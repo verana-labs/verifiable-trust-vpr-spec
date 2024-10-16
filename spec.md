@@ -456,6 +456,79 @@ The validation fees are partially sent to specific participant(s), the rest is s
 The Pay per issued credential fees are partially sent to specific participant(s), the rest is sent to trust deposits or distributed using the normal distribution principle of a [[ref: DTR]].
 
 - When a participant is granted an ISSUER permission for a given schema, trust registry and issuer grantor may define *issuance fees* for each issued credential. In this case, ISSUER must pay these fees in order to be able to deliver the credential to the holder.
+- Wallet User Agent and User Agent are rewarded, too.
+- Part of the fees are sent to trust deposits.
+
+*Example:*
+
+```plantuml
+
+@startuml
+scale max 800 width
+ 
+
+package "Trust Registry" as tr #3fbdb6 {
+    object "TR Account" as tra {
+         \t+8 TUs
+    }
+    object "TR Trust Deposit" as trtd {
+         \t+2 TUs
+    }
+}
+
+package "Issuer Grantor" as ig {
+    object "IG Account" as iga {
+        \t+4 TUs
+    }
+    object "IG Trust Deposit" as igtd {
+        \t+1 TUs
+    }
+}
+package "Issuer" as issuer #7677ed {
+    object "I Account" as issuera {
+         \t-21 TUs
+    }
+    object "I Trust Deposit" as issuertd {
+         \t+3 TUs
+    }
+
+}
+
+package "User Agent" as ua {
+    object "UA Account" as uaa {
+         \t+1.2 TUs
+    }
+    object "UA Trust Deposit" as uatd {
+        \t+0.3 TUs
+    }
+
+}
+package "Wallet User Agent" as wua {
+    object "WUA Account" as wuaa {
+         \t+1.2 TUs
+    }
+    object "WUA Trust Deposit" as wuatd {
+        \t+0.3 TUs
+    }
+
+}
+
+
+
+
+issuera -r-> tr: \t+10 TUs
+
+issuera -r-> ig: \t+5 TUs
+
+issuera -d-> ua: \t+1.5 TUs
+
+issuera -d-> wua: \t+1.5 TUs
+
+issuera --> issuertd:  \t+3 TUs
+
+@enduml
+
+```
 
 #### Pay per verified credential
 
@@ -464,6 +537,100 @@ The Pay per issued credential fees are partially sent to specific participant(s)
 The Pay per issued credential fees are partially sent to specific participant(s), the rest is sent to trust deposits or distributed using the normal distribution principle of a [[ref: DTR]].
 
 - When a participant is granted a VERIFIER permission for a given schema, trust registry, issuer grantor, issuer, verifier grantor may define *verification fees* for each verified credential. In this case, VERIFIER must pay these fees in order to be able to request presentation, for a specific issuer, of a credential of this schema to the holder.
+- Wallet User Agent and User Agent are rewarded, too.
+- Part of the fees are sent to trust deposits.
+
+*Example:*
+
+```plantuml
+
+@startuml
+scale max 800 width
+ 
+
+package "Trust Registry" as tr #3fbdb6 {
+    object "TR Account" as tra {
+         \t+16 TUs
+    }
+    object "TR Trust Deposit" as trtd {
+         \t+4 TUs
+    }
+}
+
+package "Issuer Grantor" as ig {
+    object "IG Account" as iga {
+        \t+4 TUs
+    }
+    object "IG Trust Deposit" as igtd {
+        \t+1 TUs
+    }
+}
+package "Issuer" as issuer #7677ed {
+    object "I Account" as issuera {
+         \t+24 TUs
+    }
+    object "I Trust Deposit" as issuertd {
+         \t+6 TUs
+    }
+
+}
+package "Verifier Grantor" as vg {
+    object "VG Account" as vga {
+        \t+1.6 TUs
+    }
+    object "VG Trust Deposit" as vgtd {
+        \t+0.4 TUs
+    }
+
+}
+package "Verifier" as verifier #00b0f0 {
+    object "V Account" as verifiera {
+        \t-79.8 TUs
+    }
+    object "V Trust Deposit" as verifiertd {
+        \t+11.4 TUs
+    }
+
+}
+package "User Agent" as ua {
+    object "UA Account" as uaa {
+         \t+4.56 TUs
+    }
+    object "UA Trust Deposit" as uatd {
+        \t+1.14 TUs
+    }
+
+}
+package "Wallet User Agent" as wua {
+    object "WUA Account" as wuaa {
+         \t+4.56 TUs
+    }
+    object "WUA Trust Deposit" as wuatd {
+        \t+1.14 TUs
+    }
+
+}
+
+
+
+
+verifiera -r-> tr: \t+20 TUs
+
+verifiera -r-> vg: \t+2 TUs
+
+verifiera -r-> ig: \t+5 TUs
+
+verifiera -d-> issuer: \t+30 TUs
+
+verifiera -d-> ua: \t+5.7 TUs
+
+verifiera -d-> wua: \t+5.7 TUs
+
+verifiera --> verifiertd:  \t+11.4 TUs
+
+@enduml
+
+```
 
 ## Governance of a DTR
 
