@@ -1114,7 +1114,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
 
-- `gfd.id`: "gfd<blockheight><did><gfv.version>" (need for determinism)
+- `gfd.id`: "gfd<blockheight><did><gfd.version>" (need for determinism)
 - `gfd.gfv_id`: `gfv.id`
 - `gfd.created`: current datetime, in yyyyMMddHHmm format
 - `gfd.language`: `language`
@@ -1169,7 +1169,7 @@ load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or crea
 
 - create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
 
-- `gfd.id`: "gfd<blockheight><did><gfv.version>" (need for determinism)
+- `gfd.id`: "gfd<blockheight><did><gfd.version>" (need for determinism)
 - `gfd.gfv_id`: `gfv.id`
 - `gfd.created`: current datetime, in yyyyMMddHHmm format
 - `gfd.language`: `doc_language`
