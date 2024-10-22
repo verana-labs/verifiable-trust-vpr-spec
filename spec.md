@@ -1012,7 +1012,7 @@ A DTR implementation MUST implement all the following requirements.
 |                                | Increase Active Version                 |                                  | Msg    | [[MOD-TR-MSG-3]](#mod-tr-msg-3-increase-active-governance-framework-version)   |
 |                                | Get Trust Registry                      | /dtr/v1/tr/get                  | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-1-get-trust-registry)   |
 |                                | List Trust Registries                   | /dtr/v1/tr/list                 | Query  | [[MOD-TR-QRY-2]](#mod-tr-qry-2-list-trust-registries)   |
-|                                | Get Trust Registry with DID             | /dtr/v1/tr/get_with_did         | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-3-get-trust-registry-with-did)   |
+|                                | Get Trust Registry with DID             | /dtr/v1/tr/get_with_did         | Query  | [[MOD-TR-QRY-3]](#mod-tr-qry-3-get-trust-registry-with-did)   |
 | Credential Schema              | Create a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |
 |                                | List Credential Schemas                 | /dtr/v1/cs/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |
 |                                | Get a Credential Schema                 | /dtr/v1/cs/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |
