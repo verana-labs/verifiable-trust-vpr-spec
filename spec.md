@@ -1847,7 +1847,7 @@ participant "DTR" as dtr
 
 
 Issued <-- Issuer: I want to issue a credential from schema id ... to you
-Issued --> Issuer: Here are a session uint64 and my pubkey
+Issued --> Issuer: Here is a session UUID
 Issuer <-- dtr: create CSPS session
 Issued <-- Issuer: session created, you can verify
 Issued --> dtr: /dtr/v1/csp/authorized_issuer?...
