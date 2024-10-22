@@ -1106,7 +1106,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - create and persist a new `GovernanceFrameworkVersion` entry `gfv`:
 
-- `gfv.id`: random UUID
+- `gfv.id`: "gfv<blockheight><did><gfv.version>" (need for determinism)
 - `gfv.tr_did`: `did`
 - `gfv.created`: current datetime, in yyyyMMddHHmm format
 - `gfv.version`: 1
@@ -1114,7 +1114,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
 
-- `gfd.id`: random UUID
+- `gfd.id`: "gfd<blockheight><did><gfv.version>" (need for determinism)
 - `gfd.gfv_id`: `gfv.id`
 - `gfd.created`: current datetime, in yyyyMMddHHmm format
 - `gfd.language`: `language`
@@ -1161,7 +1161,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or create a new `GovernanceFrameworkVersion` `gfv` if required:
 
-- `gfv.id`: random UUID
+- `gfv.id`: "gfv<blockheight><did><gfv.version>" (need for determinism)
 - `gfv.tr_did`: `did`
 - `gfv.created`: current datetime, in yyyyMMddHHmm format
 - `gfv.version`: 1
@@ -1169,7 +1169,7 @@ load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or crea
 
 - create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
 
-- `gfd.id`: random UUID
+- `gfd.id`: "gfd<blockheight><did><gfv.version>" (need for determinism)
 - `gfd.gfv_id`: `gfv.id`
 - `gfd.created`: current datetime, in yyyyMMddHHmm format
 - `gfd.language`: `doc_language`
