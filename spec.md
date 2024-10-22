@@ -398,7 +398,7 @@ user <|-- browser : show result
 
 *This section is non-normative.*
 
-In a [[ref: DTR]], each participant [[ref: account]] has a corresponding [[ref: trust deposit]]. 
+In a [[ref: DTR]], each participant [[ref: account]] has a corresponding [[ref: trust deposit]].
 
 This trust deposit is automatically funded when executing transactions that involve trust: creation of entities such as trust registries, credential schemas, did in did directory; fees transferred from one participant to other participant(s) for the execution of a service,...
 
@@ -648,7 +648,8 @@ For simplicity, data model is presented using a object relational model, which w
 scale max 800 width
 
 entity "TrustRegistry" as tr {
-  *did: string
+  *id: uint64
+  +did: string
   +created: datetime
   +updated: datetime
   +deposit: number
@@ -658,13 +659,13 @@ entity "TrustRegistry" as tr {
 }
 
 entity "GovernanceFrameworkVersion" as gfv {
-  *id: uuid
+  *id: uint64
   +created: datetime
   +version: integer
 }
 
 entity "GovernanceFrameworkDocument" as gfd {
-  *id: uuid
+  *id: uint64
   +created: datetime
   +language: string
   +url: string
@@ -673,7 +674,7 @@ entity "GovernanceFrameworkDocument" as gfd {
 
 
 entity "CredentialSchema" as cs {
-  *id: uuid
+  *id: uint64
   +created: datetime
   +deposit: number
   +json_schema: string
@@ -696,7 +697,7 @@ entity "(SDK) Account" as account {
 }
 
 entity "CredentialSchemaPerm" as csp {
-  *id: uuid
+  *id: uint64
   +did: string
   +created: datetime
   +effective_from: datetime
@@ -712,9 +713,9 @@ entity "CredentialSchemaPerm" as csp {
 }
 
 entity "CredentialSchemaPermSession" as csps {
-  *id: uuid
-  +user_agent_did: uuid
-  +session_authz: (uuid, uuid, uuid)[]
+  *id: uint64
+  +user_agent_did: uint64
+  +session_authz: (uint64, uint64, uint64)[]
 }
 
 enum "CredentialSchemaPermType" as cspt {
@@ -769,11 +770,12 @@ entity "TrustDeposit" as td {
 }
 
 entity "Validation" as val {
-  *id: uuid
+  *id: uint64
   +created: datetime
   +exp: date
+  +last_state_change: datetime
   +applicant_deposit: number
-  +validator_deposits: keymap(uuid, number)
+  +validator_deposits: keymap(uint64, number)
   +current_fees: number
   +current_deposit: number
   +summary_hash: hash
@@ -798,7 +800,7 @@ enum "ValidationType" as valtype {
 csp o-- cspt: type
 csp o-- cs: schema
 csp o-- "0..1" val: validation
-cs o-- tr: tr_did
+cs o-- tr: tr_id
 
 val o-- "0..1" csp: validator_perm
 
@@ -827,6 +829,7 @@ account  --o td: account
 
 `TrustRegistry`:
 
+- `id` (uint64) (*mandatory*): the id of the trust registry.
 - `did` (string) (*mandatory*): the did of the trust registry.
 - `controller` (account) (*mandatory*): [[ref: account]] that controls this entry.
 - `created` (datetime) (*mandatory*): date this TrustRegistry has been created, in yyyyMMddHHmm format.
@@ -840,8 +843,8 @@ account  --o td: account
 
 `GovernanceFrameworkVersion`:
 
-- `id` (uuid) (*mandatory*): the id of the schema.
-- `tr_did` (string) (*mandatory*): the id of the trust registry that controls this `GovernanceFrameworkVersion` entry.
+- `id` (uint64) (*mandatory*): the id of the schema.
+- `tr_id` (uint64) (*mandatory*): the id of the trust registry that controls this `GovernanceFrameworkVersion` entry.
 - `created` (datetime) (*mandatory*): date this GovernanceFrameworkVersion has been created, in yyyyMMddHHmm format.
 - `version` (int) (*mandatory*): version of this GF. MUST Starts with 1.
 
@@ -849,8 +852,8 @@ account  --o td: account
 
 `GovernanceFrameworkDocument`
 
-- `id` (uuid) (*mandatory*): the id of the schema.
-- `gfv_id` (uuid) (*mandatory*): the id of the `GovernanceFrameworkVersion` entry.
+- `id` (uint64) (*mandatory*): the id of the schema.
+- `gfv_id` (uint64) (*mandatory*): the id of the `GovernanceFrameworkVersion` entry.
 - `created` (datetime) (*mandatory*): date this GovernanceFrameworkDocument has been created, in yyyyMMddHHmm format.
 - `language` (string(2)) (*mandatory*): primary language alpha-2 code (ISO 3166) of this trust registry.
 - `url` (string) (*mandatory*): URL where the document is published.
@@ -862,8 +865,8 @@ account  --o td: account
 
 **General Info**:
 
-- `id` (uuid) (*mandatory*): the id of the schema.
-- `tr_did` (string) (*mandatory*): the id of the trust registry that controls this `CredentialSchema` entry.
+- `id` (uint64) (*mandatory*): the id of the schema.
+- `tr_id` (uint64) (*mandatory*): the id of the trust registry that controls this `CredentialSchema` entry.
 - `created` (datetime) (*mandatory*): date this CredentialSchema has been created, in yyyyMMddHHmm format.
 - `deposit` (number) (*mandatory*): [[ref: trust deposit]] (in `denom`)
 - `type` (enum) (*mandatory*): type of schema. VC_JSON_SCHEMA or ANONCREDS.
@@ -880,8 +883,8 @@ account  --o td: account
 
 `CredentialSchemaPerm`:
 
-- `id` (uuid) (*mandatory*): the id of the perm.
-- `schema_id` (uuid) (*mandatory*): the id of the related `CredentialSchema` entry.
+- `id` (uint64) (*mandatory*): the id of the perm.
+- `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `type` (CredentialSchemaPermType): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, TRUST_REGISTRY
 - `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]].
 - `grantee` (account) (*mandatory*): [[ref: account]] this permission refers to (account granted to act as `type` for schema `schema_id`).
@@ -889,7 +892,7 @@ account  --o td: account
 - `created_by` (account) (*mandatory*): [[ref: account]] that created this permission.
 - `effective_from` (datetime) (*mandatory*): date from which (inclusive) this Perm is effective, in yyyyMMddHHmm format.
 - `effective_until` (datetime) (*optional*): date until when (exclusive) this Perm is effective, in yyyyMMddHHmm format, null if no time limit has been set for this permission.
-- `validation_id` (uuid) (*optional*): the `Validation` entry this perm refers to, if created in the context of a validation process.
+- `validation_id` (uint64) (*optional*): the `Validation` entry this perm refers to, if created in the context of a validation process.
 - `validation_fees` (number) (*mandatory*): price to pay by the applicant to validator for running a validation process for a given validation period, in trust unit. Default to 0.
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is issued, in trust unit. Default to 0.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is verified, in trust unit. Default to 0.
@@ -904,24 +907,25 @@ account  --o td: account
 
 `CredentialSchemaPermSession`:
 
-- `id` (uuid) (*mandatory*): session id.
-- `user_agent_perm` (uuid) (*mandatory*): user agent permission.
+- `id` (uint64) (*mandatory*): session id.
+- `user_agent_perm` (uint64) (*mandatory*): user agent permission.
 - `controller` (account) (*mandatory*): account that controls the entry.
-- `session_authz` (uuid (CSP), uuid (CSP), uuid (UAP))[] (*mandatory*): permission(s) linked to this session.
+- `session_authz` (uint64 (CSP), uint64 (CSP), uint64 (UAP))[] (*mandatory*): permission(s) linked to this session.
 
 ### Validation
 
 `Validation`:
 
-- `id` (uuid) (*mandatory*): id of the validation entry, generated by [[ref: controller]].
+- `id` (uint64) (*mandatory*): id of the validation entry, generated by [[ref: controller]].
 - `applicant` (account) (*mandatory*): [[ref: controller]] that created this entry, the [[ref: applicant]].
 - `type` (enum) (*mandatory*): ISSUER (if [[ref: applicant]] would like to become an [[ref: issuer]] of this [[ref: credential schema]]), VERIFIER (if [[ref: applicant]] would like to become a verifier of credentials of the schema), or HOLDER, if [[ref: applicant]] would like to get issued a credential of the schema.
 - `created` (date) (*mandatory*): date of Validation creation, yyyyMMdd format.
-- `validator_perm_id` (uuid) (*optional*): permission of the validator assigned to this validation process.
+- `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to this validation process.
 - `state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED
 - `exp` (datetime) (*optional*): validation expiration date, yyyyMMdd format. This expiration date is for the validation process itself, not for the issued credential or granted permission expiration date.
+- `last_state_change` (datetime) (*mandatory*)
 - `applicant_deposit` (number) (*mandatory*): accumulated [[ref: applicant]] [[ref: trust deposit]], in [[ref: denom]].
-- `validator_deposits`: (keymap(uuid, number)) (*optional*): accumulated validator [[ref: trust deposits]], in [[ref: denom]].
+- `validator_deposits`: (keymap(uint64, number)) (*optional*): accumulated validator [[ref: trust deposits]], in [[ref: denom]].
 - `current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon validation process completion, in [[ref: denom]].
 - `current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
 - `summary_hash` (hash) (*optional*): an optional hash, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
@@ -1008,26 +1012,26 @@ A DTR implementation MUST implement all the following requirements.
 |                                | Increase Active Version                 |                                  | Msg    | [[MOD-TR-MSG-3]](#mod-tr-msg-3-increase-active-governance-framework-version)   |
 |                                | Get Trust Registry                      | /dtr/v1/tr/get                  | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-1-get-trust-registry)   |
 |                                | List Trust Registries                   | /dtr/v1/tr/list                 | Query  | [[MOD-TR-QRY-2]](#mod-tr-qry-2-list-trust-registries)   |
-| Credential Schema              | Create a Credential Schema              |                                  | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |
+|                                | Get Trust Registry with DID             | /dtr/v1/tr/get_with_did         | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-3-get-trust-registry-with-did)   |
+| Credential Schema              | Create a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |
 |                                | List Credential Schemas                 | /dtr/v1/cs/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |
 |                                | Get a Credential Schema                 | /dtr/v1/cs/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |
 |                                | Render Json Schema                      | /dtr/v1/cs/js                   | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |
-| Credential Schema Permission   | Create new CSP                          |                                  | Msg    | [[MOD-CSP-MSG-1]](#mod-csp-msg-1-create-new-csp)  |
-|                                | Revoke CSP                              |                                  | Msg    | [[MOD-CSP-MSG-2]](#mod-csp-msg-2-revoke-csp)  |
-|                                | Terminate CSP                           |                                  | Msg    | [[MOD-CSP-MSG-3]](#mod-csp-msg-3-terminate-csp)  |
-|                                | Extend CSP                              |                                  | Msg    | [[MOD-CSP-MSG-4]](#mod-csp-msg-4-extend-csp)  |
+| Credential Schema Permission   | Create new CSP                          |                                 | Msg    | [[MOD-CSP-MSG-1]](#mod-csp-msg-1-create-new-csp)  |
+|                                | Revoke CSP                              |                                 | Msg    | [[MOD-CSP-MSG-2]](#mod-csp-msg-2-revoke-csp)  |
+|                                | Terminate CSP                           |                                 | Msg    | [[MOD-CSP-MSG-3]](#mod-csp-msg-3-terminate-csp)  |
 |                                | List CSPs                               | /dtr/v1/csp/list                | Query  | [[MOD-CSP-QRY-1]](#mod-csp-qry-1-list-csps)  |
 |                                | Get CSP                                 | /dtr/v1/csp/get                 | Query  | [[MOD-CSP-QRY-2]](#mod-csp-qry-2-get-csp)  |
 |                                | Is Authorized Issuer                    | /dtr/v1/csp/authorized_issuer   | Query  | [[MOD-CSP-QRY-3]](#mod-csp-qry-3-is-authorized-issuer)  |
 |                                | Is Authorized Verifier                  | /dtr/v1/csp/authorized_verifier | Query  | [[MOD-CSP-QRY-4]](#mod-csp-qry-4-is-authorized-verifier)  |
-| Credential Schema Perm Session | Create or update CSPS                   |                                  | Msg    | [[MOD-CSPS-MSG-1]](#mod-csps-msg-1-create-or-update-csps) |
+| Credential Schema Perm Session | Create or update CSPS                   |                                 | Msg    | [[MOD-CSPS-MSG-1]](#mod-csps-msg-1-create-or-update-csps) |
 |                                | Get CSPS                                | /dtr/v1/csps/get                | Query  | [[MOD-CSPS-QRY-1]](#mod-csps-qry-1-get-csps) |
-| Validation                     | Create a Validation                     |                                  | Msg    | [[MOD-V-MSG-1]](#mod-v-msg-1-create-new-validation)    |
-|                                | Renew a Validation                      |                                  | Msg    | [[MOD-V-MSG-2]](#mod-v-msg-2-renew-validation)    |
-|                                | Set Validated                           |                                  | Msg    | [[MOD-V-MSG-3]](#mod-v-msg-3-set-validated)    |
-|                                | Request Validation Termination          |                                  | Msg    | [[MOD-V-MSG-4]](#mod-v-msg-4-request-validation-termination)    |
-|                                | Confirm Validation Termination          |                                  | Msg    | [[MOD-V-MSG-5]](#mod-v-msg-5-confirm-validation-termination)    |
-|                                | Cancel Validation                       |                                  | Msg    | [[MOD-V-MSG-6]](#mod-v-msg-6-cancel-validation)    |
+| Validation                     | Create a Validation                     |                                 | Msg    | [[MOD-V-MSG-1]](#mod-v-msg-1-create-new-validation)    |
+|                                | Renew a Validation                      |                                 | Msg    | [[MOD-V-MSG-2]](#mod-v-msg-2-renew-validation)    |
+|                                | Set Validated                           |                                 | Msg    | [[MOD-V-MSG-3]](#mod-v-msg-3-set-validated)    |
+|                                | Request Validation Termination          |                                 | Msg    | [[MOD-V-MSG-4]](#mod-v-msg-4-request-validation-termination)    |
+|                                | Confirm Validation Termination          |                                 | Msg    | [[MOD-V-MSG-5]](#mod-v-msg-5-confirm-validation-termination)    |
+|                                | Cancel Validation                       |                                 | Msg    | [[MOD-V-MSG-6]](#mod-v-msg-6-cancel-validation)    |
 |                                | List Validations                        | /dtr/v1/val/list                | Query  | [[MOD-V-QRY-1]](#mod-v-qry-1-list-validations)    |
 |                                | Get a Validation                        | /dtr/v1//val/get                | Query  | [[MOD-V-QRY-2]](#mod-v-qry-2-get-a-validation)    |
 | DID Directory                  | Add a DID                               |                                  | Msg    | [[MOD-DD-MSG-1]](#mod-dd-msg-1-add-a-did)   |
@@ -1095,6 +1099,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - create and persist a new `TrustRegistry` entry `tr`:
 
+- `tr.id` : auto-incremented uint64
 - `tr.did`: `did`
 - `tr.controller`: [[ref: account]] running the method
 - `tr.created`: current datetime, in yyyyMMddHHmm format
@@ -1106,15 +1111,15 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - create and persist a new `GovernanceFrameworkVersion` entry `gfv`:
 
-- `gfv.id`: random UUID
-- `gfv.tr_did`: `did`
+- `gfv.id`: auto-incremented uint64
+- `gfv.tr_id`: `tr.id`
 - `gfv.created`: current datetime, in yyyyMMddHHmm format
 - `gfv.version`: 1
 - `gfv.active_since`: current datetime, in yyyyMMddHHmm format
 
 - create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
 
-- `gfd.id`: random UUID
+- `gfd.id`: auto-incremented uint64
 - `gfd.gfv_id`: `gfv.id`
 - `gfd.created`: current datetime, in yyyyMMddHHmm format
 - `gfd.language`: `language`
@@ -1129,7 +1134,7 @@ Any [[ref: account]] CAN execute this method.
 
 An [[ref: account]] that would like to add a governance framework document MUST call this method by specifying:
 
-- `did` (string) (*mandatory*): the did of the trust registry.
+- `tr_id` (uint64) (*mandatory*): the id of the trust registry.
 - `doc_language` (string(2)) (*mandatory*): language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)) of the [[ref: TRGF]] document.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
 - `doc_hash` (string) (*mandatory*): hash of the document.
@@ -1143,8 +1148,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `did` (string) (*mandatory*): a `TrustRegistry` entry with this DID MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry.
-- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` where `gfv.tr_did` is equal to `did` and `gfv.version` = `version`, or `version` MUST be exactly equal to the biggest found `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries found for this `gfv.tr_did` equal to `did`. `version` MUST be greater than the `tr.active_version`.
+- `tr_id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry.
+- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` where `gfv.tr_id` is equal to `id` and `gfv.version` = `version`, or `version` MUST be exactly equal to the biggest found `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries found for this `gfv.tr_id` equal to `id`. `version` MUST be greater than the `tr.active_version`.
 - `doc_language` (string(2)) (*mandatory*): MUST be a language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_hash` (string) (*mandatory*): MUST be a valid hash.
@@ -1161,15 +1166,15 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or create a new `GovernanceFrameworkVersion` `gfv` if required:
 
-- `gfv.id`: random UUID
-- `gfv.tr_did`: `did`
+- `gfv.id`: auto-incremented uint64
+- `gfv.tr_id`: `tr_id`
 - `gfv.created`: current datetime, in yyyyMMddHHmm format
 - `gfv.version`: 1
 - `gfv.active_since`: null
 
 - create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
 
-- `gfd.id`: random UUID
+- `gfd.id`: auto-incremented uint64
 - `gfd.gfv_id`: `gfv.id`
 - `gfd.created`: current datetime, in yyyyMMddHHmm format
 - `gfd.language`: `doc_language`
@@ -1184,7 +1189,7 @@ Any [[ref: account]] CAN execute this method.
 
 An [[ref: account]] that would like to add a governance framework document MUST call this method by specifying:
 
-- `did` (string) (*mandatory*): the did of the trust registry.
+- `tr_id` (uint64) (*mandatory*): the id of the trust registry.
 
 ##### [MOD-TR-MSG-3-2] Increase Active Governance Framework Version precondition checks
 
@@ -1194,8 +1199,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `did` (string) (*mandatory*): a `TrustRegistry` entry with this DID MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry.
-- load `TrustRegistry` entry `tr` from its `did`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort.
+- `tr_id` (tr_id) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry.
+- load `TrustRegistry` entry `tr` from its `tr_id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort.
 - find `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `tr.language`. If no document is found (and thus no document exist for the default language of this version for this trust registry), transaction MUST abort.
 
 ###### [MOD-TR-MSG-3-2-2] Increase Active Governance Framework Version fee checks
@@ -1208,7 +1213,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- load `TrustRegistry` entry `tr` from its `did`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort. Else, update `tr.active_version` to `tr.active_version` + 1. Set `tr.modified` to current datetime, and set `gfv.active_since` to current datetime and persist changes.
+- load `TrustRegistry` entry `tr` from its `tr_id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort. Else, update `tr.active_version` to `tr.active_version` + 1. Set `tr.modified` to current datetime, and set `gfv.active_since` to current datetime and persist changes.
 
 #### [MOD-TR-QRY-1] Get Trust Registry
 
@@ -1216,13 +1221,11 @@ Anyone CAN execute this method.
 
 ##### [MOD-TR-QRY-1-1] Get Trust Registry parameters
 
-- `did` (string) (*mandatory*): DID of the [[ref: trust registry]].
+- `tr_id` (uint64) (*mandatory*): id of the [[ref: trust registry]].
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
 
 ##### [MOD-TR-QRY-1-2] Get Trust Registry checks
-
-- `did` (string) MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
 ##### [MOD-TR-QRY-1-3] Get Trust Registry execution
 
@@ -1236,7 +1239,8 @@ This method is used to [[ref: query]] the [[ref: DID Directory]] [[ref: keeper]]
 
 The following parameters are optional:
 
-- `modified` (date) (*optional*): if specified, returns only `TrustRegistry` entries with `TrustRegistry.modified` greater than `modified`.
+- `controller` (account) (*optional*): if specified, filter by controller.
+- `modified_after` (date) (*optional*): if specified, returns only `TrustRegistry` entries with `TrustRegistry.modified` greater than `modified`.
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
@@ -1251,6 +1255,24 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned.
 
+#### [MOD-TR-QRY-3] Get Trust Registry with DID
+
+Anyone CAN execute this method.
+
+##### [MOD-TR-QRY-3-1] Get Trust Registry with DID parameters
+
+- `did` (string) (*mandatory*): DID of the [[ref: trust registry]].
+- `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
+
+##### [MOD-TR-QRY-3-2] Get Trust Registry with DID checks
+
+- `did` (string) MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+
+##### [MOD-TR-QRY-3-3] Get Trust Registry with DID execution
+
+return found `TrustRegistry` entry (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `latest_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
+
 ### Credential Schema Module
 
 #### [MOD-CS-MSG-1] Create New Credential Schema
@@ -1262,7 +1284,7 @@ Any [[ref: account]] CAN execute this method.
 An [[ref: account]] that would like to create a [[ref: credential schema]] MUST call this method by specifying:
 
 - `id` of the credential schema (*mandatory*);
-- `tr_did` of the trust registry (*mandatory*);
+- `tr_id` id of the trust registry (*mandatory*);
 - `json_schema` the [[ref: Json Schema]] of the credential (*mandatory*).
 - `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
 - `verifier_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
@@ -1279,8 +1301,8 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-CS-MSG-1-2-1] Create New Credential Schema basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `id` MUST be a valid uuid and a [[ref: credential schema]] entry with the same id MUST NOT exist.
-- `tr_did` MUST represent an existing `TrustRegistry` entry `tr` and `tr.controller` MUST be the account executing the method.
+- `id` MUST be a valid uint64 and a [[ref: credential schema]] entry with the same id MUST NOT exist.
+- `tr_id` MUST represent an existing `TrustRegistry` entry `tr` and `tr.controller` MUST be the account executing the method.
 - `country` MUST be a valid alpha-2 code (ISO 3166).
 - `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] must be exactly the same URL that is used to render the json schema using [MOD-CS-QRY-3].
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
@@ -1314,7 +1336,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - create and persist a new CredentialSchema entry `cs`:
 
   - `cs.id`: `id`.
-  - `cs.tr_did`: did of the `TrustRegistry` entry that will be the owner of `cs`.
+  - `cs.tr_id`: id of the `TrustRegistry` entry that will be the owner of `cs`.
   - `cs.json_schema`: `json_schema`
   - `cs.issuer_grantor_validation_validity_period`: `issuer_grantor_validation_validity_period`
   - `cs.verifier_grantor_validation_validity_period`: `verifier_grantor_validation_validity_period`
@@ -1326,23 +1348,22 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-CS-QRY-1] List Credential Schemas
 
-Anyone CAN execute this method.
+Anyone CAN execute this method. Returned result MUST be ordered by `CredentialSchema.created` asc.
 
 ##### [MOD-CS-QRY-1-1] List Credential Schemas parameters
 
-- `tr_did` (string) (*optional*): to filter by trust registry did.
-- `created_before` (datetime) (*optional*): show schemas created before this datetime.
+- `tr_id` (string) (*optional*): to filter by trust registry id.
+- `created_after` (datetime) (*optional*): show schemas created after this datetime.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 
 ##### [MOD-CS-QRY-1-2] List Credential Schemas checks
 
-- `tr_did` must be a valid [[ref: DID]].
-- `created_before` must be a datetime.
+- `created_after` must be a datetime.
 - `response_max_size` must be between 1 and 1,024.
 
 ##### [MOD-CS-QRY-1-3] List Credential Schemas execution
 
-return a list of found entry, or an empty list if nothing found.
+return a list of found entry, or an empty list if nothing found. Results MUST be ordered by created ASC.
 
 #### [MOD-CS-QRY-2] Get Credential Schema
 
@@ -1354,7 +1375,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-CS-QRY-2-2] Get Credential Schema checks
 
-- `id` must be a uuid.
+- `id` must be a uint64.
 
 ##### [MOD-CS-QRY-2-3] Get Credential Schema execution
 
@@ -1370,7 +1391,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-CS-QRY-3-2] Render Json Schema checks
 
-- `id` must be a uuid.
+- `id` must be a uint64.
 
 ##### [MOD-CS-QRY-3-3] Render Json Schema execution
 
@@ -1386,15 +1407,14 @@ Any [[ref: account]] CAN execute this method.
 
 An [[ref: account]] that would like to create a `CredentialSchemaPerm` entry MUST call this method by specifying:
 
-- `id` (uuid) (*mandatory*)
-- `schema_id` (uuid) (*mandatory*)
+- `schema_id` (uint64) (*mandatory*)
 - `type` (*mandatory*): a `CredentialSchemaPermType` (ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR)
 - `did` (string) (*optional*): [[ref: DID]] of the validation service (that will be used to get a new permission or get issued a credential) this permission refers to.
 - `grantee` (account) (*mandatory*): [[ref: account]] this permission refers to.
 - `effective_from` (datetime) (*mandatory*): date from which (inclusive) this Perm is effective, in yyyyMMddHHmm format.
 - `effective_until` (datetime) (*optional*): date until when (exclusive) this Perm is effective, in yyyyMMddHHmm format, null if it doesn't expire.
 - `country` (string) (*optional*): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means all countries.
-- `validation_id` (uuid) (*optional*): required if account executing the method is not the controller of the trust registry the schema is referring to.
+- `validation_id` (uint64) (*optional*): required if account executing the method is not the controller of the trust registry the schema is referring to.
 - `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in trust unit. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.
@@ -1407,15 +1427,14 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` MUST be a valid uuid and a `CredentialSchemaPerm` entry with the same id MUST NOT exist.
-- `schema_id` MUST be a valid uuid and a [[ref: credential schema]] entry with this id MUST exist.
+- `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
 - `type` : must be a valid type
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `effective_from` must be in the future.
 - `effective_until`, if not null, must be greater than `effective_from`
 - `country` if not null, MUST be a valid alpha-2 code (ISO 3166).
 - `grantee` MUST be an [[ref: account]] (SHALL NOT check if it exists)
-- `validation_id` (uuid) (*optional*): see below permission checks.
+- `validation_id` (uint64) (*optional*): see below permission checks.
 - `validation_fees` (number) (*mandatory*): MUST be >= 0.
 - `issuance_fees` (number) (*mandatory*): MUST be >= 0.
 - `verification_fees` (number) (*mandatory*): MUST be >= 0.
@@ -1429,7 +1448,7 @@ Permission checks across CSP methods may look similar but they are different.
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
 - The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
-- The related `TrustRegistry` entry `tr` is loaded from `cs.tr_did`.
+- The related `TrustRegistry` entry `tr` is loaded from `cs.tr_id`.
 
 if `type` is TRUST_REGISTRY:
 
@@ -1502,7 +1521,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 A new entry `CredentialSchemaPerm` `perm` MUST be created:
 
-- `perm.id`: `id`.
+- `perm.id`: auto-incremented uint64.
 - `perm.schema_id`: `schema_id`.
 - `perm.type`: `type`.
 - `perm.did`: `did`.
@@ -1526,7 +1545,7 @@ Method used by grantor of a permission to revoke the permission.
 
 An [[ref: account]] that would like to revoke a `CredentialSchemaPerm` entry MUST run this method by specifying:
 
-- `id` (uuid) (*mandatory*): `id` of the `CredentialSchemaPerm` entry (called `csp` below) it wants to revoke.
+- `id` (uint64) (*mandatory*): `id` of the `CredentialSchemaPerm` entry (called `csp` below) it wants to revoke.
 
 ##### [MOD-CSP-MSG-2-2] Revoke CSP precondition checks
 
@@ -1536,7 +1555,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` MUST be a valid uuid and a `CredentialSchemaPerm` entry with the same id MUST exist.
+- `id` MUST be a valid uint64 and a `CredentialSchemaPerm` entry with the same id MUST exist.
 
 ###### [MOD-CSP-MSG-2-2-2] Revoke CSP permission checks
 
@@ -1548,7 +1567,7 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 
 - Load `CredentialSchemaPerm` entry `csp`:
 - The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
-- The related `TrustRegistry` entry `tr` is loaded from `cs.tr_did`.
+- The related `TrustRegistry` entry `tr` is loaded from `cs.tr_id`.
 
 if `csp.type` is TRUST_REGISTRY:
 
@@ -1615,7 +1634,7 @@ Method used by grantee of a permission to self-terminate a permission.
 
 An [[ref: account]] that would like to terminate a `CredentialSchemaPerm` entry MUST run this method by specifying:
 
-- `id` (uuid) (*optional*): id of the `CredentialSchemaPerm` entry (called `csp` below) it wants to terminate.
+- `id` (uint64) (*optional*): id of the `CredentialSchemaPerm` entry (called `csp` below) it wants to terminate.
 
 ##### [MOD-CSP-MSG-3-2] Terminate CSP precondition checks
 
@@ -1625,7 +1644,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` MUST be a valid uuid and a `CredentialSchemaPerm` entry `csp` with the same id MUST exist.
+- `id` MUST be a valid uint64 and a `CredentialSchemaPerm` entry `csp` with the same id MUST exist.
 
 ###### [MOD-CSP-MSG-3-2-2] Terminate CSP permission checks
 
@@ -1661,113 +1680,29 @@ Load `CredentialSchemaPerm` entry `csp`:
 
 if `csp.deposit` is greater than 0, use [MOD-TD-MSG-1] to decrease by `dd.deposit` the [[ref: trust deposit]] of account, and set `csp.deposit` to 0.
 
-#### [MOD-CSP-MSG-4] Extend CSP
-
-Any [[ref: account]] CAN execute this method.
-
-##### [MOD-CSP-MSG-4-1] Extend CSP parameters
-
-An [[ref: account]] that would like to extend a `CredentialSchemaPerm` entry MUST send a Msg by specifying:
-
-- `id` (uuid) (*mandatory*): id of the `CredentialSchemaPerm` entry to extend
-- `effective_until` (datetime) (*optional*): date until when (exclusive) this Perm is effective, in yyyyMMddHHmm format, null if it doesn't expire.
-
-##### [MOD-CSP-MSG-4-2] Extend CSP precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-CSP-MSG-4-2-1] Extend CSP basic checks
-
-if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-
-- `id` MUST be a valid uuid and a `CredentialSchemaPerm` entry with the same id MUST NOT exist.
-- `effective_until`, if not null, must be greater than now().
-
-###### [MOD-CSP-MSG-4-2-2] Extend CSP permission checks
-
-:::warning
-Permission checks across CSP methods may look similar but they are different.
-:::
-
-To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
-
-- Load `CredentialSchemaPerm` entry `csp`:
-- The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
-- The related `TrustRegistry` entry `tr` is loaded from `cs.tr_did`.
-
-if `csp.type` is TRUST_REGISTRY:
-
-- [[ref: account]] executing the method MUST be the [[ref: controller]] of `tr`, else MUST abort.
-
-if `csp.type` is ISSUER or ISSUER_GRANTOR:
-
-- if `cs.issuer_perm_management_mode` is equal to OPEN, MUST abort.
-- if `csp.validation_id` is unspecified, MUST abort.
-- load `Validation` entry `val` with `csp.validation_id`.
-- `val.exp` MUST be greater or equal to `effective_until` if not null, or MUST be null if null, else abort.
-- load `CredentialSchemaPerm` entry `csp_executor` from `val.validator_perm_id`.
-- `csp_executor` MUST exist and be a [[ref: valid permission]], else abort.
-- `csp_executor.grantee`: MUST be the `account` running the method, else abort.
-- `csp_executor.type`: MUST be ISSUER_GRANTOR if `cs.issuer_perm_management_mode` is equal to GRANTOR_VALIDATION, or TRUST_REGISTRY if `cs.issuer_perm_management_mode` is equal to TRUST_REGISTRY, else abort.
-- `csp_executor.country`: MUST be null, or if not null, MUST be equal to `csp.country`, else abort.
-
-if `csp.type` is VERIFIER or VERIFIER_GRANTOR:
-
-- if `cs.verifier_perm_management_mode` is equal to OPEN, MUST abort (no need to create perm if verifying credentials of this schema is open to anyone).
-- if `csp.validation_id` is unspecified, MUST abort.
-- load `Validation` entry `val` with `csp.validation_id`.
-- `val.exp` MUST be greater or equal to `effective_until` if not null, or MUST be null if null, else abort.
-- load `CredentialSchemaPerm` entry `csp_executor` from `val.validator_perm_id`.
-- `csp_executor` MUST exist and be a [[ref: valid permission]], else abort.
-- `csp_executor.grantee`: MUST be the `account` running the method, else abort.
-- `csp_executor.type`: MUST be VERIFIER_GRANTOR if `cs.verifier_perm_management_mode` is equal to GRANTOR_VALIDATION, or TRUST_REGISTRY if `cs.verifier_perm_management_mode` is equal to TRUST_REGISTRY, else abort.
-- `csp_executor.country`: MUST be null, or if not null, MUST be equal to `csp.country`, else abort.
-
-if `csp.type` is HOLDER:
-
-- if `cs.issuer_perm_management_mode` is equal to OPEN, MUST abort.
-- if `csp.validation_id` is unspecified, MUST abort.
-- load `Validation` entry `val` with `csp.validation_id`.
-- `val.exp` MUST be greater or equal to `effective_until` if not null, or MUST be null if null, else abort.
-- load `CredentialSchemaPerm` entry `csp_executor` from `val.validator_perm_id`.
-- `csp_executor` MUST exist and be a [[ref: valid permission]], else abort.
-- `csp_executor.grantee`: MUST be the `account` running the method, else abort.
-- `csp_executor.type`: MUST be ISSUER, else abort.
-- `csp_executor.country`: MUST be null, or if not null, MUST be equal to `csp.country`, else abort.
-
-###### [MOD-CSP-MSG-4-2-3] Extend CSP fee checks
-
-Account MUST have the required [[ref: estimated transaction fees]] available.
-
-##### [MOD-CSP-MSG-4-3] Extend CSP execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-Update entry `CredentialSchemaPerm` `csp`:
-
-- `perm.effective_until`: `effective_until`, yyyyMMddHHmm format.
-
 #### [MOD-CSP-QRY-1] List CSPs
 
 Anyone CAN execute this method.
 
+:::note
+See [MOD-CSP-QRY-3] and [MOD-CSP-QRY-4] to gather required indexes. Added to these 2 methods, frontend will have to be able to filter at least by schema_id.
+:::
+
 ##### [MOD-CSP-QRY-1-1] List CSPs parameters
 
+- `schema_id` (uint64) (*mandatory*): to filter by credential schema.
 - `creator` (account) (*optional*): to filter by creator.
 - `grantee` (account) (*optional*): to filter by grantee.
-- `did` (string) (*optional*): to filter by did.
-- `created_before` (datetime) (*optional*): get permissions created before this datetime.
+- `did` (string) (*optional*): to filter by grantee did.
 - `type` (CredentialSchemaPermissionType) (*optional*): to filter by type.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 
 ##### [MOD-CSP-QRY-1-2] List CSPs checks
 
+- `schema_id` is required and must be an uint64.
 - `creator` must be an account.
 - `grantee` must be an account.
 - `did` must be a [[ref: DID]].
-- `created_before` must be a datetime.
 - `type` must be a valid CredentialSchemaPermissionType.
 - `response_max_size` must be a number between 1 and 1,024.
 
@@ -1785,7 +1720,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-CSP-QRY-2-2] Get CSP checks
 
-- `id` must be a uuid.
+- `id` must be a uint64.
 
 ##### [MOD-CSP-QRY-2-3] Get CSP execution
 
@@ -1796,34 +1731,36 @@ return found entry (if any).
 This method is used to query if a DID is (or was) authorized to issue a credential of a given schema, country, user_agent, wallet_user_agent. Called by the browsers and apps to verify if they can accept the credential from this DID or not.
 If the target wallet is a DTS, `user_agent_did` and `wallet_user_agent_did` will be equal to the DID of the DTS.
 
+:::note
+This method should use [MOD-CSP-QRY-1]. An index might be needed to optimize query, like using (schema_id, type, did).
+:::
+
 ##### [MOD-CSP-QRY-3-1] Is Authorized Issuer parameters
 
 - `issuer_did` (string) (*mandatory*): did of the service that want to issue a credential.
 - `user_agent_did` (string) (*mandatory*): did of the user agent that received the presentation request.
 - `wallet_user_agent_did` (string) (*mandatory*): did of the user agent wallet where the credential is stored.
-- `schema_id` (uuid) (*mandatory*): the schema_id.
+- `schema_id` (uint64) (*mandatory*): the schema_id.
 - `country` (string) (*optional*): a country code, to select CSP with this country code or with a null country code.
 - `when` (datetime) (*optional*): if null, find permission *at* the current date. Else find permission *at* `when`.
-- `session_id` (uuid) (*optional*): if a payment is required, specify the session_id to check if a `CredentialSchemaPermSession` entry exists.
+- `session_id` (uint64) (*optional*): if a payment is required, specify the session_id to check if a `CredentialSchemaPermSession` entry exists.
 
 ##### [MOD-CSP-QRY-3-2] Is Authorized Issuer checks
 
 - `issuer_did` (*mandatory*): (string): MUST be a [[ref: DID]].
 - `user_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
 - `wallet_user_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
-- `schema_id` (uuid) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
+- `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
 - `country` (string) (*optional*): if specified, MUST be a country code.
 - `when` (datetime) (*optional*): if specified, MUST be a datetime.
-- `session_id` (uuid) (*optional*): if specified, MUST be a uuid.
+- `session_id` (uint64) (*optional*): if specified, MUST be a uint64.
 
 ##### [MOD-CSP-QRY-3-3] Is Authorized Issuer execution
 
 - load `CredentialSchema` `cs` from `schema_id`. If `cs.issuer_mode` is equal to OPEN, return AUTHORIZED.
 
-- find `perms[]` with `perm.did` equal to `issuer_did`.
+- find `perms[]` with `perm.did` equal to `issuer_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to ISSUER.
 - for each `perm` in `perms[]`:
-  - discard `perm` if `perm.schema_id` doesn't match.
-  - discard `perm` if `perm.type` is not ISSUER.
   - if `when` is specified, discard `perm` if `when` is lower than `perm.effective_from` or if `when` is greater than `perm.effective_until`. Else, if `when` is unspecified, discard `perm` if now() is lower than `perm.effective_from` or if now() is greater than `perm.effective_until`.
 
 if a `perm` is not found, return FORBIDDEN. Else:
@@ -1835,8 +1772,6 @@ if a `perm` is not found, return FORBIDDEN. Else:
 - else if `session_id` is defined, load `CredentialSchemaPermSession` `session` from `session_id`.
   - is `session.user_agent_did` is equal to `user_agent_did` and `session.session_authz[]` contains `(perm.id, null, wallet_user_agent_did)`, return to AUTHORIZED.
   - else set `authzResult` return SESSION_REQUIRED.
-
-
 
 :::note
 We do not need to verify if a HOLDER perm exists for user_agent_did and for wallet_user_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for user_agent_did and for wallet_user_agent_did.
@@ -1853,10 +1788,10 @@ This method is used to query if a DID is (or was) authorized to verify a credent
 - `issuer_did` (string) (*mandatory*): did of the service that issued the credential that needs to be requested to holder.
 - `user_agent_did` (string) (*mandatory*): did of the user agent that received the presentation request.
 - `wallet_user_agent_did` (string) (*mandatory*): did of the user agent wallet where the credential is stored.
-- `schema_id` (uuid) (*mandatory*): the schema_id.
+- `schema_id` (uint64) (*mandatory*): the schema_id.
 - `country` (string) (*optional*): a country code, to select CSP with this country code or with a null country code.
 - `when` (datetime) (*optional*): if null, find permission *at* the current date. Else find permission *at* `when`.
-- `session_id` (uuid) (*optional*): if a payment is required, specify the session_id to check if a `CredentialSchemaPermSession` entry exists.
+- `session_id` (uint64) (*optional*): if a payment is required, specify the session_id to check if a `CredentialSchemaPermSession` entry exists.
 
 ##### [MOD-CSP-QRY-4-2] Is Authorized Verifier checks
 
@@ -1864,27 +1799,23 @@ This method is used to query if a DID is (or was) authorized to verify a credent
 - `issuer_did` (*mandatory*): (string): MUST be a [[ref: DID]].
 - `user_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
 - `wallet_user_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
-- `schema_id` (uuid) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
+- `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
 - `country` (string) (*optional*): if specified, MUST be a country code.
 - `when` (datetime) (*optional*): if specified, MUST be a datetime.
-- `session_id` (uuid) (*optional*): if specified, MUST be a uuid.
+- `session_id` (uint64) (*optional*): if specified, MUST be a uint64.
 
 ##### [MOD-CSP-QRY-4-3] Is Authorized Verifier execution
 
 - load `CredentialSchema` `cs` from `schema_id`. If `cs.verifier_mode` is equal to OPEN, return AUTHORIZED.
 
-- find `verifier_perms[]` with `verifier_perm.did` equal to `verifier_did`.
+- find `verifier_perms[]` with `verifier_perm.did` equal to `verifier_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to VERIFIER.
 - for each `verifier_perm` in `verifier_perms[]`:
-  - discard `verifier_perm` if `verifier_perm.schema_id` doesn't match.
-  - discard `verifier_perm` if `verifier_perm.type` is not VERIFIER.
   - if `when` is specified, discard `verifier_perm` if `when` is lower than `verifier_perm.effective_from` or if `when` is greater than `verifier_perm.effective_until`. Else, if `when` is unspecified, discard `verifier_perm` if now() is lower than `verifier_perm.effective_from` or if now() is greater than `verifier_perm.effective_until`.
 
 found perm will be named `verifier_perm`.
 
-- find `issuer_perms[]` with `issuer_perm.did` equal to `issuer_did`.
+- find `issuer_perms[]` with `issuer_perm.did` equal to `issuer_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to ISSUER.
 - for each `issuer_perm` in `issuer_perms[]`:
-  - discard `issuer_perm` if `issuer_perm.schema_id` doesn't match.
-  - discard `issuer_perm` if `issuer_perm.type` is not ISSUER.
   - if `when` is specified, discard `issuer_perm` if `when` is lower than `issuer_perm.effective_from` or if `when` is greater than `issuer_perm.effective_until`. Else, if `when` is unspecified, discard `issuer_perm` if now() is lower than `issuer_perm.effective_from` or if now() is greater than `issuer_perm.effective_until`.
 
 found perm will be named `issuer_perm`.
@@ -1906,7 +1837,7 @@ We do not need to verify if a HOLDER perm exists for user_agent_did and for wall
 
 #### [MOD-CSPS-MSG-1] Create or Update CSPS
 
-Any credential exchange that requires issuer or verifier `payer` paying fees involves action from the issued or verified `wallet` (credential recipient in case of credential issuance, received presentation request in case of verification). `wallet` can be a DTS, an app, a browser. `wallet` MUST send to `payer` an uuid for session identification and creation, plus an `account` public key identifying the `wallet`. Then, `wallet` MUST check session has been created and is valid.
+Any credential exchange that requires issuer or verifier `payer` paying fees involves action from the issued or verified `wallet` (credential recipient in case of credential issuance, received presentation request in case of verification). `wallet` can be a DTS, an app, a browser. `wallet` MUST send to `payer` an uint64 for session identification and creation, plus an `account` public key identifying the `wallet`. Then, `wallet` MUST check session has been created and is valid.
 
 ```plantuml
 scale max 800 width
@@ -1916,10 +1847,10 @@ participant "DTR" as dtr
 
 
 Issued <-- Issuer: I want to issue a credential from schema id ... to you
-Issued --> Issuer: Here are a session uuid and my pubkey
+Issued --> Issuer: Here are a session uint64 and my pubkey
 Issuer <-- dtr: create CSPS session
 Issued <-- Issuer: session created, you can verify
-Issued --> dtr: /dtr/v1/csp/authorized_issuer?issuer_did=...&schema_id=...&session_id=...&wallet_account=...
+Issued --> dtr: /dtr/v1/csp/authorized_issuer?...
 Issued <-- dtr: AUTHORIZED
 Issued --> Issuer: OK, you can send the credential
 Issued <-- Issuer: Send credential
@@ -1937,8 +1868,8 @@ Define how and when UUID is exchanged. (Not needed for implementing this spec). 
 An [[ref: account]] that would like to create or update a `CredentialSchemaPermSession` entry MUST send a Msg by specifying:
 
 - `id` (uuid) (*mandatory*): id of the `CredentialSchemaPermSession`.
-- `executor_perm_id` (uuid) (*mandatory*): the id of the perm the [[ref: account]] executing the method is acting as (if I want to verify, I'll pass here the id of my VERIFIER perm that justifies I am authorized to verify credentials of `executor_perm_id.schema_id`)
-- `beneficiary_perm_id` (uuid) (*MAY be mandatory*): the id of the perm the [[ref: account]] executing the method is referring to (if I want to verify, I'll pass here the id of the ISSUER perm I'm interested in). Mandatory parameter if `executor_perm.type` is equal to VERIFIER. MUST NOT be specified if `executor_perm.type` is equal to ISSUER.
+- `executor_perm_id` (uint64) (*mandatory*): the id of the perm the [[ref: account]] executing the method is acting as (if I want to verify, I'll pass here the id of my VERIFIER perm that justifies I am authorized to verify credentials of `executor_perm_id.schema_id`)
+- `beneficiary_perm_id` (uint64) (*MAY be mandatory*): the id of the perm the [[ref: account]] executing the method is referring to (if I want to verify, I'll pass here the id of the ISSUER perm I'm interested in). Mandatory parameter if `executor_perm.type` is equal to VERIFIER. MUST NOT be specified if `executor_perm.type` is equal to ISSUER.
 - `user_agent_did` (account) (*mandatory*): the did of the user agent.
 - `wallet_user_agent_did` (account) (*mandatory*): the did of the wallet user agent.
 
@@ -1951,7 +1882,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `id` MUST be a valid uuid and a `CredentialSchemaPermSession` entry with the same id MUST NOT exist, or if it exists, account running the method MUST be the `session.controller` of the loaded `CredentialSchemaPermSession` entry `session`, else abort.
-- if an `CredentialSchemaPermSession` entry `session` exist with this `id`, `session.perm_ids[]` MUST NOT already contain (`executor_perm_id`, `beneficiary_perm_id`), else method MUST abort.
+- if a `CredentialSchemaPermSession` entry `session` exist with this `id`, `session.perm_ids[]` MUST NOT already contain (`executor_perm_id`, `beneficiary_perm_id`), else method MUST abort.
 - load `CredentialSchemaPerm` `executor_perm` from `executor_perm_id`.
 - if `executor_perm` is not a [[ref: valid permission]], the method MUST abort.
 - if [[ref: account]] running the method is not `executor_perm.grantee`, the method MUST abort.
@@ -2165,9 +2096,8 @@ Any [[ref: account]] CAN execute this method.
 
 An Applicant that would like to start a validation process MUST execute this method by specifying:
 
-- `id` (uuid) (*mandatory*) of the validation process;
 - `type` (ValidationType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER);
-- `validator_perm_id` (uuid) (*mandatory*): the [[ref: validator]], chosen by the applicant.
+- `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]], chosen by the applicant.
 - `country` (string) (*mandatory*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
 
 Available compatible perms can be found by using [MOD-CSP-QRY-3] and presented in a front-end so applicant can choose its validator.
@@ -2180,9 +2110,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` (uuid) (*mandatory*) MUST be a valid uuid and a validation entry with the same id MUST NOT exist.
 - `type` (ValidationType) (*mandatory*) MUST be a valid ValidationType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
-- `validator_perm_id` (uuid) (*mandatory*): see [[MOD-V-MSG-1-2-2]](#mod-v-msg-1-2-2-create-new-validation-permission-checks).
+- `validator_perm_id` (uint64) (*mandatory*): see [[MOD-V-MSG-1-2-2]](#mod-v-msg-1-2-2-create-new-validation-permission-checks).
 - `country` (string) (*mandatory*) MUST be a valid alpha-2 code (ISO 3166).
 
 :::note
@@ -2254,10 +2183,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - create an persist a new validation entry:
 
-  - `validation.id`: `id`.
+  - `validation.id`: auto-incremented uint64.
   - `validation.applicant`: [[ref: applicant]]'s [[ref: account]].
   - `validation.type`: `type`.
-  - `validation.created`: date of day, yyyyMMdd format.
+  - `validation.created`: datetime of day, yyyyMMddHHmm format.
+  - `validation.last_state_change`: datetime of day, yyyyMMddHHmm format.
   - `validation.validator_perm_id`: `validator_perm_id`.
   - `validation.state`: PENDING.
   - `validation.applicant_deposit`: `validation_trust_deposit_in_denom`.
@@ -2292,8 +2222,8 @@ Requesting a renewal has no effect on existing granted perms or issued credentia
 
 An [[ref: account]] [[ref: controller]] of a validation entry that would like to renew a validation MUST execute this method by specifying:
 
-- `id` (uuid) (*mandatory*): id of the validation process;
-- `validator_perm_id` (uuid)  (*optional*): the [[ref: validator]] chosen by the applicant.
+- `id` (uint64) (*mandatory*): id of the validation process;
+- `validator_perm_id` (uint64)  (*optional*): the [[ref: validator]] chosen by the applicant.
 
 ##### [MOD-V-MSG-2-2] Renew Validation precondition checks
 
@@ -2303,7 +2233,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` MUST be a valid uuid and a validation entry with the same id MUST NOT exist.
+- `id` MUST be a valid uint64 and a validation entry with the same id MUST NOT exist.
 
 ###### [MOD-V-MSG-2-2-2] Renew Validation permission checks
 
@@ -2339,6 +2269,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - update validation entry:
 
   - `validation.state`: PENDING.
+  - `validation.last_state_change`: datetime of day, yyyyMMddHHmm format.
   - `validation.applicant_deposit`: `validation.applicant_deposit` + `validation_trust_deposit_in_denom`.
   - `validation.current_fees` (number): `validation_fees_in_denom`.
   - `validation.current_deposit` (number): `validation_trust_deposit_in_denom`.
@@ -2356,7 +2287,7 @@ Any [[ref: account]] CAN execute this method.
 
 An [[ref: account]] that would like to set a validation entry to VALIDATED MUST execute this method by specifying:
 
-- `id` (uuid) (*mandatory*): id of the validation process;
+- `id` (uint64) (*mandatory*): id of the validation process;
 - `summary_hash` (hash) (*optional*): an optional hash of a summary of exchanged information between [[ref: applicant]] and [[ref: validator]], used as a proof.
 
 ##### [MOD-V-MSG-3-2] Set Validated precondition checks
@@ -2367,7 +2298,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` MUST be a valid uuid.
+- `id` MUST be a valid uint64.
 - load `Validation` entry `val` from `id`. If no entry found, abort.
 - `val.state` MUST be PENDING.
 - if `summary_hash` is not null, it MUST be a valid hash. MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials).
@@ -2392,6 +2323,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - set validation entry `validation.state` to VALIDATED.
+- set `validation.last_state_change`: datetime of day, yyyyMMddHHmm format.
 - transfer `validator_trust_fees` = `validation.current_fees` * (1 - `GlobalVariables.trust_deposit_rate`) from escrow [[ref: account]] to validator [[ref: account]] `validator_perm.grantee`;
 - Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `validator_trust_deposit` = (`validation.current_fees` - `validator_trust_fees`) the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module. Increase deposit for `validation.validator_perm_id` in `validation.applicant_deposits`: set `validation.applicant_deposits[validation.validator_perm_id]` to `applicant_deposits[validation.validator_perm_id]` + `validator_trust_deposit`, or set `applicant_deposits[validation.validator_perm_id]` to `validator_trust_deposit` if no entry were present for this perm.
 - set `validation.current_fees` to 0;
@@ -2416,7 +2348,7 @@ Requesting termination of the validation set validation entry to the TERMINATION
 
 An [[ref: account]] that would like to set a validation entry to TERMINATION_REQUESTED MUST execute this method by specifying:
 
-- `id` (uuid) (*mandatory*): id of the validation process;
+- `id` (uint64) (*mandatory*): id of the validation process;
 
 ##### [MOD-V-MSG-4-2] Request Validation Termination precondition checks
 
@@ -2426,7 +2358,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` MUST be a valid uuid and a `Validation` entry `val` with the same id MUST exist.
+- `id` MUST be a valid uint64 and a `Validation` entry `val` with the same id MUST exist.
 - [[ref: account]] running the [[ref: transaction]] MUST be `val.applicant`.
 - `val.state` must be VALIDATED.
 
@@ -2442,6 +2374,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - set `validation.state` to TERMINATION_REQUESTED.
 - set `validation.term_requested` to current datetime.
+- set `validation.last_state_change`: datetime of day, yyyyMMddHHmm format.
 
 #### [MOD-V-MSG-5] Confirm Validation Termination
 
@@ -2455,7 +2388,7 @@ Before executing this [[ref: transaction]], [[ref: validator]] should verify the
 
 An [[ref: account]] that would like to set confirm validation entry termination MUST execute this method by specifying:
 
-- `id` (uuid) (*mandatory*): id of the validation process;
+- `id` (uint64) (*mandatory*): id of the validation process;
 
 ##### [MOD-V-MSG-5-2] Confirm Validation Termination precondition checks
 
@@ -2465,7 +2398,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` MUST be a valid uuid and a validation entry with the same id MUST exist.
+- `id` MUST be a valid uint64 and a validation entry with the same id MUST exist.
 - validation entry must be in state TERMINATION_REQUESTED.
 
 ###### [MOD-V-MSG-5-2-2] Confirm Validation Termination permission checks
@@ -2497,6 +2430,7 @@ Account executing the method MUST have the required [[ref: estimated transaction
 If all precondition checks passed, [[ref: transaction]] is executed.
 
 - set validation entry `validation.state` to TERMINATED.
+- set `validation.last_state_change`: datetime of day, yyyyMMddHHmm format.
 
 - if `validation.applicant_deposit` > 0:
   - call [MOD-TD-MSG-1] to reduce `validation.applicant` trust deposit by `validation.applicant_deposit`.
@@ -2520,7 +2454,7 @@ Validation state must be PENDING. Upon method execution, the pending validation 
 
 An [[ref: account]] that would like to set cancel a validation entry MUST execute this method by specifying:
 
-- `id` (uuid) (*mandatory*): id of the validation process;
+- `id` (uint64) (*mandatory*): id of the validation process;
 
 ##### [MOD-V-MSG-6-2] Cancel Validation precondition checks
 
@@ -2530,7 +2464,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` MUST be a valid uuid and a `Validation` entry `val` with the same id MUST exist.
+- `id` MUST be a valid uint64 and a `Validation` entry `val` with the same id MUST exist.
 - [[ref: account]] running the [[ref: transaction]] MUST be `val.applicant`.
 - `val.state` must be PENDING.
 
@@ -2545,6 +2479,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - if `validation.exp` is null (validation never completed), set validation entry `validation.state` to TERMINATED, else set `validation.state` to VALIDATED.
+- set `validation.last_state_change`: datetime of day, yyyyMMddHHmm format.
 - if `validation.current_fees` > 0:
   - transfer `validation.current_fees` back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `validation.applicant`.
   - set `validation.current_fees` to 0;
@@ -2555,30 +2490,33 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-V-QRY-1] List Validations
 
-This method is used to [[ref: query]] the validation [[ref: keeper]]. As this method does not modify data, it does not require a [[ref: transaction]].
+This method is used to [[ref: query]] the validation [[ref: keeper]] and return pending actions. Returned result MUST be ordered by `validation.pending_since` ASC.
+
+:::note
+indexes will be required based on frontend usage.
+:::
 
 ##### [MOD-V-QRY-1-1] List Validations query parameters
 
 The following parameters are optional:
 
 - `controller` (account) (*optional): if specified, returns only `Validation` entries controlled by `controller`.
-- `exp_before` (date) (*optional): if specified, returns only `Validation` entries that expire before `exp_before`.
-- `schema_id` (uuid) (*optional): if specified, returns only `Validation` entries that match this `schema_id`.
-- `perm_id` (uuid) (*optional): if specified, returns only `Validation` entries that match this `perm_id`.
+- `validator_perm_id` (uint64) (*optional): if specified, returns only `Validation` entries that match this `validator_perm_id`.
 - `type` (ValidationType) (*optional): if specified, returns only `Validation` entries that match this `type`.
 - `state` (ValidationState) (*optional): if specified, returns only `Validation` entries that match this `state`.
 - `response_max_size` (small number): default to 64. Max 1,024.
+- `exp_before` (datetime) (*optional): if specified, returns only `Validation` entries that expire before `exp_before` and order by `validation.exp` ASC. If unspecified, order by `validation.last_state_change` ASC.
 
 ##### [MOD-V-QRY-1-2] List Validations query checks
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
 - `response_max_size` must be between 1 and 1,024.
-- if `controller` is unspecified, AND `perm_id` is unspecified
+- if `controller` is unspecified, AND `validator_perm_id` is unspecified.
 
 ##### [MOD-V-QRY-1-3] List Validations execution of the query
 
-If all precondition checks passed, [[ref: query]] is executed and result (a list of Validations) (may be empty) returned, ordered by created ASC.
+If all precondition checks passed, [[ref: query]] is executed and result (a list of Validations) (may be empty) returned.
 
 #### [MOD-V-QRY-2] Get a Validation
 
@@ -2586,11 +2524,11 @@ This method is used to read a Validation. As this method does not modify data, i
 
 ##### [MOD-V-QRY-2-1] Get a Validation query parameters
 
-- `id` (uuid) (*optional*): the uuid of the validation.
+- `id` (uint64) (*optional*): the uint64 of the validation.
 
 ##### [MOD-V-QRY-2-2] Get a Validation query checks
 
-`id` MUST be a valid uuid.
+`id` MUST be a valid uint64.
 
 ##### [MOD-V-QRY-2-3] Get a Validation execution of the query
 
@@ -3294,7 +3232,7 @@ This section MUST be ignored for now.
 This section MUST be ignored for now.
 :::
 
-`GET /trqp/$uuid/metadata` response:
+`GET /trqp/$uint64/metadata` response:
 
 ```json
 {
