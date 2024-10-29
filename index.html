@@ -400,7 +400,7 @@ For example, the DID directory is essential to dts browsers, such as social dts 
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules of an <a class="term-reference" href="#term:dtr">DTR</a>. A <a class="term-reference" href="#term:governance-authority">governance authority</a> will ensure the application of the <a class="term-reference" href="#term:governance-framework">governance framework</a> rules and if necessary apply some financial sanctions.</p>
 <h2 id="data-model"><a class="toc-anchor" href="#data-model" >§</a> Data model</h2>
 <p>For simplicity, data model is presented using a object relational model, which would not be always optimal depending on implementation choices, that may require organizing data differently. It’s the role of implementors to adapt the data model so it will be suitable for a given implementation (for example, a keymap-like based storage would be probably a better choice for a ledger-based implementation).</p>
-<img src="https://www.plantuml.com/plantuml/svg/fLTVRzis47_Nfn3yrAnpa0B3CFWfHkMwmXgxbMG3wp0Gj4JRN2HH8ocdxf3llYCfoPHaAqxtOfEyuztnxdT_T2yavhBCKkU-MOaOfyJDy3VtjxixzuacSkyu99TK7jrHn4iX0xAZGlBZoCN2bTpzrt7TdsWoSKkQorz_WTtRH6s1X-OxjOqvmPB0KG9_acP47PP5qZzCIC44bHCtBxCDuUe8Fs9R5kYOk3YMz43GWN11MQwEKvplIhmZ3UlpoUev0yOSvp7vm756dXX_N9kR-WcxxU7S6yuQNMcSkC16Tc3Wi1gFnMK6z4fFShMUtdEKmtXgR_TOxEtNDdQyvoHHQvo6yPvaM2kFnTMwpyJWRy5o9BIqLYo4A0b7EuvpoJWwu9I28F2FMO8rg22SiiIM1KwYM_hgQvMkL-guZdtFqkHgvieG86Gempa4IKKOPIo1Q7Lz_ncu7Xgc1-1fcVV3GZJiogmVx3vl5VuYqm1OVfuju6yUJ1VHCa3hwIVVcqR-KXr6mIgCK32R-s4K_67JB9I_2RtVRznf7BEomZKsQn3_V1c4ogxQaX-j66Ix9IRnjvnbbsXW2aqxMNiAx9OGqOscIjaUmSGeFd-hdoAS7DXZns09RwPvxntQM_neFHUAxqdM2quCYMWg5_ZoR5gN0h0540149MsACBSHBkN--yHzOoW_k-t_cp__6aPOT2mQN4bjWH-6gra0Y_Kiy3_uUcdEK8KrYsOTjJ471n-NdpouVL7zL5bUwSPQzNGLVLm6_jUP1vjm5eQ0M93uPUK7-cYri3Wixtg-vr4Eg65LBmDV6MzU0qP8LPN3NOX-AuQBgLsevodRu7IDESMRb0ZJ94mlUYjLfmKiKuaAJcDYey_GUDM6aTcUgTfnuxggTjT_qDsHeD_9CFFLrLtBI_1H3CjxHU6_KkABFU6rblrlIIzs4akE3PE-f8jHjMIh0WCu-ASa0l29b31MofwP06Ue0nNIBmjkit6ICL25TdX05aGIIcVrigxQbYAG5wUOPcXJyXnnUFfbLh77d2Z7bGDCMiI9Q9KyJfumJxeCJpXD2MJK8DzpPzJrZ38pwPhYe8sppEexKhzJPVIvahvkegU5mYEldikQsc86HF25wXi4nNiO5acR5nT52iqh7q8GP615XB0zacE6YwOV6EORRKl9kN9NjmVMvsSKY3BBCC33ZAZgLyUlXLRBtgRMdvmJgfVL7jBFr6w2uSNp5tFLIinmeWjyD0iU_8MUL7JTduNjyxhijrKqFGmqI5XRRMouPPrhTQUkfUORDXxhpZXnbM3h2BgApkxcQ7HtU_jkf4oOkAV41hAcIWuIEAA9uoYWM1VWVdE1cJdISU1RR0IqiM9xTtiB28DF6s0ptop2TTINJez3HQBwJ04MfvxcncEczSSCXXK6kSDR96s0BkI4z0aLVj7cs7rfnJgf1wOXbjFyfBWSFUqeleR1igrFh1A-shTirFtzmiDqA9hqSHhuDJIzTMhGDCSwqhKWuxraKblZEFSaJ_I7jld_3m00" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/fLTVRzis47_Nfn3yrAnpa0B3CFWfHkMwmXgxbMG3wp0Gj4JRN2HH8ocdxf3llYCfoPHaAqxtOfEyuztnxdT_T2yavhBCKkU-MOaOfyJDy3VtjxixzuacSkyu99TK7jrHn4iX0xAZGlBZoCN2bTpzrt7TdsWoSKkQorz_WTtRH6s1X-OxjOqvmPB0KG9_acP47PP5qZzCIC44bHCtBxCDuUe8Fs9R5kYOk3YMz43GWN11MQwEKvplIhmZ3UlpoUev0yOSvp7vm756dXX_N9kR-WcxxU7S6yuQNMcSkC16Tc3Wi1gFnMK6z4fFShMUtdEKmtXgR_TOxEtNDdQyvoHHQvo6yPvaM2kFnTMwpyJWRy5o9BIqLYo4A0b7EuvpoJWwu9I28F2FMO8rg22SiiIM1KwYM_hgQvMkL-guZdtFqkHgvieG86Gempa4IKKOPIo1Q7Lz_ncu7Xgc1-1fcVV3GZJiogmVx3vl5VuYqm1OVfuju6yUJ1VHCa3hwIVVcqR-KXr6mIgCK32R-s4K_67JB9I_2RtVRznf7BEomZKsQn3_V1c4ogxQaX-j66Ix9IRnjvnbbsXW2aqxMNiAx9OGqOscIjaUmSGeFd-hdoAS7DXZns09RwPvxntQM_neFHUAxqdM2quCYMWg5_ZoR5gN0h0540149MsACBSHBkN--yHzOoW_k-t_cp__6aPOT2mQN4bjWH-6gra0Y_Kiy3_uUcdEK8KrYsOTjJ471n-NdpouVL7zL5bUwSPQzNGLVLm6_jUP1vjm5eQ0M93uPUK7-cYri3Wixtg-vr4Eg65LBmDV6MzU0qP8LPN3NOX-AuQBgLsevodRu7IDESMRb0ZJ94mlUYjLfmKiKuaAJcDYey_GUDM6aTcUgTfnuxggTjT_qDsHeD_9CFFLrLtBI_1H3CjxHU6_KkABFU6rblrlIIzs4akE3PE-f8jHjMIh0WCu-ASa0l29b31MofwP06Ue0nNIBmjkiq6Ge2fMHdSbjcI01N6AQOOs9SyHXrTTPXLxp8doIJd0f4MSY5Oru-G9ywJBy8JJb42o3F8zTwPOpoWpGwp9UssSPLRVH_gTAbdFLUjr4nWj51vvzSZLb0qp-u4lL4iWADx374ZQlBWeKkXB-H0u8Bag8eJjaHmpN3IbtZ3VQ5jApfMxkksjFZ-ZG9HPXW4UPlfKlpf-BI1QzZPb_EISKBsizf1-fdOJp2MUlvYhBc7c3bsxerdmu2_q4A9B-YnidzSLlQsYQK-WGSBQwb33tUXS5pir93MwiF5ODxs9gmHRHz0mTE8sHwExszjt8sN2n3tbB90rLNAGm15D74S1nRe0zviBp8o8ZWEVMIEWZHNRkzjRG1XyjG2R-HmHhgC-OdeSAXBL5mYmEFMWDXuphJzcC8Smo1tU8ca3T8qcf4-ey8isn-vBAzP9FGiDiPn68yNbw456yJKCbcrzOfNmrRvbesxT5nwcGz6aZzF0hw7fhLE3fZdMaQu56UybazeQnxadUQA_eSt_Vm00" alt="uml diagram">
 <h3 id="trustregistry"><a class="toc-anchor" href="#trustregistry" >§</a> TrustRegistry</h3>
 <p><code>TrustRegistry</code>:</p>
 <ul>
@@ -543,7 +543,6 @@ For example, the DID directory is essential to dts browsers, such as social dts 
 <p><strong>DID Directory:</strong></p>
 <ul>
 <li><code>did_directory_trust_deposit</code> (number) (<em>mandatory</em>): default trust deposit value, in <a class="term-reference" href="#term:trust-units">trust units</a>.</li>
-<li><code>did_directory_removal_gas</code> (number) (<em>mandatory</em>): default did removal required gas.</li>
 <li><code>did_directory_grace_period_days</code> (number) (<em>mandatory</em>): default grace period, in days.</li>
 </ul>
 <p><strong>Trust Deposit:</strong></p>
@@ -2256,7 +2255,6 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 <ul>
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>;</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.trust_unit_price</code> * <code>did_directory_trust_deposit</code> * <code>years</code>.</li>
-<li>the required estimated <code>removal_gas_fees</code>: <code>GlobalVariables.did_directory_removal_gas</code> * gas_price</li>
 </ul>
 <h5 id="mod-dd-msg-1-3-add-a-did-execution"><a class="toc-anchor" href="#mod-dd-msg-1-3-add-a-did-execution" >§</a> [MOD-DD-MSG-1-3] Add a DID execution</h5>
 <p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
@@ -2264,9 +2262,6 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 <ul>
 <li>
 <p>Recalculate <code>trust_deposit_in_denom</code>, as specified above.</p>
-</li>
-<li>
-<p>Recalculate <code>removal_gas_fees</code>, as specified above.</p>
 </li>
 <li>
 <p>use [MOD-TD-MSG-1] to increase by <code>trust_deposit_in_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of account running the method and transfer the corresponding amount to <code>TrustDeposit</code> module.</p>
@@ -2281,9 +2276,6 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 <li>set <code>entry.exp</code> to date of day + <code>years</code> years;</li>
 <li>set <code>entry.deposit</code> to <code>trust_deposit_in_denom</code></li>
 </ul>
-</li>
-<li>
-<p>Send <code>removal_gas_fees</code> to EA.</p>
 </li>
 </ul>
 <h4 id="mod-dd-msg-2-renew-a-did"><a class="toc-anchor" href="#mod-dd-msg-2-renew-a-did" >§</a> [MOD-DD-MSG-2] Renew a DID</h4>
@@ -2346,10 +2338,8 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 <li><code>did</code>: the specified <a class="term-reference" href="#term:did">DID</a> format MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>], and MUST exist in DID directory.</li>
 <li>if now() &lt; expireTs + <code>GlobalVariables.did_directory_grace_period_days</code> ; then <a class="term-reference" href="#term:account">account</a> running the <a class="term-reference" href="#term:transaction">transaction</a> MUST be equals to <code>controller</code>; else parameter <a class="term-reference" href="#term:account">account</a> CAN be any <a class="term-reference" href="#term:account">account</a>.</li>
 </ul>
-<div id="note-16" class="notice note"><a class="notice-link" href="#note-16">NOTE</a><p>if account removing the DID is not its controller, corresponding trust deposit is not freed for the entry controller account.</p>
-</div>
 <h6 id="mod-dd-msg-3-2-2-remove-a-did-fee-checks"><a class="toc-anchor" href="#mod-dd-msg-3-2-2-remove-a-did-fee-checks" >§</a> [MOD-DD-MSG-3-2-2] Remove a DID fee checks</h6>
-<p>As fees are taken from the escrow <a class="term-reference" href="#term:account">account</a>, no fee checks are needed.</p>
+<p>Account running the <a class="term-reference" href="#term:transaction">transaction</a> MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
 <h5 id="mod-dd-msg-3-3-remove-a-did-execution-of-the-transaction"><a class="toc-anchor" href="#mod-dd-msg-3-3-remove-a-did-execution-of-the-transaction" >§</a> [MOD-DD-MSG-3-3] Remove a DID execution of the transaction</h5>
 <p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
 <p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
@@ -2358,7 +2348,7 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 <p>load <code>DidDirectory</code> entry <code>dd</code>.</p>
 </li>
 <li>
-<p>if <code>account</code> executing the method is the controller of the entry (<code>dd.controller</code>), use [MOD-TD-MSG-1] to decrease by <code>dd.deposit</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of account.</p>
+<p>use [MOD-TD-MSG-1] to decrease by <code>dd.deposit</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>dd.controller</code> account.</p>
 </li>
 <li>
 <p>remove entry from <code>DIDDirectory</code>.</p>
@@ -2866,7 +2856,6 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 <p><strong>DID Directory:</strong></p>
 <ul>
 <li><code>did_directory_trust_deposit</code> (number) (<em>mandatory</em>): 5 <a class="term-reference" href="#term:trust-units">trust units</a>.</li>
-<li><code>did_directory_removal_gas</code> (number) (<em>mandatory</em>): To be calculated my implementor.</li>
 <li><code>did_directory_grace_period_days</code> (number) (<em>mandatory</em>): 30.</li>
 </ul>
 <p><strong>Trust Deposit:</strong></p>

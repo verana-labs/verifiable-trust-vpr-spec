@@ -754,7 +754,6 @@ entity "GlobalVariables" as gv {
   +credential_schema_trust_deposit: number
   +validation_term_requested_timeout_days: number
   +did_directory_trust_deposit: number
-  +did_directory_removal_gas: number
   +did_directory_grace_period_days: number
   +trust_deposit_reclaim_burn_rate: number
   +trust_deposit_share_value: number
@@ -979,7 +978,6 @@ account  --o td: account
 **DID Directory:**
 
 - `did_directory_trust_deposit` (number) (*mandatory*): default trust deposit value, in [[ref: trust units]].
-- `did_directory_removal_gas` (number) (*mandatory*): default did removal required gas.
 - `did_directory_grace_period_days` (number) (*mandatory*): default grace period, in days.
 
 **Trust Deposit:**
@@ -2654,7 +2652,6 @@ Applicant MUST have an available balance (not blocked by trust deposit nor stake
 
 - the required [[ref: estimated transaction fees]];
 - the required `trust_deposit_in_denom`: `GlobalVariables.trust_unit_price` * `did_directory_trust_deposit` * `years`.
-- the required estimated `removal_gas_fees`: `GlobalVariables.did_directory_removal_gas` * gas_price
 
 ##### [MOD-DD-MSG-1-3] Add a DID execution
 
@@ -2663,7 +2660,6 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - Recalculate `trust_deposit_in_denom`, as specified above.
-- Recalculate `removal_gas_fees`, as specified above.
 - use [MOD-TD-MSG-1] to increase by `trust_deposit_in_denom` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
 
 - Create DIDDirectory entry:
@@ -2674,8 +2670,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `entry.modified` to date of day;
   - set `entry.exp` to date of day + `years` years;
   - set `entry.deposit` to `trust_deposit_in_denom`
-
-- Send `removal_gas_fees` to EA.
 
 #### [MOD-DD-MSG-2] Renew a DID
 
@@ -2744,13 +2738,9 @@ if any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 - `did`: the specified [[ref: DID]] format MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]], and MUST exist in DID directory.
 - if now() < expireTs + `GlobalVariables.did_directory_grace_period_days` ; then [[ref: account]] running the [[ref: transaction]] MUST be equals to `controller`; else parameter [[ref: account]] CAN be any [[ref: account]].
 
-:::note
-if account removing the DID is not its controller, corresponding trust deposit is not freed for the entry controller account.
-:::
-
 ###### [MOD-DD-MSG-3-2-2] Remove a DID fee checks
 
-As fees are taken from the escrow [[ref: account]], no fee checks are needed.
+Account running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
 ##### [MOD-DD-MSG-3-3] Remove a DID execution of the transaction
 
@@ -2760,7 +2750,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - load `DidDirectory` entry `dd`.
 
-- if `account` executing the method is the controller of the entry (`dd.controller`), use [MOD-TD-MSG-1] to decrease by `dd.deposit` the [[ref: trust deposit]] of account.
+- use [MOD-TD-MSG-1] to decrease by `dd.deposit` the [[ref: trust deposit]] of `dd.controller` account.
 - remove entry from `DIDDirectory`.
 
 #### [MOD-DD-MSG-4] Touch a DID
@@ -3311,7 +3301,6 @@ Default values MUST be set at DTR initialization (genesis). Below you'll find so
 **DID Directory:**
 
 - `did_directory_trust_deposit` (number) (*mandatory*): 5 [[ref: trust units]].
-- `did_directory_removal_gas` (number) (*mandatory*): To be calculated my implementor.
 - `did_directory_grace_period_days` (number) (*mandatory*): 30.
 
 **Trust Deposit:**
