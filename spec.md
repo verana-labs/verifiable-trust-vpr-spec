@@ -1756,25 +1756,26 @@ This method should use [MOD-CSP-QRY-1]. An index might be needed to optimize que
 ##### [MOD-CSP-QRY-3-3] Is Authorized Issuer execution
 
 - load `CredentialSchema` `cs` from `schema_id`. If `cs.issuer_mode` is equal to OPEN, return AUTHORIZED.
+- define `CredentialSchemaPerm` `issuer_perm` as null.
+- define `time` = `when`, or `time` = now() if `when` is null.
 
 - find `perms[]` with `perm.did` equal to `issuer_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to ISSUER.
 - for each `perm` in `perms[]`:
-  - if `when` is specified, discard `perm` if `when` is lower than `perm.effective_from` or if `when` is greater than `perm.effective_until`, and discard perm if `perm.revoked` or `perm.terminated` if not null and after `when`. Else, if `when` is unspecified, discard `perm` if now() is lower than `perm.effective_from` or if now() is greater than `perm.effective_until`.
+  - if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `issuer_perm` to `perm` and exit the *for* loop.
 
-if a `perm` is not found, return FORBIDDEN. Else:
+if a `issuer_perm` is null, return FORBIDDEN. Else:
 
 - use [MOD-CSPS-MSG-1-2-2] to calculate `found_perm_set`. Calculate, as in [MOD-CSPS-MSG-1-2-3], if some fees need to be paid. Let's call these fees `trust_fees`.
 
 - if `trust_fees` is equal to 0, set `authzResult` to AUTHORIZED.
 - else if `session_id` is undefined, set `authzResult` to SESSION_REQUIRED.
 - else if `session_id` is defined, load `CredentialSchemaPermSession` `session` from `session_id`.
-  - is `session.user_agent_did` is equal to `user_agent_did` and `session.session_authz[]` contains `(perm.id, null, wallet_user_agent_did)`, return to AUTHORIZED.
+  - is `session.user_agent_did` is equal to `user_agent_did` and `session.session_authz[]` contains `(issuer_perm.id, null, wallet_user_agent_did)`, return to AUTHORIZED.
   - else set `authzResult` return SESSION_REQUIRED.
 
 :::note
 We do not need to verify if a HOLDER perm exists for user_agent_did and for wallet_user_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for user_agent_did and for wallet_user_agent_did.
 :::
-
 
 #### [MOD-CSP-QRY-4] Is Authorized Verifier
 
@@ -1804,21 +1805,24 @@ This method is used to query if a DID is (or was) authorized to verify a credent
 
 ##### [MOD-CSP-QRY-4-3] Is Authorized Verifier execution
 
+- define `time` = `when`, or `time` = now() if `when` is null.
+- define `CredentialSchemaPerm` `verifier_perm` as null.
+- define `CredentialSchemaPerm` `issuer_perm` as null.
+
 - load `CredentialSchema` `cs` from `schema_id`. If `cs.verifier_mode` is equal to OPEN, return AUTHORIZED.
 
 - find `verifier_perms[]` with `verifier_perm.did` equal to `verifier_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to VERIFIER.
-- for each `verifier_perm` in `verifier_perms[]`:
-  - if `when` is specified, discard `verifier_perm` if `when` is lower than `verifier_perm.effective_from` or if `when` is greater than `verifier_perm.effective_until`, and discard perm if `verifier_perm.revoked` or `verifier_perm.terminated` if not null and after `when`. Else, if `when` is unspecified, discard `verifier_perm` if now() is lower than `verifier_perm.effective_from` or if now() is greater than `verifier_perm.effective_until`.
+- for each `perm` in `verifier_perms[]`
+  - if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `verifier_perm` to `perm` and exit the *for* loop.
 
-found perm will be named `verifier_perm`.
+- if  `verifier_perm` is null (no permission has been found), return FORBIDDEN. Else:
 
 - find `issuer_perms[]` with `issuer_perm.did` equal to `issuer_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to ISSUER.
-- for each `issuer_perm` in `issuer_perms[]`:
-  - if `when` is specified, discard `issuer_perm` if `when` is lower than `issuer_perm.effective_from` or if `when` is greater than `issuer_perm.effective_until`, and discard perm if `issuer_perm.revoked` or `issuer_perm.terminated` if not null and after `when`. Else, if `when` is unspecified, discard `issuer_perm` if now() is lower than `issuer_perm.effective_from` or if now() is greater than `issuer_perm.effective_until`.
+- for each `perm` in `issuer_perms[]`:
+  - if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `issuer_perm` to `perm` and exit the *for* loop.
 
-found perm will be named `issuer_perm`.
+- if `issuer_perm` is null, return FORBIDDEN. Else:
 
-- if `issuer_perm` or `verifier_perm` is null, return FORBIDDEN.
 - use [MOD-CSPS-MSG-1-2-2] to calculate `found_perm_set`. Calculate, as in [MOD-CSPS-MSG-1-2-3], if some fees need to be paid. Let's call these fees `trust_fees`.
 
 - if `trust_fees` is equal to 0, return AUTHORIZED.
