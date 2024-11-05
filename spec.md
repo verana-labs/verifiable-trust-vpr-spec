@@ -1759,7 +1759,7 @@ This method should use [MOD-CSP-QRY-1]. An index might be needed to optimize que
 
 - find `perms[]` with `perm.did` equal to `issuer_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to ISSUER.
 - for each `perm` in `perms[]`:
-  - if `when` is specified, discard `perm` if `when` is lower than `perm.effective_from` or if `when` is greater than `perm.effective_until`. Else, if `when` is unspecified, discard `perm` if now() is lower than `perm.effective_from` or if now() is greater than `perm.effective_until`.
+  - if `when` is specified, discard `perm` if `when` is lower than `perm.effective_from` or if `when` is greater than `perm.effective_until`, and discard perm if `perm.revoked` or `perm.terminated` if not null and after `when`. Else, if `when` is unspecified, discard `perm` if now() is lower than `perm.effective_from` or if now() is greater than `perm.effective_until`.
 
 if a `perm` is not found, return FORBIDDEN. Else:
 
@@ -1808,13 +1808,13 @@ This method is used to query if a DID is (or was) authorized to verify a credent
 
 - find `verifier_perms[]` with `verifier_perm.did` equal to `verifier_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to VERIFIER.
 - for each `verifier_perm` in `verifier_perms[]`:
-  - if `when` is specified, discard `verifier_perm` if `when` is lower than `verifier_perm.effective_from` or if `when` is greater than `verifier_perm.effective_until`. Else, if `when` is unspecified, discard `verifier_perm` if now() is lower than `verifier_perm.effective_from` or if now() is greater than `verifier_perm.effective_until`.
+  - if `when` is specified, discard `verifier_perm` if `when` is lower than `verifier_perm.effective_from` or if `when` is greater than `verifier_perm.effective_until`, and discard perm if `verifier_perm.revoked` or `verifier_perm.terminated` if not null and after `when`. Else, if `when` is unspecified, discard `verifier_perm` if now() is lower than `verifier_perm.effective_from` or if now() is greater than `verifier_perm.effective_until`.
 
 found perm will be named `verifier_perm`.
 
 - find `issuer_perms[]` with `issuer_perm.did` equal to `issuer_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to ISSUER.
 - for each `issuer_perm` in `issuer_perms[]`:
-  - if `when` is specified, discard `issuer_perm` if `when` is lower than `issuer_perm.effective_from` or if `when` is greater than `issuer_perm.effective_until`. Else, if `when` is unspecified, discard `issuer_perm` if now() is lower than `issuer_perm.effective_from` or if now() is greater than `issuer_perm.effective_until`.
+  - if `when` is specified, discard `issuer_perm` if `when` is lower than `issuer_perm.effective_from` or if `when` is greater than `issuer_perm.effective_until`, and discard perm if `issuer_perm.revoked` or `issuer_perm.terminated` if not null and after `when`. Else, if `when` is unspecified, discard `issuer_perm` if now() is lower than `issuer_perm.effective_from` or if now() is greater than `issuer_perm.effective_until`.
 
 found perm will be named `issuer_perm`.
 
