@@ -1281,7 +1281,6 @@ Any [[ref: account]] CAN execute this method.
 
 An [[ref: account]] that would like to create a [[ref: credential schema]] MUST call this method by specifying:
 
-- `id` of the credential schema (*mandatory*);
 - `tr_id` id of the trust registry (*mandatory*);
 - `json_schema` the [[ref: Json Schema]] of the credential (*mandatory*).
 - `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
@@ -1299,10 +1298,8 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-CS-MSG-1-2-1] Create New Credential Schema basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `id` MUST be a valid uint64 and a [[ref: credential schema]] entry with the same id MUST NOT exist.
 - `tr_id` MUST represent an existing `TrustRegistry` entry `tr` and `tr.controller` MUST be the account executing the method.
-- `country` MUST be a valid alpha-2 code (ISO 3166).
-- `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] must be exactly the same URL that is used to render the json schema using [MOD-CS-QRY-3].
+- `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] must be a valid https URL that terminates with string `/dtr/v1/cs/js/DTR_CREDENTIAL_SCHEMA_ID` as specified in [MOD-CS-QRY-3]. DTR_CREDENTIAL_SCHEMA_ID will be replaced during execution by the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
 - `issuer_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
@@ -1313,7 +1310,7 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-CS-MSG-1-2-2] Create New Credential Schema fee checks
 
-Applicant MUST have an available balance (not blocked by trust deposit nor staked) in its [[ref: account]], to cover the following fees:
+Applicant MUST have an available balance in its [[ref: account]], to cover the following fees:
 
 - the required [[ref: estimated transaction fees]] in its [[ref: account]].
 - the required `trust_deposit_in_denom`: `GlobalVariables.credential_schema_trust_deposit` * `GlobalVariables.trust_unit_price`.
@@ -1331,11 +1328,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - use [MOD-TD-MSG-1] to increase by `trust_deposit_in_denom`: `GlobalVariables.trust_registry_trust_deposit` * `GlobalVariables.trust_unit_price`
  the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
 
-- create and persist a new CredentialSchema entry `cs`:
+- create and persist a new `CredentialSchema` entry `cs`:
 
-  - `cs.id`: `id`.
+  - `cs.id`: auto-incremented uint64.
   - `cs.tr_id`: id of the `TrustRegistry` entry that will be the owner of `cs`.
-  - `cs.json_schema`: `json_schema`
+  - `cs.json_schema`: `json_schema`, with DTR_CREDENTIAL_SCHEMA_ID string replaced by generated `cs.id`.
   - `cs.issuer_grantor_validation_validity_period`: `issuer_grantor_validation_validity_period`
   - `cs.verifier_grantor_validation_validity_period`: `verifier_grantor_validation_validity_period`
   - `cs.issuer_validation_validity_period`: `issuer_validation_validity_period`
@@ -1406,8 +1403,8 @@ Any [[ref: account]] CAN execute this method.
 An [[ref: account]] that would like to create a `CredentialSchemaPerm` entry MUST call this method by specifying:
 
 - `schema_id` (uint64) (*mandatory*)
-- `type` (*mandatory*): a `CredentialSchemaPermType` (ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR)
-- `did` (string) (*optional*): [[ref: DID]] of the validation service (that will be used to get a new permission or get issued a credential) this permission refers to.
+- `type` (*mandatory*): a `CredentialSchemaPermType` (ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, TRUST_REGISTRY, HOLDER)
+- `did` (string) (*mandatory*): [[ref: DID]] of the grantee service (that will be used to get a new permission or get issued a credential) this permission refers to.
 - `grantee` (account) (*mandatory*): [[ref: account]] this permission refers to.
 - `effective_from` (datetime) (*mandatory*): date from which (inclusive) this Perm is effective, in yyyyMMddHHmm format.
 - `effective_until` (datetime) (*optional*): date until when (exclusive) this Perm is effective, in yyyyMMddHHmm format, null if it doesn't expire.
