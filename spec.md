@@ -1496,9 +1496,9 @@ Find all [[ref: valid permissions]] `perms[]` (existing not revoked, nor termina
 
 for each `CredentialSchemaPerm` entry `p` from `perms[]`:
 
-- if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
-- if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+- if `p.effective_until` is greater than `effective_from` and `p.effective_from` is lower than `effective_from`, method execution MUST abort.
+- if `p.effective_from` is lower than `effective_until` and `p.effective_until` is greater than `effective_until`, method execution MUST abort.
+- if `p.effective_until` is NULL (never expire) and `effective_until` is greater than `p.effective_from`, method execution MUST abort.
 
 :::note
 In some cases it can be necessary for a validator (o trust registry) to revoke existing permissions for cleanup before creating new ones. Apps should make sure to use the best practices in order to prevent the ledger from growing too fast.
