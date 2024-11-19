@@ -1303,9 +1303,9 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <p>Find all <a class="term-reference" href="#term:valid-permissions">valid permissions</a> <code>perms[]</code> (existing not revoked, nor terminated) for <code>schema_id</code>, <code>type</code>, <code>country</code>, <code>grantee</code>.</p>
 <p>for each <code>CredentialSchemaPerm</code> entry <code>p</code> from <code>perms[]</code>:</p>
 <ul>
-<li>if <code>p.effective_until</code> is greater than <code>effective_from</code>, method execution MUST abort.</li>
-<li>if <code>p.effective_from</code> is lower than <code>effective_until</code>, method execution MUST abort.</li>
-<li>if <code>p.effective_until</code> is NULL (never expire), creation of a new permission doesn’t make any sense and method execution MUST abort.</li>
+<li>if <code>p.effective_until</code> is greater than <code>effective_from</code> and <code>p.effective_from</code> is lower than <code>effective_from</code>, method execution MUST abort.</li>
+<li>if <code>p.effective_from</code> is lower than <code>effective_until</code> and <code>p.effective_until</code> is greater than <code>effective_until</code>, method execution MUST abort.</li>
+<li>if <code>p.effective_until</code> is NULL (never expire) and <code>effective_until</code> is greater than <code>p.effective_from</code>, method execution MUST abort.</li>
 </ul>
 <div id="note-4" class="notice note"><a class="notice-link" href="#note-4">NOTE</a><p>In some cases it can be necessary for a validator (o trust registry) to revoke existing permissions for cleanup before creating new ones. Apps should make sure to use the best practices in order to prevent the ledger from growing too fast.</p>
 </div>
