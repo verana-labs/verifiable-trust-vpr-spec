@@ -668,6 +668,13 @@ For example, the DID directory is essential to dts browsers, such as social dts 
 </tr>
 <tr>
 <td></td>
+<td>Create or update CSPS</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-csp-msg-4-create-or-update-csps" >[MOD-CSP-MSG-4]</a></td>
+</tr>
+<tr>
+<td></td>
 <td>List CSPs</td>
 <td>/dtr/v1/csp/list</td>
 <td>Query</td>
@@ -695,18 +702,11 @@ For example, the DID directory is essential to dts browsers, such as social dts 
 <td><a href="#mod-csp-qry-4-is-authorized-verifier" >[MOD-CSP-QRY-4]</a></td>
 </tr>
 <tr>
-<td>Credential Schema Perm Session</td>
-<td>Create or update CSPS</td>
-<td></td>
-<td>Msg</td>
-<td><a href="#mod-csps-msg-1-create-or-update-csps" >[MOD-CSPS-MSG-1]</a></td>
-</tr>
-<tr>
 <td></td>
 <td>Get CSPS</td>
-<td>/dtr/v1/csps/get</td>
+<td>/dtr/v1/csp/get_session</td>
 <td>Query</td>
-<td><a href="#mod-csps-qry-1-get-csps" >[MOD-CSPS-QRY-1]</a></td>
+<td><a href="#mod-csp-qry-5-get-csps" >[MOD-CSP-QRY-5]</a></td>
 </tr>
 <tr>
 <td>Validation</td>
@@ -1443,6 +1443,147 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>set <code>csp.terminated_by</code> to <a class="term-reference" href="#term:account">account</a> executing the method.</li>
 </ul>
 <p>if <code>csp.deposit</code> is greater than 0, use [MOD-TD-MSG-1] to decrease by <code>dd.deposit</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of account, and set <code>csp.deposit</code> to 0.</p>
+<h4 id="mod-csp-msg-4-create-or-update-csps"><a class="toc-anchor" href="#mod-csp-msg-4-create-or-update-csps" >§</a> [MOD-CSP-MSG-4] Create or Update CSPS</h4>
+<p>Any credential exchange that requires issuer or verifier <code>payer</code> paying fees involves action from the issued or verified <code>wallet</code> (credential recipient in case of credential issuance, received presentation request in case of verification). <code>wallet</code> can be a DTS, an app, a browser. <code>wallet</code> MUST send to <code>payer</code> an uint64 for session identification and creation, plus an <code>account</code> public key identifying the <code>wallet</code>. Then, <code>wallet</code> MUST check session has been created and is valid.</p>
+<img src="https://www.plantuml.com/plantuml/svg/RP5HQuCm4CVV_HH7dwTsRwEChTqSLFRGKfN168mZkM904qbYdVlqIvokCdm99FVBx_wNR8r5RTkw2Wp3Yg36BxXRhw4Jt9O1CgiqhDwmgiX-o2JFubtJn4zQTORq2j10QanB78B6QGGJ3KeBgoFsf0V-okX_J9AVXYAthX84e-S-34Ty0obqdhGAX3y11AQ9axG2ApXhLODX9TK8WaCKHHxiLJkPml3XpxGdJKxY38QC4Kf2KQH9CERoFLsAZTUZ9NZEZja4BkMQ7Byul_5TWQ642sbnxkS11ctirlXo6pFJnDZQKcdnJVnp64e_kkJp9iEDNP7l3wVq_ILPckRmUcrfI7Am9SsUPYbovh4PidLxz-a_" alt="uml diagram">
+<p>See [TR-RESOL] in [DTS-SPECS].</p>
+<div id="todo-1" class="notice todo"><a class="notice-link" href="#todo-1">TODO</a><p>Define how and when UUID is exchanged. (Not needed for implementing this spec). Verifier MUST be able to query holder and see for a given credential schema(s), if holder has a credential and who is the issuer, before creating the CSPS.</p>
+</div>
+<h5 id="mod-csp-msg-4-1-create-or-update-csps-parameters"><a class="toc-anchor" href="#mod-csp-msg-4-1-create-or-update-csps-parameters" >§</a> [MOD-CSP-MSG-4-1] Create or Update CSPS parameters</h5>
+<p>An <a class="term-reference" href="#term:account">account</a> that would like to create or update a <code>CredentialSchemaPermSession</code> entry MUST send a Msg by specifying:</p>
+<ul>
+<li><code>id</code> (uuid) (<em>mandatory</em>): id of the <code>CredentialSchemaPermSession</code>.</li>
+<li><code>executor_perm_id</code> (uint64) (<em>mandatory</em>): the id of the perm the <a class="term-reference" href="#term:account">account</a> executing the method is acting as (if I want to verify, I’ll pass here the id of my VERIFIER perm that justifies I am authorized to verify credentials of <code>executor_perm_id.schema_id</code>)</li>
+<li><code>beneficiary_perm_id</code> (uint64) (<em>MAY be mandatory</em>): the id of the perm the <a class="term-reference" href="#term:account">account</a> executing the method is referring to (if I want to verify, I’ll pass here the id of the ISSUER perm I’m interested in). Mandatory parameter if <code>executor_perm.type</code> is equal to VERIFIER. MUST NOT be specified if <code>executor_perm.type</code> is equal to ISSUER.</li>
+<li><code>user_agent_did</code> (account) (<em>mandatory</em>): the did of the user agent.</li>
+<li><code>wallet_user_agent_did</code> (account) (<em>mandatory</em>): the did of the wallet user agent.</li>
+</ul>
+<h5 id="mod-csp-msg-4-2-create-or-update-csps-precondition-checks"><a class="toc-anchor" href="#mod-csp-msg-4-2-create-or-update-csps-precondition-checks" >§</a> [MOD-CSP-MSG-4-2] Create or Update CSPS precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-csp-msg-4-2-1-create-or-update-csps-checks"><a class="toc-anchor" href="#mod-csp-msg-4-2-1-create-or-update-csps-checks" >§</a> [MOD-CSP-MSG-4-2-1] Create or Update CSPS checks</h6>
+<p>if a mandatory parameter is not present, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li><code>id</code> MUST be a valid uuid and a <code>CredentialSchemaPermSession</code> entry with the same id MUST NOT exist, or if it exists, account running the method MUST be the <code>session.controller</code> of the loaded <code>CredentialSchemaPermSession</code> entry <code>session</code>, else abort.</li>
+<li>if a <code>CredentialSchemaPermSession</code> entry <code>session</code> exist with this <code>id</code>, <code>session.perm_ids[]</code> MUST NOT already contain (<code>executor_perm_id</code>, <code>beneficiary_perm_id</code>), else method MUST abort.</li>
+<li>load <code>CredentialSchemaPerm</code> <code>executor_perm</code> from <code>executor_perm_id</code>.</li>
+<li>if <code>executor_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, the method MUST abort.</li>
+<li>if <a class="term-reference" href="#term:account">account</a> running the method is not <code>executor_perm.grantee</code>, the method MUST abort.</li>
+<li>if <code>executor_perm.type</code> is different than ISSUER or VERIFIER, abort.</li>
+<li>if <code>executor_perm.type</code> is equal to ISSUER:
+<ul>
+<li>if <code>beneficiary_perm_id</code> is not null, MUST abort.</li>
+</ul>
+</li>
+<li>else <code>executor_perm.type</code> is equal to VERIFIER:
+<ul>
+<li>load <code>CredentialSchemaPerm</code> <code>beneficiary_perm</code> from <code>beneficiary_perm_id</code>.</li>
+<li><code>beneficiary_perm.type</code> MUST be ISSUER, else the method MUST abort.</li>
+<li>if <code>beneficiary_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, the method MUST abort.</li>
+<li>if <code>beneficiary_perm.schema_id</code> is different than <code>executor_perm.schema_id</code>, the method MUST abort.</li>
+</ul>
+</li>
+</ul>
+<h6 id="mod-csp-msg-4-2-2-find-beneficiaries"><a class="toc-anchor" href="#mod-csp-msg-4-2-2-find-beneficiaries" >§</a> [MOD-CSP-MSG-4-2-2] Find Beneficiaries</h6>
+<p>To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry), starting from the 2 branches <code>executor_perm</code> and <code>beneficiary_perm</code>. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. <code>executor_perm</code> is never added to the set.</p>
+<p>Example 1: <code>executor_perm.type</code> is equal to ISSUER, and <code>cs.issuer_perm_management_mode</code> is equal to GRANTOR_VALIDATION:</p>
+<img src="https://www.plantuml.com/plantuml/svg/dT2n2eD030RW_PuYwD1940hQgTX1nAM5KuTEn-d5rg9UyI8LIj-zQa4tXqxv0-4BIM18TjGtDGkMP0fP8pHoW8FhmgjIT6SwVs11OAKyIrB1moXEKdu57B3eINSWsmBD59xODHP80zI1lIzpbNlmPW1IAMWGI4Ef-rQ9QKuO9FPPx3X9if2BY9_EwOLlsTNjFtirLmfit_DzLBEaTBkZBO-DgntdE5x7gZcCFGkmLVCBV_KB" alt="uml diagram">
+<p>Example 2: <code>executor_perm.type</code> is equal to ISSUER, and <code>cs.issuer_perm_management_mode</code> is equal to TRUST_REGISTRY:</p>
+<img src="https://www.plantuml.com/plantuml/svg/VS-z2eD040JW_fvYY4KgGGXegc0ZmTQV8fMSToinU5wuMuaGykw91aoNQgSOFcPJpzBnP0QHRiahEH2Cd76C8ZnwpLTXsnifngugwh9gYkoSbrLn0Ssa9hOESbJabt0dPtQG7kmG7BfMjp6U0f1Qmn3OehFJg9kbrtXYyThil2phhFYP6zKZIE8a8RrAsevx_kS9qICCJvy58gLHhyzzxni0" alt="uml diagram">
+<p>Example 3: <code>executor_perm.type</code> is equal to VERIFIER, <code>beneficiary_perm.type</code> is equal to ISSUER, <code>cs.issuer_perm_management_mode</code> is equal to GRANTOR_VALIDATION, and <code>cs.verifier_perm_management_mode</code> is equal to GRANTOR_VALIDATION:</p>
+<img src="https://www.plantuml.com/plantuml/svg/dT9FQy8m60RmUpx5Ynvs4WJ1UXhrKAMN3T8wsAcaoTijOXD9tdQEiU--Mh5LXFddbESDuST3aj2JS5IL6nPsoKknGIZ53cRZCNnfHP_CvckK18EKhv8quz4oJbB-3ZaQBBJKmds3C18zMGTRTEK0X0ToC9mKkSgdyCC0X59G8f25mbP6PVjpcKTYlnqV9yagujcIpr_ILtw5rn-FyMTihzsATTfRnED5V58NToYhVSNBhlNTNOzwh_OO38Df4A1gBMND4_rRkBceqUYvUGwcsz3ChExswZOqCsCX6jN-XSFw1m00" alt="uml diagram">
+<p>Now, let’s build the set.</p>
+<ul>
+<li>create Set <code>found_perm_set</code>.</li>
+</ul>
+<p>if <code>executor_perm.type</code> is equal to VERIFIER or ISSUER, we MUST process ancestors of <code>executor_perm</code>:</p>
+<ul>
+<li>load <code>CredentialSchemaPerm</code> <code>executor_perm</code> from <code>executor_perm_id</code>.</li>
+<li>while <code>executor_perm.validation_id</code> is not null:
+<ul>
+<li>load <code>Validation</code> <code>executor_val</code> from <code>executor_perm.validation_id</code>.</li>
+<li>Add <code>executor_val.validator_perm_id</code> to <code>found_perm_set</code>.</li>
+<li>load <code>CredentialSchemaPerm</code> <code>executor_perm</code> from <code>executor_val.validator_perm_id</code>.</li>
+</ul>
+</li>
+</ul>
+<p>Additionally, if <code>executor_perm.type</code> is equal to VERIFIER, we MUST add <code>beneficiary_perm_id</code> and process its ancestors (else omit):</p>
+<ul>
+<li>Add <code>beneficiary_perm_id</code> to <code>found_perm_set</code>.</li>
+<li>load <code>CredentialSchemaPerm</code> <code>beneficiary_perm</code> from <code>beneficiary_perm_id</code>.</li>
+<li>while <code>beneficiary_perm.validation_id</code> is not null:
+<ul>
+<li>load <code>Validation</code> <code>beneficiary_val</code> from <code>beneficiary_perm.validation_id</code>.</li>
+<li>Add <code>beneficiary_val.validator_perm_id</code> to <code>found_perm_set</code>.</li>
+<li>load <code>CredentialSchemaPerm</code> <code>beneficiary_perm</code> from <code>beneficiary.validator_perm_id</code>.</li>
+</ul>
+</li>
+</ul>
+<h6 id="mod-csp-msg-4-2-3-create-or-update-csps-fee-checks"><a class="toc-anchor" href="#mod-csp-msg-4-2-3-create-or-update-csps-fee-checks" >§</a> [MOD-CSP-MSG-4-2-3] Create or Update CSPS fee checks</h6>
+<p>Account MUST have sufficient available balance for:</p>
+<ul>
+<li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>;</li>
+<li>the required beneficiary fees and its corresponding trust deposit <code>trust_fees</code> as explained below:</li>
+</ul>
+<p>To calculate the required beneficiary fees, use [MOD-CSPS-MSG-1-2-2] to create a Set with all beneficiary permission <code>found_perm_set</code>. Now that we have the set with all ancestors, we can calculate the required fees:</p>
+<ul>
+<li>
+<p>define <code>beneficiary_fees</code> = 0</p>
+</li>
+<li>
+<p>load <code>CredentialSchemaPerm</code> <code>executor_perm</code> from <code>executor_perm_id</code>.</p>
+</li>
+<li>
+<p>if <code>executor_perm.type</code> is equal to VERIFIER: iterate over permissions <code>perm</code> of <code>found_perm_set</code> and set <code>beneficiary_fees</code> = <code>beneficiary_fees</code> + <code>perm.verification_fees</code>.</p>
+</li>
+<li>
+<p>else <code>executor_perm.type</code> is equal to ISSUER: iterate over permissions <code>perm</code> of <code>found_perm_set</code> and set <code>beneficiary_fees</code> = <code>beneficiary_fees</code> + <code>perm.issuance_fees</code>.</p>
+</li>
+</ul>
+<p>Required beneficiary fees, its corresponding trust deposit <code>trust_fees</code> = <code>beneficiary_fees</code> * <code>GlobalVariables.trust_unit_price</code> * (<code>GlobalVariables.trust_deposit_rate</code>), plus wallet and user agent rewards <code>rewards</code> = <code>beneficiary_fees</code> * <code>GlobalVariables.trust_unit_price</code> * (<code>GlobalVariables.user_agent_reward_rate</code> + <code>GlobalVariables.wallet_user_agent_reward_rate</code>).</p>
+<h5 id="mod-csp-msg-4-3-create-or-update-csps-execution"><a class="toc-anchor" href="#mod-csp-msg-4-3-create-or-update-csps-execution" >§</a> [MOD-CSP-MSG-4-3] Create or Update CSPS execution</h5>
+<p>If all precondition checks passed, method is executed.</p>
+<ul>
+<li>
+<p>load <code>CredentialSchemaPerm</code> <code>executor_perm</code> from <code>executor_perm_id</code>.</p>
+</li>
+<li>
+<p>use [MOD-CSPS-MSG-1-2-2] to build <code>found_perm_set</code>.</p>
+</li>
+<li>
+<p>if <code>executor_perm.type</code> is equal to ISSUER:</p>
+<ul>
+<li>for each <code>CredentialSchemaPerm</code> <code>perm</code> from <code>found_perm_set</code>, if <code>perm.issuance_fees</code> &gt; 0:
+<ul>
+<li>transfer <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>) to <code>perm.grantee</code>.</li>
+<li>use [MOD-TD-MSG-1] to increase by <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.grantee</code>.</li>
+<li>use [MOD-TD-MSG-1] to increase by <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>executor_perm.grantee</code>.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>else <code>executor_perm.type</code> is equal to VERIFIER:</p>
+<ul>
+<li>for each <code>CredentialSchemaPerm</code> <code>perm</code> from <code>found_perm_set</code>, if <code>perm.verification_fees</code> &gt; 0:
+<ul>
+<li>transfer <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>) to <code>perm.grantee</code>.</li>
+<li>use [MOD-TD-MSG-1] to increase by <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.grantee</code>.</li>
+<li>use [MOD-TD-MSG-1] to increase by <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>executor_perm.grantee</code>.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>If new, create entry <code>CredentialSchemaPermSession</code> <code>session</code>:</p>
+<ul>
+<li><code>session.id</code>: <code>id</code></li>
+<li><code>session.controller</code>: account running the method</li>
+<li><code>session.perm_ids[]</code>: create and put  (<code>executor_perm_id</code>, <code>beneficiary_perm_id</code>).</li>
+</ul>
+<p>Else update:</p>
+<ul>
+<li>add (<code>executor_perm_id</code>, <code>beneficiary_perm_id</code>) to <code>session.perm_ids[]</code></li>
+</ul>
 <h4 id="mod-csp-qry-1-list-csps"><a class="toc-anchor" href="#mod-csp-qry-1-list-csps" >§</a> [MOD-CSP-QRY-1] List CSPs</h4>
 <p>Anyone CAN execute this method.</p>
 <div id="note-6" class="notice note"><a class="notice-link" href="#note-6">NOTE</a><p>See [MOD-CSP-QRY-3] and [MOD-CSP-QRY-4] to gather required indexes. Added to these 2 methods, frontend will have to be able to filter at least by schema_id.</p>
@@ -1627,155 +1768,13 @@ If the target wallet is a DTS, <code>user_agent_did</code> and <code>wallet_user
 </ul>
 <div id="note-9" class="notice note"><a class="notice-link" href="#note-9">NOTE</a><p>We do not need to verify if a HOLDER perm exists for user_agent_did and for wallet_user_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for user_agent_did and for wallet_user_agent_did.</p>
 </div>
-<h3 id="credential-schema-permission-session-module"><a class="toc-anchor" href="#credential-schema-permission-session-module" >§</a> Credential Schema Permission Session Module</h3>
-<h4 id="mod-csps-msg-1-create-or-update-csps"><a class="toc-anchor" href="#mod-csps-msg-1-create-or-update-csps" >§</a> [MOD-CSPS-MSG-1] Create or Update CSPS</h4>
-<p>Any credential exchange that requires issuer or verifier <code>payer</code> paying fees involves action from the issued or verified <code>wallet</code> (credential recipient in case of credential issuance, received presentation request in case of verification). <code>wallet</code> can be a DTS, an app, a browser. <code>wallet</code> MUST send to <code>payer</code> an uint64 for session identification and creation, plus an <code>account</code> public key identifying the <code>wallet</code>. Then, <code>wallet</code> MUST check session has been created and is valid.</p>
-<img src="https://www.plantuml.com/plantuml/svg/RP5HQuCm4CVV_HH7dwTsRwEChTqSLFRGKfN168mZkM904qbYdVlqIvokCdm99FVBx_wNR8r5RTkw2Wp3Yg36BxXRhw4Jt9O1CgiqhDwmgiX-o2JFubtJn4zQTORq2j10QanB78B6QGGJ3KeBgoFsf0V-okX_J9AVXYAthX84e-S-34Ty0obqdhGAX3y11AQ9axG2ApXhLODX9TK8WaCKHHxiLJkPml3XpxGdJKxY38QC4Kf2KQH9CERoFLsAZTUZ9NZEZja4BkMQ7Byul_5TWQ642sbnxkS11ctirlXo6pFJnDZQKcdnJVnp64e_kkJp9iEDNP7l3wVq_ILPckRmUcrfI7Am9SsUPYbovh4PidLxz-a_" alt="uml diagram">
-<p>See [TR-RESOL] in [DTS-SPECS].</p>
-<div id="todo-1" class="notice todo"><a class="notice-link" href="#todo-1">TODO</a><p>Define how and when UUID is exchanged. (Not needed for implementing this spec). Verifier MUST be able to query holder and see for a given credential schema(s), if holder has a credential and who is the issuer, before creating the CSPS.</p>
-</div>
-<h5 id="mod-csps-msg-1-1-create-or-update-csps-parameters"><a class="toc-anchor" href="#mod-csps-msg-1-1-create-or-update-csps-parameters" >§</a> [MOD-CSPS-MSG-1-1] Create or Update CSPS parameters</h5>
-<p>An <a class="term-reference" href="#term:account">account</a> that would like to create or update a <code>CredentialSchemaPermSession</code> entry MUST send a Msg by specifying:</p>
-<ul>
-<li><code>id</code> (uuid) (<em>mandatory</em>): id of the <code>CredentialSchemaPermSession</code>.</li>
-<li><code>executor_perm_id</code> (uint64) (<em>mandatory</em>): the id of the perm the <a class="term-reference" href="#term:account">account</a> executing the method is acting as (if I want to verify, I’ll pass here the id of my VERIFIER perm that justifies I am authorized to verify credentials of <code>executor_perm_id.schema_id</code>)</li>
-<li><code>beneficiary_perm_id</code> (uint64) (<em>MAY be mandatory</em>): the id of the perm the <a class="term-reference" href="#term:account">account</a> executing the method is referring to (if I want to verify, I’ll pass here the id of the ISSUER perm I’m interested in). Mandatory parameter if <code>executor_perm.type</code> is equal to VERIFIER. MUST NOT be specified if <code>executor_perm.type</code> is equal to ISSUER.</li>
-<li><code>user_agent_did</code> (account) (<em>mandatory</em>): the did of the user agent.</li>
-<li><code>wallet_user_agent_did</code> (account) (<em>mandatory</em>): the did of the wallet user agent.</li>
-</ul>
-<h5 id="mod-csps-msg-1-2-create-or-update-csps-precondition-checks"><a class="toc-anchor" href="#mod-csps-msg-1-2-create-or-update-csps-precondition-checks" >§</a> [MOD-CSPS-MSG-1-2] Create or Update CSPS precondition checks</h5>
-<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
-<h6 id="mod-csps-msg-1-2-1-create-or-update-csps-checks"><a class="toc-anchor" href="#mod-csps-msg-1-2-1-create-or-update-csps-checks" >§</a> [MOD-CSPS-MSG-1-2-1] Create or Update CSPS checks</h6>
-<p>if a mandatory parameter is not present, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
-<ul>
-<li><code>id</code> MUST be a valid uuid and a <code>CredentialSchemaPermSession</code> entry with the same id MUST NOT exist, or if it exists, account running the method MUST be the <code>session.controller</code> of the loaded <code>CredentialSchemaPermSession</code> entry <code>session</code>, else abort.</li>
-<li>if a <code>CredentialSchemaPermSession</code> entry <code>session</code> exist with this <code>id</code>, <code>session.perm_ids[]</code> MUST NOT already contain (<code>executor_perm_id</code>, <code>beneficiary_perm_id</code>), else method MUST abort.</li>
-<li>load <code>CredentialSchemaPerm</code> <code>executor_perm</code> from <code>executor_perm_id</code>.</li>
-<li>if <code>executor_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, the method MUST abort.</li>
-<li>if <a class="term-reference" href="#term:account">account</a> running the method is not <code>executor_perm.grantee</code>, the method MUST abort.</li>
-<li>if <code>executor_perm.type</code> is different than ISSUER or VERIFIER, abort.</li>
-<li>if <code>executor_perm.type</code> is equal to ISSUER:
-<ul>
-<li>if <code>beneficiary_perm_id</code> is not null, MUST abort.</li>
-</ul>
-</li>
-<li>else <code>executor_perm.type</code> is equal to VERIFIER:
-<ul>
-<li>load <code>CredentialSchemaPerm</code> <code>beneficiary_perm</code> from <code>beneficiary_perm_id</code>.</li>
-<li><code>beneficiary_perm.type</code> MUST be ISSUER, else the method MUST abort.</li>
-<li>if <code>beneficiary_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, the method MUST abort.</li>
-<li>if <code>beneficiary_perm.schema_id</code> is different than <code>executor_perm.schema_id</code>, the method MUST abort.</li>
-</ul>
-</li>
-</ul>
-<h6 id="mod-csps-msg-1-2-2-find-beneficiaries"><a class="toc-anchor" href="#mod-csps-msg-1-2-2-find-beneficiaries" >§</a> [MOD-CSPS-MSG-1-2-2] Find Beneficiaries</h6>
-<p>To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry), starting from the 2 branches <code>executor_perm</code> and <code>beneficiary_perm</code>. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. <code>executor_perm</code> is never added to the set.</p>
-<p>Example 1: <code>executor_perm.type</code> is equal to ISSUER, and <code>cs.issuer_perm_management_mode</code> is equal to GRANTOR_VALIDATION:</p>
-<img src="https://www.plantuml.com/plantuml/svg/dT2n2eD030RW_PuYwD1940hQgTX1nAM5KuTEn-d5rg9UyI8LIj-zQa4tXqxv0-4BIM18TjGtDGkMP0fP8pHoW8FhmgjIT6SwVs11OAKyIrB1moXEKdu57B3eINSWsmBD59xODHP80zI1lIzpbNlmPW1IAMWGI4Ef-rQ9QKuO9FPPx3X9if2BY9_EwOLlsTNjFtirLmfit_DzLBEaTBkZBO-DgntdE5x7gZcCFGkmLVCBV_KB" alt="uml diagram">
-<p>Example 2: <code>executor_perm.type</code> is equal to ISSUER, and <code>cs.issuer_perm_management_mode</code> is equal to TRUST_REGISTRY:</p>
-<img src="https://www.plantuml.com/plantuml/svg/VS-z2eD040JW_fvYY4KgGGXegc0ZmTQV8fMSToinU5wuMuaGykw91aoNQgSOFcPJpzBnP0QHRiahEH2Cd76C8ZnwpLTXsnifngugwh9gYkoSbrLn0Ssa9hOESbJabt0dPtQG7kmG7BfMjp6U0f1Qmn3OehFJg9kbrtXYyThil2phhFYP6zKZIE8a8RrAsevx_kS9qICCJvy58gLHhyzzxni0" alt="uml diagram">
-<p>Example 3: <code>executor_perm.type</code> is equal to VERIFIER, <code>beneficiary_perm.type</code> is equal to ISSUER, <code>cs.issuer_perm_management_mode</code> is equal to GRANTOR_VALIDATION, and <code>cs.verifier_perm_management_mode</code> is equal to GRANTOR_VALIDATION:</p>
-<img src="https://www.plantuml.com/plantuml/svg/dT9FQy8m60RmUpx5Ynvs4WJ1UXhrKAMN3T8wsAcaoTijOXD9tdQEiU--Mh5LXFddbESDuST3aj2JS5IL6nPsoKknGIZ53cRZCNnfHP_CvckK18EKhv8quz4oJbB-3ZaQBBJKmds3C18zMGTRTEK0X0ToC9mKkSgdyCC0X59G8f25mbP6PVjpcKTYlnqV9yagujcIpr_ILtw5rn-FyMTihzsATTfRnED5V58NToYhVSNBhlNTNOzwh_OO38Df4A1gBMND4_rRkBceqUYvUGwcsz3ChExswZOqCsCX6jN-XSFw1m00" alt="uml diagram">
-<p>Now, let’s build the set.</p>
-<ul>
-<li>create Set <code>found_perm_set</code>.</li>
-</ul>
-<p>if <code>executor_perm.type</code> is equal to VERIFIER or ISSUER, we MUST process ancestors of <code>executor_perm</code>:</p>
-<ul>
-<li>load <code>CredentialSchemaPerm</code> <code>executor_perm</code> from <code>executor_perm_id</code>.</li>
-<li>while <code>executor_perm.validation_id</code> is not null:
-<ul>
-<li>load <code>Validation</code> <code>executor_val</code> from <code>executor_perm.validation_id</code>.</li>
-<li>Add <code>executor_val.validator_perm_id</code> to <code>found_perm_set</code>.</li>
-<li>load <code>CredentialSchemaPerm</code> <code>executor_perm</code> from <code>executor_val.validator_perm_id</code>.</li>
-</ul>
-</li>
-</ul>
-<p>Additionally, if <code>executor_perm.type</code> is equal to VERIFIER, we MUST add <code>beneficiary_perm_id</code> and process its ancestors (else omit):</p>
-<ul>
-<li>Add <code>beneficiary_perm_id</code> to <code>found_perm_set</code>.</li>
-<li>load <code>CredentialSchemaPerm</code> <code>beneficiary_perm</code> from <code>beneficiary_perm_id</code>.</li>
-<li>while <code>beneficiary_perm.validation_id</code> is not null:
-<ul>
-<li>load <code>Validation</code> <code>beneficiary_val</code> from <code>beneficiary_perm.validation_id</code>.</li>
-<li>Add <code>beneficiary_val.validator_perm_id</code> to <code>found_perm_set</code>.</li>
-<li>load <code>CredentialSchemaPerm</code> <code>beneficiary_perm</code> from <code>beneficiary.validator_perm_id</code>.</li>
-</ul>
-</li>
-</ul>
-<h6 id="mod-csps-msg-1-2-3-create-or-update-csps-fee-checks"><a class="toc-anchor" href="#mod-csps-msg-1-2-3-create-or-update-csps-fee-checks" >§</a> [MOD-CSPS-MSG-1-2-3] Create or Update CSPS fee checks</h6>
-<p>Account MUST have sufficient available balance for:</p>
-<ul>
-<li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>;</li>
-<li>the required beneficiary fees and its corresponding trust deposit <code>trust_fees</code> as explained below:</li>
-</ul>
-<p>To calculate the required beneficiary fees, use [MOD-CSPS-MSG-1-2-2] to create a Set with all beneficiary permission <code>found_perm_set</code>. Now that we have the set with all ancestors, we can calculate the required fees:</p>
-<ul>
-<li>
-<p>define <code>beneficiary_fees</code> = 0</p>
-</li>
-<li>
-<p>load <code>CredentialSchemaPerm</code> <code>executor_perm</code> from <code>executor_perm_id</code>.</p>
-</li>
-<li>
-<p>if <code>executor_perm.type</code> is equal to VERIFIER: iterate over permissions <code>perm</code> of <code>found_perm_set</code> and set <code>beneficiary_fees</code> = <code>beneficiary_fees</code> + <code>perm.verification_fees</code>.</p>
-</li>
-<li>
-<p>else <code>executor_perm.type</code> is equal to ISSUER: iterate over permissions <code>perm</code> of <code>found_perm_set</code> and set <code>beneficiary_fees</code> = <code>beneficiary_fees</code> + <code>perm.issuance_fees</code>.</p>
-</li>
-</ul>
-<p>Required beneficiary fees, its corresponding trust deposit <code>trust_fees</code> = <code>beneficiary_fees</code> * <code>GlobalVariables.trust_unit_price</code> * (<code>GlobalVariables.trust_deposit_rate</code>), plus wallet and user agent rewards <code>rewards</code> = <code>beneficiary_fees</code> * <code>GlobalVariables.trust_unit_price</code> * (<code>GlobalVariables.user_agent_reward_rate</code> + <code>GlobalVariables.wallet_user_agent_reward_rate</code>).</p>
-<h5 id="mod-csps-msg-1-3-create-or-update-csps-execution"><a class="toc-anchor" href="#mod-csps-msg-1-3-create-or-update-csps-execution" >§</a> [MOD-CSPS-MSG-1-3] Create or Update CSPS execution</h5>
-<p>If all precondition checks passed, method is executed.</p>
-<ul>
-<li>
-<p>load <code>CredentialSchemaPerm</code> <code>executor_perm</code> from <code>executor_perm_id</code>.</p>
-</li>
-<li>
-<p>use [MOD-CSPS-MSG-1-2-2] to build <code>found_perm_set</code>.</p>
-</li>
-<li>
-<p>if <code>executor_perm.type</code> is equal to ISSUER:</p>
-<ul>
-<li>for each <code>CredentialSchemaPerm</code> <code>perm</code> from <code>found_perm_set</code>, if <code>perm.issuance_fees</code> &gt; 0:
-<ul>
-<li>transfer <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>) to <code>perm.grantee</code>.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.grantee</code>.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>executor_perm.grantee</code>.</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p>else <code>executor_perm.type</code> is equal to VERIFIER:</p>
-<ul>
-<li>for each <code>CredentialSchemaPerm</code> <code>perm</code> from <code>found_perm_set</code>, if <code>perm.verification_fees</code> &gt; 0:
-<ul>
-<li>transfer <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>) to <code>perm.grantee</code>.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.grantee</code>.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>executor_perm.grantee</code>.</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<p>If new, create entry <code>CredentialSchemaPermSession</code> <code>session</code>:</p>
-<ul>
-<li><code>session.id</code>: <code>id</code></li>
-<li><code>session.controller</code>: account running the method</li>
-<li><code>session.perm_ids[]</code>: create and put  (<code>executor_perm_id</code>, <code>beneficiary_perm_id</code>).</li>
-</ul>
-<p>Else update:</p>
-<ul>
-<li>add (<code>executor_perm_id</code>, <code>beneficiary_perm_id</code>) to <code>session.perm_ids[]</code></li>
-</ul>
-<h4 id="mod-csps-qry-1-get-csps"><a class="toc-anchor" href="#mod-csps-qry-1-get-csps" >§</a> [MOD-CSPS-QRY-1] Get CSPS</h4>
-<h5 id="mod-csps-qry-1-1-get-csps-parameters"><a class="toc-anchor" href="#mod-csps-qry-1-1-get-csps-parameters" >§</a> [MOD-CSPS-QRY-1-1] Get CSPS parameters</h5>
+<h4 id="mod-csp-qry-5-get-csps"><a class="toc-anchor" href="#mod-csp-qry-5-get-csps" >§</a> [MOD-CSP-QRY-5] Get CSPS</h4>
+<h5 id="mod-csp-qry-5-1-get-csps-parameters"><a class="toc-anchor" href="#mod-csp-qry-5-1-get-csps-parameters" >§</a> [MOD-CSP-QRY-5-1] Get CSPS parameters</h5>
 <ul>
 <li><code>id</code> (uuid) (<em>mandatory</em>): the id of the <code>CredentialSchemaPermSession</code>.</li>
 </ul>
-<h5 id="mod-csps-qry-1-2-get-csps-checks"><a class="toc-anchor" href="#mod-csps-qry-1-2-get-csps-checks" >§</a> [MOD-CSPS-QRY-1-2] Get CSPS checks</h5>
-<h5 id="mod-csps-qry-1-3-get-csps-execution"><a class="toc-anchor" href="#mod-csps-qry-1-3-get-csps-execution" >§</a> [MOD-CSPS-QRY-1-3] Get CSPS execution</h5>
+<h5 id="mod-csp-qry-5-2-get-csps-checks"><a class="toc-anchor" href="#mod-csp-qry-5-2-get-csps-checks" >§</a> [MOD-CSP-QRY-5-2] Get CSPS checks</h5>
+<h5 id="mod-csp-qry-5-3-get-csps-execution"><a class="toc-anchor" href="#mod-csp-qry-5-3-get-csps-execution" >§</a> [MOD-CSP-QRY-5-3] Get CSPS execution</h5>
 <p>return <code>CredentialSchemaPermSession</code> entry if found, else return not found.</p>
 <h3 id="validation-module"><a class="toc-anchor" href="#validation-module" >§</a> Validation Module</h3>
 <h4 id="validation-module-overview"><a class="toc-anchor" href="#validation-module-overview" >§</a> Validation Module Overview</h4>
@@ -3009,16 +3008,12 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 <li><a href="#mod-csp-msg-1-create-new-csp" >[MOD-CSP-MSG-1] Create New CSP</a></li>
 <li><a href="#mod-csp-msg-2-revoke-csp" >[MOD-CSP-MSG-2] Revoke CSP</a></li>
 <li><a href="#mod-csp-msg-3-terminate-csp" >[MOD-CSP-MSG-3] Terminate CSP</a></li>
+<li><a href="#mod-csp-msg-4-create-or-update-csps" >[MOD-CSP-MSG-4] Create or Update CSPS</a></li>
 <li><a href="#mod-csp-qry-1-list-csps" >[MOD-CSP-QRY-1] List CSPs</a></li>
 <li><a href="#mod-csp-qry-2-get-csp" >[MOD-CSP-QRY-2] Get CSP</a></li>
 <li><a href="#mod-csp-qry-3-is-authorized-issuer" >[MOD-CSP-QRY-3] Is Authorized Issuer</a></li>
 <li><a href="#mod-csp-qry-4-is-authorized-verifier" >[MOD-CSP-QRY-4] Is Authorized Verifier</a></li>
-</ul>
-</li>
-<li><a href="#credential-schema-permission-session-module" >Credential Schema Permission Session Module</a>
-<ul>
-<li><a href="#mod-csps-msg-1-create-or-update-csps" >[MOD-CSPS-MSG-1] Create or Update CSPS</a></li>
-<li><a href="#mod-csps-qry-1-get-csps" >[MOD-CSPS-QRY-1] Get CSPS</a></li>
+<li><a href="#mod-csp-qry-5-get-csps" >[MOD-CSP-QRY-5] Get CSPS</a></li>
 </ul>
 </li>
 <li><a href="#validation-module" >Validation Module</a>
