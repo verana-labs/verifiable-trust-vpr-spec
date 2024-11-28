@@ -1657,7 +1657,7 @@ If the target wallet is a DTS, <code>user_agent_did</code> and <code>wallet_user
 <p>define <code>time</code> = <code>when</code>, or <code>time</code> = now() if <code>when</code> is null.</p>
 </li>
 <li>
-<p>find <code>perms[]</code> with <code>perm.did</code> equal to <code>issuer_did</code> and <code>perm.schema_id</code> equal to <code>schema_id</code> and <code>perm.type</code> equal to ISSUER.</p>
+<p>find <code>perms[]</code> with <code>perm.did</code> equal to <code>issuer_did</code> and <code>perm.schema_id</code> equal to <code>schema_id</code> and <code>perm.type</code> equal to ISSUER and (if <code>country</code> is unspecified (<code>perm.country</code> IS NULL) else <code>country</code> is specified (<code>perm.country</code> IS NULL or <code>perm.country</code> is equal to <code>country</code>)).</p>
 </li>
 <li>
 <p>for each <code>perm</code> in <code>perms[]</code>:</p>
@@ -1726,7 +1726,7 @@ If the target wallet is a DTS, <code>user_agent_did</code> and <code>wallet_user
 <p>load <code>CredentialSchema</code> <code>cs</code> from <code>schema_id</code>. If <code>cs.verifier_mode</code> is equal to OPEN, return AUTHORIZED.</p>
 </li>
 <li>
-<p>find <code>verifier_perms[]</code> with <code>verifier_perm.did</code> equal to <code>verifier_did</code> and <code>perm.schema_id</code> equal to <code>schema_id</code> and <code>perm.type</code> equal to VERIFIER.</p>
+<p>find <code>verifier_perms[]</code> with <code>verifier_perm.did</code> equal to <code>verifier_did</code> and <code>verifier_perm.schema_id</code> equal to <code>schema_id</code> and <code>verifier_perm.type</code> equal to VERIFIER and (if <code>country</code> is unspecified (<code>verifier_perm.country</code> IS NULL) else <code>country</code> is specified (<code>verifier_perm.country</code> IS NULL or <code>verifier_perm.country</code> is equal to <code>country</code>)).</p>
 </li>
 <li>
 <p>for each <code>perm</code> in <code>verifier_perms[]</code></p>
@@ -1738,7 +1738,7 @@ If the target wallet is a DTS, <code>user_agent_did</code> and <code>wallet_user
 <p>if  <code>verifier_perm</code> is null (no permission has been found), return FORBIDDEN. Else:</p>
 </li>
 <li>
-<p>find <code>issuer_perms[]</code> with <code>issuer_perm.did</code> equal to <code>issuer_did</code> and <code>perm.schema_id</code> equal to <code>schema_id</code> and <code>perm.type</code> equal to ISSUER.</p>
+<p>find <code>issuer_perms[]</code> with <code>issuer_perm.did</code> equal to <code>issuer_did</code> and <code>issuer_perm.schema_id</code> equal to <code>schema_id</code> and <code>issuer_perm.type</code> equal to ISSUER and (if <code>country</code> is unspecified (<code>issuer_perm.country</code> IS NULL) else <code>country</code> is specified (<code>issuer_perm.country</code> IS NULL or <code>issuer_perm.country</code> is equal to <code>country</code>)).</p>
 </li>
 <li>
 <p>for each <code>perm</code> in <code>issuer_perms[]</code>:</p>
