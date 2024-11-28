@@ -1959,7 +1959,7 @@ This method should use [MOD-CSP-QRY-1]. An index might be needed to optimize que
 - define `CredentialSchemaPerm` `issuer_perm` as null.
 - define `time` = `when`, or `time` = now() if `when` is null.
 
-- find `perms[]` with `perm.did` equal to `issuer_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to ISSUER.
+- find `perms[]` with `perm.did` equal to `issuer_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to ISSUER and (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)).
 - for each `perm` in `perms[]`:
   - if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `issuer_perm` to `perm` and exit the *for* loop.
 
@@ -2011,13 +2011,13 @@ This method is used to query if a DID is (or was) authorized to verify a credent
 
 - load `CredentialSchema` `cs` from `schema_id`. If `cs.verifier_mode` is equal to OPEN, return AUTHORIZED.
 
-- find `verifier_perms[]` with `verifier_perm.did` equal to `verifier_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to VERIFIER.
+- find `verifier_perms[]` with `verifier_perm.did` equal to `verifier_did` and `verifier_perm.schema_id` equal to `schema_id` and `verifier_perm.type` equal to VERIFIER and (if `country` is unspecified (`verifier_perm.country` IS NULL) else `country` is specified (`verifier_perm.country` IS NULL or `verifier_perm.country` is equal to `country`)).
 - for each `perm` in `verifier_perms[]`
   - if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `verifier_perm` to `perm` and exit the *for* loop.
 
 - if  `verifier_perm` is null (no permission has been found), return FORBIDDEN. Else:
 
-- find `issuer_perms[]` with `issuer_perm.did` equal to `issuer_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to ISSUER.
+- find `issuer_perms[]` with `issuer_perm.did` equal to `issuer_did` and `issuer_perm.schema_id` equal to `schema_id` and `issuer_perm.type` equal to ISSUER and (if `country` is unspecified (`issuer_perm.country` IS NULL) else `country` is specified (`issuer_perm.country` IS NULL or `issuer_perm.country` is equal to `country`)).
 - for each `perm` in `issuer_perms[]`:
   - if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `issuer_perm` to `perm` and exit the *for* loop.
 
