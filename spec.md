@@ -1044,7 +1044,7 @@ A DTR implementation MUST implement all the following requirements.
 |                                | Get Trust Deposit                       | /dtr/v1/td/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
 
 :::note
-Any method failure in the precondition/basic checks SHOULD lead to a HTTP BAD REQUEST error.
+Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
 :::
 
 ### Trust Registry Module
