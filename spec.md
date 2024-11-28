@@ -1043,6 +1043,10 @@ A DTR implementation MUST implement all the following requirements.
 |                                | Reclaim Trust Deposit                   |                                  | Msg    | [[MOD-TD-MSG-3]](#mod-td-msg-3-reclaim-trust-deposit)   |
 |                                | Get Trust Deposit                       | /dtr/v1/td/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
 
+:::note
+Any method failure in the precondition/basic checks SHOULD lead to a HTTP BAD REQUEST error.
+:::
+
 ### Trust Registry Module
 
 #### [MOD-TR-MSG-1] Create New Trust Registry
