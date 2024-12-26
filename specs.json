@@ -2,14 +2,14 @@
     "specs": [
       
       {
-        "title": "Decentralized Trust Registry v1 Specification",
+        "title": "Verifiable Public Registry v1 Specification",
         "spec_directory": "./",
-        "logo": "https://verana.foundation/logo.svg",
-        "logo_link": "https://verana.foundation",
+        "logo": "https://verana.io/logo.svg",
+        "logo_link": "https://verana.io",
         "source": {
           "host": "github",
           "account": "verana-labs",
-          "repo": "decentralized-trust-registry-spec"
+          "repo": "verifiable-public-registry-spec"
         }
       }
     ]
