@@ -1,4 +1,4 @@
-# Decentralized Trust Registry v1 Specification
+# Decentralized Trust VPR v1 Specification
 
 **Specification Status:** *Draft*
 
@@ -6,7 +6,7 @@
 
 **Editors:**
 
-~ [Fabrice Rochette](https://www.linkedin.com/in/fabricerochette) (2060.io)
+~ [Fabrice Rochette](https://www.linkedin.com/in/fabricerochette) (The Verana Foundation, 2060.io)
 
 <!-- -->
 
@@ -34,11 +34,11 @@ Not to talk about privacy, and what's done with our data.
 
 To build a new, trustable internet, we need new, trustable communication channels, where both ends can be clearly identified, and where providing a service, accessing a service, or creating a new account, should be as simple as presenting a credential.
 
-A **trust layer**, open to any participant, is required for that. This is the purpose of a Decentralized Trust Registry.
+A **trust layer**, open to any participant, is required for that. This is the purpose of a Verifiable Public Registry.
 
 ## About this Document
 
-In order to fully understand the concepts developed in this document, you should have some basic knowledge of [[ref:DID]], [[ref:DIDComm]], [[ref:DTS]], [[ref:trust registry]], ledger-based applications, and more generally, all terms present in the [Terminology](#terminology) section.
+In order to fully understand the concepts developed in this document, you should have some basic knowledge of [[ref:DID]], [[ref:DIDComm]], [[ref:VS]], [[ref:trust registry]], ledger-based applications, and more generally, all terms present in the [Terminology](#terminology) section.
 
 ## Introduction
 
@@ -53,15 +53,15 @@ A trust registry typically expose APIs that are consumed by services that would 
 - can [[ref: participant]] #1 issue credential for schema ABC?
 - can [[ref: participant]] #2 request credential presentation of credential issued by issuer DEF from schema GHI?
 
-### What is a Decentralized Trust Registry?
+### What is a Verifiable Public Registry?
 
 *This section is non-normative.*
 
-A Decentralized Trust Registry ([[ref: DTR]]) is a "registry of registries" public service, which provides:
+A Verifiable Public Registry ([[ref: VPR]]) is a public "registry of trust registries" service, which provides:
 
-- trust registry features, that can be used by all its [[ref: participants]]: create trust registries, credential schemas, define who can issue, verify credential of a specific schema,...
-- a tokenized business model, for charging [[ref: participants]] for [[ref: trust fees]], that are transferred to other [[ref: participants]], and/or locked into [[ref: trust deposits]].
-- a query API, used by Decentralized Trust Service browsers and apps, to enforce application of governance frameworks and rules of created trust registries.
+- trust registry features, that can be used by all its [[ref: participants]]: create trust registries, for each trust registry, define its credential schemas, who can issue, verify credential of a specific credential schema,...
+- a tokenized business model(s), for charging [[ref: participants]] for [[ref: trust fees]], that are transferred to other [[ref: participants]], and/or locked into [[ref: trust deposits]].
+- a query API, used by Verifiable Services, Verifiable User Agents, to enforce application of governance frameworks and rules of created trust registries.
 
 ### Conformance
 
@@ -71,16 +71,16 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ## Terminology
 
 [[def: account, accounts]]:
-~ A [[ref: decentralized trust registry]] account. An account has one or more controller, that can be a user, groups...
+~ A [[ref: verifiable public registry]] account. An account has one or more controller, that can be a user, groups...
 
 [[def: applicant, applicants]]:
 ~ A [[ref: controller]] that starts a [[ref: validation process]].
 
 [[def: controller, controllers]]:
-~ An [[ref: account]] which is the controller of a specific resource in an [[ref: DTR]].
+~ An [[ref: account]] which is the controller of a specific resource in an [[ref: VPR]].
 
 [[def: credential schema, credential schemas]]:
-~ An [[ref: DTR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
+~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
 
 [[def: credential schema permission, credential schema permissions, CSP]]:
 ~ A permission, linked to a [[ref: credential schema]], that represent a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], or [[ref: verifier grantor]] of a [[ref: credential schema]].
@@ -94,38 +94,38 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: decentralized identifier document, DID Document, DID Documents]]:
 ~ A DID Document, as specified in [[spec-norm:DID-CORE]].
 
-[[def: decentralized trust registry, DTR]]:
-~ a decentralized, ledger-based network, which provides: trust registry features that can be used by all its [[ref: participants]], including credential schema management, issuer and verifier management; and a tokenized business model for  charging/rewarding [[ref: participants]].
+[[def: verifiable public registry, VPR, VPRs]]:
+~ a public, normally decentralized, ledger-based network, which provides: trust registry features, that can be used by all its [[ref: participants]]: create trust registries, for each trust registry, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
 
-[[def: decentralized trust service, DTS, DTSs]]:
-~ A service, usually provided using [[ref: DIDComm]], that can be deployed anywhere by its owner, and that is using the decentralized trust layer provided by an [[ref: DTR]], and has a resolvable [[ref: proof of trust]].
+[[def: verifiable service, VS, VSs]]:
+~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable [[ref: proof of trust]]. See [[ref: DT Spec]].
 
-[[def: Decentralized Trust Specification, DT Specs]]:
-~ see [DT Specs](https://github.com/verana-labs/decentralized-trust-specs).
+[[def: verifiable user agent, VUA, VUAs]]:
+~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: DT Spec]].
 
-[[def: decentralized trust user agent, DTUA, DTUAs]]:
-~ A user agent for accessing and using [[ref: DTSs]]. To be considered as a [[ref: DTUA]], a user agent must comply with [[ref: Decentralized Trust Specification]].
+[[def: Decentralized Trust Specification, DT Specs, DT Spec]]:
+~ see [DT Spec](https://github.com/verana-labs/decentralized-trust-spec).
 
 [[def: denom]]:
-~ Native token of an [[ref: DTR]], example: ts.
+~ Native token of a [[ref: VPR]], example: VNA.
 
 [[def: DID Directory, DID directory]]:
-~ A repository of DIDs in an DTR.
+~ A repository of DIDs in an VPR.
 
 [[def: entity, entities]]:
 ~ An [[ref: account]], a [[ref: group]], or the [[ref: governance authority]].
 
 [[def: essential credential schema, essential credential schemas]]:
-~ Default [[ref: credential schema]], created at genesis of an [[ref: DTR]], that provide the basis for a trust layer to exist in the ecosystem so that [[ref: DTUA]] can generate a [[ref: proof of trust]].
+~ Default [[ref: credential schema]], created at genesis of an [[ref: VPR]], that provide the basis for a trust layer to exist in the ecosystem so that [[ref: VUA]] can generate a [[ref: proof of trust]].
 
 [[def: estimated transaction fees]]:
-~ Estimated fees required, in [[ref: denom]], that is passed when execute a [[ref: transaction]] in an [[ref: DTR]]. Usually, a estimated transaction fees are always slightly greater than [[ref: transaction fees]], to make sure the execution of the transaction will not be aborted for an out-of-gas situation. Unused gas is refunded to account.
+~ Estimated fees required, in [[ref: denom]], that is passed when execute a [[ref: transaction]] in an [[ref: VPR]]. Usually, a estimated transaction fees are always slightly greater than [[ref: transaction fees]], to make sure the execution of the transaction will not be aborted for an out-of-gas situation. Unused gas is refunded to account.
 
 [[def: governance framework, GF]]:
-~ The governance framework (GF) of a [[ref: DTR]].
+~ The governance framework (GF) of a [[ref: VPR]].
 
 [[def: governance authority, GA]]:
-~ The governance authority (GA) of a [[ref: DTR]].
+~ The governance authority (GA) of a [[ref: VPR]].
 
 [[def: group]]:
 ~ A group.
@@ -143,28 +143,28 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ a Json Schema, as specified in [https://json-schema.org/specification](https://json-schema.org/specification).
 
 [[def: keeper]]:
-~ A storage map(key, value) in the ledger of an [[ref: DTR]].
+~ A storage map(key, value) in the ledger of an [[ref: VPR]].
 
 [[def: linked-vp]]:
 ~ A presentation of a [[ref: verifiable credential]] as specified in [LINKED-VP](https://identity.foundation/linked-vp/).
 
 [[def: participant, participants]]:
-~ An entity that uses an [[ref: DTR]] and its trust layer to provide or use services.
+~ An entity that uses an [[ref: VPR]] and its trust layer to provide or use services.
 
 [[def: proof of trust]]:
-~ Visual representation using [[ref: essential credential schemas]] of a [[ref: trust resolution]] process of a [[ref: DTS]], for identifying the [[ref: DTS]], its owner, and the [[ref: issuer]] of the verifiable credential of its owner.
+~ Visual representation using [[ref: essential credential schemas]] of a [[ref: trust resolution]] process of a [[ref: VS]], for identifying the [[ref: VS]], its owner, and the [[ref: issuer]] of the verifiable credential of its owner.
 
 [[def: query]]:
-~ A read-only action that perform some reading in an [[ref: DTR]] and returns value.
+~ A read-only action that perform some reading in an [[ref: VPR]] and returns value.
 
 [[def: subject, subjects]]:
 ~ A thing about which claims are made. Example subjects include human beings, animals, things, and organization, a [[ref: DID]]...
 
 [[def: transaction, transactions]]:
-~ An action that modifies the ledger of an [[ref: DTR]] and which execution requires transaction fees.
+~ An action that modifies the ledger of an [[ref: VPR]] and which execution requires transaction fees.
 
 [[def: transaction fees]]:
-~ Fees required, in [[ref: denom]], to execute a [[ref: transaction]] in an [[ref: DTR]].
+~ Fees required, in [[ref: denom]], to execute a [[ref: transaction]] in an [[ref: VPR]].
 
 [[def: trust deposit, trust deposits]]:
 ~ A financial deposit that is used as a trust guarantee. For a given [[ref: controller]], its trust deposit is increased when running validation process (either as an [[ref: applicant]] or as a [[ref: validator]]), or when registering [[ref: DID]] in the DID directory.
@@ -182,7 +182,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ An approved list of [[ref: issuers]] and [[ref: verifiers]] that are authorized to issue/verify certain credentials in an ecosystem.
 
 [[def: trust resolution]]:
-~ Process run by, for example a [[ref: DTUA]], which purpose is to recursively resolve [[ref: DID]] by digging into [[ref: DID Documents]] and look for [[ref: linked-vp]] entries and their [[ref: issuer]] [[ref: DIDs]], and [trust registry](https://trustoverip.github.io/tswg-trust-registry-protocol/) entries to gather whether the service provided by the [[ref: DID]] is trustable (and legitimate), or not.
+~ Process run by, for example a [[ref: VUA]] or a [[ref: VS]], which purpose is to recursively resolve [[ref: DID]] by digging into [[ref: DID Documents]] and look for [[ref: linked-vp]] entries and their [[ref: issuer]] [[ref: DIDs]], and trust-registry entries to gather whether the service provided by the [[ref: DID]] is trustable (and legitimate), or not.
 
 [[def: URI, URIs]]
 ~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
@@ -205,13 +205,13 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: verifiable credential, verifiable credentials]]:
 ~ A verifiable credential as defined in [[spec-norm:VC-DATA-MODEL]].
 
-## High Level DTR Features
+## High Level VPR Features
 
 ### Trust Registry Management
 
 *This section is non-normative.*
 
-In an [[ref: DTR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]]. `TrustRegistry` entry includes human readable [[ref: trust registry governance framework]] that defines the ecosystem rules that will be enforced by using the [[ref: DTR]] features.
+In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]]. `TrustRegistry` entry includes human readable [[ref: trust registry governance framework]] that defines the ecosystem rules that will be enforced by using the [[ref: VPR]] features.
 
 ### Credential Schema, Permissions, and Validation process
 
@@ -226,7 +226,7 @@ More specifically, [[ref: controller]] can configure, for a credential schema:
 - if anyone can *issue* credentials of this schema, or if it is restricted to specific issuers. If restricted, how are issuers selected: directly by the trust registry, or through one or more *issuer grantors* by running a validation process.
 - if anyone can *verify* credentials of this schema, or if it is restricted to specific verifiers. If restricted, how are verifiers selected: directly by the trust registry, or through one or more *verifier grantors* by running a validation process.
 
-For being an issuer, issuer grantor, verifier, or verifier grantor, it is needed to have an account in the [[ref: DTR]] and run a validation process. A validation process is run between an *applicant* (the one that would like to obtain a permission for a given schema) and a *validator* (the one that has granted permission(s) for validating applicants and create them permissions). Running a validation process usually involve the payment of fees.
+For being an issuer, issuer grantor, verifier, or verifier grantor, it is needed to have an account in the [[ref: VPR]] and run a validation process. A validation process is run between an *applicant* (the one that would like to obtain a permission for a given schema) and a *validator* (the one that has granted permission(s) for validating applicants and create them permissions). Running a validation process usually involve the payment of fees.
 
 #### Issuers
 
@@ -280,7 +280,7 @@ Based on the verifier configuration mode of the credential schema, issuer granto
 
 *This section is non-normative.*
 
-To get issued a verifiable credential from a given schema, it is usually not needed to have an [[ref: account]], because the finality of the operation is the delivery of a credential, not the creation of a permission in the [[ref: DTR]]. However, if the issuer would like to charge the holder for issuing the credential to it, an account is needed.
+To get issued a verifiable credential from a given schema, it is usually not needed to have an [[ref: account]], because the finality of the operation is the delivery of a credential, not the creation of a permission in the [[ref: VPR]]. However, if the issuer would like to charge the holder for issuing the credential to it, an account is needed.
 
 #### Examples
 
@@ -327,47 +327,47 @@ u --> v1 : present credential to
 ```plantuml
 scale max 800 width
 actor "Applicant\n(issuer candidate)\nAccount" as ApplicantAccount 
-actor "Applicant\n(issuer candidate)\nDTS Browser" as ApplicantBrowser 
+actor "Applicant\n(issuer candidate)\nVS Browser" as ApplicantBrowser 
 
-actor "Validator\n(issuer grantor)\nDTS" as ValidatorDTS
+actor "Validator\n(issuer grantor)\nVS" as ValidatorVS
 actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
 
-participant "Decentralized Trust Registry" as DTR #3fbdb6
+participant "Verifiable Public Registry" as VPR #3fbdb6
 
-ApplicantAccount --> DTR: create new validation with Validator 
-DTR <-- DTR: create validation entry.
-ApplicantAccount <-- DTR: validation entry created
-ApplicantBrowser --> ValidatorDTS: connect to validator DTS DID found in validation.perm\nby creating a DIDComm connection
-ApplicantBrowser <-- ValidatorDTS: DIDComm connection established.
-ApplicantBrowser --> ValidatorDTS: I want to proceed with validation.id=...
-ValidatorDTS --> ValidatorDTS: load validation with id=...\nand verify the associated validation.perm is referring to me
-ApplicantBrowser <-- ValidatorDTS: request proof of control\nof validation.applicant account (blind sign)
-ApplicantBrowser --> ValidatorDTS: send blind sign proof of account
-ApplicantBrowser <-- ValidatorDTS: proof accepted, you are the controller\nof validation entry, I trust you.
-ApplicantBrowser <-- ValidatorDTS: which DID do you want to register as an issuer?
-ApplicantBrowser --> ValidatorDTS: send DID
-ValidatorDTS --> ValidatorDTS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorDTS: request proof of ownership\nof the DID to be registered in the ISSUER permission (blind sign)
-ApplicantBrowser --> ValidatorDTS: send blind sign proofs
-ApplicantBrowser <-- ValidatorDTS: proof accepted, you are the controller of this DID, I trust you.
-note over ApplicantBrowser, ValidatorDTS #EEEEEE: (*optional*) repeat the following until tasks completed
-ApplicantBrowser <-- ValidatorDTS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
-ApplicantBrowser --> ValidatorDTS: perform requested tasks...
-note over ApplicantBrowser, ValidatorDTS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorDTS: Your are a legitimate candidate. I'll now create an ISSUER permission for your account and DID.
-ValidatorAccount --> DTR #3fbdb6: set validation.state to VALIDATED\ncreate permission(s) for applicant.
-DTR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorDTS: notify ISSUER permission created for your account and DID.\nDID can now issue credentials of this schema.
+ApplicantAccount --> VPR: create new validation with Validator 
+VPR <-- VPR: create validation entry.
+ApplicantAccount <-- VPR: validation entry created
+ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validation.perm\nby creating a DIDComm connection
+ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
+ApplicantBrowser --> ValidatorVS: I want to proceed with validation.id=...
+ValidatorVS --> ValidatorVS: load validation with id=...\nand verify the associated validation.perm is referring to me
+ApplicantBrowser <-- ValidatorVS: request proof of control\nof validation.applicant account (blind sign)
+ApplicantBrowser --> ValidatorVS: send blind sign proof of account
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof validation entry, I trust you.
+ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
+ApplicantBrowser --> ValidatorVS: send DID
+ValidatorVS --> ValidatorVS: resolve DID and get pub keys
+ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be registered in the ISSUER permission (blind sign)
+ApplicantBrowser --> ValidatorVS: send blind sign proofs
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of this DID, I trust you.
+note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
+ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
+ApplicantBrowser --> ValidatorVS: perform requested tasks...
+note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
+ApplicantBrowser <-- ValidatorVS: Your are a legitimate candidate. I'll now create an ISSUER permission for your account and DID.
+ValidatorAccount --> VPR #3fbdb6: set validation.state to VALIDATED\ncreate permission(s) for applicant.
+VPR --> ValidatorAccount: Receive trust fees.
+ApplicantBrowser <-- ValidatorVS: notify ISSUER permission created for your account and DID.\nDID can now issue credentials of this schema.
 ```
 
 ### DID Directory Management
 
 *This section is non-normative.*
 
-The [[ref: DID]] directory is a public database of [[ref: DID]] that can be used by crawlers to index the metadata of the [[ref: DTS]] provided by these [[ref: DID]].
+The [[ref: DID]] directory is a public database of [[ref: DID]] that can be used by crawlers to index the metadata of the [[ref: VS]] provided by these [[ref: DID]].
 
-Search engines simply need to iterate over the [[ref: DID Directory]] and index [[ref: DTSs]] based on [[ref: DTS]] metadata (DID Document, presented credentials,...)
-For example, the DID directory is essential to dts browsers, such as social dts browsers, cdn dts browsers,... but can although be used by a general classic form-based **search engine** that would return simple link(s) for accessing [[ref: DTSs]].
+Search engines simply need to iterate over the [[ref: DID Directory]] and index [[ref: VSs]] based on [[ref: VS]] metadata (DID Document, presented credentials,...)
+For example, the DID directory is essential to dts browsers, such as social dts browsers, cdn dts browsers,... but can although be used by a general classic form-based **search engine** that would return simple link(s) for accessing [[ref: VSs]].
 
 Any [[ref: participant]] can register a [[ref: DID]] in the DID directory by passing some [[ref: trust fees]] and/or [[ref: trust deposit]] .
 
@@ -378,8 +378,8 @@ scale max 800 width
 object "DID Directory" as didd
 object "Crawler" as crawler #3fbdb6
 object "Index" as index #3fbdb6
-object "DTS #1" as dts1 #7677ed
-object "DTS #2" as dts2 #7677ed
+object "VS #1" as dts1 #7677ed
+object "VS #2" as dts2 #7677ed
 object "Browser" as browser #00b0f0
 object "User" as user
 didd <|-- crawler : iterate over DID directory
@@ -398,15 +398,15 @@ user <|-- browser : show result
 
 *This section is non-normative.*
 
-In a [[ref: DTR]], each participant [[ref: account]] has a corresponding [[ref: trust deposit]].
+In a [[ref: VPR]], each participant [[ref: account]] has a corresponding [[ref: trust deposit]].
 
-This trust deposit is automatically funded when executing transactions that involve trust: creation of entities such as trust registries, credential schemas, did in did directory; fees transferred from one participant to other participant(s) for the execution of a service,...
+This trust deposit is automatically funded when executing transactions that involve trust: creation of entities such as trust registries, credential schemas, did in did directory; fees transferred from one participant to other participant(s) for the execution of a service, presentation or issuance of a credential...
 
-Fundamentally, the trust deposit enables the so called "Proof-of-Trust" (PoT) feature of the [[ref:DTR]]:
+Fundamentally, the trust deposit enables the so called "Proof-of-Trust" (PoT) feature of the [[ref:VPR]]:
 
-- the more you use the [[ref: DTR]], the more your [[ref: trust deposit]] grows.
-- a trust deposit generates yield: in a DTR, block execution transaction fees are distributed not only to network validators, but to trust deposit owners as well.
-- if you do not respect the governance framework of the [[ref: DTR]] (or run fraudulent activities) your deposit can be partially or fully slashed by the governance authority.
+- the more you use the [[ref: VPR]], the more your [[ref: trust deposit]] grows.
+- a trust deposit generates yield: in a VPR, block execution transaction fees are distributed not only to network validators, but to trust deposit owners as well.
+- if you do not respect the governance framework of the [[ref: VPR]] (or run fraudulent activities) your deposit can be partially or fully slashed by the governance authority.
 - if you do not respect the governance framework of the [[ref: trust registries]] you are interacting with (as issuer, verifier, holder, etc...) part of your deposit can be slashed by the governance authority of the corresponding trust registry.
 - when your deposit has been slashed, you need to refill it in order to continue to use the services that generated the sanction.
 - when you stop using a service, you can free its corresponding trust deposit.
@@ -416,15 +416,15 @@ Fundamentally, the trust deposit enables the so called "Proof-of-Trust" (PoT) fe
 
 *This section is non-normative.*
 
-The following fees are not directly sent to a specific participant but are distributed using the normal distribution principle of a [[ref: DTR]].
+The following network fees are not directly sent to a specific participant but are distributed using the normal distribution principle of a [[ref: VPR]].
 
-Creating an instance of one of the following entities implies paying fees and sending funds to the trust deposit:
+Creating an instance of one of the following entities implies paying network fees and sending funds to the trust deposit:
 
 - Trust Registries (once)
 - Credential Schema (once)
 - Did Directory (renewable subscription)
 
-Other operations that just imply paying fees:
+Other operations that just imply paying network fees:
 
 - Updating governance frameworks of Trust Registries
 - Removing a Did from the Did Directory
@@ -434,7 +434,7 @@ Other operations that just imply paying fees:
 
 *This section is non-normative.*
 
-The validation fees are partially sent to specific participant(s), the rest is sent to trust deposits or distributed using the normal distribution principle of a [[ref: DTR]].
+The validation fees are partially sent to specific participant(s), the remaining fees are sent to trust deposits or treated as normal network fees and distributed using the normal distribution principle of a [[ref: VPR]].
 
 | Payee → Payer ↓  | Trust Registry                      | Issuer Grantor                        | Verifier Grantor                    | Issuer                              | Verifier | Holder                                  |
 |------------------|-------------------------------------|---------------------------------------|-------------------------------------|-------------------------------------|----------|-----------------------------------------|
@@ -453,7 +453,7 @@ The validation fees are partially sent to specific participant(s), the rest is s
 
 *This section is non-normative.*
 
-The Pay per issued credential fees are partially sent to specific participant(s), the rest is sent to trust deposits or distributed using the normal distribution principle of a [[ref: DTR]].
+The Pay per issued credential fees are partially sent to specific participant(s), the rest is sent to trust deposits or distributed using the normal distribution principle of a [[ref: VPR]].
 
 - When a participant is granted an ISSUER permission for a given schema, trust registry and issuer grantor may define *issuance fees* for each issued credential. In this case, ISSUER must pay these fees in order to be able to deliver the credential to the holder.
 - Wallet User Agent and User Agent are rewarded, too.
@@ -534,7 +534,7 @@ issuera --> issuertd:  \t+3 TUs
 
 *This section is non-normative.*
 
-The Pay per issued credential fees are partially sent to specific participant(s), the rest is sent to trust deposits or distributed using the normal distribution principle of a [[ref: DTR]].
+The Pay per issued credential fees are partially sent to specific participant(s), the rest is sent to trust deposits or distributed using the normal distribution principle of a [[ref: VPR]].
 
 - When a participant is granted a VERIFIER permission for a given schema, trust registry, issuer grantor, issuer, verifier grantor may define *verification fees* for each verified credential. In this case, VERIFIER must pay these fees in order to be able to request presentation, for a specific issuer, of a credential of this schema to the holder.
 - Wallet User Agent and User Agent are rewarded, too.
@@ -632,11 +632,11 @@ verifiera --> verifiertd:  \t+11.4 TUs
 
 ```
 
-## Governance of a DTR
+## Governance of a VPR
 
 *This section is non-normative.*
 
-A [[ref: governance framework]] must define the governance rules of an [[ref: DTR]]. A [[ref: governance authority]] will ensure the application of the [[ref: governance framework]] rules and if necessary apply some financial sanctions.
+A [[ref: governance framework]] must define the governance rules of an [[ref: VPR]]. A [[ref: governance authority]] will ensure the application of the [[ref: governance framework]] rules and if necessary apply some financial sanctions.
 
 ## Data model
 
@@ -990,7 +990,7 @@ account  --o td: account
 
 ## Module Requirements
 
-All [[ref: DTR]] modules MUST, at least, provide:
+All [[ref: VPR]] modules MUST, at least, provide:
 
 - A [[ref: keeper]](s), used to access the module's store(s) and update the state.
 - A Msg service, used to process messages when they are routed to the module by BaseApp and trigger state-transitions.
@@ -1001,47 +1001,47 @@ All [[ref: DTR]] modules MUST, at least, provide:
 For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified **again** upon method execution
 :::
 
-A DTR implementation MUST implement all the following requirements.
+A VPR implementation MUST implement all the following requirements.
 
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      |
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|
 | Trust Registry                 | Create a Trust Registry                 |                                  | Msg    | [[MOD-TR-MSG-1]](#mod-tr-msg-1-create-new-trust-registry)   |
 |                                | Add Governance Framework Document       |                                  | Msg    | [[MOD-TR-MSG-2]](#mod-tr-msg-2-add-governance-framework-document)   |
 |                                | Increase Active Version                 |                                  | Msg    | [[MOD-TR-MSG-3]](#mod-tr-msg-3-increase-active-governance-framework-version)   |
-|                                | Get Trust Registry                      | /dtr/v1/tr/get                  | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-1-get-trust-registry)   |
-|                                | List Trust Registries                   | /dtr/v1/tr/list                 | Query  | [[MOD-TR-QRY-2]](#mod-tr-qry-2-list-trust-registries)   |
-|                                | Get Trust Registry with DID             | /dtr/v1/tr/get_with_did         | Query  | [[MOD-TR-QRY-3]](#mod-tr-qry-3-get-trust-registry-with-did)   |
+|                                | Get Trust Registry                      | /vpr/v1/tr/get                  | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-1-get-trust-registry)   |
+|                                | List Trust Registries                   | /vpr/v1/tr/list                 | Query  | [[MOD-TR-QRY-2]](#mod-tr-qry-2-list-trust-registries)   |
+|                                | Get Trust Registry with DID             | /vpr/v1/tr/get_with_did         | Query  | [[MOD-TR-QRY-3]](#mod-tr-qry-3-get-trust-registry-with-did)   |
 | Credential Schema              | Create a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |
-|                                | List Credential Schemas                 | /dtr/v1/cs/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |
-|                                | Get a Credential Schema                 | /dtr/v1/cs/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |
-|                                | Render Json Schema                      | /dtr/v1/cs/js                   | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |
+|                                | List Credential Schemas                 | /vpr/v1/cs/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |
+|                                | Get a Credential Schema                 | /vpr/v1/cs/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |
+|                                | Render Json Schema                      | /vpr/v1/cs/js                   | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |
 | Credential Schema Permission   | Create new CSP                          |                                 | Msg    | [[MOD-CSP-MSG-1]](#mod-csp-msg-1-create-new-csp)  |
 |                                | Revoke CSP                              |                                 | Msg    | [[MOD-CSP-MSG-2]](#mod-csp-msg-2-revoke-csp)  |
 |                                | Terminate CSP                           |                                 | Msg    | [[MOD-CSP-MSG-3]](#mod-csp-msg-3-terminate-csp)  |
 |                                | Create or update CSPS                   |                                 | Msg    | [[MOD-CSP-MSG-4]](#mod-csp-msg-4-create-or-update-csps) |
-|                                | List CSPs                               | /dtr/v1/csp/list                | Query  | [[MOD-CSP-QRY-1]](#mod-csp-qry-1-list-csps)  |
-|                                | Get CSP                                 | /dtr/v1/csp/get                 | Query  | [[MOD-CSP-QRY-2]](#mod-csp-qry-2-get-csp)  |
-|                                | Is Authorized Issuer                    | /dtr/v1/csp/authorized_issuer   | Query  | [[MOD-CSP-QRY-3]](#mod-csp-qry-3-is-authorized-issuer)  |
-|                                | Is Authorized Verifier                  | /dtr/v1/csp/authorized_verifier | Query  | [[MOD-CSP-QRY-4]](#mod-csp-qry-4-is-authorized-verifier)  |
-|                                | Get CSPS                                | /dtr/v1/csp/get_session         | Query  | [[MOD-CSP-QRY-5]](#mod-csp-qry-5-get-csps) |
+|                                | List CSPs                               | /vpr/v1/csp/list                | Query  | [[MOD-CSP-QRY-1]](#mod-csp-qry-1-list-csps)  |
+|                                | Get CSP                                 | /vpr/v1/csp/get                 | Query  | [[MOD-CSP-QRY-2]](#mod-csp-qry-2-get-csp)  |
+|                                | Is Authorized Issuer                    | /vpr/v1/csp/authorized_issuer   | Query  | [[MOD-CSP-QRY-3]](#mod-csp-qry-3-is-authorized-issuer)  |
+|                                | Is Authorized Verifier                  | /vpr/v1/csp/authorized_verifier | Query  | [[MOD-CSP-QRY-4]](#mod-csp-qry-4-is-authorized-verifier)  |
+|                                | Get CSPS                                | /vpr/v1/csp/get_session         | Query  | [[MOD-CSP-QRY-5]](#mod-csp-qry-5-get-csps) |
 | Validation                     | Create a Validation                     |                                 | Msg    | [[MOD-V-MSG-1]](#mod-v-msg-1-create-new-validation)    |
 |                                | Renew a Validation                      |                                 | Msg    | [[MOD-V-MSG-2]](#mod-v-msg-2-renew-validation)    |
 |                                | Set Validated                           |                                 | Msg    | [[MOD-V-MSG-3]](#mod-v-msg-3-set-validated)    |
 |                                | Request Validation Termination          |                                 | Msg    | [[MOD-V-MSG-4]](#mod-v-msg-4-request-validation-termination)    |
 |                                | Confirm Validation Termination          |                                 | Msg    | [[MOD-V-MSG-5]](#mod-v-msg-5-confirm-validation-termination)    |
 |                                | Cancel Validation                       |                                 | Msg    | [[MOD-V-MSG-6]](#mod-v-msg-6-cancel-validation)    |
-|                                | List Validations                        | /dtr/v1/val/list                | Query  | [[MOD-V-QRY-1]](#mod-v-qry-1-list-validations)    |
-|                                | Get a Validation                        | /dtr/v1//val/get                | Query  | [[MOD-V-QRY-2]](#mod-v-qry-2-get-a-validation)    |
+|                                | List Validations                        | /vpr/v1/val/list                | Query  | [[MOD-V-QRY-1]](#mod-v-qry-1-list-validations)    |
+|                                | Get a Validation                        | /vpr/v1//val/get                | Query  | [[MOD-V-QRY-2]](#mod-v-qry-2-get-a-validation)    |
 | DID Directory                  | Add a DID                               |                                  | Msg    | [[MOD-DD-MSG-1]](#mod-dd-msg-1-add-a-did)   |
 |                                | Renew a DID                             |                                  | Msg    | [[MOD-DD-MSG-2]](#mod-dd-msg-2-renew-a-did)   |
 |                                | Remove a DID                            |                                  | Msg    | [[MOD-DD-MSG-3]](#mod-dd-msg-3-remove-a-did)   |
 |                                | Touch a DID                             |                                  | Msg    | [[MOD-DD-MSG-4]](#mod-dd-msg-4-touch-a-did)   |
-|                                | List DIDs                               | /dtr/v1/dd/list                 | Query  | [[MOD-DD-QRY-1]](#mod-dd-qry-1-list-dids)   |
-|                                | Get a DID                               | /dtr/v1/dd/get                  | Query  | [[MOD-DD-QRY-2]](#mod-dd-qry-2-get-a-did)   |
+|                                | List DIDs                               | /vpr/v1/dd/list                 | Query  | [[MOD-DD-QRY-1]](#mod-dd-qry-1-list-dids)   |
+|                                | Get a DID                               | /vpr/v1/dd/get                  | Query  | [[MOD-DD-QRY-2]](#mod-dd-qry-2-get-a-did)   |
 | Trust Deposit                  | Adjust Trust Deposit                    |                                  | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-adjust-trust-deposit)   |
 |                                | Reclaim Trust Deposit Interests         |                                  | Msg    | [[MOD-TD-MSG-2]](#mod-td-msg-2-reclaim-trust-deposit-interests)   |
 |                                | Reclaim Trust Deposit                   |                                  | Msg    | [[MOD-TD-MSG-3]](#mod-td-msg-3-reclaim-trust-deposit)   |
-|                                | Get Trust Deposit                       | /dtr/v1/td/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
+|                                | Get Trust Deposit                       | /vpr/v1/td/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -1303,7 +1303,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 - `tr_id` MUST represent an existing `TrustRegistry` entry `tr` and `tr.controller` MUST be the account executing the method.
-- `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] must be a valid https URL that terminates with string `/dtr/v1/cs/js/DTR_CREDENTIAL_SCHEMA_ID` as specified in [MOD-CS-QRY-3]. DTR_CREDENTIAL_SCHEMA_ID will be replaced during execution by the auto-generated id of this `CredentialSchema`.
+- `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] must be a valid https URL that terminates with string `/vpr/v1/cs/js/VPR_CREDENTIAL_SCHEMA_ID` as specified in [MOD-CS-QRY-3]. VPR_CREDENTIAL_SCHEMA_ID will be replaced during execution by the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
 - `issuer_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
@@ -1336,7 +1336,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
   - `cs.id`: auto-incremented uint64.
   - `cs.tr_id`: id of the `TrustRegistry` entry that will be the owner of `cs`.
-  - `cs.json_schema`: `json_schema`, with DTR_CREDENTIAL_SCHEMA_ID string replaced by generated `cs.id`.
+  - `cs.json_schema`: `json_schema`, with VPR_CREDENTIAL_SCHEMA_ID string replaced by generated `cs.id`.
   - `cs.issuer_grantor_validation_validity_period`: `issuer_grantor_validation_validity_period`
   - `cs.verifier_grantor_validation_validity_period`: `verifier_grantor_validation_validity_period`
   - `cs.issuer_validation_validity_period`: `issuer_validation_validity_period`
@@ -1681,27 +1681,27 @@ if `csp.deposit` is greater than 0, use [MOD-TD-MSG-1] to decrease by `dd.deposi
 
 #### [MOD-CSP-MSG-4] Create or Update CSPS
 
-Any credential exchange that requires issuer or verifier `payer` paying fees involves action from the issued or verified `wallet` (credential recipient in case of credential issuance, received presentation request in case of verification). `wallet` can be a DTS, an app, a browser. `wallet` MUST send to `payer` an uint64 for session identification and creation, plus an `account` public key identifying the `wallet`. Then, `wallet` MUST check session has been created and is valid.
+Any credential exchange that requires issuer or verifier `payer` paying fees involves action from the issued or verified `wallet` (credential recipient in case of credential issuance, received presentation request in case of verification). `wallet` can be a VS, an app, a browser. `wallet` MUST send to `payer` an uint64 for session identification and creation, plus an `account` public key identifying the `wallet`. Then, `wallet` MUST check session has been created and is valid.
 
 ```plantuml
 scale max 800 width
-actor "Wallet\nDTS/App/Browser" as Issued 
-participant "Payer\nDTS" as Issuer 
-participant "DTR" as dtr 
+actor "Wallet\nVS/App/Browser" as Issued 
+participant "Payer\nVS" as Issuer 
+participant "VPR" as vpr 
 
 
 Issued <-- Issuer: I want to issue a credential from schema id ... to you
 Issued --> Issuer: Here is a session UUID
-Issuer <-- dtr: create CSPS session
+Issuer <-- vpr: create CSPS session
 Issued <-- Issuer: session created, you can verify
-Issued --> dtr: /dtr/v1/csp/authorized_issuer?...
-Issued <-- dtr: AUTHORIZED
+Issued --> vpr: /vpr/v1/csp/authorized_issuer?...
+Issued <-- vpr: AUTHORIZED
 Issued --> Issuer: OK, you can send the credential
 Issued <-- Issuer: Send credential
 
 ```
 
-See [TR-RESOL] in [DTS-SPECS].
+See [TR-RESOL] in [VS-SPECS].
 
 ::: todo
 Define how and when UUID is exchanged. (Not needed for implementing this spec). Verifier MUST be able to query holder and see for a given credential schema(s), if holder has a credential and who is the issuer, before creating the CSPS.
@@ -1931,7 +1931,7 @@ return found entry (if any).
 #### [MOD-CSP-QRY-3] Is Authorized Issuer
 
 This method is used to query if a DID is (or was) authorized to issue a credential of a given schema, country, user_agent, wallet_user_agent. Called by the browsers and apps to verify if they can accept the credential from this DID or not.
-If the target wallet is a DTS, `user_agent_did` and `wallet_user_agent_did` will be equal to the DID of the DTS.
+If the target wallet is a VS, `user_agent_did` and `wallet_user_agent_did` will be equal to the DID of the VS.
 
 :::note
 This method should use [MOD-CSP-QRY-1]. An index might be needed to optimize query, like using (schema_id, type, did).
@@ -2070,7 +2070,7 @@ Validation is used by [[ref: applicants]] that want to:
 In all cases, the process is very similar. Example execution of a validation process:
 
 1. Applicant starts a validation process by running the [start new validation] [[ref: transaction]]. Validation process may be subject to paying validation fees, as defined by validator.
-2. Validation process usually requires that [[ref: applicant]] connects to a validation [[ref: DTS]] identified by its [[ref: DID]], and execute a some validation steps, required for the validation process to conclude.
+2. Validation process usually requires that [[ref: applicant]] connects to a validation [[ref: VS]] identified by its [[ref: DID]], and execute a some validation steps, required for the validation process to conclude.
 3. If [[ref: applicant]] qualifies, [[ref: validator]] updates the validation entry by running the [set to validated] [[ref: transaction]], and [[ref: applicant]] is granted new permissions, and/or gets issued a credential.
 
 Validation is valid for a specific period, for example 365 days, as configured in the [[ref: credential schema]] for credential schema related validations, or set by trust registry for user-agent validation.
@@ -2116,7 +2116,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `country` (string) (*mandatory*) MUST be a valid alpha-2 code (ISO 3166).
 
 :::note
-A holder CAN directly connect to the DID DTS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the validation process is REQUIRED or not.
+A holder CAN directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the validation process is REQUIRED or not.
 :::
 
 ###### [MOD-V-MSG-1-2-2] Create New Validation permission checks
@@ -2197,21 +2197,21 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `validation.summary_hash`: null.
   - `validation.term_requested`: null.
 
-#### Connecting to the DTS of the Validator
+#### Connecting to the VS of the Validator
 
 *This section is non-normative, and provided for understanding only.*
 
 This action can only be initiated by the [[ref: applicant]].
 
-If the `perm` associated to the validation has a specified `did`, [[ref: applicant]] should connect to the validation [[ref: DTS]] of the [[ref: validator]] by using the [[ref: DIDComm]] protocol in order to continue with the validation process.
+If the `perm` associated to the validation has a specified `did`, [[ref: applicant]] should connect to the validation [[ref: VS]] of the [[ref: validator]] by using the [[ref: DIDComm]] protocol in order to continue with the validation process.
 
-By connecting to the [[ref: DTS]], [[ref: applicant]] might be required by [[ref: validator]] to perform some tasks, such as:
+By connecting to the [[ref: VS]], [[ref: applicant]] might be required by [[ref: validator]] to perform some tasks, such as:
 
-1. Prove to the [[ref: DTS]] that it controls the [[ref: controller]] [[ref: account]] that created the validation entry in the [[ref: keeper]]. (ej blind sign).
-2. Provide the information requested by the validation [[ref: DTS]], by filling-in forms, sharing documents, ...
-3. In case information includes sharing a [[ref: DID]] that is part of the granted permission, or present in the credential as a [[ref: subject]] or attribute directly linked to the [[ref: applicant]], [[ref: applicant]] should prove to the [[ref: DTS]] that it controls the [[ref: DID]].
+1. Prove to the [[ref: VS]] that it controls the [[ref: controller]] [[ref: account]] that created the validation entry in the [[ref: keeper]]. (ej blind sign).
+2. Provide the information requested by the validation [[ref: VS]], by filling-in forms, sharing documents, ...
+3. In case information includes sharing a [[ref: DID]] that is part of the granted permission, or present in the credential as a [[ref: subject]] or attribute directly linked to the [[ref: applicant]], [[ref: applicant]] should prove to the [[ref: VS]] that it controls the [[ref: DID]].
 
-When [[ref: validator]] considers process is finished, [[ref: validator]] can set the validation process as terminated. Validator can build a file with a summary of the process, exchanged information, proofs... and share it back to the [[ref: applicant]] using the [[ref: DTS]] connection, or other means, and register file hash in the validation entry.
+When [[ref: validator]] considers process is finished, [[ref: validator]] can set the validation process as terminated. Validator can build a file with a summary of the process, exchanged information, proofs... and share it back to the [[ref: applicant]] using the [[ref: VS]] connection, or other means, and register file hash in the validation entry.
 
 #### [MOD-V-MSG-2] Renew Validation
 
@@ -2547,15 +2547,15 @@ Example of an Applicant that would like to get issued a credential (HOLDER):
 scale max 800 width
 actor "Applicant" as Applicant 
 actor "Validator" as CE
-participant "Decentralized Trust Registry" as DTR #3fbdb6
+participant "Verifiable Public Registry" as VPR #3fbdb6
 autonumber "<font color='#7677ed'><b>(run start method)"
-Applicant --> DTR #3fbdb6: Create Validation Entry (and pay required Trust Fees).
+Applicant --> VPR #3fbdb6: Create Validation Entry (and pay required Trust Fees).
 autonumber stop
-DTR <-- DTR: Assign Validator (or use provided Validator).
+VPR <-- VPR: Assign Validator (or use provided Validator).
 autonumber "<font color='#7677ed'><b>(end start method)"
-Applicant <-- DTR: Transaction completed and Validation entry created
+Applicant <-- VPR: Transaction completed and Validation entry created
 autonumber stop
-autonumber "<font color='#7677ed'><b>(connects to Certification Entity Validation DTS)"
+autonumber "<font color='#7677ed'><b>(connects to Certification Entity Validation VS)"
 Applicant --> CE: share id of Validation Entry
 autonumber stop
 Applicant <-- CE: Request proof of account and DID ownership (blind sign)
@@ -2567,7 +2567,7 @@ note over Applicant, CE #EEEEEE: tasks completed
 autonumber stop
 CE --> Applicant #3fbdb6: Issue Credential.
 autonumber "<font color='#7677ed'><b>(run issued method)"
-CE --> DTR #3fbdb6: Update Validation Entry. Applicant VALIDATED, Credential Issued, fees transferred to Validator.
+CE --> VPR #3fbdb6: Update Validation Entry. Applicant VALIDATED, Credential Issued, fees transferred to Validator.
 autonumber stop
 ```
 
@@ -2578,37 +2578,37 @@ autonumber stop
 ```plantuml
 scale max 800 width
 actor "Applicant\n(issuer candidate)\nAccount" as ApplicantAccount 
-actor "Applicant\n(issuer candidate)\nDTS Browser" as ApplicantBrowser 
+actor "Applicant\n(issuer candidate)\nVS Browser" as ApplicantBrowser 
 
-actor "Validator\n(issuer grantor)\nDTS" as ValidatorDTS
+actor "Validator\n(issuer grantor)\nVS" as ValidatorVS
 actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
 
-participant "Decentralized Trust Registry" as DTR #3fbdb6
+participant "Verifiable Public Registry" as VPR #3fbdb6
 
-ApplicantAccount --> DTR: /validation/new
-DTR <-- DTR: create validation entry.
-ApplicantAccount <-- DTR: validation entry created,\nassigned validation.perm from ISSUER_GRANTOR permissions.
-ApplicantBrowser --> ValidatorDTS: connect to validator DTS DID found in validation.perm\nby creating a DIDComm connection
-ApplicantBrowser <-- ValidatorDTS: DIDComm connection established.
-ApplicantBrowser --> ValidatorDTS: I want to proceed with validation.id=...
-ValidatorDTS --> ValidatorDTS: load validation with id=...\nand verify the associated validation.perm is referring to me
-ApplicantBrowser <-- ValidatorDTS: request proof of control\nof validation.applicant account (blind sign)
-ApplicantBrowser --> ValidatorDTS: send blind sign proof of account
-ApplicantBrowser <-- ValidatorDTS: proof accepted, you are the controller\nof validation entry, I trust you.
-ApplicantBrowser <-- ValidatorDTS: which DID do you want to register as an issuer?
-ApplicantBrowser --> ValidatorDTS: send DID
-ValidatorDTS --> ValidatorDTS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorDTS: request proof of ownership\nof the DID to be added in an ISSUER permission (blind sign)
-ApplicantBrowser --> ValidatorDTS: send blind sign proofs
-ApplicantBrowser <-- ValidatorDTS: proof accepted, you are the controller of the DID, I trust you.
-note over ApplicantBrowser, ValidatorDTS #EEEEEE: (*optional*) repeat the following until tasks completed
-ApplicantBrowser <-- ValidatorDTS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
-ApplicantBrowser --> ValidatorDTS: perform requested tasks...
-note over ApplicantBrowser, ValidatorDTS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorDTS: Your are a legitimate issuer. I'll now create an ISSUER permission for your account and DID.
-ValidatorAccount --> DTR #3fbdb6: /validation/set_validated\nset validation.state to VALIDATED\ncreate permission(s) for applicant.
-DTR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorDTS: notify permission added for your DID.\nDID can now issue credentials of this schema.
+ApplicantAccount --> VPR: /validation/new
+VPR <-- VPR: create validation entry.
+ApplicantAccount <-- VPR: validation entry created,\nassigned validation.perm from ISSUER_GRANTOR permissions.
+ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validation.perm\nby creating a DIDComm connection
+ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
+ApplicantBrowser --> ValidatorVS: I want to proceed with validation.id=...
+ValidatorVS --> ValidatorVS: load validation with id=...\nand verify the associated validation.perm is referring to me
+ApplicantBrowser <-- ValidatorVS: request proof of control\nof validation.applicant account (blind sign)
+ApplicantBrowser --> ValidatorVS: send blind sign proof of account
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof validation entry, I trust you.
+ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
+ApplicantBrowser --> ValidatorVS: send DID
+ValidatorVS --> ValidatorVS: resolve DID and get pub keys
+ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be added in an ISSUER permission (blind sign)
+ApplicantBrowser --> ValidatorVS: send blind sign proofs
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of the DID, I trust you.
+note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
+ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
+ApplicantBrowser --> ValidatorVS: perform requested tasks...
+note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
+ApplicantBrowser <-- ValidatorVS: Your are a legitimate issuer. I'll now create an ISSUER permission for your account and DID.
+ValidatorAccount --> VPR #3fbdb6: /validation/set_validated\nset validation.state to VALIDATED\ncreate permission(s) for applicant.
+VPR --> ValidatorAccount: Receive trust fees.
+ApplicantBrowser <-- ValidatorVS: notify permission added for your DID.\nDID can now issue credentials of this schema.
 ```
 
 ### DID Directory Module
@@ -2619,12 +2619,12 @@ The [[ref: DID Directory]] is a keystore of [[ref: DIDs]].
 
 *This section is non-normative.*
 
-Registering a [[ref: DID]] in the [[ref: DID Directory]] makes the [[ref: DID]], its presented credentials and its related services, such as [[ref: DTSs]], publicly "findable" by crawlers and then by users.
-It is not mandatory to register a [[ref: DID]], nor needed for Trust Resolution, but it might desirable for some use cases. For example, a Social Browser will need the [[ref: DID Directory]] in order to crawl and index all the [[ref: DIDs]] that refers to Social Channel [[ref: DTSs]], so that users will be able to search the indexed [[ref: DTSs]] in the Social Browser App.
+Registering a [[ref: DID]] in the [[ref: DID Directory]] makes the [[ref: DID]], its presented credentials and its related services, such as [[ref: VSs]], publicly "findable" by crawlers and then by users.
+It is not mandatory to register a [[ref: DID]], nor needed for Trust Resolution, but it might desirable for some use cases. For example, a Social Browser will need the [[ref: DID Directory]] in order to crawl and index all the [[ref: DIDs]] that refers to Social Channel [[ref: VSs]], so that users will be able to search the indexed [[ref: VSs]] in the Social Browser App.
 
-Anyone can register any [[ref: DID]]. That mean, as there are no way of verifying from an [[ref: DTR]] that the [[ref: account]] that registers a [[ref: DID]] *is the controller of the DID*, there might be some case of [[ref: DID]] registered by someone that is not the DID controller. This is inevitable, as an [[ref: DTR]] does not know how to resolve [[ref: DIDs]] and then cannot verify who is the controller.
+Anyone can register any [[ref: DID]]. That mean, as there are no way of verifying from an [[ref: VPR]] that the [[ref: account]] that registers a [[ref: DID]] *is the controller of the DID*, there might be some case of [[ref: DID]] registered by someone that is not the DID controller. This is inevitable, as an [[ref: VPR]] does not know how to resolve [[ref: DIDs]] and then cannot verify who is the controller.
 
-To make sure a [[ref: DTS]] provider will have the control and decide if a [[ref: DID]] and its related services, linked credentials... should be indexed or not, registering the [[ref: DTS]] in the [[ref: DID Directory]] will not be enough for the information to be indexed by a crawler. DID Document will optionally include crawler rules (index, do not index...) so the indexation control reminds on hands of the DID controller, even if someone that does not control a [[ref: DID]] registers it in the [[ref: DID Directory]].
+To make sure a [[ref: VS]] provider will have the control and decide if a [[ref: DID]] and its related services, linked credentials... should be indexed or not, registering the [[ref: VS]] in the [[ref: DID Directory]] will not be enough for the information to be indexed by a crawler. DID Document will optionally include crawler rules (index, do not index...) so the indexation control reminds on hands of the DID controller, even if someone that does not control a [[ref: DID]] registers it in the [[ref: DID Directory]].
 
 Note that it is possible to register any [[ref: DID]] from any method.
 
@@ -3040,7 +3040,7 @@ The following requirements of the [ToIP Trust Registry QueryProtocol version 2.0
 
 [TRQP-1], [TRQP-2], [TRQP-3], [TRQP-4], [TRQP-5].
 
-Be aware that data answered by API MUST comply with data format defined in ToIP Trust Registry QueryProtocol version 2.0 which sometimes is different from data in DTR (at least for datetime datatype).
+Be aware that data answered by API MUST comply with data format defined in ToIP Trust Registry QueryProtocol version 2.0 which sometimes is different from data in VPR (at least for datetime datatype).
 
 Base API for QueryProtocol is `/${tr.did}/trqp-2.0` where tr_did is the `did` of the `TrustRegistry` entry. So to consume the /metadata service below, one MUST query `/${tr.did}/trqp-2.0/metadata`
 
@@ -3277,7 +3277,7 @@ This section MUST be ignored for now.
 
 Global variables CAN only be changed by the [[ref: governance authority]] through proposals.
 
-Default values MUST be set at DTR initialization (genesis). Below you'll find some possible values. These values will have to be defined in the [[ref: governance framework]].
+Default values MUST be set at VPR initialization (genesis). Below you'll find some possible values. These values will have to be defined in the [[ref: governance framework]].
 
 **Trust Unit:**
 
