@@ -2,18 +2,18 @@
   "dependencies": {
     "spec-up": "^0.10.8"
   },
-  "name": "verifiable-public-registry-spec",
+  "name": "verifiable-trust-vpr-spec",
   "version": "1.0",
   "description": "Verifiable Public Registry v1 Specification",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/verana-labs/verifiable-public-registry-spec.git"
+    "url": "git+https://github.com/verana-labs/verifiable-trust-vpr-spec.git"
   },
   "license": "Creative Commons Attribution-ShareAlike 4.0 International Public License",
-  "homepage": "https://github.com/verana-labs/verifiable-public-registry-spec",
+  "homepage": "https://github.com/verana-labs/verifiable-trust-vpr-spec",
   
   "bugs": {
-    "url": "https://github.com/verana-labs/verifiable-public-registry-spec/issues"
+    "url": "https://github.com/verana-labs/verifiable-trust-vpr-spec/issues"
   },
   "scripts": {
     "render": "npm run build",

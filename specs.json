@@ -9,7 +9,7 @@
         "source": {
           "host": "github",
           "account": "verana-labs",
-          "repo": "verifiable-public-registry-spec"
+          "repo": "verifiable-trust-vpr-spec"
         }
       }
     ]
