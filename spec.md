@@ -2,7 +2,7 @@
 
 **Specification Status:** *Draft*
 
-**Latest Draft:** [verana-labs/verifiable-public-registry-spec](https://github.com/verana-labs/verifiable-public-registry-spec)
+**Latest Draft:** [verana-labs/verifiable-trust-vpr-spec](https://github.com/verana-labs/verifiable-trust-vpr-spec)
 
 **Editors:**
 
@@ -12,11 +12,11 @@
 
 **Participate:**
 
-~ [GitHub repo](https://github.com/verana-labs/verifiable-public-registry-spec)
+~ [GitHub repo](https://github.com/verana-labs/verifiable-trust-vpr-spec)
 
-~ [File a bug](https://github.com/verana-labs/verifiable-public-registry-spec/issues)
+~ [File a bug](https://github.com/verana-labs/verifiable-trust-vpr-spec/issues)
 
-~ [Commit history](https://github.com/verana-labs/verifiable-public-registry-spec/commits/main)
+~ [Commit history](https://github.com/verana-labs/verifiable-trust-vpr-spec/commits/main)
 
 ---
 
