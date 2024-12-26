@@ -2,18 +2,18 @@
   "dependencies": {
     "spec-up": "^0.10.8"
   },
-  "name": "decentralized-trust-registry-spec",
+  "name": "verifiable-public-registry-spec",
   "version": "1.0",
-  "description": "Decentralized Trust Registry v1 Specification",
+  "description": "Verifiable Public Registry v1 Specification",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/verana-labs/decentralized-trust-registry-spec.git"
+    "url": "git+https://github.com/verana-labs/verifiable-public-registry-spec.git"
   },
-  "license": "W3C Patent Policy (2004)",
-  "homepage": "https://github.com/verana-labs/decentralized-trust-registry-spec",
+  "license": "Creative Commons Attribution-ShareAlike 4.0 International Public License",
+  "homepage": "https://github.com/verana-labs/verifiable-public-registry-spec",
   
   "bugs": {
-    "url": "https://github.com/verana-labs/decentralized-trust-registry-spec/issues"
+    "url": "https://github.com/verana-labs/verifiable-public-registry-spec/issues"
   },
   "scripts": {
     "render": "npm run build",
