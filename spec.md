@@ -1,8 +1,8 @@
-# Decentralized Trust VPR v1 Specification
+# Verifiable Public Registry v1 Specification
 
 **Specification Status:** *Draft*
 
-**Latest Draft:** [verana-labs/decentralized-trust-registry-spec](https://github.com/verana-labs/decentralized-trust-registry-spec)
+**Latest Draft:** [verana-labs/verifiable-public-registry-spec](https://github.com/verana-labs/verifiable-public-registry-spec)
 
 **Editors:**
 
@@ -12,11 +12,11 @@
 
 **Participate:**
 
-~ [GitHub repo](https://github.com/verana-labs/decentralized-trust-registry-spec)
+~ [GitHub repo](https://github.com/verana-labs/verifiable-public-registry-spec)
 
-~ [File a bug](https://github.com/verana-labs/decentralized-trust-registry-spec/issues)
+~ [File a bug](https://github.com/verana-labs/verifiable-public-registry-spec/issues)
 
-~ [Commit history](https://github.com/verana-labs/decentralized-trust-registry-spec/commits/main)
+~ [Commit history](https://github.com/verana-labs/verifiable-public-registry-spec/commits/main)
 
 ---
 
@@ -103,8 +103,8 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: verifiable user agent, VUA, VUAs]]:
 ~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: DT Spec]].
 
-[[def: Decentralized Trust Specification, DT Specs, DT Spec]]:
-~ see [DT Spec](https://github.com/verana-labs/decentralized-trust-spec).
+[[def: Verifiable Trust Specification, DT Specs, DT Spec]]:
+~ see [DT Spec](https://github.com/verana-labs/verifiable-trust-spec).
 
 [[def: denom]]:
 ~ Native token of a [[ref: VPR]], example: VNA.
