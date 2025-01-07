@@ -651,12 +651,13 @@ entity "TrustRegistry" as tr {
   *id: uint64
   +did: string
   +created: datetime
-  +updated: datetime
+  +modified: datetime
+  +archived: datetime
   +deposit: number
   +aka: string
   +int: active_version
   +language: string
-  +archived: datetime
+  
 }
 
 entity "GovernanceFrameworkVersion" as gfv {
@@ -677,7 +678,8 @@ entity "GovernanceFrameworkDocument" as gfd {
 entity "CredentialSchema" as cs {
   *id: uint64
   +created: datetime
-  +updated: datetime
+  +modified: datetime
+  +archived: datetime
   +deposit: number
   +json_schema: string
   +issuer_grantor_validation_validity_period: number
@@ -687,7 +689,6 @@ entity "CredentialSchema" as cs {
   +holder_validation_validity_period: number
   +issuer_perm_management_mode: CredentialSchemaPermManagementMode
   +verifier_perm_management_mode: CredentialSchemaPermManagementMode
-  +archived: datetime
 }
 
 enum "CredentialSchemaPermManagementMode" as cspm {
@@ -836,6 +837,7 @@ account  --o td: account
 - `controller` (account) (*mandatory*): [[ref: account]] that controls this entry.
 - `created` (datetime) (*mandatory*): date this TrustRegistry has been created, in yyyyMMddHHmm format.
 - `modified` (datetime) (*mandatory*): date this TrustRegistry has been modified, in yyyyMMddHHmm format.
+- `archived` (datetime) (*mandatory*): date this TrustRegistry has been archived, in yyyyMMddHHmm format.
 - `deposit` (number) (*mandatory*): [[ref: trust deposit]] (in `denom`)
 - `aka` (string) (*optional*): optional additional URI of this trust registry.
 - `language` (string(2)) (*mandatory*): primary language alpha-2 code (ISO 3166) of this trust registry.
@@ -870,6 +872,8 @@ account  --o td: account
 - `id` (uint64) (*mandatory*): the id of the schema.
 - `tr_id` (uint64) (*mandatory*): the id of the trust registry that controls this `CredentialSchema` entry.
 - `created` (datetime) (*mandatory*): date this CredentialSchema has been created, in yyyyMMddHHmm format.
+- `modified` (datetime) (*mandatory*): date this CredentialSchema has been modified, in yyyyMMddHHmm format.
+- `archived` (datetime) (*mandatory*): date this CredentialSchema has been archived, in yyyyMMddHHmm format.
 - `deposit` (number) (*mandatory*): [[ref: trust deposit]] (in `denom`)
 - `type` (enum) (*mandatory*): type of schema. VC_JSON_SCHEMA or ANONCREDS.
 - `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
@@ -1160,7 +1164,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `tr_id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry.
+- `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry.
 - `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` where `gfv.tr_id` is equal to `id` and `gfv.version` = `version`, or `version` MUST be exactly equal to the biggest found `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries found for this `gfv.tr_id` equal to `id`. `version` MUST be greater than the `tr.active_version`.
 - `doc_language` (string(2)) (*mandatory*): MUST be a language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
@@ -1179,7 +1183,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or create a new `GovernanceFrameworkVersion` `gfv` if required:
 
 - `gfv.id`: auto-incremented uint64
-- `gfv.tr_id`: `tr_id`
+- `gfv.tr_id`: `id`
 - `gfv.created`: current datetime, in yyyyMMddHHmm format
 - `gfv.version`: 1
 - `gfv.active_since`: null
@@ -1201,7 +1205,7 @@ Any [[ref: account]] CAN execute this method.
 
 An [[ref: account]] that would like to add a governance framework document MUST call this method by specifying:
 
-- `tr_id` (uint64) (*mandatory*): the id of the trust registry.
+- `id` (uint64) (*mandatory*): the id of the trust registry.
 
 ##### [MOD-TR-MSG-3-2] Increase Active Governance Framework Version precondition checks
 
@@ -1211,8 +1215,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `tr_id` (tr_id) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry.
-- load `TrustRegistry` entry `tr` from its `tr_id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort.
+- `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry.
+- load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort.
 - find `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `tr.language`. If no document is found (and thus no document exist for the default language of this version for this trust registry), transaction MUST abort.
 
 ###### [MOD-TR-MSG-3-2-2] Increase Active Governance Framework Version fee checks
@@ -1225,7 +1229,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- load `TrustRegistry` entry `tr` from its `tr_id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort. Else, update `tr.active_version` to `tr.active_version` + 1. Set `tr.modified` to current datetime, and set `gfv.active_since` to current datetime and persist changes.
+- load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort. Else, update `tr.active_version` to `tr.active_version` + 1. Set `tr.modified` to current datetime, and set `gfv.active_since` to current datetime and persist changes.
 
 #### [MOD-TR-MSG-4] Update Trust Registry
 
@@ -1264,8 +1268,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - load `TrustRegistry` entry `tr` from `id` and set:
 
 - `tr.did`: `did`
-- `tr.modified`: current datetime, in yyyyMMddHHmm format
 - `tr.aka`: `aka`
+- `tr.modified`: current datetime, in yyyyMMddHHmm format
 
 #### [MOD-TR-MSG-5] Archive Trust Registry
 
@@ -1416,6 +1420,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.issuer_perm_management_mode`: `issuer_perm_management_mode`
   - `cs.verifier_perm_management_mode`: `verifier_perm_management_mode`
   - `cs.created`: datetime of day, yyyyMMddHHmm format.
+  - `cs.modified`: `cs.created`.
 
 #### [MOD-CS-MSG-2] Update Credential Schema
 
