@@ -443,7 +443,6 @@ For example, the DID directory is essential to dts browsers, such as social dts 
 <li><code>modified</code> (datetime) (<em>mandatory</em>): date this CredentialSchema has been modified, in yyyyMMddHHmm format.</li>
 <li><code>archived</code> (datetime) (<em>mandatory</em>): date this CredentialSchema has been archived, in yyyyMMddHHmm format.</li>
 <li><code>deposit</code> (number) (<em>mandatory</em>): <a class="term-reference" href="#term:trust-deposit">trust deposit</a> (in <code>denom</code>)</li>
-<li><code>type</code> (enum) (<em>mandatory</em>): type of schema. VC_JSON_SCHEMA or ANONCREDS.</li>
 <li><code>json_schema</code> (string) (<em>mandatory</em>): Json Schema used for issuing credentials based on this schema.</li>
 <li><code>issuer_grantor_validation_validity_period</code> (number) (<em>mandatory</em>): number of days after which an issuer grantor validation process expires and must be renewed.</li>
 <li><code>verifier_grantor_validation_validity_period</code> (number) (<em>mandatory</em>): number of days after which a verifier grantor validation process expires and must be renewed.</li>
@@ -1385,12 +1384,12 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <h5 id="mod-cs-qry-1-1-list-credential-schemas-parameters"><a class="toc-anchor" href="#mod-cs-qry-1-1-list-credential-schemas-parameters" >§</a> [MOD-CS-QRY-1-1] List Credential Schemas parameters</h5>
 <ul>
 <li><code>tr_id</code> (string) (<em>optional</em>): to filter by trust registry id.</li>
-<li><code>created_after</code> (datetime) (<em>optional</em>): show schemas created after this datetime.</li>
+<li><code>modified_after</code> (datetime) (<em>optional</em>): show schemas modified after this datetime.</li>
 <li><code>response_max_size</code> (small number) (<em>optional</em>): default to 64. Max 1,024.</li>
 </ul>
 <h5 id="mod-cs-qry-1-2-list-credential-schemas-checks"><a class="toc-anchor" href="#mod-cs-qry-1-2-list-credential-schemas-checks" >§</a> [MOD-CS-QRY-1-2] List Credential Schemas checks</h5>
 <ul>
-<li><code>created_after</code> must be a datetime.</li>
+<li><code>modified_after</code> must be a datetime.</li>
 <li><code>response_max_size</code> must be between 1 and 1,024.</li>
 </ul>
 <h5 id="mod-cs-qry-1-3-list-credential-schemas-execution"><a class="toc-anchor" href="#mod-cs-qry-1-3-list-credential-schemas-execution" >§</a> [MOD-CS-QRY-1-3] List Credential Schemas execution</h5>
