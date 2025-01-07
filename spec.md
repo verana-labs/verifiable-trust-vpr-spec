@@ -656,6 +656,7 @@ entity "TrustRegistry" as tr {
   +aka: string
   +int: active_version
   +language: string
+  +archived: datetime
 }
 
 entity "GovernanceFrameworkVersion" as gfv {
@@ -676,6 +677,7 @@ entity "GovernanceFrameworkDocument" as gfd {
 entity "CredentialSchema" as cs {
   *id: uint64
   +created: datetime
+  +updated: datetime
   +deposit: number
   +json_schema: string
   +issuer_grantor_validation_validity_period: number
@@ -685,6 +687,7 @@ entity "CredentialSchema" as cs {
   +holder_validation_validity_period: number
   +issuer_perm_management_mode: CredentialSchemaPermManagementMode
   +verifier_perm_management_mode: CredentialSchemaPermManagementMode
+  +archived: datetime
 }
 
 enum "CredentialSchemaPermManagementMode" as cspm {
@@ -875,8 +878,8 @@ account  --o td: account
 - `issuer_validation_validity_period` (number) (*mandatory*): number of days after which an issuer validation process expires and must be renewed.
 - `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier validation process expires and must be renewed.
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder validation process expires and must be renewed.
-- `issuer_perm_management_mode` (CredentialSchemaPermManagementMode) (*mandatory*): defines how permission are managed for issuers of this `CredentialSchema`. OPEN means anyone can create its own ISSUER permission; GRANTOR_VALIDATION means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; TRUST_REGISTRY_VALIDATION means a validation process MUST be run between a candidate ISSUER and the trust registry owner of the `CredentialSchema` entry in order to create an ISSUER permission;
-- `verifier_perm_management_mode` (CredentialSchemaPermManagementMode) (*mandatory*): defines how permission are managed for verifiers of this `CredentialSchema`. OPEN means anyone can create its own VERIFIER permission; GRANTOR_VALIDATION means a validation process MUST be run between a candidate VERIFIER and an VERIFIER_GRANTOR in order to create a VERIFIER permission; TRUST_REGISTRY_VALIDATION means a validation process MUST be run between a candidate VERIFIER and the trust registry owner of the `CredentialSchema` entry in order to create an VERIFIER permission;
+- `issuer_perm_management_mode` (CredentialSchemaPermManagementMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can create its own ISSUER permission; GRANTOR_VALIDATION means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; TRUST_REGISTRY_VALIDATION means a validation process MUST be run between a candidate ISSUER and the trust registry owner of the `CredentialSchema` entry in order to create an ISSUER permission;
+- `verifier_perm_management_mode` (CredentialSchemaPermManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can create its own VERIFIER permission; GRANTOR_VALIDATION means a validation process MUST be run between a candidate VERIFIER and an VERIFIER_GRANTOR in order to create a VERIFIER permission; TRUST_REGISTRY_VALIDATION means a validation process MUST be run between a candidate VERIFIER and the trust registry owner of the `CredentialSchema` entry in order to create an VERIFIER permission;
 
 ### CredentialSchemaPerm
 
@@ -1008,10 +1011,13 @@ A VPR implementation MUST implement all the following requirements.
 | Trust Registry                 | Create a Trust Registry                 |                                  | Msg    | [[MOD-TR-MSG-1]](#mod-tr-msg-1-create-new-trust-registry)   |
 |                                | Add Governance Framework Document       |                                  | Msg    | [[MOD-TR-MSG-2]](#mod-tr-msg-2-add-governance-framework-document)   |
 |                                | Increase Active Version                 |                                  | Msg    | [[MOD-TR-MSG-3]](#mod-tr-msg-3-increase-active-governance-framework-version)   |
+|                                | Update Trust Registry                   |                                  | Msg    | [[MOD-TR-MSG-4]](#mod-tr-msg-4-update-trust-registry)   |
+|                                | Archive Trust Registry                  |                                  | Msg    | [[MOD-TR-MSG-5]](#mod-tr-msg-5-archive-trust-registry)   |
 |                                | Get Trust Registry                      | /vpr/v1/tr/get                  | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-1-get-trust-registry)   |
 |                                | List Trust Registries                   | /vpr/v1/tr/list                 | Query  | [[MOD-TR-QRY-2]](#mod-tr-qry-2-list-trust-registries)   |
-|                                | Get Trust Registry with DID             | /vpr/v1/tr/get_with_did         | Query  | [[MOD-TR-QRY-3]](#mod-tr-qry-3-get-trust-registry-with-did)   |
 | Credential Schema              | Create a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |
+|                                | Update a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |
+|                                | Archive Credential Schema               |                                 | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |
 |                                | List Credential Schemas                 | /vpr/v1/cs/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |
 |                                | Get a Credential Schema                 | /vpr/v1/cs/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |
 |                                | Render Json Schema                      | /vpr/v1/cs/js                   | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |
@@ -1031,7 +1037,7 @@ A VPR implementation MUST implement all the following requirements.
 |                                | Confirm Validation Termination          |                                 | Msg    | [[MOD-V-MSG-5]](#mod-v-msg-5-confirm-validation-termination)    |
 |                                | Cancel Validation                       |                                 | Msg    | [[MOD-V-MSG-6]](#mod-v-msg-6-cancel-validation)    |
 |                                | List Validations                        | /vpr/v1/val/list                | Query  | [[MOD-V-QRY-1]](#mod-v-qry-1-list-validations)    |
-|                                | Get a Validation                        | /vpr/v1//val/get                | Query  | [[MOD-V-QRY-2]](#mod-v-qry-2-get-a-validation)    |
+|                                | Get a Validation                        | /vpr/v1/val/get                 | Query  | [[MOD-V-QRY-2]](#mod-v-qry-2-get-a-validation)    |
 | DID Directory                  | Add a DID                               |                                  | Msg    | [[MOD-DD-MSG-1]](#mod-dd-msg-1-add-a-did)   |
 |                                | Renew a DID                             |                                  | Msg    | [[MOD-DD-MSG-2]](#mod-dd-msg-2-renew-a-did)   |
 |                                | Remove a DID                            |                                  | Msg    | [[MOD-DD-MSG-3]](#mod-dd-msg-3-remove-a-did)   |
@@ -1073,11 +1079,15 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]]. A trust registry with this DID MUST NOT already exist.
+- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `aka` (string) (*optional*): optional additional URI of this trust registry. MUST be an [[ref: URI]].
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL .
 - `doc_hash` (string) (*mandatory*): MUST be a valid hash.
+
+:::note
+It is not a problem if several Trust Registries are created with the same did. Identifier of a Trust Registry is its id, and the Verifiable Trust Spec includes the id of the Trust Registry in the DID Document. DID unique constraint is then not needed.
+:::
 
 ###### [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks
 
@@ -1217,13 +1227,92 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - load `TrustRegistry` entry `tr` from its `tr_id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort. Else, update `tr.active_version` to `tr.active_version` + 1. Set `tr.modified` to current datetime, and set `gfv.active_since` to current datetime and persist changes.
 
+#### [MOD-TR-MSG-4] Update Trust Registry
+
+Any [[ref: account]] CAN execute this method.
+
+##### [MOD-TR-MSG-4-1] Update Trust Registry parameters
+
+An [[ref: account]] that would like to update a [[ref: trust registry]] MUST call this method by specifying:
+
+- `id` (uint64) (*mandatory*): the id of the trust registry.
+- `did` (string) (*mandatory*): the did of the trust registry.
+- `aka` (string) (*optional*): optional additional URI of this trust registry. If null, it means replace existing value with null.
+
+##### [MOD-TR-MSG-4-2] Update Trust Registry precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-TR-MSG-4-2-1] Update Trust Registry basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `id` (uint64) (*mandatory*): a `TrustRegistry` entry `tr` with id `id` MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry `tr`.
+- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `aka` (string) (*optional*): optional additional URI of this trust registry. MUST be an [[ref: URI]] or null.
+
+###### [MOD-TR-MSG-4-2-2] Update Trust Registry fee checks
+
+Applicant MUST have an available balance in its [[ref: account]], to cover the required [[ref: transaction fees]].
+
+##### [MOD-TR-MSG-4-3] Update Trust Registry execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- load `TrustRegistry` entry `tr` from `id` and set:
+
+- `tr.did`: `did`
+- `tr.modified`: current datetime, in yyyyMMddHHmm format
+- `tr.aka`: `aka`
+
+#### [MOD-TR-MSG-5] Archive Trust Registry
+
+Any [[ref: account]] CAN execute this method.
+
+##### [MOD-TR-MSG-5-1] Archive Trust Registry parameters
+
+An [[ref: account]] that would like to archive or unarchive a [[ref: trust registry]] MUST call this method by specifying:
+
+- `id` (uint64) (*mandatory*) id of the trust registry (*mandatory*);
+- `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
+
+##### [MOD-TR-MSG-5-2] Archive Trust Registry precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-TR-MSG-5-2-1] Archive Trust Registry basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- load `TrustRegistry` `tr` from `id`. `tr.controller` MUST be the account executing the method, else MUST abort.
+- `archive` (boolean) (*mandatory*) MUST be a boolean.
+  - If `archive` is true and `tr.archived` is not null, MUST abort as Trust Registry is already archived.
+  - If `archive` is false and `tr.archived` is null, MUST abort as Trust Registry is already not archived.
+
+###### [MOD-TR-MSG-5-2-2] Archive Trust Registry fee checks
+
+Account MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+
+##### [MOD-TR-MSG-5-3] Archive Trust Registry execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- update `TrustRegistry` entry `tr` with `tr.id` equal to `id`:
+- if `archived` is true: set `cs.archived` to datetime of day, yyyyMMddHHmm format.
+- if `archived` is false: set `cs.archived` to null.
+- `tr.modified`: current datetime, in yyyyMMddHHmm format
+
 #### [MOD-TR-QRY-1] Get Trust Registry
 
 Anyone CAN execute this method.
 
 ##### [MOD-TR-QRY-1-1] Get Trust Registry parameters
 
-- `tr_id` (uint64) (*mandatory*): id of the [[ref: trust registry]].
+- `id` (uint64) (*mandatory*): id of the [[ref: trust registry]].
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
 
@@ -1256,24 +1345,6 @@ If any of these checks fail, [[ref: query]] MUST fail.
 ##### [MOD-TR-QRY-2-3] List Trust Registries execution of the query
 
 If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned.
-
-#### [MOD-TR-QRY-3] Get Trust Registry with DID
-
-Anyone CAN execute this method.
-
-##### [MOD-TR-QRY-3-1] Get Trust Registry with DID parameters
-
-- `did` (string) (*mandatory*): DID of the [[ref: trust registry]].
-- `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
-- `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
-
-##### [MOD-TR-QRY-3-2] Get Trust Registry with DID checks
-
-- `did` (string) MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-
-##### [MOD-TR-QRY-3-3] Get Trust Registry with DID execution
-
-return found `TrustRegistry` entry (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `latest_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
 
 ### Credential Schema Module
 
@@ -1344,6 +1415,100 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.holder_validation_validity_period`: `holder_validation_validity_period`
   - `cs.issuer_perm_management_mode`: `issuer_perm_management_mode`
   - `cs.verifier_perm_management_mode`: `verifier_perm_management_mode`
+  - `cs.created`: datetime of day, yyyyMMddHHmm format.
+
+#### [MOD-CS-MSG-2] Update Credential Schema
+
+Any [[ref: account]] CAN execute this method.
+
+##### [MOD-CS-MSG-2-1] Update Credential Schema parameters
+
+An [[ref: account]] that would like to update a [[ref: credential schema]] MUST call this method by specifying:
+
+- `id` id of the credential schema (*mandatory*);
+- `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
+- `verifier_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
+- `issuer_validation_validity_period` (*mandatory*), default to 0 (days).
+- `verifier_validation_validity_period` (*mandatory*), default to 0 (days).
+- `holder_validation_validity_period` (*mandatory*), default to 0 (days).
+
+other attributes are immutables and cannot be updated.
+
+##### [MOD-CS-MSG-2-2] Update Credential Schema precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CS-MSG-2-2-1] Update Credential Schema basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `id` MUST represent an existing `CredentialSchema` entry `cs`.
+- load `TrustRegistry` `tr` from `cs.tr_id`. `tr.controller` MUST be the account executing the method, else MUST abort.
+- `issuer_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
+- `verifier_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
+- `issuer_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
+- `verifier_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_validation_validity_period_max_days` days.
+- `holder_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
+
+###### [MOD-CS-MSG-2-2-2] Update Credential Schema fee checks
+
+Account MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+
+##### [MOD-CS-MSG-2-3] Update Credential Schema execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- update `CredentialSchema` entry `cs` with `cs.id` equal to `id`:
+
+  - `cs.issuer_grantor_validation_validity_period`: `issuer_grantor_validation_validity_period`
+  - `cs.verifier_grantor_validation_validity_period`: `verifier_grantor_validation_validity_period`
+  - `cs.issuer_validation_validity_period`: `issuer_validation_validity_period`
+  - `cs.verifier_validation_validity_period`: `verifier_validation_validity_period`
+  - `cs.holder_validation_validity_period`: `holder_validation_validity_period`
+  - `cs.updated`: datetime of day, yyyyMMddHHmm format.
+
+#### [MOD-CS-MSG-3] Archive Credential Schema
+
+Any [[ref: account]] CAN execute this method.
+
+##### [MOD-CS-MSG-3-1] Archive Credential Schema parameters
+
+An [[ref: account]] that would like to archive or unarchive a [[ref: credential schema]] MUST call this method by specifying:
+
+- `id` (uint64) (*mandatory*) id of the credential schema (*mandatory*);
+- `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
+
+##### [MOD-CS-MSG-3-2] Archive Credential Schema precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CS-MSG-3-2-1] Archive Credential Schema basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `id` MUST represent an existing `CredentialSchema` entry `cs`.
+- load `TrustRegistry` `tr` from `cs.tr_id`. `tr.controller` MUST be the account executing the method, else MUST abort.
+- `archive` (boolean) (*mandatory*) MUST be a boolean. 
+  - If `archive` is true and `cs.archived` is not null, MUST abort as Credential Schema is already archived.
+  - If `archive` is false and `cs.archived` is null, MUST abort as Credential Schema is already not archived.
+
+###### [MOD-CS-MSG-3-2-2] Archive Credential Schema fee checks
+
+Account MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+
+##### [MOD-CS-MSG-3-3] Archive Credential Schema execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- update `CredentialSchema` entry `cs` with `cs.id` equal to `id`:
+
+- if `archived` is true: set `cs.archived` to datetime of day, yyyyMMddHHmm format.
+- if `archived` is false: set `cs.archived` to null.
+- set `cs.modified` to datetime of day, yyyyMMddHHmm format.
 
 #### [MOD-CS-QRY-1] List Credential Schemas
 
