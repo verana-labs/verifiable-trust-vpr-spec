@@ -875,7 +875,6 @@ account  --o td: account
 - `modified` (datetime) (*mandatory*): date this CredentialSchema has been modified, in yyyyMMddHHmm format.
 - `archived` (datetime) (*mandatory*): date this CredentialSchema has been archived, in yyyyMMddHHmm format.
 - `deposit` (number) (*mandatory*): [[ref: trust deposit]] (in `denom`)
-- `type` (enum) (*mandatory*): type of schema. VC_JSON_SCHEMA or ANONCREDS.
 - `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
 - `issuer_grantor_validation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor validation process expires and must be renewed.
 - `verifier_grantor_validation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor validation process expires and must be renewed.
@@ -1522,12 +1521,12 @@ Anyone CAN execute this method. Returned result MUST be ordered by `CredentialSc
 ##### [MOD-CS-QRY-1-1] List Credential Schemas parameters
 
 - `tr_id` (string) (*optional*): to filter by trust registry id.
-- `created_after` (datetime) (*optional*): show schemas created after this datetime.
+- `modified_after` (datetime) (*optional*): show schemas modified after this datetime.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 
 ##### [MOD-CS-QRY-1-2] List Credential Schemas checks
 
-- `created_after` must be a datetime.
+- `modified_after` must be a datetime.
 - `response_max_size` must be between 1 and 1,024.
 
 ##### [MOD-CS-QRY-1-3] List Credential Schemas execution
