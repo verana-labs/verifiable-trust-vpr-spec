@@ -1003,11 +1003,123 @@ All [[ref: VPR]] modules MUST, at least, provide:
 - A [[ref: query]] service, used to process user queries.
 - Interfaces, for end users to [[ref: query]] the subset of the state defined by the module and create messages of the custom types defined in the module.
 
+Note about Query REST API:
+
+- all query methods MUST return valid JSON.
+- objects MUST be nested when needed, such as when returning a trust registry.
+- JSON formatting MUST obey to data model regarding attribute names. A method that returns a Trust Registry entry MUST return an entry called "trustRegistry". A method that returns a list of Trust Registries MUST return an entry called "trustRegistries" that contain a list of Trust Registry entries.
+
+Examples:
+
+Get a Trust Registry
+
+```json
+"trustRegistry": {
+  {
+    "active_version": 0,
+    "aka": "string",
+    "controller": "string",
+    "created": "2025-01-14T19:40:37.967Z",
+    "deposit": "string",
+    "did": "string",
+    "id": "string",
+    "language": "string",
+    "modified": "2025-01-14T19:40:37.967Z",
+    "versions": [
+      {
+        "active_since": "2025-01-14T19:40:37.967Z",
+        "created": "2025-01-14T19:40:37.967Z",
+        "id": "string",
+        "tr_id": "string",
+        "version": 0,
+        "documents": [
+          {
+            "created": "2025-01-14T19:40:37.967Z",
+            "gfv_id": "string",
+            "hash": "string",
+            "id": "string",
+            "language": "string",
+            "url": "string"
+          }
+        ]
+      }
+    ]  
+  }
+```
+
+```json
+"trustRegistries": [ {
+  {
+    "active_version": 0,
+    "aka": "string",
+    "controller": "string",
+    "created": "2025-01-14T19:40:37.967Z",
+    "deposit": "string",
+    "did": "string",
+    "id": "string",
+    "language": "string",
+    "modified": "2025-01-14T19:40:37.967Z",
+    "versions": [
+      {
+        "active_since": "2025-01-14T19:40:37.967Z",
+        "created": "2025-01-14T19:40:37.967Z",
+        "id": "string",
+        "tr_id": "string",
+        "version": 0,
+        "documents": [
+          {
+            "created": "2025-01-14T19:40:37.967Z",
+            "gfv_id": "string",
+            "hash": "string",
+            "id": "string",
+            "language": "string",
+            "url": "string"
+          }
+        ]
+      }
+    ]  
+  }, {
+    "active_version": 0,
+    "aka": "string",
+    "controller": "string",
+    "created": "2025-01-14T19:40:37.967Z",
+    "deposit": "string",
+    "did": "string",
+    "id": "string",
+    "language": "string",
+    "modified": "2025-01-14T19:40:37.967Z",
+    "versions": [
+      {
+        "active_since": "2025-01-14T19:40:37.967Z",
+        "created": "2025-01-14T19:40:37.967Z",
+        "id": "string",
+        "tr_id": "string",
+        "version": 0,
+        "documents": [
+          {
+            "created": "2025-01-14T19:40:37.967Z",
+            "gfv_id": "string",
+            "hash": "string",
+            "id": "string",
+            "language": "string",
+            "url": "string"
+          }
+        ],
+      }
+    ]  
+  }
+]
+```
+
 :::warning
 For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified **again** upon method execution
 :::
 
 A VPR implementation MUST implement all the following requirements.
+
+:::note
+The relative REST path is the path suffix. Implementer can set any prefix, like http://1.2.3.4/verana/tr/v1/get.
+:::
 
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      |
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|
@@ -1016,41 +1128,53 @@ A VPR implementation MUST implement all the following requirements.
 |                                | Increase Active Version                 |                                  | Msg    | [[MOD-TR-MSG-3]](#mod-tr-msg-3-increase-active-governance-framework-version)   |
 |                                | Update Trust Registry                   |                                  | Msg    | [[MOD-TR-MSG-4]](#mod-tr-msg-4-update-trust-registry)   |
 |                                | Archive Trust Registry                  |                                  | Msg    | [[MOD-TR-MSG-5]](#mod-tr-msg-5-archive-trust-registry)   |
-|                                | Get Trust Registry                      | /vpr/v1/tr/get                  | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-1-get-trust-registry)   |
-|                                | List Trust Registries                   | /vpr/v1/tr/list                 | Query  | [[MOD-TR-QRY-2]](#mod-tr-qry-2-list-trust-registries)   |
+|                                | Update TR Module Parameters             |                                 | Msg    | [[MOD-TR-MSG-6]](#mod-tr-msg-6-update-module-parameters)   |
+|                                | Get Trust Registry                      | /tr/v1/get                  | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-1-get-trust-registry)   |
+|                                | List Trust Registries                   | /tr/v1/list                 | Query  | [[MOD-TR-QRY-2]](#mod-tr-qry-2-list-trust-registries)   |
+|                                | List TR Module Parameters               | /tr/v1/params                 | Query  | [[MOD-TR-QRY-3]](#mod-tr-qry-3-list-module-parameters)   |
 | Credential Schema              | Create a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |
 |                                | Update a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |
 |                                | Archive Credential Schema               |                                 | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |
-|                                | List Credential Schemas                 | /vpr/v1/cs/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |
-|                                | Get a Credential Schema                 | /vpr/v1/cs/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |
-|                                | Render Json Schema                      | /vpr/v1/cs/js                   | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |
+|                                | Update CS Module Parameters             |                                 | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |
+|                                | List Credential Schemas                 | /cs/v1/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |
+|                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |
+|                                | Render Json Schema                      | /cs/v1/js                   | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |
+|                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-TR-QRY-3]](#mod-cs-qry-4-list-module-parameters)   |
 | Credential Schema Permission   | Create new CSP                          |                                 | Msg    | [[MOD-CSP-MSG-1]](#mod-csp-msg-1-create-new-csp)  |
 |                                | Revoke CSP                              |                                 | Msg    | [[MOD-CSP-MSG-2]](#mod-csp-msg-2-revoke-csp)  |
 |                                | Terminate CSP                           |                                 | Msg    | [[MOD-CSP-MSG-3]](#mod-csp-msg-3-terminate-csp)  |
 |                                | Create or update CSPS                   |                                 | Msg    | [[MOD-CSP-MSG-4]](#mod-csp-msg-4-create-or-update-csps) |
-|                                | List CSPs                               | /vpr/v1/csp/list                | Query  | [[MOD-CSP-QRY-1]](#mod-csp-qry-1-list-csps)  |
-|                                | Get CSP                                 | /vpr/v1/csp/get                 | Query  | [[MOD-CSP-QRY-2]](#mod-csp-qry-2-get-csp)  |
-|                                | Is Authorized Issuer                    | /vpr/v1/csp/authorized_issuer   | Query  | [[MOD-CSP-QRY-3]](#mod-csp-qry-3-is-authorized-issuer)  |
-|                                | Is Authorized Verifier                  | /vpr/v1/csp/authorized_verifier | Query  | [[MOD-CSP-QRY-4]](#mod-csp-qry-4-is-authorized-verifier)  |
-|                                | Get CSPS                                | /vpr/v1/csp/get_session         | Query  | [[MOD-CSP-QRY-5]](#mod-csp-qry-5-get-csps) |
+|                                | Update CSP Module Parameters            |                                 | Msg    | [[MOD-CSP-MSG-5]](#mod-csp-msg-5-update-module-parameters)   |
+|                                | List CSPs                               | /csp/v1/list                | Query  | [[MOD-CSP-QRY-1]](#mod-csp-qry-1-list-csps)  |
+|                                | Get CSP                                 | /csp/v1/get                 | Query  | [[MOD-CSP-QRY-2]](#mod-csp-qry-2-get-csp)  |
+|                                | Is Authorized Issuer                    | /csp/v1/authorized_issuer   | Query  | [[MOD-CSP-QRY-3]](#mod-csp-qry-3-is-authorized-issuer)  |
+|                                | Is Authorized Verifier                  | /csp/v1/authorized_verifier | Query  | [[MOD-CSP-QRY-4]](#mod-csp-qry-4-is-authorized-verifier)  |
+|                                | Get CSPS                                | /csp/v1/get_session         | Query  | [[MOD-CSP-QRY-5]](#mod-csp-qry-5-get-csps) |
+|                                | List CSP Module Parameters              | /csp/v1/params                 | Query  | [[MOD-CSP-QRY-6]](#mod-csp-qry-6-list-module-parameters)   |
 | Validation                     | Create a Validation                     |                                 | Msg    | [[MOD-V-MSG-1]](#mod-v-msg-1-create-new-validation)    |
 |                                | Renew a Validation                      |                                 | Msg    | [[MOD-V-MSG-2]](#mod-v-msg-2-renew-validation)    |
 |                                | Set Validated                           |                                 | Msg    | [[MOD-V-MSG-3]](#mod-v-msg-3-set-validated)    |
 |                                | Request Validation Termination          |                                 | Msg    | [[MOD-V-MSG-4]](#mod-v-msg-4-request-validation-termination)    |
 |                                | Confirm Validation Termination          |                                 | Msg    | [[MOD-V-MSG-5]](#mod-v-msg-5-confirm-validation-termination)    |
 |                                | Cancel Validation                       |                                 | Msg    | [[MOD-V-MSG-6]](#mod-v-msg-6-cancel-validation)    |
-|                                | List Validations                        | /vpr/v1/val/list                | Query  | [[MOD-V-QRY-1]](#mod-v-qry-1-list-validations)    |
-|                                | Get a Validation                        | /vpr/v1/val/get                 | Query  | [[MOD-V-QRY-2]](#mod-v-qry-2-get-a-validation)    |
+|                                | Update V Module Parameters              |                                 | Msg    | [[MOD-V-MSG-7]](#mod-v-msg-7-update-module-parameters)   |
+|                                | List Validations                        | /val/v1/list                | Query  | [[MOD-V-QRY-1]](#mod-v-qry-1-list-validations)    |
+|                                | Get a Validation                        | /val/v1/get                 | Query  | [[MOD-V-QRY-2]](#mod-v-qry-2-get-a-validation)    |
+|                                | List V Module Parameters                | /val/v1/params                 | Query  | [[MOD-V-QRY-3]](#mod-v-qry-3-list-module-parameters)   |
 | DID Directory                  | Add a DID                               |                                  | Msg    | [[MOD-DD-MSG-1]](#mod-dd-msg-1-add-a-did)   |
 |                                | Renew a DID                             |                                  | Msg    | [[MOD-DD-MSG-2]](#mod-dd-msg-2-renew-a-did)   |
 |                                | Remove a DID                            |                                  | Msg    | [[MOD-DD-MSG-3]](#mod-dd-msg-3-remove-a-did)   |
 |                                | Touch a DID                             |                                  | Msg    | [[MOD-DD-MSG-4]](#mod-dd-msg-4-touch-a-did)   |
-|                                | List DIDs                               | /vpr/v1/dd/list                 | Query  | [[MOD-DD-QRY-1]](#mod-dd-qry-1-list-dids)   |
-|                                | Get a DID                               | /vpr/v1/dd/get                  | Query  | [[MOD-DD-QRY-2]](#mod-dd-qry-2-get-a-did)   |
+|                                | Update TD Module Parameters             |                                  | Msg    | [[MOD-DD-MSG-5]](#mod-dd-msg-5-update-module-parameters)   |
+|                                | List DIDs                               | /dd/v1/list                 | Query  | [[MOD-DD-QRY-1]](#mod-dd-qry-1-list-dids)   |
+|                                | Get a DID                               | /dd/v1/get                  | Query  | [[MOD-DD-QRY-2]](#mod-dd-qry-2-get-a-did)   |
+|                                | List DD Module Parameters               | /dd/v1/params                 | Query  | [[MOD-DD-QRY-3]](#mod-dd-qry-3-list-module-parameters)   |
 | Trust Deposit                  | Adjust Trust Deposit                    |                                  | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-adjust-trust-deposit)   |
 |                                | Reclaim Trust Deposit Interests         |                                  | Msg    | [[MOD-TD-MSG-2]](#mod-td-msg-2-reclaim-trust-deposit-interests)   |
 |                                | Reclaim Trust Deposit                   |                                  | Msg    | [[MOD-TD-MSG-3]](#mod-td-msg-3-reclaim-trust-deposit)   |
-|                                | Get Trust Deposit                       | /vpr/v1/td/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
+|                                | Update TD Module Parameters             |                               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |
+|                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
+|                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -1309,6 +1433,38 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if `archived` is false: set `cs.archived` to null.
 - `tr.modified`: current datetime, in yyyyMMddHHmm format
 
+#### [MOD-TR-MSG-6] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-TR-MSG-6-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-TR-MSG-6-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-TR-MSG-6-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+
+###### [MOD-TR-MSG-6-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution
+
+##### [MOD-TR-MSG-6-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
 #### [MOD-TR-QRY-1] Get Trust Registry
 
 Anyone CAN execute this method.
@@ -1348,6 +1504,31 @@ If any of these checks fail, [[ref: query]] MUST fail.
 ##### [MOD-TR-QRY-2-3] List Trust Registries execution of the query
 
 If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned.
+
+#### [MOD-TR-QRY-3] List Module Parameters
+
+Anyone CAN run this [[ref: query]].
+
+##### [MOD-TR-QRY-3-2] List Module Parameters parameters
+
+##### [MOD-TR-QRY-3-2] List Module Parameters query checks
+
+##### [MOD-TR-QRY-3-3] List Module Parameters execution of the query
+
+Return the list of the existing parameters and their values.
+
+##### [MOD-TR-QRY-3-4] List Module Parameters API result example
+
+```json
+{
+  "params": {
+    "key1": "value1",
+    "key2": "value2",
+    ...
+    ...
+  }
+}
+```
 
 ### Credential Schema Module
 
@@ -1514,6 +1695,38 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if `archived` is false: set `cs.archived` to null.
 - set `cs.modified` to datetime of day, yyyyMMddHHmm format.
 
+#### [MOD-CS-MSG-4] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-CS-MSG-4-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-CS-MSG-4-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-CS-MSG-4-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+
+###### [MOD-CS-MSG-4-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution
+
+##### [MOD-CS-MSG-4-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
 #### [MOD-CS-QRY-1] List Credential Schemas
 
 Anyone CAN execute this method. Returned result MUST be ordered by `CredentialSchema.created` asc.
@@ -1564,6 +1777,31 @@ Anyone CAN execute this method.
 ##### [MOD-CS-QRY-3-3] Render Json Schema execution
 
 Render found entry (if any). In case value is returned by a REST API, content type MUST be set to "application/schema+json".
+
+#### [MOD-CS-QRY-4] List Module Parameters
+
+Anyone CAN run this [[ref: query]].
+
+##### [MOD-CS-QRY-4-2] List Module Parameters parameters
+
+##### [MOD-CS-QRY-4-2] List Module Parameters query checks
+
+##### [MOD-CS-QRY-4-3] List Module Parameters execution of the query
+
+Return the list of the existing parameters and their values.
+
+##### [MOD-CS-QRY-4-4] List Module Parameters API result example
+
+```json
+{
+  "params": {
+    "key1": "value1",
+    "key2": "value2",
+    ...
+    ...
+  }
+}
+```
 
 ### Credential Schema Permission (CSP) Module
 
@@ -2051,6 +2289,38 @@ Else update:
 
 - add (`executor_perm_id`, `beneficiary_perm_id`) to `session.perm_ids[]`
 
+#### [MOD-CSP-MSG-5] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-CSP-MSG-5-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-CSP-MSG-5-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-CSP-MSG-5-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+
+###### [MOD-CSP-MSG-5-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution
+
+##### [MOD-CSP-MSG-5-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
 #### [MOD-CSP-QRY-1] List CSPs
 
 Anyone CAN execute this method.
@@ -2220,6 +2490,30 @@ We do not need to verify if a HOLDER perm exists for user_agent_did and for wall
 
 return `CredentialSchemaPermSession` entry if found, else return not found.
 
+#### [MOD-CSP-QRY-6] List Module Parameters
+
+Anyone CAN run this [[ref: query]].
+
+##### [MOD-CSP-QRY-6-2] List Module Parameters parameters
+
+##### [MOD-CSP-QRY-6-2] List Module Parameters query checks
+
+##### [MOD-CSP-QRY-6-3] List Module Parameters execution of the query
+
+Return the list of the existing parameters and their values.
+
+##### [MOD-CSP-QRY-6-4] List Module Parameters API result example
+
+```json
+{
+  "params": {
+    "key1": "value1",
+    "key2": "value2",
+    ...
+    ...
+  }
+}
+```
 ### Validation Module
 
 #### Validation Module Overview
@@ -2658,6 +2952,38 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - call [MOD-TD-MSG-1] to reduce trust deposit of `validation.applicant` by `validation.current_deposit`
   - set `validation.current_deposit` to 0.
 
+#### [MOD-V-MSG-7] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-V-MSG-7-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-V-MSG-7-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-V-MSG-7-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+
+###### [MOD-V-MSG-7-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution
+
+##### [MOD-V-MSG-7-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
 #### [MOD-V-QRY-1] List Validations
 
 This method is used to [[ref: query]] the validation [[ref: keeper]] and return pending actions. Returned result MUST be ordered by `validation.pending_since` ASC.
@@ -2703,6 +3029,31 @@ This method is used to read a Validation. As this method does not modify data, i
 ##### [MOD-V-QRY-2-3] Get a Validation execution of the query
 
 If `id` is found, return the corresponding entry, else empty result is returned.
+
+#### [MOD-V-QRY-3] List Module Parameters
+
+Anyone CAN run this [[ref: query]].
+
+##### [MOD-V-QRY-3-2] List Module Parameters parameters
+
+##### [MOD-V-QRY-3-2] List Module Parameters query checks
+
+##### [MOD-V-QRY-3-3] List Module Parameters execution of the query
+
+Return the list of the existing parameters and their values.
+
+##### [MOD-V-QRY-3-4] List Module Parameters API result example
+
+```json
+{
+  "params": {
+    "key1": "value1",
+    "key2": "value2",
+    ...
+    ...
+  }
+}
+```
 
 #### Validation Examples
 
@@ -2954,6 +3305,39 @@ Transaction execution MUST perform the following tasks, and rollback if any erro
 
 - update `changed` to date of the day for the selected entry.
 
+#### [MOD-DD-MSG-5] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-DD-MSG-5-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-DD-MSG-5-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-DD-MSG-5-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+
+###### [MOD-DD-MSG-5-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution
+
+##### [MOD-DD-MSG-5-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
+
 #### [MOD-DD-QRY-1] List DIDs
 
 This method is used to [[ref: query]] the [[ref: DID Directory]] [[ref: keeper]]. Returned data MUST be ordered by `DidDirectory.changed` asc.
@@ -2993,6 +3377,31 @@ This method is used to read a [[ref: DID]] from the [[ref: DID Directory]] [[ref
 ##### [MOD-DD-QRY-2-3] Get a DID execution of the query
 
 If [[ref: DID]] is found, return the corresponding entry, else empty result is returned.
+
+#### [MOD-DD-QRY-3] List Module Parameters
+
+Anyone CAN run this [[ref: query]].
+
+##### [MOD-DD-QRY-3-2] List Module Parameters parameters
+
+##### [MOD-DD-QRY-3-2] List Module Parameters query checks
+
+##### [MOD-DD-QRY-3-3] List Module Parameters execution of the query
+
+Return the list of the existing parameters and their values.
+
+##### [MOD-DD-QRY-3-4] List Module Parameters API result example
+
+```json
+{
+  "params": {
+    "key1": "value1",
+    "key2": "value2",
+    ...
+    ...
+  }
+}
+```
 
 ### Trust deposit module
 
@@ -3181,6 +3590,38 @@ For the `TrustDeposit` entry `td` linked to `account`:
 - transfer `to_transfer` from `TrustDeposit` account to `account`.
 - burn `to_burn` from `TrustDeposit` account to `account`.
 
+#### [MOD-TD-MSG-4] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-TD-MSG-4-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-TD-MSG-4-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-TD-MSG-4-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+
+###### [MOD-TD-MSG-4-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution
+
+##### [MOD-TD-MSG-4-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
 #### [MOD-TD-QRY-1] Get Trust Deposit
 
 Any [[ref: account]] CAN run this [[ref: query]]. As this method does not modify data, it does not require a [[ref: transaction]].
@@ -3198,6 +3639,31 @@ If any of these checks fail, [[ref: query]] MUST fail.
 ##### [MOD-TD-QRY-1-3] Get Trust Deposit execution of the query
 
 If found, returns [[ref: trust deposit]], else return 0.
+
+#### [MOD-TD-QRY-2] List Module Parameters
+
+Anyone CAN run this [[ref: query]].
+
+##### [MOD-TD-QRY-2-2] List Module Parameters parameters
+
+##### [MOD-TD-QRY-2-2] List Module Parameters query checks
+
+##### [MOD-TD-QRY-2-3] List Module Parameters execution of the query
+
+Return the list of the existing parameters and their values.
+
+##### [MOD-TD-QRY-2-4] List Module Parameters API result example
+
+```json
+{
+  "params": {
+    "key1": "value1",
+    "key2": "value2",
+    ...
+    ...
+  }
+}
+```
 
 ### ToIP Trust Registry QueryProtocol version 2.0 (NOT TO BE IMPLEMENTED)
 
