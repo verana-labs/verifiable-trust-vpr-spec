@@ -1496,6 +1496,22 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>cs.modified</code>: <code>cs.created</code>.</li>
 </ul>
 </li>
+<li>
+<p>create and persist a new default <code>CredentialSchemaPerm</code> entry <code>csp</code> of type TRUST_REGISTRY for this <code>CredentialSchema</code>, by calling the create CSP method with the following parameters:</p>
+<ul>
+<li><code>schema_id</code>: <code>cs.id</code></li>
+<li><code>type</code>: TRUST_REGISTRY</li>
+<li><code>did</code>: load <code>TrustRegistry</code> <code>tr</code> from <code>cs.tr_id</code>. Use <code>tr.did</code>.</li>
+<li><code>grantee</code>: <code>tr.controller</code></li>
+<li><code>effective_from</code>: current datetime.</li>
+<li><code>effective_until</code>: null.</li>
+<li><code>country</code>: null.</li>
+<li><code>validation_id</code>: null.</li>
+<li><code>validation_fees</code>: 0.</li>
+<li><code>issuance_fees</code>: 0.</li>
+<li><code>verification_fees</code>: 0.</li>
+</ul>
+</li>
 </ul>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any <a class="term-reference" href="#term:account">account</a> CAN execute this method.</p>
