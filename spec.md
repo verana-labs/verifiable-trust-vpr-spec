@@ -1602,6 +1602,20 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.created`: datetime of day, yyyyMMddHHmm format.
   - `cs.modified`: `cs.created`.
 
+- create and persist a new default `CredentialSchemaPerm` entry `csp` of type TRUST_REGISTRY for this `CredentialSchema`, by calling the create CSP method with the following parameters:
+
+  - `schema_id`: `cs.id`
+  - `type`: TRUST_REGISTRY
+  - `did`: load `TrustRegistry` `tr` from `cs.tr_id`. Use `tr.did`.
+  - `grantee`: `tr.controller`
+  - `effective_from`: current datetime.
+  - `effective_until`: null.
+  - `country`: null.
+  - `validation_id`: null.
+  - `validation_fees`: 0.
+  - `issuance_fees`: 0.
+  - `verification_fees`: 0.
+
 #### [MOD-CS-MSG-2] Update Credential Schema
 
 Any [[ref: account]] CAN execute this method.
