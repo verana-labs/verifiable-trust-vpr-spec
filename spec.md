@@ -1602,19 +1602,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.created`: datetime of day, yyyyMMddHHmm format.
   - `cs.modified`: `cs.created`.
 
-- create and persist a new default `CredentialSchemaPerm` entry `csp` of type TRUST_REGISTRY for this `CredentialSchema`, by calling the create CSP method with the following parameters:
-
-  - `schema_id`: `cs.id`
-  - `type`: TRUST_REGISTRY
-  - `did`: load `TrustRegistry` `tr` from `cs.tr_id`. Use `tr.did`.
-  - `grantee`: `tr.controller`
-  - `effective_from`: current datetime.
-  - `effective_until`: null.
-  - `country`: null.
-  - `validation_id`: null.
-  - `validation_fees`: 0.
-  - `issuance_fees`: 0.
-  - `verification_fees`: 0.
+:::note
+If needed, depending on configuration mode, Trust Registry controller MAY need to create a TRUST_REGISTRY `CredentialSchemaPerm` so that validation processes can be run.
+:::
 
 #### [MOD-CS-MSG-2] Update Credential Schema
 
@@ -1872,7 +1862,7 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 
 if `type` is TRUST_REGISTRY:
 
-- [[ref: account]] executing the method MUST be the [[ref: controller]] of `tr`, and `did` MUST be equal to `tr.did`.
+- [[ref: account]] executing the method MUST be the [[ref: controller]] of `tr`.
 - else MUST abort.
 
 if `type` is ISSUER or ISSUER_GRANTOR:
@@ -2113,7 +2103,7 @@ participant "VPR" as vpr
 
 Issued <-- Issuer: I want to issue a credential from schema id ... to you
 Issued --> Issuer: Here is a session UUID
-Issuer <-- vpr: create CSPS session
+Issuer --> vpr: create CSPS session
 Issued <-- Issuer: session created, you can verify
 Issued --> vpr: /vpr/v1/csp/authorized_issuer?...
 Issued <-- vpr: AUTHORIZED
