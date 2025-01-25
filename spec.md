@@ -704,6 +704,7 @@ entity "Permission" as csp {
   *id: uint64
   did: string
   +created: datetime
+  +extended: datetime
   effective_from: datetime
   effective_until: datetime
   +validation_fees: number
@@ -731,9 +732,8 @@ enum "ValidationState" as valstate {
 }
 
 entity "PermissionSession" as csps {
-  *id: uint64
-  +user_agent_did: uint64
-  +session_authz: (uint64, uint64, uint64)[]
+  *id: uuid
+  +authz: (uint64, uint64, uint64)[]
 }
 
 enum "PermissionType" as cspt {
@@ -797,11 +797,12 @@ gfv "1" --- "1..n" gfd: documents
 account --o tr: controller
 account --o csp: grantee
 account --o csp: created_by
+account --o csp: extended_by
 csp o-- "0..1" account: revoked_by
 csp o-- "0..1" account: terminated_by
 
 csps o-- account: controller
-csps o-- account: wallet_account
+csps o-- csp: agent_perm_id
 account --o did: controller
 account --o val: applicant
 valstate --o csp: vp_state
@@ -878,8 +879,11 @@ account  --o td: account
 - `grantee` (account) (*mandatory*): [[ref: account]] this permission refers to (account granted to act as `type` for schema `schema_id`).
 - `created` (datetime) (*mandatory*): datetime this `Permission` has been created, in yyyyMMddHHmm format.
 - `created_by` (account) (*mandatory*): [[ref: account]] that created this permission.
+- `extended` (datetime) (*mandatory*): datetime this `Permission` has been extended, in yyyyMMddHHmm format.
+- `extended_by` (account) (*mandatory*): [[ref: account]] that extended this permission.
 - `effective_from` (datetime) (*optional*): date from which (inclusive) this `Permission` is effective, in yyyyMMddHHmm format.
 - `effective_until` (datetime) (*optional*): date until when (exclusive) this `Permission` is effective, in yyyyMMddHHmm format, null if no time limit has been set for this permission.
+- `modified` (datetime) (*mandatory*): date this Permission has been modified, in yyyyMMddHHmm format.
 - `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (grantee of this perm) for running a validation process for a given validation period, in trust unit. Default to 0.
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is issued, in trust unit. Default to 0.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is verified, in trust unit. Default to 0.
@@ -903,10 +907,10 @@ account  --o td: account
 
 `PermissionSession`:
 
-- `id` (uint64) (*mandatory*): session id.
-- `user_agent_perm` (uint64) (*mandatory*): user agent permission.
+- `id` (uuid) (*mandatory*): session uuid.
 - `controller` (account) (*mandatory*): account that controls the entry.
-- `session_authz` (uint64 (CSP), uint64 (CSP), uint64 (UAP))[] (*mandatory*): permission(s) linked to this session.
+- `agent_perm_id` (uint64) (*mandatory*): permission id of the agent.
+- `authz` (uint64 (Permission id), uint64 (Permission id), uint64 (Permission id))[] (*mandatory*): permission(s) linked to this session (executor, beneficiary, wallet_agent).
 
 ### DIDDirectory
 
@@ -1112,17 +1116,17 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |
 |                                | Render Json Schema                      | /cs/v1/js                   | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |
 |                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-TR-QRY-3]](#mod-cs-qry-4-list-module-parameters)   |
-| Permission                     | Start Permission VP                   |                                 | Msg    | [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp)    |
+| Permission                     | Start Permission VP                     |                                 | Msg    | [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp)    |
 |                                | Renew a Permission VP                   |                                 | Msg    | [[MOD-PERM-MSG-2]](#mod-perm-msg-2-renew-permission-vp)    |
 |                                | Set Permission VP to Validated          |                                 | Msg    | [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated)    |
 |                                | Request Permission VP Termination       |                               | Msg    | [[MOD-PERM-MSG-4]](#mod-perm-msg-4-request-permission-vp-termination)    |
 |                                | Confirm Permission VP Termination       |                                 | Msg    | [[MOD-PERM-MSG-5]](#mod-perm-msg-5-confirm-permission-vp-termination)    |
 |                                | Cancel Permission VP Last Request       |                                 | Msg    | [[MOD-PERM-MSG-6]](#mod-perm-msg-6-cancel-permission-vp-last-request)    |
-|                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-MSG-7]](#mod-perm-msg-7-update-permission-module-parameters)   |
+|                                | Create Root Permission                  |                                 | Msg    | [[MOD-PERM-MSG-7]](#mod-perm-msg-7-create-root-permission)   |
 |                                | Extend Permission                       |                                 | Msg    | [[MOD-PERM-MSG-8]](#mod-perm-msg-8-extend-permission)  |
 |                                | Revoke Permission                       |                                 | Msg    | [[MOD-PERM-MSG-9]](#mod-perm-msg-9-revoke-permission)  |
-|                                | Terminate Permission                    |                                 | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-terminate-permission)  |
-|                                | Create or update Permission Session     |                                 | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-create-or-update-permission-session) |
+|                                | Create or update Permission Session     |                                 | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-create-or-update-permission-session)  |
+|                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |
 |                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |
 |                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-a-permission)    |
 |                                | List Permission Module Parameters       | /perm/v1/params              | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-list-module-parameters)   |
@@ -1777,489 +1781,7 @@ Return the list of the existing parameters and their values.
 
 ### Credential Schema Permission (CSP) Module
 
-#### [MOD-CSP-MSG-1] Create New CSP
 
-Any [[ref: account]] CAN execute this method.
-
-##### [MOD-CSP-MSG-1-1] Create New CSP parameters
-
-An [[ref: account]] that would like to create a `Permission` entry MUST call this method by specifying:
-
-- `schema_id` (uint64) (*mandatory*)
-- `type` (*mandatory*): a `PermissionType` (ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, TRUST_REGISTRY, HOLDER)
-- `did` (string) (*mandatory*): [[ref: DID]] of the grantee service (that will be used to get a new permission or get issued a credential) this permission refers to.
-- `grantee` (account) (*mandatory*): [[ref: account]] this permission refers to.
-- `effective_from` (datetime) (*mandatory*): date from which (inclusive) this Perm is effective, in yyyyMMddHHmm format.
-- `effective_until` (datetime) (*optional*): date until when (exclusive) this Perm is effective, in yyyyMMddHHmm format, null if it doesn't expire.
-- `country` (string) (*optional*): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means all countries.
-- `validation_id` (uint64) (*optional*): required if account executing the method is not the controller of the trust registry the schema is referring to.
-- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0.
-- `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in trust unit. Default to 0.
-- `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.
-
-##### [MOD-CSP-MSG-1-2] Create New CSP precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-CSP-MSG-1-2-1] Create New CSP basic checks
-
-if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-
-- `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
-- `type` : must be a valid type
-- `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `effective_from` must be in the future.
-- `effective_until`, if not null, must be greater than `effective_from`
-- `country` if not null, MUST be a valid alpha-2 code (ISO 3166).
-- `grantee` MUST be an [[ref: account]] (SHALL NOT check if it exists)
-- `validation_id` (uint64) (*optional*): see below permission checks.
-- `validation_fees` (number) (*mandatory*): MUST be >= 0.
-- `issuance_fees` (number) (*mandatory*): MUST be >= 0.
-- `verification_fees` (number) (*mandatory*): MUST be >= 0.
-
-###### [MOD-CSP-MSG-1-2-2] Create New CSP permission checks
-
-:::warning
-Permission checks across CSP methods may look similar but they are different.
-:::
-
-To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
-
-- The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
-- The related `TrustRegistry` entry `tr` is loaded from `cs.tr_id`.
-
-if `type` is TRUST_REGISTRY:
-
-- [[ref: account]] executing the method MUST be the [[ref: controller]] of `tr`.
-- else MUST abort.
-
-if `type` is ISSUER or ISSUER_GRANTOR:
-
-- if `cs.issuer_perm_management_mode` is equal to OPEN, MUST abort (no need to create perm if issuing credentials of this schema  is open to anyone).
-- if `validation_id` is unspecified, MUST abort.
-- load `Validation` entry `val` with `validation_id`.
-- `val.exp` MUST be greater or equal to `effective_until` if not null, or MUST be null if null, else abort.
-- load `Permission` entry `csp_executor` from `val.validator_perm_id`.
-- `csp_executor` MUST exist and be a [[ref: valid permission]], else abort.
-- `csp_executor.grantee`: MUST be the `account` running the method, else abort.
-- `csp_executor.type`: MUST be ISSUER_GRANTOR if `cs.issuer_perm_management_mode` is equal to GRANTOR_VALIDATION, or TRUST_REGISTRY if `cs.issuer_perm_management_mode` is equal to TRUST_REGISTRY, else abort.
-- `csp_executor.country`: MUST be null, or if not null, MUST be equal to `perm.country`, else abort.
-
-if `type` is VERIFIER or VERIFIER_GRANTOR:
-
-- if `cs.verifier_perm_management_mode` is equal to OPEN, MUST abort (no need to create perm if verifying credentials of this schema is open to anyone).
-- if `validation_id` is unspecified, MUST abort.
-- load `Validation` entry `val` with `validation_id`.
-- `val.exp` MUST be greater or equal to `effective_until` if not null, or MUST be null if null, else abort.
-- load `Permission` entry `csp_executor` from `val.validator_perm_id`.
-- `csp_executor` MUST exist and be a [[ref: valid permission]], else abort.
-- `csp_executor.grantee`: MUST be the `account` running the method, else abort.
-- `csp_executor.type`: MUST be VERIFIER_GRANTOR if `cs.verifier_perm_management_mode` is equal to GRANTOR_VALIDATION, or TRUST_REGISTRY if `cs.verifier_perm_management_mode` is equal to TRUST_REGISTRY, else abort.
-- `csp_executor.country`: MUST be null, or if not null, MUST be equal to `perm.country`, else abort.
-
-if `type` is HOLDER:
-
-- if `cs.issuer_perm_management_mode` is equal to OPEN, MUST abort (no need to create perm if issuing credentials of this schema  is open to anyone).
-- if `validation_id` is unspecified, MUST abort.
-- load `Validation` entry `val` with `validation_id`.
-- `val.exp` MUST be greater or equal to `effective_until` if not null, or MUST be null if null, else abort.
-- load `Permission` entry `csp_executor` from `val.validator_perm_id`.
-- `csp_executor` MUST exist and be a [[ref: valid permission]], else abort.
-- `csp_executor.grantee`: MUST be the `account` running the method, else abort.
-- `csp_executor.type`: MUST be ISSUER, else abort.
-- `csp_executor.country`: MUST be null, or if not null, MUST be equal to `perm.country`, else abort.
-
-:::note
-HOLDER permission are used so that it is possible to identify grantee account for paying rewards.
-:::
-
-###### [MOD-CSP-MSG-1-2-3] Create New CSP overlap checks
-
-Find all [[ref: valid permissions]] `perms[]` (existing not revoked, nor terminated) for `schema_id`, `type`, `country`, `grantee`.
-
-for each `Permission` entry `p` from `perms[]`:
-
-- if `p.effective_until` is greater than `effective_from` and `p.effective_from` is lower than `effective_from`, method execution MUST abort.
-- if `p.effective_from` is lower than `effective_until` and `p.effective_until` is greater than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire) and `effective_until` is greater than `p.effective_from`, method execution MUST abort.
-
-:::note
-In some cases it can be necessary for a validator (o trust registry) to revoke existing permissions for cleanup before creating new ones. Apps should make sure to use the best practices in order to prevent the ledger from growing too fast.
-:::
-
-###### [MOD-CSP-MSG-1-2-4] Create New CSP fee checks
-
-Account MUST have the required [[ref: estimated transaction fees]] available.
-
-##### [MOD-CSP-MSG-1-3] Create New CSP execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-A new entry `Permission` `perm` MUST be created:
-
-- `perm.id`: auto-incremented uint64.
-- `perm.schema_id`: `schema_id`.
-- `perm.type`: `type`.
-- `perm.did`: `did`.
-- `perm.grantee`: `grantee`
-- `perm.created`: datetime of day, yyyyMMddHHmm format.
-- `perm.created_by`: `account` executing the method.
-- `perm.effective_from`: `effective_from`
-- `perm.effective_until`: `effective_until`
-- `perm.country`: `country`
-- `perm.validation_id`: `validation_id`
-- `perm.validation_fees`: `validation_fees`
-- `perm.issuance_fees`: `issuance_fees`
-- `perm.verification_fees`: `verification_fees`
-- `perm.deposit`: 0
-
-#### [MOD-CSP-MSG-2] Revoke CSP
-
-Method used by grantor of a permission to revoke the permission.
-
-##### [MOD-CSP-MSG-2-1] Revoke CSP parameters
-
-An [[ref: account]] that would like to revoke a `Permission` entry MUST run this method by specifying:
-
-- `id` (uint64) (*mandatory*): `id` of the `Permission` entry (called `perm` below) it wants to revoke.
-
-##### [MOD-CSP-MSG-2-2] Revoke CSP precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-CSP-MSG-2-2-1] Revoke CSP basic checks
-
-if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-
-- `id` MUST be a valid uint64 and a `Permission` entry with the same id MUST exist.
-
-###### [MOD-CSP-MSG-2-2-2] Revoke CSP permission checks
-
-:::warning
-Permission checks across CSP methods may look similar but they are different.
-:::
-
-To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
-
-- Load `Permission` entry `perm`:
-- The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
-- The related `TrustRegistry` entry `tr` is loaded from `cs.tr_id`.
-
-if `perm.type` is TRUST_REGISTRY:
-
-- [[ref: account]] executing the method MUST be the [[ref: controller]] of `tr`, else MUST abort.
-
-if `perm.type` is ISSUER or ISSUER_GRANTOR:
-
-- if `cs.issuer_perm_management_mode` is equal to OPEN, MUST abort.
-- if `perm.validation_id` is unspecified, MUST abort.
-- load `Validation` entry `val` with `perm.validation_id`.
-- `val.exp` MUST be greater or equal to `effective_until` if not null, or MUST be null if null, else abort.
-- load `Permission` entry `csp_executor` from `val.validator_perm_id`.
-- `csp_executor` MUST exist and be a [[ref: valid permission]], else abort.
-- `csp_executor.grantee`: MUST be the `account` running the method, else abort.
-- `csp_executor.type`: MUST be ISSUER_GRANTOR if `cs.issuer_perm_management_mode` is equal to GRANTOR_VALIDATION, or TRUST_REGISTRY if `cs.issuer_perm_management_mode` is equal to TRUST_REGISTRY, else abort.
-- `csp_executor.country`: MUST be null, or if not null, MUST be equal to `perm.country`, else abort.
-
-if `perm.type` is VERIFIER or VERIFIER_GRANTOR:
-
-- if `cs.verifier_perm_management_mode` is equal to OPEN, MUST abort (no need to create perm if verifying credentials of this schema is open to anyone).
-- if `perm.validation_id` is unspecified, MUST abort.
-- load `Validation` entry `val` with `perm.validation_id`.
-- `val.exp` MUST be greater or equal to `effective_until` if not null, or MUST be null if null, else abort.
-- load `Permission` entry `csp_executor` from `val.validator_perm_id`.
-- `csp_executor` MUST exist and be a [[ref: valid permission]], else abort.
-- `csp_executor.grantee`: MUST be the `account` running the method, else abort.
-- `csp_executor.type`: MUST be VERIFIER_GRANTOR if `cs.verifier_perm_management_mode` is equal to GRANTOR_VALIDATION, or TRUST_REGISTRY if `cs.verifier_perm_management_mode` is equal to TRUST_REGISTRY, else abort.
-- `csp_executor.country`: MUST be null, or if not null, MUST be equal to `perm.country`, else abort.
-
-if `perm.type` is HOLDER:
-
-- if `cs.issuer_perm_management_mode` is equal to OPEN, MUST abort.
-- if `perm.validation_id` is unspecified, MUST abort.
-- load `Validation` entry `val` with `perm.validation_id`.
-- `val.exp` MUST be greater or equal to `effective_until` if not null, or MUST be null if null, else abort.
-- load `Permission` entry `csp_executor` from `val.validator_perm_id`.
-- `csp_executor` MUST exist and be a [[ref: valid permission]], else abort.
-- `csp_executor.grantee`: MUST be the `account` running the method, else abort.
-- `csp_executor.type`: MUST be ISSUER, else abort.
-- `csp_executor.country`: MUST be null, or if not null, MUST be equal to `perm.country`, else abort.
-
-###### [MOD-CSP-MSG-2-2-3] Revoke CSPs fee checks
-
-Account MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-CSP-MSG-2-3] Revoke CSPs execution
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-Load `Permission` entry `perm`:
-
-- set `perm.revoked` to datetime of day, yyyyMMddHHmm format.
-- set `perm.revoked_by` to [[ref: account]] executing the method.
-
-if `perm.deposit` is greater than 0, use [MOD-TD-MSG-1] to decrease by `dd.deposit` the [[ref: trust deposit]] of account, and set `perm.deposit` to 0.
-
-#### [MOD-CSP-MSG-3] Terminate CSP
-
-Method used by grantee of a permission to self-terminate a permission.
-
-##### [MOD-CSP-MSG-3-1] Terminate CSP parameters
-
-An [[ref: account]] that would like to terminate a `Permission` entry MUST run this method by specifying:
-
-- `id` (uint64) (*optional*): id of the `Permission` entry (called `perm` below) it wants to terminate.
-
-##### [MOD-CSP-MSG-3-2] Terminate CSP precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-CSP-MSG-3-2-1] Terminate CSP basic checks
-
-if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-
-- `id` MUST be a valid uint64 and a `Permission` entry `perm` with the same id MUST exist.
-
-###### [MOD-CSP-MSG-3-2-2] Terminate CSP permission checks
-
-:::warning
-Permission checks across CSP methods may look similar but they are different.
-:::
-
-To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
-
-- Load `Permission` entry `perm`:
-- Load `Validation` entry `val` from `perm.validation_id`.
-- `val.state` MUST be TERMINATION_REQUESTED.
-- [[ref: account]] executing the method MUST be `perm.grantee`.
-
-:::note
-If there is a validation process and it is not in TERMINATED state, permissions cannot be terminated.
-:::
-
-###### [MOD-CSP-MSG-3-2-3] Terminate CSPs fee checks
-
-Account MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-CSP-MSG-3-3] Terminate CSPs execution
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-Load `Permission` entry `perm`:
-
-- set `perm.terminated` to datetime of day, yyyyMMddHHmm format.
-- set `perm.terminated_by` to [[ref: account]] executing the method.
-
-if `perm.deposit` is greater than 0, use [MOD-TD-MSG-1] to decrease by `dd.deposit` the [[ref: trust deposit]] of account, and set `perm.deposit` to 0.
-
-#### [MOD-CSP-MSG-4] Create or Update CSPS
-
-Any credential exchange that requires issuer or verifier `payer` paying fees involves action from the issued or verified `wallet` (credential recipient in case of credential issuance, received presentation request in case of verification). `wallet` can be a VS, an app, a browser. `wallet` MUST send to `payer` an uint64 for session identification and creation, plus an `account` public key identifying the `wallet`. Then, `wallet` MUST check session has been created and is valid.
-
-```plantuml
-scale max 800 width
-actor "Wallet\nVS/App/Browser" as Issued 
-participant "Payer\nVS" as Issuer 
-participant "VPR" as vpr 
-
-
-Issued <-- Issuer: I want to issue a credential from schema id ... to you
-Issued --> Issuer: Here is a session UUID
-Issuer --> vpr: create CSPS session
-Issued <-- Issuer: session created, you can verify
-Issued --> vpr: /vpr/v1/csp/authorized_issuer?...
-Issued <-- vpr: AUTHORIZED
-Issued --> Issuer: OK, you can send the credential
-Issued <-- Issuer: Send credential
-
-```
-
-See [TR-RESOL] in [VS-SPECS].
-
-::: todo
-Define how and when UUID is exchanged. (Not needed for implementing this spec). Verifier MUST be able to query holder and see for a given credential schema(s), if holder has a credential and who is the issuer, before creating the CSPS.
-:::
-
-##### [MOD-CSP-MSG-4-1] Create or Update CSPS parameters
-
-An [[ref: account]] that would like to create or update a `PermissionSession` entry MUST send a Msg by specifying:
-
-- `id` (uuid) (*mandatory*): id of the `PermissionSession`.
-- `executor_perm_id` (uint64) (*mandatory*): the id of the perm the [[ref: account]] executing the method is acting as (if I want to verify, I'll pass here the id of my VERIFIER perm that justifies I am authorized to verify credentials of `executor_perm_id.schema_id`)
-- `beneficiary_perm_id` (uint64) (*MAY be mandatory*): the id of the perm the [[ref: account]] executing the method is referring to (if I want to verify, I'll pass here the id of the ISSUER perm I'm interested in). Mandatory parameter if `executor_perm.type` is equal to VERIFIER. MUST NOT be specified if `executor_perm.type` is equal to ISSUER.
-- `user_agent_did` (account) (*mandatory*): the did of the user agent.
-- `wallet_user_agent_did` (account) (*mandatory*): the did of the wallet user agent.
-
-##### [MOD-CSP-MSG-4-2] Create or Update CSPS precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-CSP-MSG-4-2-1] Create or Update CSPS checks
-
-if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-
-- `id` MUST be a valid uuid and a `PermissionSession` entry with the same id MUST NOT exist, or if it exists, account running the method MUST be the `session.controller` of the loaded `PermissionSession` entry `session`, else abort.
-- if a `PermissionSession` entry `session` exist with this `id`, `session.perm_ids[]` MUST NOT already contain (`executor_perm_id`, `beneficiary_perm_id`), else method MUST abort.
-- load `Permission` `executor_perm` from `executor_perm_id`.
-- if `executor_perm` is not a [[ref: valid permission]], the method MUST abort.
-- if [[ref: account]] running the method is not `executor_perm.grantee`, the method MUST abort.
-- if `executor_perm.type` is different than ISSUER or VERIFIER, abort.
-- if `executor_perm.type` is equal to ISSUER:
-  - if `beneficiary_perm_id` is not null, MUST abort.
-- else `executor_perm.type` is equal to VERIFIER:
-  - load `Permission` `beneficiary_perm` from `beneficiary_perm_id`.
-  - `beneficiary_perm.type` MUST be ISSUER, else the method MUST abort.
-  - if `beneficiary_perm` is not a [[ref: valid permission]], the method MUST abort.
-  - if `beneficiary_perm.schema_id` is different than `executor_perm.schema_id`, the method MUST abort.
-  
-###### [MOD-CSP-MSG-4-2-2] Find Beneficiaries
-
-To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry), starting from the 2 branches `executor_perm` and `beneficiary_perm`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. `executor_perm` is never added to the set.
-
-Example 1: `executor_perm.type` is equal to ISSUER, and `cs.issuer_perm_management_mode` is equal to GRANTOR_VALIDATION:
-
-```plantuml
-
-@startuml
-scale max 800 width
-object "TRUST_REGISTRY executor ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
-}
-object "ISSUER_GRANTOR executor ancestor perm" as ig #3fbdb6 {
-  add me to found_perm_set
-}
-object "ISSUER executor perm" as i #7677ed {
-  don't add me to found_perm_set
-}
-
-ig --> tr
-i --> ig 
-@enduml
-
-```
-
-Example 2: `executor_perm.type` is equal to ISSUER, and `cs.issuer_perm_management_mode` is equal to TRUST_REGISTRY:
-
-```plantuml
-
-@startuml
-scale max 800 width
-object "TRUST_REGISTRY executor ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
-}
-object "ISSUER executor perm" as i #7677ed {
-  don't add me to found_perm_set
-}
-
-
-i --> tr
-@enduml
-
-```
-
-Example 3: `executor_perm.type` is equal to VERIFIER, `beneficiary_perm.type` is equal to ISSUER, `cs.issuer_perm_management_mode` is equal to GRANTOR_VALIDATION, and `cs.verifier_perm_management_mode` is equal to GRANTOR_VALIDATION:
-
-```plantuml
-
-@startuml
-scale max 800 width
-object "TRUST_REGISTRY beneficiary ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
-}
-object "ISSUER_GRANTOR beneficiary ancestor perm" as ig #3fbdb6 {
-  add me to found_perm_set
-}
-object "ISSUER beneficiary perm" as i #3fbdb6 {
-  add me to found_perm_set
-}
-
-object "VERIFIER_GRANTOR executor ancestor perm" as vg #3fbdb6 {
-  add me to found_perm_set
-}
-object "VERIFIER executor perm" as v #7677ed {
-  don't add me to found_perm_set
-}
-
-ig --> tr
-i --> ig 
-vg --> tr
-v --> vg 
-
-@enduml
-
-```
-
-Now, let's build the set.
-
-- create Set `found_perm_set`.
-
-if `executor_perm.type` is equal to VERIFIER or ISSUER, we MUST process ancestors of `executor_perm`:
-
-- load `Permission` `executor_perm` from `executor_perm_id`.
-- while `executor_perm.validation_id` is not null:
-  - load `Validation` `executor_val` from `executor_perm.validation_id`.
-  - Add `executor_val.validator_perm_id` to `found_perm_set`.
-  - load `Permission` `executor_perm` from `executor_val.validator_perm_id`.
-
-Additionally, if `executor_perm.type` is equal to VERIFIER, we MUST add `beneficiary_perm_id` and process its ancestors (else omit):
-
-- Add `beneficiary_perm_id` to `found_perm_set`.
-- load `Permission` `beneficiary_perm` from `beneficiary_perm_id`.
-- while `beneficiary_perm.validation_id` is not null:
-  - load `Validation` `beneficiary_val` from `beneficiary_perm.validation_id`.
-  - Add `beneficiary_val.validator_perm_id` to `found_perm_set`.
-  - load `Permission` `beneficiary_perm` from `beneficiary.validator_perm_id`.
-
-###### [MOD-CSP-MSG-4-2-3] Create or Update CSPS fee checks
-
-Account MUST have sufficient available balance for:
-
-- the required [[ref: estimated transaction fees]];
-- the required beneficiary fees and its corresponding trust deposit `trust_fees` as explained below:
-
-To calculate the required beneficiary fees, use [MOD-CSPS-MSG-1-2-2] to create a Set with all beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
-
-- define `beneficiary_fees` = 0
-- load `Permission` `executor_perm` from `executor_perm_id`.
-
-- if `executor_perm.type` is equal to VERIFIER: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`.
-- else `executor_perm.type` is equal to ISSUER: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.issuance_fees`.
-
-Required beneficiary fees, its corresponding trust deposit `trust_fees` = `beneficiary_fees` \* `GlobalVariables.trust_unit_price` \* (`GlobalVariables.trust_deposit_rate`), plus wallet and user agent rewards `rewards` = `beneficiary_fees` \* `GlobalVariables.trust_unit_price` \* (`GlobalVariables.user_agent_reward_rate` + `GlobalVariables.wallet_user_agent_reward_rate`).
-
-##### [MOD-CSP-MSG-4-3] Create or Update CSPS execution
-
-If all precondition checks passed, method is executed.
-
-- load `Permission` `executor_perm` from `executor_perm_id`.
-- use [MOD-CSPS-MSG-1-2-2] to build `found_perm_set`.
-- if `executor_perm.type` is equal to ISSUER:
-  - for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
-    - transfer `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `executor_perm.grantee`.
-
-- else `executor_perm.type` is equal to VERIFIER:
-  - for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
-    - transfer `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `executor_perm.grantee`.
-
-If new, create entry `PermissionSession` `session`:
-
-- `session.id`: `id`
-- `session.controller`: account running the method
-- `session.perm_ids[]`: create and put  (`executor_perm_id`, `beneficiary_perm_id`).
-
-Else update:
-
-- add (`executor_perm_id`, `beneficiary_perm_id`) to `session.perm_ids[]`
 
 #### [MOD-CSP-MSG-5] Update Module Parameters
 
@@ -2529,54 +2051,6 @@ Some special unexpected situation may arise and must be mitigated. Examples:
 
 Any [[ref: account]] CAN execute this method.
 
-
-| Permission                     | Start a Permission VP                   |                                 | Msg    | [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp)    |
-|                                | Renew a Permission VP                   |                                 | Msg    | [[MOD-PERM-MSG-2]](#mod-perm-msg-2-renew-permission-vp)    |
-|                                | Set Permission VP to Validated          |                                 | Msg    | [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated)    |
-|                                | Request Permission VP Termination       |                               | Msg    | [[MOD-PERM-MSG-4]](#mod-perm-msg-4-request-permission-vp-termination)    |
-|                                | Confirm Permission VP Termination       |                                 | Msg    | [[MOD-PERM-MSG-5]](#mod-perm-msg-5-confirm-permission-vp-termination)    |
-|                                | Cancel Permission VP Last Request       |                                 | Msg    | [[MOD-PERM-MSG-6]](#mod-perm-msg-6-cancel-permission-vp-last-request)    |
-|                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-MSG-7]](#mod-perm-msg-7-update-permission-module-parameters)   |
-|                                | Extend Permission                       |                                 | Msg    | [[MOD-PERM-MSG-8]](#mod-perm-msg-8-extend-permission)  |
-|                                | Revoke Permission                       |                                 | Msg    | [[MOD-PERM-MSG-9]](#mod-perm-msg-9-revoke-permission)  |
-|                                | Terminate Permission                    |                                 | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-terminate-permission)  |
-|                                | Create or update Permission Session     |                                 | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-create-or-update-permission-session) |
-|                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |
-|                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-a-permission)    |
-|                                | List Permission Module Parameters       | /perm/v1/params              | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-list-module-parameters)   |
-|                                | Is Authorized Issuer                    | /perm/v1/authorized_issuer   | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-3-is-authorized-issuer)  |
-|                                | Is Authorized Verifier                  | /perm/v1/authorized_verifier | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-4-is-authorized-verifier)  |
-|                                | Get Permission Session                  | /perm/v1/get_session         | Query  | [[MOD-PERM-QRY-6]](#mod-perm-qry-5-get-permission-session) |
-
- `id` (uint64) (*mandatory*): the id of the perm.
-- `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
-- `type` (PermissionType): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, TRUST_REGISTRY, HOLDER
-- `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]].
-- `grantee` (account) (*mandatory*): [[ref: account]] this permission refers to (account granted to act as `type` for schema `schema_id`).
-- `created` (datetime) (*mandatory*): datetime this `Permission` has been created, in yyyyMMddHHmm format.
-- `created_by` (account) (*mandatory*): [[ref: account]] that created this permission.
-- `effective_from` (datetime) (*optional*): date from which (inclusive) this `Permission` is effective, in yyyyMMddHHmm format.
-- `effective_until` (datetime) (*optional*): date until when (exclusive) this `Permission` is effective, in yyyyMMddHHmm format, null if no time limit has been set for this permission.
-- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (grantee of this perm) for running a validation process for a given validation period, in trust unit. Default to 0.
-- `issuance_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is issued, in trust unit. Default to 0.
-- `verification_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is verified, in trust unit. Default to 0.
-- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in `denom`. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `perm.deposit` value as well. If `perm` is, let's say revoked, then corresponding `perm.deposit` value is freed from `perm.grantee` Trust Deposit.
-- `revoked` (datetime) (*optional*): manual revocation datetime of this Perm, in yyyyMMddHHmm format.
-- `revoked_by` (account) (*mandatory*): [[ref: account]] that revoked this permission.
-- `terminated` (datetime) (*optional*): manual termination (by grantee) datetime of this Perm, in yyyyMMddHHmm format.
-- `terminated_by` (account) (*mandatory*): [[ref: account]] that terminated this permission.
-- `country` (string) (*optional*): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country.
-- `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED
-- `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to this validation process, ie *parent node* in the CSP tree.
-- `vp_exp` (datetime) (*optional*): validation expiration date, yyyyMMdd format. This expiration date is for the validation process itself, not for the issued credential or `Permission` expiration date.
-- `vp_last_state_change` (datetime) (*mandatory*)
-- `vp_validator_deposits`: (keymap(uint64, number)) (*optional*): accumulated validator [[ref: trust deposits]], in [[ref: denom]].
-- `vp_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon validation process completion, in [[ref: denom]].
-- `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
-- `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `vp_term_requested` (datetime) (*optional*): set when [[ref: controller]] requests the termination of this entry.
-
-
 ##### [MOD-PERM-MSG-1-1] Start Permission VP parameters
 
 An Applicant that would like to start a permission validation process MUST execute this method by specifying:
@@ -2596,11 +2070,12 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `type` (PermissionType) (*mandatory*) MUST be a valid PermissionType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
-- `validator_perm_id` (uint64) (*mandatory*): see [MOD-PERM-MSG-1-2-2](#mod-perm-msg-1-2-2-start-a-permission-vp-permission-checks).
+- `validator_perm_id` (uint64) (*mandatory*): see [MOD-PERM-MSG-1-2-2](#mod-perm-msg-1-2-2-start-permission-vp-permission-checks).
 - `country` (string) (*mandatory*) MUST be a valid alpha-2 code (ISO 3166).
+- `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
 :::note
-A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the validation process is REQUIRED or not.
+A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.
 :::
 
 ###### [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks
@@ -2666,18 +2141,21 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
+- define `now`: datetime of day, yyyyMMddHHmm format.
+
 - create an persist a new permission entry `applicant_perm`:
 
   - `applicant_perm.id`: auto-incremented uint64.
   - `applicant_perm.grantee`: [[ref: applicant]]'s [[ref: account]].
   - `applicant_perm.type`: `type`.
-  - `applicant_perm.created`: datetime of day, yyyyMMddHHmm format.
+  - `applicant_perm.created`: `now`
+  - `applicant_perm.modified`: `now`
   - `applicant_perm.deposit`: `validation_trust_deposit_in_denom`.
   - `applicant_perm.validation_fees`: 0.
   - `applicant_perm.issuance_fees`: 0.
   - `applicant_perm.verification_fees`: 0.
   - `applicant_perm.validator_perm_id`: `validator_perm_id`.
-  - `applicant_perm.vp_last_state_change`: datetime of day, yyyyMMddHHmm format.
+  - `applicant_perm.vp_last_state_change`: `now`
   - `applicant_perm.vp_state`: PENDING.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
   - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_denom`.
@@ -2754,13 +2232,16 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
-- update validation entry:
+- define `now`: datetime of day, yyyyMMddHHmm format.
+
+- update permission entry:
 
   - `applicant_perm.vp_state`: PENDING.
   - `applicant_perm.vp_last_state_change`: datetime of day, yyyyMMddHHmm format.
   - `applicant_perm.deposit`: `applicant_perm.applicant_deposit` + `validation_trust_deposit_in_denom`.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
   - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_denom`.
+  - `applicant_perm.modified`: `now`
 
 #### [MOD-PERM-MSG-3] Set Permission VP to Validated
 
@@ -2856,6 +2337,7 @@ Change value of provided `effective_until` if needed, and abort if needed:
 
 Update `Permission` `applicant_perm`:
 
+- set `applicant_perm.modified` to `now`.
 - set `applicant_perm.vp_state` to VALIDATED.
 - set `applicant_perm.vp_last_state_change` to `now`.
 - set `applicant_perm.vp_current_fees` to 0;
@@ -2869,6 +2351,9 @@ Update `Permission` `applicant_perm`:
   - set `applicant_perm.verification_fees` to `verification_fees`;
   - set `applicant_perm.country` to `country`;
   - set `applicant_perm.effective_from` to `now`.
+
+Fees and Trust Deposits:
+
 - transfer `validator_trust_fees` = `applicant_perm.vp_current_fees` * (1 - `GlobalVariables.trust_deposit_rate`) from escrow [[ref: account]] to validator [[ref: account]] `validator_perm.grantee`;
 - Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `validator_trust_deposit` = (`validation.current_fees` - `validator_trust_fees`) the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.validator_deposit` to `applicant_perm.validator_deposit` + `validator_trust_deposit`.
 
@@ -2882,7 +2367,7 @@ Requesting termination of the validation process set permission entry to the TER
 
 ##### [MOD-PERM-MSG-4-1] Request Permission VP Termination parameters
 
-An [[ref: account]] that would like to set a validation entry to TERMINATION_REQUESTED MUST execute this method by specifying:
+An [[ref: account]] that would like to set a `Permission` entry to TERMINATION_REQUESTED MUST execute this method by specifying:
 
 - `id` (uint64) (*mandatory*): id of the validation process;
 
@@ -2894,9 +2379,15 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` MUST be a valid uint64 and a `Validation` entry `val` with the same id MUST exist.
-- [[ref: account]] running the [[ref: transaction]] MUST be `val.applicant`.
-- `val.state` must be VALIDATED.
+- `id` MUST be a valid uint64.
+- Load `Permission` entry `applicant_perm` with this id. It MUST exist.
+- `applicant_perm.vp_state` must be VALIDATED.
+
+If validation process already expired, either party can terminate the validation process to reclaim the deposit. Else, only the grantee can terminate the vp.
+
+- if `applicant_perm.vp_exp` is lower than `now`:
+  - Load `Permission` entry `validator_perm` with id equal to `applicant_perm.validator_perm_id`. [[ref: account]] running the [[ref: transaction]] MUST be either `applicant_perm.grantee` OR `validator_perm.grantee`.
+- else [[ref: account]] running the [[ref: transaction]] MUST be `applicant_perm.grantee`.
 
 ###### [MOD-PERM-MSG-4-2-2] Request Permission VP Termination fee checks
 
@@ -2908,145 +2399,583 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- set `validation.state` to TERMINATION_REQUESTED.
-- set `validation.term_requested` to current datetime.
-- set `validation.last_state_change`: datetime of day, yyyyMMddHHmm format.
+Define vars:
 
-#### [MOD-PERM-MSG-5] Confirm Validation Termination
+- define `now`  datetime of day, yyyyMMddHHmm format.
 
-This method CAN be run my any [[ref: account]], provided it has the proper permissions for the associated resources.
+Update perm:
 
-*This section is non-normative.*
+- set `applicant_perm.modified` to `now`.
+- set `applicant_perm.vp_term_requested` to current datetime.
+- set `applicant_perm.vp_last_state_change` to `now`.
+if `applicant_perm.type` is not HOLDER, or `applicant_perm.vp_exp` is lower than `now`:
+- set `applicant_perm.vp_state` to TERMINATED.
+- set `applicant_perm.terminated` to `now`
+- set `applicant_perm.terminated_by` to account executing the method.
+else
+- set `applicant_perm.vp_state` to TERMINATION_REQUESTED.
 
-Before executing this [[ref: transaction]], [[ref: validator]] should verify the implications of canceling this validation such as optional credential revocation, permission termination...
+Update deposits if state is TERMINATED:
 
-##### [MOD-PERM-MSG-5-1] Confirm Validation Termination parameters
+If `applicant_perm.vp_state` has been set to TERMINATED:
+
+- if `applicant_perm.deposit` > 0:
+  - call [MOD-TD-MSG-1] to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
+  - set `applicant_perm.deposit` to 0.
+
+- if `applicant_perm.validator_deposit` > 0:
+  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.validator_deposit`.
+  - set `applicant_perm.validator_deposit` to 0.
+
+:::note
+if `applicant_perm.type` is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.
+:::
+
+#### [MOD-PERM-MSG-5] Confirm Permission VP Termination
+
+This method is called by a validator to confirm the termination of a vp when permission type is HOLDER, usually after revoking (or not) the verifiable credential of the holder. It can be although called by the grantee after a timeout, defined in `GlobalVariables.validation_term_requested_timeout_days`.
+
+##### [MOD-PERM-MSG-5-1] Confirm Permission VP Termination parameters
 
 An [[ref: account]] that would like to set confirm validation entry termination MUST execute this method by specifying:
 
 - `id` (uint64) (*mandatory*): id of the validation process;
 
-##### [MOD-PERM-MSG-5-2] Confirm Validation Termination precondition checks
+##### [MOD-PERM-MSG-5-2] Confirm Permission VP Termination precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-5-2-1] Confirm Validation Termination basic checks
+###### [MOD-PERM-MSG-5-2-1] Confirm Permission VP Termination basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `id` MUST be a valid uint64 and a validation entry with the same id MUST exist.
-- validation entry must be in state TERMINATION_REQUESTED.
+- `Permission` entry must be in state TERMINATION_REQUESTED.
 
-###### [MOD-PERM-MSG-5-2-2] Confirm Validation Termination permission checks
+###### [MOD-PERM-MSG-5-2-2] Confirm Permission VP Termination permission checks
 
-if `validation.type` is equal to HOLDER:
+- `id` MUST be a valid uint64.
+- Load `Permission` entry `applicant_perm` with this id. It MUST exist.
 
-else:
+Timeout not reached: only validator can call the method:
 
-- each existing `Permission` entries `perm` where `perm.validation_id` is equal to `id` MUST have either a not null `perm.revoked`, `perm.terminated`, or `perm.effective_until` MUST be lower than now().
-- load `Validation` entry `val` from `id`.
-- if `val.type` is different than HOLDER:
-  - if `val.exp` is NULL (never expire), or  `val.exp` is after now(), [[ref: account]] executing the method MUST be `val.applicant`.
-  - if `val.exp` is before now(), [[ref: account]] executing the method MUST be `val.applicant` OR load `Permission` `perm` from `val.validator_perm_id` [[ref: account]] running the [[ref: transaction]] MUST be `perm.grantee`. Else MUST abort.
-- else `val.type` is HOLDER:
-  - if `val.exp` is NULL (never expire), or  `val.exp` is after now(), load `Permission` `perm` from `val.validator_perm_id` [[ref: account]] running the [[ref: transaction]] MUST be `perm.grantee`.
-  - if `val.exp` is before now(), [[ref: account]] executing the method MUST be `val.applicant` OR load `Permission` `perm` from `val.validator_perm_id` [[ref: account]] running the [[ref: transaction]] MUST be `perm.grantee`. Else MUST abort.
-  - if `validation.term_requested` + `GlobalVariables.validation_term_requested_timeout_days` days is before now(), [[ref: account]] executing the method MUST be `val.applicant` OR load `Permission` `perm` from `val.validator_perm_id` [[ref: account]] running the [[ref: transaction]] MUST be `perm.grantee`. Else MUST abort.
+if `applicant_perm.term_requested` + `GlobalVariables.validation_term_requested_timeout_days` is after or equal to current datetime:
+
+- Load `Permission` entry `validator_perm` with id `applicant_perm.validator_perm_id`. It MUST exist, and `validator_perm.grantee` MUST be the account executing the method. Else MUST abort.
+
+Timeout reached: either the validator or the applicant can call the method:
+
+if `applicant_perm.term_requested` + `GlobalVariables.validation_term_requested_timeout_days` is before now:
+
+- Load `Permission` entry `validator_perm` with id `applicant_perm.validator_perm_id`. It MUST exist, and `validator_perm.grantee` CAN be the account executing the method.
+OR
+`applicant_perm.grantee` CAN be the account executing the method.
+
+Else MUST abort.
   
 :::note
 For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless `GlobalVariables.validation_term_requested_timeout_days` have passed since termination request and validator did not answered.
 :::
 
-###### [MOD-PERM-MSG-5-2-3] Confirm Validation Termination fee checks
+###### [MOD-PERM-MSG-5-2-3] Confirm Permission VP Termination fee checks
 
 Account executing the method MUST have the required [[ref: estimated transaction fees]].
 
-##### [MOD-PERM-MSG-5-3] Confirm Validation Termination execution
+##### [MOD-PERM-MSG-5-3] Confirm Permission VP Termination execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
+Define vars:
+
+- define `now`  datetime of day, yyyyMMddHHmm format.
+
+Update:
+
+- set `applicant_perm.modified` to `now`.
 - set validation entry `validation.state` to TERMINATED.
-- set `validation.last_state_change`: datetime of day, yyyyMMddHHmm format.
+- set `validation.last_state_change`: `now`.
 
-- if `validation.applicant_deposit` > 0:
-  - call [MOD-TD-MSG-1] to reduce `validation.applicant` trust deposit by `validation.applicant_deposit`.
-  - set `validation.applicant_deposit` to 0.
+- if `applicant_perm.deposit` > 0:
+  - call [MOD-TD-MSG-1] to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
+  - set `applicant_perm.deposit` to 0.
 
-- for each (validator_deposit_perm_id, validator_deposit) from `validation.validator_deposits`: load `Permission` `validator_perm` from `validator_deposit_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `validator_deposit`. Remove entry (validator_deposit_perm_id, validator_deposit) from `validation.validator_deposits`.
+If account executing the method is the validator:
+
+- if `applicant_perm.validator_deposit` > 0:
+  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.validator_deposit`.
+  - set `applicant_perm.validator_deposit` to 0.
 
 :::note
-if `validation.type` is not HOLDER, method will fail is permission linked to this validation are not revoked, terminated or are not expired. If `validation.type` is HOLDER, then validator SHOULD revoke the corresponding credential before calling this method.
+If account executing the method is the grantee (timeout), validator **is punished** and its trust deposit is not freed.
 :::
 
-#### [MOD-PERM-MSG-6] Cancel Validation
+#### [MOD-PERM-MSG-6] Cancel Permission VP Last Request
 
-*This section is non-normative.*
+At any time, [[ref: applicant]] of a permission validation process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and paid [[ref: trust fees]] are refunded. If `vp_exp` is not null, `vp_state` is set back to VALIDATED, else `vp_state` is set to TERMINATED.
 
-At any time, [[ref: controller]] of a validation may request cancellation of a validation.
-
-Validation state must be PENDING. Upon method execution, the pending validation is cancelled and paid [[ref: trust fees]] are refunded. If `exp` is not null, validation state is set back to VALIDATED, else validation state is set to TERMINATED.
-
-##### [MOD-PERM-MSG-6-1] Cancel Validation parameters
+##### [MOD-PERM-MSG-6-1] Cancel Permission VP Last Request parameters
 
 An [[ref: account]] that would like to set cancel a validation entry MUST execute this method by specifying:
 
-- `id` (uint64) (*mandatory*): id of the validation process;
+- `id` (uint64) (*mandatory*): id of the `Permission` entry;
 
-##### [MOD-PERM-MSG-6-2] Cancel Validation precondition checks
+##### [MOD-PERM-MSG-6-2] Cancel Permission VP Last Request precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-6-2-1] Cancel Validation basic checks
+###### [MOD-PERM-MSG-6-2-1] Cancel Permission VP Last Request basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `id` MUST be a valid uint64 and a `Validation` entry `val` with the same id MUST exist.
-- [[ref: account]] running the [[ref: transaction]] MUST be `val.applicant`.
-- `val.state` must be PENDING.
+- `id` MUST be a valid uint64.
+- Load `Permission` entry `applicant_perm` with this id. It MUST exist.
+- [[ref: account]] running the [[ref: transaction]] MUST be `applicant_perm.grantee`.
+- `applicant_perm.vp_state` MUST be PENDING.
 
-###### [MOD-PERM-MSG-6-2-2] Cancel Validation fee checks
+###### [MOD-PERM-MSG-6-2-2] Cancel Permission VP Last Request fee checks
 
 Account executing the method MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-PERM-MSG-6-3] Cancel Validation execution
+##### [MOD-PERM-MSG-6-3] Cancel Permission VP Last Request execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- if `validation.exp` is null (validation never completed), set validation entry `validation.state` to TERMINATED, else set `validation.state` to VALIDATED.
-- set `validation.last_state_change`: datetime of day, yyyyMMddHHmm format.
-- if `validation.current_fees` > 0:
-  - transfer `validation.current_fees` back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `validation.applicant`.
-  - set `validation.current_fees` to 0;
+- Load `Permission` entry `applicant_perm` with `id`. It MUST exist.
+- define `now`: datetime of day, yyyyMMddHHmm format.
 
-- if `validation.current_deposit` > 0:
-  - call [MOD-TD-MSG-1] to reduce trust deposit of `validation.applicant` by `validation.current_deposit`
-  - set `validation.current_deposit` to 0.
+- set `applicant_perm.modified` to `now`.
+- if `applicant_perm.vp_exp` is null (validation never completed), set `applicant_perm.vp_state` to TERMINATED, else set `applicant_perm.vp_state` to VALIDATED.
+- set `applicant_perm.vp_last_state_change` to `now`.
+- if `applicant_perm.vp_current_fees` > 0:
+  - transfer `applicant_perm.vp_current_fees` back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_perm.grantee`.
+  - set `applicant_perm.vp_current_fees` to 0;
 
-#### [MOD-PERM-MSG-7] Update Module Parameters
+- if `applicant_perm.vp_current_deposit` > 0:
+  - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_perm.grantee` by `applicant_perm.vp_current_deposit`
+  - set `applicant_perm.vp_current_deposit` to 0.
 
-Update Module Parameters.
+#### [MOD-PERM-MSG-7] Create Root Permission
 
-Can only be executed through a governance proposal.
+This method is used by controllers of Trust Registries. When they create a Credential Schema, they need to create (a) permission(s) of type TRUST_REGISTRY so that other participants can run validation processes.
 
-##### [MOD-PERM-MSG-7-1] Update Module Parameters parameters
+##### [MOD-PERM-MSG-7-1] Create Root Permission parameters
 
-- `params` (KeySet<String, String>): the parameters to update and their values.
+An [[ref: account]] that would like to create a `Permission` entry MUST call this method by specifying:
 
-##### [MOD-PERM-MSG-7-2] Update Module Parameters precondition checks
+- `schema_id` (uint64) (*mandatory*)
+- `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
+- `country` (*optional*).
+- `effective_from` (datetime) (*optional*): date from when (exclusive) this Perm is effective, in yyyyMMddHHmm format. MUST be in the future.
+- `effective_until` (datetime) (*optional*): date until when (exclusive) this Perm is effective, in yyyyMMddHHmm format, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
+- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0.
+- `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in trust unit. Default to 0.
+- `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.
+
+##### [MOD-PERM-MSG-7-2] Create Root Permission precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-7-2-1] Update Module Parameters basic checks
+###### [MOD-PERM-MSG-7-2-1] Create Root Permission basic checks
+
+if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
+
+- `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
+- `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `effective_from` must be in the future.
+- `effective_until`, if not null, must be greater than `effective_from`
+- `country` if not null, MUST be a valid alpha-2 code (ISO 3166).
+- `validation_fees` (number) (*mandatory*): MUST be >= 0.
+- `issuance_fees` (number) (*mandatory*): MUST be >= 0.
+- `verification_fees` (number) (*mandatory*): MUST be >= 0.
+
+###### [MOD-PERM-MSG-7-2-2] Create Root Permission permission checks
+
+To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
+
+- The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
+- The related `TrustRegistry` entry `tr` is loaded from `cs.tr_id`.
+- [[ref: account]] executing the method MUST be the [[ref: controller]] of `tr`.
+- else MUST abort.
+
+:::note
+HOLDER permission are used so that it is possible to identify grantee account for paying rewards.
+:::
+
+###### [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks
+
+Account MUST have the required [[ref: estimated transaction fees]] available.
+
+##### [MOD-PERM-MSG-7-3] Create Root Permission execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: datetime of day, yyyyMMddHHmm format.
+
+A new entry `Permission` `perm` MUST be created:
+
+- `perm.id`: auto-incremented uint64.
+- `perm.schema_id`: `schema_id`.
+- `perm.modified` to `now`.
+- `perm.type`: TRUST_REGISTRY.
+- `perm.did`: `did`.
+- `perm.grantee`: `account` executing the method.
+- `perm.created`: `now`
+- `perm.created_by`: `account` executing the method.
+- `perm.effective_from`: `effective_from`
+- `perm.effective_until`: `effective_until`
+- `perm.country`: `country`
+- `perm.validation_fees`: `validation_fees`
+- `perm.issuance_fees`: `issuance_fees`
+- `perm.verification_fees`: `verification_fees`
+- `perm.deposit`: 0
+
+#### [MOD-PERM-MSG-8] Extend Permission
+
+This method can only be called by a validator.
+
+##### [MOD-PERM-MSG-8-1] Extend Permission parameters
+
+An [[ref: account]] that would like to extend the effective_until date of a permission MUST call this methid by specifying:
+
+- `id` (uint64) (*mandatory*): id of the permission;
+- `effective_until` (datetime) (*optional*): date until when (exclusive) this `Permission` is effective, in yyyyMMddHHmm format.
+
+##### [MOD-PERM-MSG-8-2] Extend Permission precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-PERM-MSG-8-2-1] Extend Permission basic checks
+
+if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
+
+- `id` MUST be a valid uint64.
+- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
+- `effective_until` MUST be greater than `applicant_perm.effective_until` else MUST abort.
+- `effective_until` MUST be lower or equal to `applicant_perm.vp_exp` else MUST abort.
+
+###### [MOD-PERM-MSG-8-2-2] Extend Permission validator perms
+
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]].
+- [[ref: account]] running the method MUST be `validator_perm.grantee`.
+
+###### [MOD-PERM-MSG-8-2-3] Extend Permission fee checks
+
+Validator MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+
+##### [MOD-PERM-MSG-8-3] Extend Permission execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: datetime of day, yyyyMMddHHmm format.
+
+- Load `Permission` entry `applicant_perm` from `id`.
+- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
+- set `applicant_perm.effective_until` to `effective_until`
+- set `applicant_perm.extended` to `now`
+- set `applicant_perm.modified` to `now`
+- set `applicant_perm.extended_by` to account executing the method.
+
+#### [MOD-PERM-MSG-9] Revoke Permission
+
+This method can only be called by a validator.
+
+##### [MOD-PERM-MSG-9-1] Revoke Permission parameters
+
+An [[ref: account]] that would like to extend the effective_until date of a permission MUST call this methid by specifying:
+
+- `id` (uint64) (*mandatory*): id of the permission;
+
+##### [MOD-PERM-MSG-9-2] Revoke Permission precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-PERM-MSG-9-2-1] Revoke Permission basic checks
+
+if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
+
+- `id` MUST be a valid uint64.
+- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
+
+###### [MOD-PERM-MSG-9-2-2] Revoke Permission validator perms
+
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]].
+- [[ref: account]] running the method MUST be `validator_perm.grantee`.
+
+###### [MOD-PERM-MSG-9-2-3] Revoke Permission fee checks
+
+Validator MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+
+##### [MOD-PERM-MSG-9-3] Revoke Permission execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: datetime of day, yyyyMMddHHmm format.
+
+- Load `Permission` entry `applicant_perm` from `id`.
+- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
+- set `applicant_perm.revoked` to `now`
+- set `applicant_perm.modified` to `now`
+- set `applicant_perm.revoked_by` to account executing the method.
+
+#### [MOD-PERM-MSG-10] Create or Update Permission Session
+
+Any credential exchange that requires issuer or verifier to pay fees implies the creation of a `PermissionSession`.
+
+The `agent`, the Verifiable User Agent or Verifiable Service that receive the request, MUST send to issuer/verifier:
+
+- an `uuid` for session identification and creation;
+- a `agent_did` (`agent` [[ref: DID]]);
+- a `wallet_agent_did`, if wallet that contain the credential (presentation request) or wallet that will store the credential (in case of issuance) is an agent different than `agent`.
+
+`payer` MUST create a Permission Session, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
+
+```plantuml
+scale max 800 width
+actor "Agent\nVUA" as Issued 
+participant "Payer\nVS" as Issuer 
+participant "VPR" as vpr 
+
+
+Issued <-- Issuer: I want to issue a credential from schema id ... to you
+Issued --> Issuer: Here is the session UUID, agent_did, wallet_agent_did
+Issuer --> vpr: create CSPS session
+Issued <-- Issuer: session created, you can verify
+Issued --> vpr: /vpr/v1/csp/authorized_issuer?...
+Issued <-- vpr: AUTHORIZED
+Issued --> Issuer: OK, you can send the credential
+Issued <-- Issuer: Send credential
+Issued <-- Issued: Store credential
+
+```
+
+See [TR-RESOL] in [VS-SPECS].
+
+::: todo
+Define how and when UUID is exchanged. (Not needed for implementing this spec). Verifier MUST be able to query `agent` and check, for a given credential schema(s), if holder has (a) credential(s) of this schema and who is (are) the issuer(s), before creating the CSPS.
+:::
+
+##### [MOD-PERM-MSG-10-1] Create or Update Permission Session parameters
+
+An [[ref: account]] that would like to create or update a `PermissionSession` entry MUST send a Msg by specifying:
+
+- `id` (uuid) (*mandatory*): id of the `PermissionSession`.
+- `executor_perm_id` (uint64) (*mandatory*): the id of the perm the [[ref: account]] executing the method is acting as: if I want to verify, I'll pass here the id of my VERIFIER perm that justifies I am authorized to verify credentials of `executor_perm.schema_id`, if I want to issue, I'll pass here the did of my VERIFIER perm that justifies I am authorized to verify credentials of `executor_perm.schema_id`.
+- `beneficiary_perm_id` (uint64) (*MAY be mandatory*): the id of the perm the [[ref: account]] executing the method is referring to (if I want to verify, it is mandatory and I MUST pass here the id of the ISSUER perm I'm interested in).
+- `agent_perm_id` (uint64) (*mandatory*): the HOLDER permission of the agent.
+- `wallet_agent_perm_id` (uint64) (*option al*): the HOLDER permission of the wallet agent, if different than agent.
+
+##### [MOD-PERM-MSG-10-2] Create or Update Permission Session precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+if `executor_perm.type` is ISSUER:
+
+- Load `executor_perm` from `executor_perm_id`. If not found, MUST abort.
+- `executor_perm` MUST be a [[ref: valid permission]] else MUST abort.
+
+else if `executor_perm.type` is VERIFIER:
+
+- Load `executor_perm` from `executor_perm_id`. If not found, MUST abort.
+- `executor_perm` MUST be a [[ref: valid permission]] else MUST abort.
+- Load `beneficiary_perm` from `beneficiary_perm_id`. If not found, MUST abort.
+- `beneficiary_perm` MUST be a [[ref: valid permission]] else MUST abort.
+- `beneficiary_perm.schema_id` MUST be equal to `executor_perm.schema_id`
+- `beneficiary_perm.type` MUST be ISSUER else MUST abort.
+
+else `executor_perm.type` is different than ISSUER or VERIFIER: MUST abort.
+
+Additionally:
+
+- Load `agent_perm` from `agent_perm_id`. If not found, MUST abort.
+- `agent_perm` MUST be a [[ref: valid permission]] else MUST abort.
+- `agent_perm.type` MUST be equal to HOLDER.
+
+If `wallet_agent_perm_id` is specified:
+
+- Load `wallet_agent_perm` from `wallet_agent_perm_id`. If not found, MUST abort.
+- `wallet_agent_perm` MUST be a [[ref: valid permission]] else MUST abort.
+- `wallet_agent_perm.type` MUST be equal to HOLDER.
+
+:::warn
+we might want to check that credential schema of agent and wallet_agent perms is an ECS of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.
+:::
+
+###### [MOD-PERM-MSG-10-2-2] Find Beneficiaries
+
+To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches `executor_perm` and `beneficiary_perm`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. `executor_perm` is never added to the set.
+
+Example 1: `executor_perm.type` is equal to ISSUER, and `cs.issuer_perm_management_mode` is equal to GRANTOR_VALIDATION:
+
+```plantuml
+
+@startuml
+scale max 800 width
+object "TRUST_REGISTRY executor ancestor perm" as tr #3fbdb6 {
+  add me to found_perm_set
+}
+object "ISSUER_GRANTOR executor ancestor perm" as ig #3fbdb6 {
+  add me to found_perm_set
+}
+object "ISSUER executor perm" as i #7677ed {
+  don't add me to found_perm_set
+}
+
+ig --> tr
+i --> ig 
+@enduml
+
+```
+
+Example 2: `executor_perm.type` is equal to ISSUER, and `cs.issuer_perm_management_mode` is equal to TRUST_REGISTRY:
+
+```plantuml
+
+@startuml
+scale max 800 width
+object "TRUST_REGISTRY executor ancestor perm" as tr #3fbdb6 {
+  add me to found_perm_set
+}
+object "ISSUER executor perm" as i #7677ed {
+  don't add me to found_perm_set
+}
+
+
+i --> tr
+@enduml
+
+```
+
+Example 3: `executor_perm.type` is equal to VERIFIER, `beneficiary_perm.type` is equal to ISSUER, `cs.issuer_perm_management_mode` is equal to GRANTOR_VALIDATION, and `cs.verifier_perm_management_mode` is equal to GRANTOR_VALIDATION:
+
+```plantuml
+
+@startuml
+scale max 800 width
+object "TRUST_REGISTRY beneficiary ancestor perm" as tr #3fbdb6 {
+  add me to found_perm_set
+}
+object "ISSUER_GRANTOR beneficiary ancestor perm" as ig #3fbdb6 {
+  add me to found_perm_set
+}
+object "ISSUER beneficiary perm" as i #3fbdb6 {
+  add me to found_perm_set
+}
+
+object "VERIFIER_GRANTOR executor ancestor perm" as vg #3fbdb6 {
+  add me to found_perm_set
+}
+object "VERIFIER executor perm" as v #7677ed {
+  don't add me to found_perm_set
+}
+
+ig --> tr
+i --> ig 
+vg --> tr
+v --> vg 
+
+@enduml
+
+```
+
+Now, let's build the set. Revoked and terminated permissions will not be added to the set. Expired permissions, if not revoked/terminated, will be considered.
+
+- create Set `found_perm_set`.
+
+- Load `executor_perm` from `executor_perm_id`. If `executor_perm` is not a [[ref: valid permission]], MUST abort.
+
+if `executor_perm.type` is equal to VERIFIER or ISSUER, we MUST process ancestors of `executor_perm`:
+
+- while `executor_perm.validator_perm_id` is not null:
+  - load `Permission` `executor_perm` from `executor_perm.validator_perm_id`.
+  - if `executor_perm.revoked` AND `executor_perm.terminated` is NULL, Add `executor_perm.id` to `found_perm_set`.
+
+Additionally, if `executor_perm.type` is equal to VERIFIER, we MUST add `beneficiary_perm_id` and process its ancestors (else omit):
+
+- load `Permission` `beneficiary_perm` from `beneficiary_perm_id`.
+- if `beneficiary_perm.revoked` is NULL AND `beneficiary_perm.terminated` is NULL, Add `beneficiary_perm.id` to `found_perm_set`.
+- while `beneficiary_perm.validator_perm_id` is not null:
+  - load `Permission` `beneficiary_perm` from `beneficiary_perm.validator_perm_id`.
+  - if `beneficiary_perm.revoked` is NULL AND `beneficiary_perm.terminated` is NULL, Add `beneficiary_perm.id` to `found_perm_set`.
+
+###### [MOD-PERM-MSG-10-2-3] Create or Update Permission Session fee checks
+
+Account MUST have sufficient available balance for:
+
+- the required [[ref: estimated transaction fees]];
+- the required beneficiary fees and its corresponding trust deposit `trust_fees` as explained below:
+
+To calculate the required beneficiary fees, use [MOD-PERM-MSG-8-2-2] to create a Set with all beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
+
+- define `beneficiary_fees` = 0
+- if `executor_type` is equal to VERIFIER: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`.
+- else `executor_type` is equal to ISSUER: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.issuance_fees`.
+
+Total required fees including Trust Deposit:
+
+`trust_fees` = `beneficiary_fees` \* `GlobalVariables.trust_unit_price` \* (`GlobalVariables.trust_deposit_rate`), plus wallet and user agent rewards `rewards` = `beneficiary_fees` \* `GlobalVariables.trust_unit_price` \* (`GlobalVariables.user_agent_reward_rate` + `GlobalVariables.wallet_user_agent_reward_rate`).
+
+##### [MOD-PERM-MSG-10-3] Create or Update Permission Session execution
+
+If all precondition checks passed, method is executed.
+
+- Load `executor_perm` from `executor_perm_id`.
+
+- use [MOD-PERM-MSG-8-2-2] to build `found_perm_set`.
+
+- if `executor_perm.type` is equal to ISSUER:
+  - for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
+    - transfer `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `executor_perm.grantee`.
+
+- else `executor_perm.type` is equal to VERIFIER:
+  - for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
+    - transfer `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `executor_perm.grantee`.
+
+If new, create entry `PermissionSession` `session`:
+
+- `session.id`: `id`
+- `session.controller`: account running the method
+- `session.agent_perm_id`: `agent_perm_id`
+- `session.authz[]`: create and put  (`executor_perm_id`, `beneficiary_perm_id`, `wallet_agent_perm_id`).
+
+Else update:
+
+- add (`executor_perm_id`, `beneficiary_perm_id`, `wallet_agent_perm_id`) to `session.authz[]`
+
+#### [MOD-PERM-MSG-11] Update Permission Module Parameters
+
+Update Permission Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-PERM-MSG-11-1] Update Permission Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-PERM-MSG-11-2] Update Permission Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-PERM-MSG-11-2-1] Update Permission Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
 
-###### [MOD-PERM-MSG-7-2-2] Update Module Parameters fee checks
+###### [MOD-PERM-MSG-11-2-2] Update Permission Module Parameters fee checks
 
 provided transaction fees MUST be sufficient for execution
 
-##### [MOD-PERM-MSG-7-3] Update Module Parameters execution
+##### [MOD-PERM-MSG-11-3] Update Permission Module Parameters execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -3056,9 +2985,9 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
 
-#### [MOD-V-QRY-1] List Validations
+#### [MOD-PERM-QRY-1] List Permissions
 
-This method is used to [[ref: query]] the validation [[ref: keeper]] and return pending actions. Returned result MUST be ordered by `validation.pending_since` ASC.
+This method is used to [[ref: query]] the permission [[ref: keeper]] and return pending actions. Returned result MUST be ordered by `validation.pending_since` ASC.
 
 :::note
 indexes will be required based on frontend usage.
