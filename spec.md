@@ -1128,11 +1128,11 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Create or update Permission Session     |                                 | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-create-or-update-permission-session)  |
 |                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |
 |                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |
-|                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-a-permission)    |
-|                                | List Permission Module Parameters       | /perm/v1/params              | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-list-module-parameters)   |
-|                                | Is Authorized Issuer                    | /perm/v1/authorized_issuer   | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-3-is-authorized-issuer)  |
-|                                | Is Authorized Verifier                  | /perm/v1/authorized_verifier | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-4-is-authorized-verifier)  |
-|                                | Get Permission Session                  | /perm/v1/get_session         | Query  | [[MOD-PERM-QRY-6]](#mod-perm-qry-5-get-permission-session) |
+|                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |
+|                                | Is Authorized Issuer                    | /perm/v1/authorized_issuer   | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-is-authorized-issuer)  |
+|                                | Is Authorized Verifier                  | /perm/v1/authorized_verifier | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-is-authorized-verifier)  |
+|                                | Get Permission Session                  | /perm/v1/get_session         | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-5-get-permissionsession) |
+|                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |
 | DID Directory                  | Add a DID                               |                                  | Msg    | [[MOD-DD-MSG-1]](#mod-dd-msg-1-add-a-did)   |
 |                                | Renew a DID                             |                                  | Msg    | [[MOD-DD-MSG-2]](#mod-dd-msg-2-renew-a-did)   |
 |                                | Remove a DID                            |                                  | Msg    | [[MOD-DD-MSG-3]](#mod-dd-msg-3-remove-a-did)   |
@@ -1471,7 +1471,7 @@ The following parameters are optional:
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
-- `response_max_size` must be between 1 and 1,024.
+- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
 
 ##### [MOD-TR-QRY-2-3] List Trust Registries execution of the query
 
@@ -1781,8 +1781,6 @@ Return the list of the existing parameters and their values.
 
 ### Credential Schema Permission (CSP) Module
 
-
-
 #### [MOD-CSP-MSG-5] Update Module Parameters
 
 Update Module Parameters.
@@ -1815,174 +1813,6 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
 
-#### [MOD-CSP-QRY-1] List CSPs
-
-Anyone CAN execute this method.
-
-:::note
-See [MOD-CSP-QRY-3] and [MOD-CSP-QRY-4] to gather required indexes. Added to these 2 methods, frontend will have to be able to filter at least by schema_id.
-:::
-
-##### [MOD-CSP-QRY-1-1] List CSPs parameters
-
-- `schema_id` (uint64) (*mandatory*): to filter by credential schema.
-- `creator` (account) (*optional*): to filter by creator.
-- `grantee` (account) (*optional*): to filter by grantee.
-- `did` (string) (*optional*): to filter by grantee did.
-- `type` (PermissionissionType) (*optional*): to filter by type.
-- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
-
-##### [MOD-CSP-QRY-1-2] List CSPs checks
-
-- `schema_id` is required and must be an uint64.
-- `creator` must be an account.
-- `grantee` must be an account.
-- `did` must be a [[ref: DID]].
-- `type` must be a valid PermissionissionType.
-- `response_max_size` must be a number between 1 and 1,024.
-
-##### [MOD-CSP-QRY-1-3] List CSPs execution
-
-return a list of found entries, or an empty list if nothing found.
-
-#### [MOD-CSP-QRY-2] Get CSP
-
-Anyone CAN execute this method.
-
-##### [MOD-CSP-QRY-2-1] Get CSP parameters
-
-- `id` of the [[ref: credential schema permission]] (*mandatory*);
-
-##### [MOD-CSP-QRY-2-2] Get CSP checks
-
-- `id` must be a uint64.
-
-##### [MOD-CSP-QRY-2-3] Get CSP execution
-
-return found entry (if any).
-
-#### [MOD-CSP-QRY-3] Is Authorized Issuer
-
-This method is used to query if a DID is (or was) authorized to issue a credential of a given schema, country, user_agent, wallet_user_agent. Called by the browsers and apps to verify if they can accept the credential from this DID or not.
-If the target wallet is a VS, `user_agent_did` and `wallet_user_agent_did` will be equal to the DID of the VS.
-
-:::note
-This method should use [MOD-CSP-QRY-1]. An index might be needed to optimize query, like using (schema_id, type, did).
-:::
-
-##### [MOD-CSP-QRY-3-1] Is Authorized Issuer parameters
-
-- `issuer_did` (string) (*mandatory*): did of the service that want to issue a credential.
-- `user_agent_did` (string) (*mandatory*): did of the user agent that received the presentation request.
-- `wallet_user_agent_did` (string) (*mandatory*): did of the user agent wallet where the credential is stored.
-- `schema_id` (uint64) (*mandatory*): the schema_id.
-- `country` (string) (*optional*): a country code, to select CSP with this country code or with a null country code.
-- `when` (datetime) (*optional*): if null, find permission *at* the current date. Else find permission *at* `when`.
-- `session_id` (uint64) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
-
-##### [MOD-CSP-QRY-3-2] Is Authorized Issuer checks
-
-- `issuer_did` (*mandatory*): (string): MUST be a [[ref: DID]].
-- `user_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
-- `wallet_user_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
-- `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
-- `country` (string) (*optional*): if specified, MUST be a country code.
-- `when` (datetime) (*optional*): if specified, MUST be a datetime.
-- `session_id` (uint64) (*optional*): if specified, MUST be a uint64.
-
-##### [MOD-CSP-QRY-3-3] Is Authorized Issuer execution
-
-- load `CredentialSchema` `cs` from `schema_id`. If `cs.issuer_mode` is equal to OPEN, return AUTHORIZED.
-- define `Permission` `issuer_perm` as null.
-- define `time` = `when`, or `time` = now() if `when` is null.
-
-- find `perms[]` with `perm.did` equal to `issuer_did` and `perm.schema_id` equal to `schema_id` and `perm.type` equal to ISSUER and (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)).
-- for each `perm` in `perms[]`:
-  - if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `issuer_perm` to `perm` and exit the *for* loop.
-
-if a `issuer_perm` is null, return FORBIDDEN. Else:
-
-- use [MOD-CSPS-MSG-1-2-2] to calculate `found_perm_set`. Calculate, as in [MOD-CSPS-MSG-1-2-3], if some fees need to be paid. Let's call these fees `trust_fees`.
-
-- if `trust_fees` is equal to 0, set `authzResult` to AUTHORIZED.
-- else if `session_id` is undefined, set `authzResult` to SESSION_REQUIRED.
-- else if `session_id` is defined, load `PermissionSession` `session` from `session_id`.
-  - is `session.user_agent_did` is equal to `user_agent_did` and `session.session_authz[]` contains `(issuer_perm.id, null, wallet_user_agent_did)`, return to AUTHORIZED.
-  - else set `authzResult` return SESSION_REQUIRED.
-
-:::note
-We do not need to verify if a HOLDER perm exists for user_agent_did and for wallet_user_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for user_agent_did and for wallet_user_agent_did.
-:::
-
-#### [MOD-CSP-QRY-4] Is Authorized Verifier
-
-This method is used to query if a DID is (or was) authorized to verify a credential of a given schema and country. Called by the browsers and apps to verify if they can accept the presentation request from this DID or not.
-
-##### [MOD-CSP-QRY-4-1] Is Authorized Verifier parameters
-
-- `verifier_did` (string) (*mandatory*): did of the service that want to verify a credential.
-- `issuer_did` (string) (*mandatory*): did of the service that issued the credential that needs to be requested to holder.
-- `user_agent_did` (string) (*mandatory*): did of the user agent that received the presentation request.
-- `wallet_user_agent_did` (string) (*mandatory*): did of the user agent wallet where the credential is stored.
-- `schema_id` (uint64) (*mandatory*): the schema_id.
-- `country` (string) (*optional*): a country code, to select CSP with this country code or with a null country code.
-- `when` (datetime) (*optional*): if null, find permission *at* the current date. Else find permission *at* `when`.
-- `session_id` (uint64) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
-
-##### [MOD-CSP-QRY-4-2] Is Authorized Verifier checks
-
-- `verifier_did` (*mandatory*): (string): MUST be a [[ref: DID]].
-- `issuer_did` (*mandatory*): (string): MUST be a [[ref: DID]].
-- `user_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
-- `wallet_user_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
-- `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
-- `country` (string) (*optional*): if specified, MUST be a country code.
-- `when` (datetime) (*optional*): if specified, MUST be a datetime.
-- `session_id` (uint64) (*optional*): if specified, MUST be a uint64.
-
-##### [MOD-CSP-QRY-4-3] Is Authorized Verifier execution
-
-- define `time` = `when`, or `time` = now() if `when` is null.
-- define `Permission` `verifier_perm` as null.
-- define `Permission` `issuer_perm` as null.
-
-- load `CredentialSchema` `cs` from `schema_id`. If `cs.verifier_mode` is equal to OPEN, return AUTHORIZED.
-
-- find `verifier_perms[]` with `verifier_perm.did` equal to `verifier_did` and `verifier_perm.schema_id` equal to `schema_id` and `verifier_perm.type` equal to VERIFIER and (if `country` is unspecified (`verifier_perm.country` IS NULL) else `country` is specified (`verifier_perm.country` IS NULL or `verifier_perm.country` is equal to `country`)).
-- for each `perm` in `verifier_perms[]`
-  - if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `verifier_perm` to `perm` and exit the *for* loop.
-
-- if  `verifier_perm` is null (no permission has been found), return FORBIDDEN. Else:
-
-- find `issuer_perms[]` with `issuer_perm.did` equal to `issuer_did` and `issuer_perm.schema_id` equal to `schema_id` and `issuer_perm.type` equal to ISSUER and (if `country` is unspecified (`issuer_perm.country` IS NULL) else `country` is specified (`issuer_perm.country` IS NULL or `issuer_perm.country` is equal to `country`)).
-- for each `perm` in `issuer_perms[]`:
-  - if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `issuer_perm` to `perm` and exit the *for* loop.
-
-- if `issuer_perm` is null, return FORBIDDEN. Else:
-
-- use [MOD-CSPS-MSG-1-2-2] to calculate `found_perm_set`. Calculate, as in [MOD-CSPS-MSG-1-2-3], if some fees need to be paid. Let's call these fees `trust_fees`.
-
-- if `trust_fees` is equal to 0, return AUTHORIZED.
-- else if `session_id` is undefined, return SESSION_REQUIRED.
-- else if `session_id` is defined, load `PermissionSession` `session` from `session_id`.
-  - if `session.user_agent_did` is equal to `user_agent_did` and if `session.session_authz[]` contains `(verifier_perm.id, issuer_perm.id, wallet_user_agent_did)`: return AUTHORIZED.
-  - else return SESSION_REQUIRED.
-
-:::note
-We do not need to verify if a HOLDER perm exists for user_agent_did and for wallet_user_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for user_agent_did and for wallet_user_agent_did.
-:::
-
-#### [MOD-CSP-QRY-5] Get CSPS
-
-##### [MOD-CSP-QRY-5-1] Get CSPS parameters
-
-- `id` (uuid) (*mandatory*): the id of the `PermissionSession`.
-
-##### [MOD-CSP-QRY-5-2] Get CSPS checks
-
-##### [MOD-CSP-QRY-5-3] Get CSPS execution
-
-return `PermissionSession` entry if found, else return not found.
 
 #### [MOD-CSP-QRY-6] List Module Parameters
 
@@ -2015,7 +1845,7 @@ Return the list of the existing parameters and their values.
 
 *This section is non-normative.*
 
-Validation is a process which involves an [[ref: applicant]] (which is the [[ref: controller]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional fees plus transaction fees.
+Validation Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: controller]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional fees plus transaction fees.
 
 Validation is used by [[ref: applicants]] that want to:
 
@@ -2912,7 +2742,7 @@ Account MUST have sufficient available balance for:
 - the required [[ref: estimated transaction fees]];
 - the required beneficiary fees and its corresponding trust deposit `trust_fees` as explained below:
 
-To calculate the required beneficiary fees, use [MOD-PERM-MSG-8-2-2] to create a Set with all beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
+To calculate the required beneficiary fees, use [MOD-PERM-MSG-10-2-2] to create a Set with all beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
 
 - define `beneficiary_fees` = 0
 - if `executor_type` is equal to VERIFIER: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`.
@@ -2928,7 +2758,7 @@ If all precondition checks passed, method is executed.
 
 - Load `executor_perm` from `executor_perm_id`.
 
-- use [MOD-PERM-MSG-8-2-2] to build `found_perm_set`.
+- use [MOD-PERM-MSG-10-2-2] to build `found_perm_set`.
 
 - if `executor_perm.type` is equal to ISSUER:
   - for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
@@ -2987,63 +2817,184 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 #### [MOD-PERM-QRY-1] List Permissions
 
-This method is used to [[ref: query]] the permission [[ref: keeper]] and return pending actions. Returned result MUST be ordered by `validation.pending_since` ASC.
+Anyone CAN execute this method.
+
+##### [MOD-PERM-QRY-1-1] List Permissions parameters
+
+- `modified_after` (datetime) (*optional*): show permissions modified after this datetime.
+- `response_max_size` (small number) (*optional*): default to 64. Min 1, max 1,024.
+
+##### [MOD-PERM-QRY-1-2] List Permissions checks
+
+- `modified_after` (datetime) (*mandatory*): show permissions modified after this datetime.
+- `response_max_size` (small number) (*optional*): Must be min 1, max 1,024.
+
+##### [MOD-PERM-QRY-1-3] List Permissions execution
+
+return a list of found entries, or an empty list if nothing found.
+
+#### [MOD-PERM-QRY-2] Get Permission
+
+Anyone CAN execute this method.
+
+##### [MOD-PERM-QRY-2-1] Get Permission parameters
+
+- `id` of the [[ref: credential schema permission]] (*mandatory*);
+
+##### [MOD-PERM-QRY-2-2] Get Permission checks
+
+- `id` must be a uint64.
+
+##### [MOD-PERM-QRY-2-3] Get Permission execution
+
+return found entry (if any).
+
+#### [MOD-PERM-QRY-3] Is Authorized Issuer
+
+This method is used to query if a DID is (or was) authorized to issue a credential of a given schema, country, user_agent, wallet_user_agent. Called by the Verifiable User Agents to verify if they can accept the credential from this DID or not.
+
+If the target wallet is a VS, `agent_did` and `wallet_agent_did` will be equal to the DID of the VS.
+
+##### [MOD-PERM-QRY-3-1] Is Authorized Issuer parameters
+
+- `issuer_did` (string) (*mandatory*): did of the service that want to issue a credential.
+- `agent_did` (string) (*mandatory*): did of the user agent that received the presentation request.
+- `wallet_agent_did` (string) (*mandatory*): did of the user agent wallet where the credential is stored.
+- `schema_id` (uint64) (*mandatory*): the schema_id.
+- `country` (string) (*optional*): a country code, to select Permission with this country code or with a null country code.
+- `when` (datetime) (*optional*): if null, find permission *at* the current date. Else find permission *at* `when`.
+- `session_id` (uint64) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
+
+##### [MOD-PERM-QRY-3-2] Is Authorized Issuer checks
+
+- `issuer_did` (*mandatory*): (string): MUST be a [[ref: DID]].
+- `agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
+- `wallet_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
+- `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
+- `country` (string) (*optional*): if specified, MUST be a country code.
+- `when` (datetime) (*optional*): if specified, MUST be a datetime.
+- `session_id` (uint64) (*optional*): if specified, MUST be a uint64.
+
+##### [MOD-PERM-QRY-3-3] Is Authorized Issuer execution
+
+This method should use an index per `cs.id` and insert any new entry hash(`cs.did`;`cs.type`) when `cs.effective_from` and `cs.did` are not null. Index example:
+
+SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, terminated)
+
+- load `CredentialSchema` `cs` from `schema_id`. If `cs.issuer_mode` is equal to OPEN, return AUTHORIZED.
+- define `Permission` `issuer_perm` as null.
+- define `time` = `when`, or `time` = now() if `when` is null.
+
+Using example index, calculate hash(`issuer_did`;`cs.type`) to get the list of matching permissions `perms[]`.
+
+- then for each `perm` in `perms[]`:
+  - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.
+  - if `perm` is valid for requested `country`, then check perm validity: if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `issuer_perm` to `perm` and exit the *for* loop.
+
+if a `issuer_perm` is null, return FORBIDDEN. Else:
+
+- use [MOD-PERM-MSG-10-2-2] to calculate `found_perm_set`. Calculate, as in [MOD-PERM-MSG-10-2-3], if some fees need to be paid. Let's call these fees `trust_fees`.
+
+- if `trust_fees` is equal to 0, set `authzResult` return AUTHORIZED.
+- else if `session_id` is undefined, set `authzResult` return SESSION_REQUIRED.
+- else if `session_id` is defined, load `PermissionSession` `session` from `session_id`.
+  - load `Permission` `agent_perm` from 
+  - is `session.agent_did` is equal to `agent_did` and `session.authz[]` contains `(issuer_perm.id, null, wallet_agent_did)`, return AUTHORIZED.
+  - else set `authzResult` return SESSION_REQUIRED.
 
 :::note
-indexes will be required based on frontend usage.
+We do not need to verify if a HOLDER perm exists for agent_did and for wallet_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for agent_did and for wallet_agent_did.
 :::
 
-##### [MOD-V-QRY-1-1] List Validations query parameters
+#### [MOD-PERM-QRY-4] Is Authorized Verifier
 
-The following parameters are optional:
+This method is used to query if a DID is (or was) authorized to verify a credential of a given schema and country. Called by the browsers and apps to verify if they can accept the presentation request from this DID or not.
 
-- `controller` (account) (*optional): if specified, returns only `Validation` entries controlled by `controller`.
-- `validator_perm_id` (uint64) (*optional): if specified, returns only `Validation` entries that match this `validator_perm_id`.
-- `type` (PermissionType) (*optional): if specified, returns only `Validation` entries that match this `type`.
-- `state` (ValidationState) (*optional): if specified, returns only `Validation` entries that match this `state`.
-- `response_max_size` (small number) (*optional): default to 64. Max 1,024.
-- `exp_before` (datetime) (*optional): if specified, returns only `Validation` entries that expire before `exp_before` and order by `validation.exp` ASC. If unspecified, order by `validation.last_state_change` ASC.
+##### [MOD-PERM-QRY-4-1] Is Authorized Verifier parameters
 
-##### [MOD-V-QRY-1-2] List Validations query checks
+- `verifier_did` (string) (*mandatory*): did of the service that want to verify a credential.
+- `issuer_did` (string) (*mandatory*): did of the service that issued the credential that needs to be requested to holder.
+- `agent_did` (string) (*mandatory*): did of the user agent that received the presentation request.
+- `wallet_agent_did` (string) (*mandatory*): did of the user agent wallet where the credential is stored.
+- `schema_id` (uint64) (*mandatory*): the schema_id.
+- `country` (string) (*optional*): a country code, to select CSP with this country code or with a null country code.
+- `when` (datetime) (*optional*): if null, find permission *at* the current date. Else find permission *at* `when`.
+- `session_id` (uint64) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
 
-If any of these checks fail, [[ref: query]] MUST fail.
+##### [MOD-PERM-QRY-4-2] Is Authorized Verifier checks
 
-- `response_max_size` must be between 1 and 1,024. If not specified, it is 64.
-- if `controller` is unspecified, AND `validator_perm_id` is unspecified.
+- `verifier_did` (*mandatory*): (string): MUST be a [[ref: DID]].
+- `issuer_did` (*mandatory*): (string): MUST be a [[ref: DID]].
+- `agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
+- `wallet_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
+- `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
+- `country` (string) (*optional*): if specified, MUST be a country code.
+- `when` (datetime) (*optional*): if specified, MUST be a datetime.
+- `session_id` (uint64) (*optional*): if specified, MUST be a uint64.
 
-##### [MOD-V-QRY-1-3] List Validations execution of the query
+##### [MOD-PERM-QRY-4-3] Is Authorized Verifier execution
 
-If all precondition checks passed, [[ref: query]] is executed and result (a list of Validations) (may be empty) returned.
+This method should use an index (same index proposed in [MOD-PERM-QRY-4]) per `cs.id` and insert any new entry hash(`cs.did`;`cs.type`) when `cs.effective_from` and `cs.did` are not null. Index example:
 
-#### [MOD-V-QRY-2] Get a Validation
+SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, terminated)
 
-This method is used to read a Validation. As this method does not modify data, it does not require a [[ref: transaction]].
+- define `time` = `when`, or `time` = now() if `when` is null.
+- define `Permission` `verifier_perm` as null.
+- define `Permission` `issuer_perm` as null.
 
-##### [MOD-V-QRY-2-1] Get a Validation query parameters
+- load `CredentialSchema` `cs` from `schema_id`. If `cs.verifier_mode` is equal to OPEN, return AUTHORIZED.
 
-- `id` (uint64) (*optional*): the uint64 of the validation.
+Using example index, calculate hash(`verifier_did`;`cs.type`) to get the list of matching permissions `verifier_perms[]`.
 
-##### [MOD-V-QRY-2-2] Get a Validation query checks
+- then for each `perm` in `verifier_perms[]`
+  - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.
+  - if `perm` is valid for requested `country`, then check perm validity: if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `verifier_perm` to `perm` and exit the *for* loop.
 
-`id` MUST be a valid uint64.
+- if  `verifier_perm` is null (no permission has been found), return FORBIDDEN. Else:
 
-##### [MOD-V-QRY-2-3] Get a Validation execution of the query
+Using example index, calculate hash(`issuer_did`;`cs.type`) to get the list of matching permissions `issuer_perms[]`.
 
-If `id` is found, return the corresponding entry, else empty result is returned.
+- then for each `perm` in `perms[]`:
+  - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.
+  - if `perm` is valid for requested `country`, then check perm validity: if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `issuer_perm` to `perm` and exit the *for* loop.
 
-#### [MOD-V-QRY-3] List Module Parameters
+if a `issuer_perm` is null, return FORBIDDEN. Else:
 
-Anyone CAN run this [[ref: query]].
+- use [MOD-CSPS-MSG-1-2-2] to calculate `found_perm_set`. Calculate, as in [MOD-CSPS-MSG-1-2-3], if some fees need to be paid. Let's call these fees `trust_fees`.
 
-##### [MOD-V-QRY-3-2] List Module Parameters parameters
+- if `trust_fees` is equal to 0, return AUTHORIZED.
+- else if `session_id` is undefined, return SESSION_REQUIRED.
+- else if `session_id` is defined, load `PermissionSession` `session` from `session_id`.
+  - if `session.agent_did` is equal to `agent_did` and if `session.authz[]` contains `(verifier_perm.id, issuer_perm.id, wallet_agent_did)`: return AUTHORIZED.
+  - else return SESSION_REQUIRED.
 
-##### [MOD-V-QRY-3-2] List Module Parameters query checks
+:::note
+We do not need to verify if a HOLDER perm exists for agent_did and for wallet_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for agent_did and for wallet_agent_did.
+:::
 
-##### [MOD-V-QRY-3-3] List Module Parameters execution of the query
+#### [MOD-PERM-QRY-5] Get PermissionSession
+
+##### [MOD-PERM-QRY-5-1] Get PermissionSession parameters
+
+- `id` (uuid) (*mandatory*): the id of the `PermissionSession`.
+
+##### [MOD-PERM-QRY-5-2] Get PermissionSession checks
+
+##### [MOD-PERM-QRY-5-3] Get PermissionSession execution
+
+return `PermissionSession` entry if found, else return not found.
+
+##### [MOD-PERM-QRY-6] List Permission Module Parameters
+
+##### [MOD-PERM-QRY-6-2] List Permission Module Parameters parameters
+
+##### [MOD-PERM-QRY-6-2] List Permission Module Parameters query checks
+
+##### [MOD-PERM-QRY-6-3] List Permission Module Parameters execution of the query
 
 Return the list of the existing parameters and their values.
 
-##### [MOD-V-QRY-3-4] List Module Parameters API result example
+##### [MOD-PERM-QRY-6-4] List Permission Module Parameters API result example
 
 ```json
 {
