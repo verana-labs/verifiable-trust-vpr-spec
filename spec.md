@@ -205,6 +205,18 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: verifiable credential, verifiable credentials]]:
 ~ A verifiable credential as defined in [[spec-norm:VC-DATA-MODEL]].
 
+## Naming Conventions
+
+### In this spec
+
+- For clarity, Camel Case is used for naming Modules, Entities, Objects, etc.
+
+### In Implementations
+
+- All APIs MUST return valid JSON.
+- All JSON content MUST use Snake Case for object, attribute... names.
+- Object attributes and Json Content in general can be returned in any order.
+
 ## High Level VPR Features
 
 ### Trust Registry Management
@@ -983,14 +995,14 @@ Note about Query REST API:
 
 - all query methods MUST return valid JSON.
 - objects MUST be nested when needed, such as when returning a trust registry.
-- JSON formatting MUST obey to data model regarding attribute names. A method that returns a Trust Registry entry MUST return an entry called "trustRegistry". A method that returns a list of Trust Registries MUST return an entry called "trustRegistries" that contain a list of Trust Registry entries.
+- JSON formatting MUST obey to data model regarding attribute names. A method that returns a Trust Registry entry MUST return an entry called "trust_registry". A method that returns a list of Trust Registries MUST return an entry called "trustRegistries" that contain a list of Trust Registry entries.
 
 Examples:
 
 Get a Trust Registry
 
 ```json
-"trustRegistry": {
+"trust_registry": {
   {
     "active_version": 0,
     "aka": "string",
