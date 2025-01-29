@@ -905,8 +905,8 @@ account  --o td: account
 - `terminated` (datetime) (*optional*): manual termination (by grantee) datetime of this Perm, in yyyyMMddHHmm format.
 - `terminated_by` (account) (*mandatory*): [[ref: account]] that terminated this permission.
 - `country` (string) (*optional*): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country.
+- `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Permission` tree.
 - `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED
-- `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to this validation process, ie *parent node* in the CSP tree.
 - `vp_exp` (datetime) (*optional*): validation expiration date, yyyyMMdd format. This expiration date is for the validation process itself, not for the issued credential or `Permission` expiration date.
 - `vp_last_state_change` (datetime) (*mandatory*)
 - `vp_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
@@ -923,6 +923,7 @@ account  --o td: account
 - `controller` (account) (*mandatory*): account that controls the entry.
 - `agent_perm_id` (uint64) (*mandatory*): permission id of the agent.
 - `authz` (uint64 (Permission id), uint64 (Permission id), uint64 (Permission id))[] (*mandatory*): permission(s) linked to this session (executor, beneficiary, wallet_agent).
+- `modified` (datetime) (*mandatory*): date this PermissionSession has been modified, in yyyyMMddHHmm format.
 
 ### DIDDirectory
 
@@ -1791,73 +1792,63 @@ Return the list of the existing parameters and their values.
 }
 ```
 
-### Credential Schema Permission (CSP) Module
-
-#### [MOD-CSP-MSG-5] Update Module Parameters
-
-Update Module Parameters.
-
-Can only be executed through a governance proposal.
-
-##### [MOD-CSP-MSG-5-1] Update Module Parameters parameters
-
-- `params` (KeySet<String, String>): the parameters to update and their values.
-
-##### [MOD-CSP-MSG-5-2] Update Module Parameters precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-CSP-MSG-5-2-1] Update Module Parameters basic checks
-
-- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
-
-###### [MOD-CSP-MSG-5-2-2] Update Module Parameters fee checks
-
-provided transaction fees MUST be sufficient for execution
-
-##### [MOD-CSP-MSG-5-3] Update Module Parameters execution
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-for each parameter `param` <`key`, `value`> in `parameters`:
-
-- update parameter set value = `value` where key = `key`.
-
-
-#### [MOD-CSP-QRY-6] List Module Parameters
-
-Anyone CAN run this [[ref: query]].
-
-##### [MOD-CSP-QRY-6-2] List Module Parameters parameters
-
-##### [MOD-CSP-QRY-6-2] List Module Parameters query checks
-
-##### [MOD-CSP-QRY-6-3] List Module Parameters execution of the query
-
-Return the list of the existing parameters and their values.
-
-##### [MOD-CSP-QRY-6-4] List Module Parameters API result example
-
-```json
-{
-  "params": {
-    "key1": "value1",
-    "key2": "value2",
-    ...
-    ...
-  }
-}
-```
-
 ### Permission Module
 
 #### Permission Module Overview
 
 *This section is non-normative.*
 
-Validation Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: controller]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional fees plus transaction fees.
+Permission are linked to a Credential Schema and representable as a tree.
+
+```plantuml
+
+@startuml
+scale max 800 width
+ 
+package "Example Credential Schema Permission Tree" as cs {
+
+    object "Trust Registry A" as tr #3fbdb6 {
+        permissionType: TRUST_REGISTRY (Root)
+        did:example:trA
+    }
+    object "Issuer Grantor B" as ig {
+        permissionType: ISSUER_GRANTOR
+        did:example:igB
+    }
+    object "Issuer C" as issuer #7677ed  {
+        permissionType: ISSUER
+        did:example:iC
+    }
+    object "Verifier Grantor D" as vg {
+        permissionType: VERIFIER_GRANTOR
+        did:example:vgD
+    }
+    object "Verifier E" as verifier #00b0f0 {
+        permissionType: VERIFIER
+        did:example:vE
+    }
+    object "Holder Z " as holder #FFB073 {
+        permissionType: HOLDER
+    }
+}
+
+
+
+tr --> ig : granted schema permission
+ig --> issuer : granted schema permission
+
+tr --> vg : granted schema permission
+vg --> verifier : granted schema permission
+
+issuer --> holder: granted schema permission
+
+@enduml
+
+```
+
+The TRUST_REGISTRY type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process.
+
+A Validation Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: controller]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional fees plus transaction fees.
 
 Validation is used by [[ref: applicants]] that want to:
 
@@ -1865,7 +1856,8 @@ Validation is used by [[ref: applicants]] that want to:
 - be a [[ref: verifier]] of a specific [[ref: credential schema]];
 - be an [[ref: issuer grantor]] of a specific [[ref: credential schema]];
 - be a [[ref: verifier grantor]] of a specific [[ref: credential schema]];
-- get issued a credential of a specific [[ref: credential schema]].
+- get issued a credential of a specific [[ref: credential schema]];
+- optionally get created a HOLDER permission (HOLDER permission may be used in combination with credentials, example for User Agent credentials).
 
 In all cases, the process is very similar. Example execution of a validation process:
 
@@ -2501,8 +2493,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PERM-MSG-8-2-2] Extend Permission validator perms
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]].
-- [[ref: account]] running the method MUST be `validator_perm.grantee`.
+- if `applicant_perm.validator_perm_id` is null and `applicant_perm.type` is TRUST_REGISTRY, [[ref: account]] running the method MUST be `applicant_perm.grantee'.
+- else load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]]. [[ref: account]] running the method MUST be `validator_perm.grantee`.
 
 ###### [MOD-PERM-MSG-8-2-3] Extend Permission fee checks
 
@@ -2770,6 +2762,8 @@ If all precondition checks passed, method is executed.
 
 - Load `executor_perm` from `executor_perm_id`.
 
+- define `now`: datetime of day, yyyyMMddHHmm format.
+
 - use [MOD-PERM-MSG-10-2-2] to build `found_perm_set`.
 
 - if `executor_perm.type` is equal to ISSUER:
@@ -2790,10 +2784,12 @@ If new, create entry `PermissionSession` `session`:
 - `session.controller`: account running the method
 - `session.agent_perm_id`: `agent_perm_id`
 - `session.authz[]`: create and put  (`executor_perm_id`, `beneficiary_perm_id`, `wallet_agent_perm_id`).
+- `session.modified:` : `now`
 
 Else update:
 
 - add (`executor_perm_id`, `beneficiary_perm_id`, `wallet_agent_perm_id`) to `session.authz[]`
+- `session.modified:` : `now`
 
 #### [MOD-PERM-MSG-11] Update Permission Module Parameters
 
@@ -2889,7 +2885,7 @@ If the target wallet is a VS, `agent_did` and `wallet_agent_did` will be equal t
 
 ##### [MOD-PERM-QRY-3-3] Is Authorized Issuer execution
 
-This method should use an index per `cs.id` and insert any new entry hash(`cs.did`;`cs.type`) when `cs.effective_from` and `cs.did` are not null. Index example:
+This method should use an index per `cs.id` and insert any new entry hash(`perm.did`;`perm.type`) when `perm.effective_from` and `perm.did` are not null (updated when `perm` is modified). Index example:
 
 SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, terminated)
 
@@ -2897,7 +2893,7 @@ SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter 
 - define `Permission` `issuer_perm` as null.
 - define `time` = `when`, or `time` = now() if `when` is null.
 
-Using example index, calculate hash(`issuer_did`;`cs.type`) to get the list of matching permissions `perms[]`.
+Using example index, calculate hash(`issuer_did`;ISSUER) to get the list of matching permissions `perms[]`.
 
 - then for each `perm` in `perms[]`:
   - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.
@@ -2946,7 +2942,7 @@ This method is used to query if a DID is (or was) authorized to verify a credent
 
 ##### [MOD-PERM-QRY-4-3] Is Authorized Verifier execution
 
-This method should use an index (same index proposed in [MOD-PERM-QRY-4]) per `cs.id` and insert any new entry hash(`cs.did`;`cs.type`) when `cs.effective_from` and `cs.did` are not null. Index example:
+This method should use an index (same index proposed in [MOD-PERM-QRY-4]) per `cs.id` and insert any new entry hash(`perm.did`;`perm.type`) when `perm.effective_from` and `perm.did` are not null. Index example:
 
 SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, terminated)
 
@@ -2956,7 +2952,7 @@ SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter 
 
 - load `CredentialSchema` `cs` from `schema_id`. If `cs.verifier_mode` is equal to OPEN, return AUTHORIZED.
 
-Using example index, calculate hash(`verifier_did`;`cs.type`) to get the list of matching permissions `verifier_perms[]`.
+Using example index, calculate hash(`verifier_did`;VERIFIER) to get the list of matching permissions `verifier_perms[]`.
 
 - then for each `perm` in `verifier_perms[]`
   - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.
@@ -2964,7 +2960,7 @@ Using example index, calculate hash(`verifier_did`;`cs.type`) to get the list of
 
 - if  `verifier_perm` is null (no permission has been found), return FORBIDDEN. Else:
 
-Using example index, calculate hash(`issuer_did`;`cs.type`) to get the list of matching permissions `issuer_perms[]`.
+Using example index, calculate hash(`issuer_did`;ISSUER) to get the list of matching permissions `issuer_perms[]`.
 
 - then for each `perm` in `perms[]`:
   - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.

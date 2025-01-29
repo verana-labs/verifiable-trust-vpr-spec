@@ -487,8 +487,8 @@ For example, the DID directory is essential to dts browsers, such as social dts 
 <li><code>terminated</code> (datetime) (<em>optional</em>): manual termination (by grantee) datetime of this Perm, in yyyyMMddHHmm format.</li>
 <li><code>terminated_by</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> that terminated this permission.</li>
 <li><code>country</code> (string) (<em>optional</em>): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country.</li>
+<li><code>validator_perm_id</code> (uint64) (<em>optional</em>): permission of the validator assigned to the validation process of this permission, ie <em>parent node</em> in the <code>Permission</code> tree.</li>
 <li><code>vp_state</code> (enum) (<em>mandatory</em>): one of PENDING, VALIDATED, TERMINATED</li>
-<li><code>validator_perm_id</code> (uint64) (<em>optional</em>): permission of the validator assigned to this validation process, ie <em>parent node</em> in the CSP tree.</li>
 <li><code>vp_exp</code> (datetime) (<em>optional</em>): validation expiration date, yyyyMMdd format. This expiration date is for the validation process itself, not for the issued credential or <code>Permission</code> expiration date.</li>
 <li><code>vp_last_state_change</code> (datetime) (<em>mandatory</em>)</li>
 <li><code>vp_validator_deposit</code>: number (<em>optional</em>): accumulated validator trust deposit, in <a class="term-reference" href="#term:denom">denom</a>.</li>
@@ -504,6 +504,7 @@ For example, the DID directory is essential to dts browsers, such as social dts 
 <li><code>controller</code> (account) (<em>mandatory</em>): account that controls the entry.</li>
 <li><code>agent_perm_id</code> (uint64) (<em>mandatory</em>): permission id of the agent.</li>
 <li><code>authz</code> (uint64 (Permission id), uint64 (Permission id), uint64 (Permission id))[] (<em>mandatory</em>): permission(s) linked to this session (executor, beneficiary, wallet_agent).</li>
+<li><code>modified</code> (datetime) (<em>mandatory</em>): date this PermissionSession has been modified, in yyyyMMddHHmm format.</li>
 </ul>
 <h3 id="diddirectory"><a class="toc-anchor" href="#diddirectory" >§</a> DIDDirectory</h3>
 <p><code>DidDirectory</code>:</p>
@@ -669,10 +670,10 @@ For example, the DID directory is essential to dts browsers, such as social dts 
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-3" class="notice warning"><a class="notice-link" href="#warning-3">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-8" class="notice warning"><a class="notice-link" href="#warning-8">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-29" class="notice note"><a class="notice-link" href="#note-29">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="1.2.3.4"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="http://1.2.3.4/verana/tr/v1/get" ><span>http://1.2.3.4/verana/tr/v1/get</span></a>.</p>
+<div id="note-99" class="notice note"><a class="notice-link" href="#note-99">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="1.2.3.4"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="http://1.2.3.4/verana/tr/v1/get" ><span>http://1.2.3.4/verana/tr/v1/get</span></a>.</p>
 </div>
 <table>
 <thead>
@@ -1023,7 +1024,7 @@ For example, the DID directory is essential to dts browsers, such as social dts 
 </tr>
 </tbody>
 </table>
-<div id="note-30" class="notice note"><a class="notice-link" href="#note-30">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-100" class="notice note"><a class="notice-link" href="#note-100">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1061,7 +1062,7 @@ For example, the DID directory is essential to dts browsers, such as social dts 
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-31" class="notice note"><a class="notice-link" href="#note-31">NOTE</a><p>It is not a problem if several Trust Registries are created with the same did. Identifier of a Trust Registry is its id, and the Verifiable Trust Spec includes the id of the Trust Registry in the DID Document. DID unique constraint is then not needed.</p>
+<div id="note-101" class="notice note"><a class="notice-link" href="#note-101">NOTE</a><p>It is not a problem if several Trust Registries are created with the same did. Identifier of a Trust Registry is its id, and the Verifiable Trust Spec includes the id of the Trust Registry in the DID Document. DID unique constraint is then not needed.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Applicant MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following:</p>
@@ -1069,7 +1070,7 @@ For example, the DID directory is essential to dts browsers, such as social dts 
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.trust_registry_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-32" class="notice note"><a class="notice-link" href="#note-32">NOTE</a><p>Trust Registry trust deposit is not reclaimable.</p>
+<div id="note-102" class="notice note"><a class="notice-link" href="#note-102">NOTE</a><p>Trust Registry trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-tr-msg-1-3-create-new-trust-registry-execution"><a class="toc-anchor" href="#mod-tr-msg-1-3-create-new-trust-registry-execution" >§</a> [MOD-TR-MSG-1-3] Create New Trust Registry execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1445,7 +1446,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.credential_schema_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-33" class="notice note"><a class="notice-link" href="#note-33">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
+<div id="note-103" class="notice note"><a class="notice-link" href="#note-103">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-cs-msg-1-3-create-new-credential-schema-execution"><a class="toc-anchor" href="#mod-cs-msg-1-3-create-new-credential-schema-execution" >§</a> [MOD-CS-MSG-1-3] Create New Credential Schema execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1473,7 +1474,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 </ul>
 </li>
 </ul>
-<div id="note-34" class="notice note"><a class="notice-link" href="#note-34">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a TRUST_REGISTRY <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-104" class="notice note"><a class="notice-link" href="#note-104">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a TRUST_REGISTRY <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any <a class="term-reference" href="#term:account">account</a> CAN execute this method.</p>
@@ -1660,56 +1661,21 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
   <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<h3 id="credential-schema-permission-csp-module"><a class="toc-anchor" href="#credential-schema-permission-csp-module" >§</a> Credential Schema Permission (CSP) Module</h3>
-<h4 id="mod-csp-msg-5-update-module-parameters"><a class="toc-anchor" href="#mod-csp-msg-5-update-module-parameters" >§</a> [MOD-CSP-MSG-5] Update Module Parameters</h4>
-<p>Update Module Parameters.</p>
-<p>Can only be executed through a governance proposal.</p>
-<h5 id="mod-csp-msg-5-1-update-module-parameters-parameters"><a class="toc-anchor" href="#mod-csp-msg-5-1-update-module-parameters-parameters" >§</a> [MOD-CSP-MSG-5-1] Update Module Parameters parameters</h5>
-<ul>
-<li><code>params</code> (KeySet&lt;String, String&gt;): the parameters to update and their values.</li>
-</ul>
-<h5 id="mod-csp-msg-5-2-update-module-parameters-precondition-checks"><a class="toc-anchor" href="#mod-csp-msg-5-2-update-module-parameters-precondition-checks" >§</a> [MOD-CSP-MSG-5-2] Update Module Parameters precondition checks</h5>
-<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
-<h6 id="mod-csp-msg-5-2-1-update-module-parameters-basic-checks"><a class="toc-anchor" href="#mod-csp-msg-5-2-1-update-module-parameters-basic-checks" >§</a> [MOD-CSP-MSG-5-2-1] Update Module Parameters basic checks</h6>
-<ul>
-<li><code>params</code>: size of <code>params</code> MUST be greater than 0. For each <code>param</code> &lt;<code>key</code>, <code>value</code>&gt; <code>key</code> MUST exist, else abort.</li>
-</ul>
-<h6 id="mod-csp-msg-5-2-2-update-module-parameters-fee-checks"><a class="toc-anchor" href="#mod-csp-msg-5-2-2-update-module-parameters-fee-checks" >§</a> [MOD-CSP-MSG-5-2-2] Update Module Parameters fee checks</h6>
-<p>provided transaction fees MUST be sufficient for execution</p>
-<h5 id="mod-csp-msg-5-3-update-module-parameters-execution"><a class="toc-anchor" href="#mod-csp-msg-5-3-update-module-parameters-execution" >§</a> [MOD-CSP-MSG-5-3] Update Module Parameters execution</h5>
-<p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
-<p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
-<p>for each parameter <code>param</code> &lt;<code>key</code>, <code>value</code>&gt; in <code>parameters</code>:</p>
-<ul>
-<li>update parameter set value = <code>value</code> where key = <code>key</code>.</li>
-</ul>
-<h4 id="mod-csp-qry-6-list-module-parameters"><a class="toc-anchor" href="#mod-csp-qry-6-list-module-parameters" >§</a> [MOD-CSP-QRY-6] List Module Parameters</h4>
-<p>Anyone CAN run this <a class="term-reference" href="#term:query">query</a>.</p>
-<h5 id="mod-csp-qry-6-2-list-module-parameters-parameters"><a class="toc-anchor" href="#mod-csp-qry-6-2-list-module-parameters-parameters" >§</a> [MOD-CSP-QRY-6-2] List Module Parameters parameters</h5>
-<h5 id="mod-csp-qry-6-2-list-module-parameters-query-checks"><a class="toc-anchor" href="#mod-csp-qry-6-2-list-module-parameters-query-checks" >§</a> [MOD-CSP-QRY-6-2] List Module Parameters query checks</h5>
-<h5 id="mod-csp-qry-6-3-list-module-parameters-execution-of-the-query"><a class="toc-anchor" href="#mod-csp-qry-6-3-list-module-parameters-execution-of-the-query" >§</a> [MOD-CSP-QRY-6-3] List Module Parameters execution of the query</h5>
-<p>Return the list of the existing parameters and their values.</p>
-<h5 id="mod-csp-qry-6-4-list-module-parameters-api-result-example"><a class="toc-anchor" href="#mod-csp-qry-6-4-list-module-parameters-api-result-example" >§</a> [MOD-CSP-QRY-6-4] List Module Parameters API result example</h5>
-<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
-  <span class="token property">"params"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
-    <span class="token property">"key1"</span><span class="token operator">:</span> <span class="token string">"value1"</span><span class="token punctuation">,</span>
-    <span class="token property">"key2"</span><span class="token operator">:</span> <span class="token string">"value2"</span><span class="token punctuation">,</span>
-    ...
-    ...
-  <span class="token punctuation">}</span>
-<span class="token punctuation">}</span>
-</code></pre>
 <h3 id="permission-module"><a class="toc-anchor" href="#permission-module" >§</a> Permission Module</h3>
 <h4 id="permission-module-overview"><a class="toc-anchor" href="#permission-module-overview" >§</a> Permission Module Overview</h4>
 <p><em>This section is non-normative.</em></p>
-<p>Validation Process (VP) is a process which involves an <a class="term-reference" href="#term:applicant">applicant</a> (which is the <a class="term-reference" href="#term:controller">controller</a> of validation entry stored in a validation <a class="term-reference" href="#term:keeper">keeper</a>), a <a class="term-reference" href="#term:validator">validator</a> permission, and optional fees plus transaction fees.</p>
+<p>Permission are linked to a Credential Schema and representable as a tree.</p>
+<img src="https://www.plantuml.com/plantuml/svg/ZPDTQy8m58Rl-oiEzcQx61G4Eten_AfQ67EaLTXk93QnPkiNIUoKuNzVRBJRe8ixD-rft_C-EJb9NqZCvIvBhNxp9cASKiZm7kuT1puOaLiBh1B7xpYXqF7tE2kLOCGfeRbaE8Kmtj8CmpFb6HE25Jb4dD8EO06nW4_B0XN5-et64ZeHtma9Y2PCI7w0GIsJ7EpkPatMFIM7SvIDNtGegGSHMeJH2ldJ88pG2zoWef2tZPemub6zDa_oGVtz-8iS2B6Z7AOSvxBWCAp9B34GWp1S-6WrHOEdQ8vQKImP_eqQQOHERBVdkfJ0LLuxPzI2MLBEDkn7J-CQM9bwMleec0HNkggIiGddQymbjHrdxMoSVq3RONuBQrQaH5c_GetQwioUJ8QEspM0PlF7yHbpj8wM2dMqxkuUJdFs83bjang1q0VskzXIlskL7fL9UJ6ip8QLDcpso6XvnfuATAT6TP_cfBwo-la5" alt="uml diagram">
+<p>The TRUST_REGISTRY type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process.</p>
+<p>A Validation Process (VP) is a process which involves an <a class="term-reference" href="#term:applicant">applicant</a> (which is the <a class="term-reference" href="#term:controller">controller</a> of validation entry stored in a validation <a class="term-reference" href="#term:keeper">keeper</a>), a <a class="term-reference" href="#term:validator">validator</a> permission, and optional fees plus transaction fees.</p>
 <p>Validation is used by <a class="term-reference" href="#term:applicants">applicants</a> that want to:</p>
 <ul>
 <li>be an <a class="term-reference" href="#term:issuer">issuer</a> of a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>;</li>
 <li>be a <a class="term-reference" href="#term:verifier">verifier</a> of a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>;</li>
 <li>be an <a class="term-reference" href="#term:issuer-grantor">issuer grantor</a> of a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>;</li>
 <li>be a <a class="term-reference" href="#term:verifier-grantor">verifier grantor</a> of a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>;</li>
-<li>get issued a credential of a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>.</li>
+<li>get issued a credential of a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>;</li>
+<li>optionally get created a HOLDER permission (HOLDER permission may be used in combination with credentials, example for User Agent credentials).</li>
 </ul>
 <p>In all cases, the process is very similar. Example execution of a validation process:</p>
 <ol>
@@ -1718,7 +1684,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-35" class="notice note"><a class="notice-link" href="#note-35">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration date because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-105" class="notice note"><a class="notice-link" href="#note-105">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration date because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration date must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -1748,7 +1714,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>country</code> (string) (<em>mandatory</em>) MUST be a valid alpha-2 code (ISO 3166).</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 </ul>
-<div id="note-36" class="notice note"><a class="notice-link" href="#note-36">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
+<div id="note-106" class="notice note"><a class="notice-link" href="#note-106">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
@@ -2156,7 +2122,7 @@ else</li>
 </ul>
 </li>
 </ul>
-<div id="note-37" class="notice note"><a class="notice-link" href="#note-37">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
+<div id="note-107" class="notice note"><a class="notice-link" href="#note-107">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
 </div>
 <h4 id="mod-perm-msg-5-confirm-permission-vp-termination"><a class="toc-anchor" href="#mod-perm-msg-5-confirm-permission-vp-termination" >§</a> [MOD-PERM-MSG-5] Confirm Permission VP Termination</h4>
 <p>This method is called by a validator to confirm the termination of a vp when permission type is HOLDER, usually after revoking (or not) the verifiable credential of the holder. It can be although called by the grantee after a timeout, defined in <code>GlobalVariables.validation_term_requested_timeout_days</code>.</p>
@@ -2191,7 +2157,7 @@ OR
 <code>applicant_perm.grantee</code> CAN be the account executing the method.</li>
 </ul>
 <p>Else MUST abort.</p>
-<div id="note-38" class="notice note"><a class="notice-link" href="#note-38">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
+<div id="note-108" class="notice note"><a class="notice-link" href="#note-108">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
 </div>
 <h6 id="mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks" >§</a> [MOD-PERM-MSG-5-2-3] Confirm Permission VP Termination fee checks</h6>
 <p>Account executing the method MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -2229,7 +2195,7 @@ OR
 </ul>
 </li>
 </ul>
-<div id="note-39" class="notice note"><a class="notice-link" href="#note-39">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
+<div id="note-109" class="notice note"><a class="notice-link" href="#note-109">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
 </div>
 <h4 id="mod-perm-msg-6-cancel-permission-vp-last-request"><a class="toc-anchor" href="#mod-perm-msg-6-cancel-permission-vp-last-request" >§</a> [MOD-PERM-MSG-6] Cancel Permission VP Last Request</h4>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> of a permission validation process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and paid <a class="term-reference" href="#term:trust-fees">trust fees</a> are refunded. If <code>vp_exp</code> is not null, <code>vp_state</code> is set back to VALIDATED, else <code>vp_state</code> is set to TERMINATED.</p>
@@ -2320,7 +2286,7 @@ OR
 <li><a class="term-reference" href="#term:account">account</a> executing the method MUST be the <a class="term-reference" href="#term:controller">controller</a> of <code>tr</code>.</li>
 <li>else MUST abort.</li>
 </ul>
-<div id="note-40" class="notice note"><a class="notice-link" href="#note-40">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
+<div id="note-110" class="notice note"><a class="notice-link" href="#note-110">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
 </div>
 <h6 id="mod-perm-msg-7-2-3-create-root-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-7-2-3-create-root-permission-fee-checks" >§</a> [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks</h6>
 <p>Account MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> available.</p>
@@ -2368,8 +2334,8 @@ OR
 </ul>
 <h6 id="mod-perm-msg-8-2-2-extend-permission-validator-perms"><a class="toc-anchor" href="#mod-perm-msg-8-2-2-extend-permission-validator-perms" >§</a> [MOD-PERM-MSG-8-2-2] Extend Permission validator perms</h6>
 <ul>
-<li>load <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. <code>validator_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a>.</li>
-<li><a class="term-reference" href="#term:account">account</a> running the method MUST be <code>validator_perm.grantee</code>.</li>
+<li>if <code>applicant_perm.validator_perm_id</code> is null and <code>applicant_perm.type</code> is TRUST_REGISTRY, <a class="term-reference" href="#term:account">account</a> running the method MUST be `applicant_perm.grantee’.</li>
+<li>else load <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. <code>validator_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a>. <a class="term-reference" href="#term:account">account</a> running the method MUST be <code>validator_perm.grantee</code>.</li>
 </ul>
 <h6 id="mod-perm-msg-8-2-3-extend-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-3-extend-permission-fee-checks" >§</a> [MOD-PERM-MSG-8-2-3] Extend Permission fee checks</h6>
 <p>Validator MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
@@ -2455,7 +2421,7 @@ OR
 <p><code>payer</code> MUST create a Permission Session, then, <code>agent</code> MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).</p>
 <img src="https://www.plantuml.com/plantuml/svg/VPBFQy8m5CVl_IiUFLlhRaF6Pfa3omuMkteOW_98dckWlqZIElVNxwLJgqDsoI7vlE-F90jZKTkkAZqZi2Iey0lkPpFOAsaB3uLjDFZH9zNsezvcaGze83Qc8mbUovDAg1Ph2tw21zBCf2EY_o3RP3CSzYsVUDvHvY48ZlWSOjWxqZQWt0uW24sIpHMMiDDD1KOKL24e2TFfr867fZif1S7ZMMb5cbW4R45Wo1ZLr91byN82wChaKia9cvKbsVoyunrZEo4EENVkQ0cUqoGzgToAVJBunLcOGu706dhIQdUup3V8Xho6_LqeJ1jYPuj6gs-I-T1PFt6nIvDX8ihULkjD_Fwol5Ls_JfQ6ghbq7gykLkHKuVzWqX6-EslP1Oymp_b1m00" alt="uml diagram">
 <p>See [TR-RESOL] in [VS-SPECS].</p>
-<div id="todo-29" class="notice todo"><a class="notice-link" href="#todo-29">TODO</a><p>Define how and when UUID is exchanged. (Not needed for implementing this spec). Verifier MUST be able to query <code>agent</code> and check, for a given credential schema(s), if holder has (a) credential(s) of this schema and who is (are) the issuer(s), before creating the CSPS.</p>
+<div id="todo-99" class="notice todo"><a class="notice-link" href="#todo-99">TODO</a><p>Define how and when UUID is exchanged. (Not needed for implementing this spec). Verifier MUST be able to query <code>agent</code> and check, for a given credential schema(s), if holder has (a) credential(s) of this schema and who is (are) the issuer(s), before creating the CSPS.</p>
 </div>
 <h5 id="mod-perm-msg-10-1-create-or-update-permission-session-parameters"><a class="toc-anchor" href="#mod-perm-msg-10-1-create-or-update-permission-session-parameters" >§</a> [MOD-PERM-MSG-10-1] Create or Update Permission Session parameters</h5>
 <p>An <a class="term-reference" href="#term:account">account</a> that would like to create or update a <code>PermissionSession</code> entry MUST send a Msg by specifying:</p>
@@ -2556,6 +2522,9 @@ we might want to check that credential schema of agent and wallet_agent perms is
 <p>Load <code>executor_perm</code> from <code>executor_perm_id</code>.</p>
 </li>
 <li>
+<p>define <code>now</code>: datetime of day, yyyyMMddHHmm format.</p>
+</li>
+<li>
 <p>use [MOD-PERM-MSG-10-2-2] to build <code>found_perm_set</code>.</p>
 </li>
 <li>
@@ -2589,10 +2558,12 @@ we might want to check that credential schema of agent and wallet_agent perms is
 <li><code>session.controller</code>: account running the method</li>
 <li><code>session.agent_perm_id</code>: <code>agent_perm_id</code></li>
 <li><code>session.authz[]</code>: create and put  (<code>executor_perm_id</code>, <code>beneficiary_perm_id</code>, <code>wallet_agent_perm_id</code>).</li>
+<li><code>session.modified:</code> : <code>now</code></li>
 </ul>
 <p>Else update:</p>
 <ul>
 <li>add (<code>executor_perm_id</code>, <code>beneficiary_perm_id</code>, <code>wallet_agent_perm_id</code>) to <code>session.authz[]</code></li>
+<li><code>session.modified:</code> : <code>now</code></li>
 </ul>
 <h4 id="mod-perm-msg-11-update-permission-module-parameters"><a class="toc-anchor" href="#mod-perm-msg-11-update-permission-module-parameters" >§</a> [MOD-PERM-MSG-11] Update Permission Module Parameters</h4>
 <p>Update Permission Module Parameters.</p>
@@ -2666,14 +2637,14 @@ we might want to check that credential schema of agent and wallet_agent perms is
 <li><code>session_id</code> (uint64) (<em>optional</em>): if specified, MUST be a uint64.</li>
 </ul>
 <h5 id="mod-perm-qry-3-3-is-authorized-issuer-execution"><a class="toc-anchor" href="#mod-perm-qry-3-3-is-authorized-issuer-execution" >§</a> [MOD-PERM-QRY-3-3] Is Authorized Issuer execution</h5>
-<p>This method should use an index per <code>cs.id</code> and insert any new entry hash(<code>cs.did</code>;<code>cs.type</code>) when <code>cs.effective_from</code> and <code>cs.did</code> are not null. Index example:</p>
+<p>This method should use an index per <code>cs.id</code> and insert any new entry hash(<code>perm.did</code>;<code>perm.type</code>) when <code>perm.effective_from</code> and <code>perm.did</code> are not null (updated when <code>perm</code> is modified). Index example:</p>
 <p>SchemaId =&gt; hash(did;type) =&gt; Perm id list =&gt; (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, terminated)</p>
 <ul>
 <li>load <code>CredentialSchema</code> <code>cs</code> from <code>schema_id</code>. If <code>cs.issuer_mode</code> is equal to OPEN, return AUTHORIZED.</li>
 <li>define <code>Permission</code> <code>issuer_perm</code> as null.</li>
 <li>define <code>time</code> = <code>when</code>, or <code>time</code> = now() if <code>when</code> is null.</li>
 </ul>
-<p>Using example index, calculate hash(<code>issuer_did</code>;<code>cs.type</code>) to get the list of matching permissions <code>perms[]</code>.</p>
+<p>Using example index, calculate hash(<code>issuer_did</code>;ISSUER) to get the list of matching permissions <code>perms[]</code>.</p>
 <ul>
 <li>then for each <code>perm</code> in <code>perms[]</code>:
 <ul>
@@ -2702,7 +2673,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 </ul>
 </li>
 </ul>
-<div id="note-41" class="notice note"><a class="notice-link" href="#note-41">NOTE</a><p>We do not need to verify if a HOLDER perm exists for agent_did and for wallet_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for agent_did and for wallet_agent_did.</p>
+<div id="note-111" class="notice note"><a class="notice-link" href="#note-111">NOTE</a><p>We do not need to verify if a HOLDER perm exists for agent_did and for wallet_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for agent_did and for wallet_agent_did.</p>
 </div>
 <h4 id="mod-perm-qry-4-is-authorized-verifier"><a class="toc-anchor" href="#mod-perm-qry-4-is-authorized-verifier" >§</a> [MOD-PERM-QRY-4] Is Authorized Verifier</h4>
 <p>This method is used to query if a DID is (or was) authorized to verify a credential of a given schema and country. Called by the browsers and apps to verify if they can accept the presentation request from this DID or not.</p>
@@ -2729,7 +2700,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 <li><code>session_id</code> (uint64) (<em>optional</em>): if specified, MUST be a uint64.</li>
 </ul>
 <h5 id="mod-perm-qry-4-3-is-authorized-verifier-execution"><a class="toc-anchor" href="#mod-perm-qry-4-3-is-authorized-verifier-execution" >§</a> [MOD-PERM-QRY-4-3] Is Authorized Verifier execution</h5>
-<p>This method should use an index (same index proposed in [MOD-PERM-QRY-4]) per <code>cs.id</code> and insert any new entry hash(<code>cs.did</code>;<code>cs.type</code>) when <code>cs.effective_from</code> and <code>cs.did</code> are not null. Index example:</p>
+<p>This method should use an index (same index proposed in [MOD-PERM-QRY-4]) per <code>cs.id</code> and insert any new entry hash(<code>perm.did</code>;<code>perm.type</code>) when <code>perm.effective_from</code> and <code>perm.did</code> are not null. Index example:</p>
 <p>SchemaId =&gt; hash(did;type) =&gt; Perm id list =&gt; (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, terminated)</p>
 <ul>
 <li>
@@ -2745,7 +2716,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 <p>load <code>CredentialSchema</code> <code>cs</code> from <code>schema_id</code>. If <code>cs.verifier_mode</code> is equal to OPEN, return AUTHORIZED.</p>
 </li>
 </ul>
-<p>Using example index, calculate hash(<code>verifier_did</code>;<code>cs.type</code>) to get the list of matching permissions <code>verifier_perms[]</code>.</p>
+<p>Using example index, calculate hash(<code>verifier_did</code>;VERIFIER) to get the list of matching permissions <code>verifier_perms[]</code>.</p>
 <ul>
 <li>
 <p>then for each <code>perm</code> in <code>verifier_perms[]</code></p>
@@ -2758,7 +2729,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 <p>if  <code>verifier_perm</code> is null (no permission has been found), return FORBIDDEN. Else:</p>
 </li>
 </ul>
-<p>Using example index, calculate hash(<code>issuer_did</code>;<code>cs.type</code>) to get the list of matching permissions <code>issuer_perms[]</code>.</p>
+<p>Using example index, calculate hash(<code>issuer_did</code>;ISSUER) to get the list of matching permissions <code>issuer_perms[]</code>.</p>
 <ul>
 <li>then for each <code>perm</code> in <code>perms[]</code>:
 <ul>
@@ -2786,7 +2757,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 </ul>
 </li>
 </ul>
-<div id="note-42" class="notice note"><a class="notice-link" href="#note-42">NOTE</a><p>We do not need to verify if a HOLDER perm exists for agent_did and for wallet_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for agent_did and for wallet_agent_did.</p>
+<div id="note-112" class="notice note"><a class="notice-link" href="#note-112">NOTE</a><p>We do not need to verify if a HOLDER perm exists for agent_did and for wallet_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for agent_did and for wallet_agent_did.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -3269,7 +3240,7 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 <span class="token punctuation">}</span>
 </code></pre>
 <h3 id="toip-trust-registry-queryprotocol-version-20-not-to-be-implemented"><a class="toc-anchor" href="#toip-trust-registry-queryprotocol-version-20-not-to-be-implemented" >§</a> ToIP Trust Registry QueryProtocol version 2.0 (NOT TO BE IMPLEMENTED)</h3>
-<div id="todo-30" class="notice todo"><a class="notice-link" href="#todo-30">TODO</a><p>Due to the pre-draft status of the trqp-2.0 spec, everything dealing with the trqp-2.0 MUST be ignored for now.</p>
+<div id="todo-100" class="notice todo"><a class="notice-link" href="#todo-100">TODO</a><p>Due to the pre-draft status of the trqp-2.0 spec, everything dealing with the trqp-2.0 MUST be ignored for now.</p>
 </div>
 <p>The following requirements of the <a path-0="trustoverip.github.io"path-1="tswg-trust-registry-protocol"path-2=""href="https://trustoverip.github.io/tswg-trust-registry-protocol/" >ToIP Trust Registry QueryProtocol version 2.0</a> MUST be implemented:</p>
 <p>[TRQP-1], [TRQP-2], [TRQP-3], [TRQP-4], [TRQP-5].</p>
@@ -3339,7 +3310,7 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 </tbody>
 </table>
 <h4 entityId="" id="mod-trqp-1-entities"><a class="toc-anchor" href="#mod-trqp-1-entities" >§</a> [MOD-TRQP-1] /entities/</h4>
-<div id="todo-31" class="notice todo"><a class="notice-link" href="#todo-31">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-101" class="notice todo"><a class="notice-link" href="#todo-101">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <ul>
 <li><code>TrustRegistry</code> entry <code>tr</code>.</li>
@@ -3435,31 +3406,31 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 
 </code></pre>
 <h4 id="mod-trqp-3-entitiesentityvidauthorizations"><a class="toc-anchor" href="#mod-trqp-3-entitiesentityvidauthorizations" >§</a> [MOD-TRQP-3] /entities/{entityVID}/authorizations</h4>
-<div id="todo-32" class="notice todo"><a class="notice-link" href="#todo-32">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-102" class="notice todo"><a class="notice-link" href="#todo-102">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <h4 id="mod-trqp-4-registriesrecognized-registries"><a class="toc-anchor" href="#mod-trqp-4-registriesrecognized-registries" >§</a> [MOD-TRQP-4] /registries/recognized-registries</h4>
-<div id="todo-33" class="notice todo"><a class="notice-link" href="#todo-33">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-103" class="notice todo"><a class="notice-link" href="#todo-103">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <h4 id="mod-trqp-5-registriesregistryvidrecognized-registries"><a class="toc-anchor" href="#mod-trqp-5-registriesregistryvidrecognized-registries" >§</a> [MOD-TRQP-5] /registries/{registryVID}/recognized-registries/</h4>
-<div id="todo-34" class="notice todo"><a class="notice-link" href="#todo-34">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-104" class="notice todo"><a class="notice-link" href="#todo-104">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <h4 id="mod-trqp-6-registriesregistryvid"><a class="toc-anchor" href="#mod-trqp-6-registriesregistryvid" >§</a> [MOD-TRQP-6] /registries/{registryVID}/</h4>
-<div id="todo-35" class="notice todo"><a class="notice-link" href="#todo-35">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-105" class="notice todo"><a class="notice-link" href="#todo-105">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <h4 id="mod-trqp-7-lookupauthorizations"><a class="toc-anchor" href="#mod-trqp-7-lookupauthorizations" >§</a> [MOD-TRQP-7] /lookup/authorizations</h4>
-<div id="todo-36" class="notice todo"><a class="notice-link" href="#todo-36">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-106" class="notice todo"><a class="notice-link" href="#todo-106">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <h4 id="mod-trqp-8-lookupnamespaces"><a class="toc-anchor" href="#mod-trqp-8-lookupnamespaces" >§</a> [MOD-TRQP-8] /lookup/namespaces</h4>
-<div id="todo-37" class="notice todo"><a class="notice-link" href="#todo-37">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-107" class="notice todo"><a class="notice-link" href="#todo-107">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <h4 id="mod-trqp-9-lookupvidmethods"><a class="toc-anchor" href="#mod-trqp-9-lookupvidmethods" >§</a> [MOD-TRQP-9] /lookup/vidmethods</h4>
-<div id="todo-38" class="notice todo"><a class="notice-link" href="#todo-38">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-108" class="notice todo"><a class="notice-link" href="#todo-108">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <h4 id="mod-trqp-10-lookupassurancelevels"><a class="toc-anchor" href="#mod-trqp-10-lookupassurancelevels" >§</a> [MOD-TRQP-10] /lookup/assurancelevels</h4>
-<div id="todo-39" class="notice todo"><a class="notice-link" href="#todo-39">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-109" class="notice todo"><a class="notice-link" href="#todo-109">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <h4 id="mod-trqp-11-metadata"><a class="toc-anchor" href="#mod-trqp-11-metadata" >§</a> [MOD-TRQP-11] /metadata</h4>
-<div id="todo-40" class="notice todo"><a class="notice-link" href="#todo-40">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-110" class="notice todo"><a class="notice-link" href="#todo-110">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <p><code>GET /trqp/$uint64/metadata</code> response:</p>
 <pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
@@ -3492,10 +3463,10 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 <li><code>languages</code>: <code>tr.language</code>.</li>
 </ul>
 <h4 id="mod-trqp-12-offlineexportfile"><a class="toc-anchor" href="#mod-trqp-12-offlineexportfile" >§</a> [MOD-TRQP-12] /offline/exportfile</h4>
-<div id="todo-41" class="notice todo"><a class="notice-link" href="#todo-41">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-111" class="notice todo"><a class="notice-link" href="#todo-111">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <h4 id="mod-trqp-13-offlinetrustestablishmentdocument"><a class="toc-anchor" href="#mod-trqp-13-offlinetrustestablishmentdocument" >§</a> [MOD-TRQP-13] /offline/trustestablishmentdocument</h4>
-<div id="todo-42" class="notice todo"><a class="notice-link" href="#todo-42">TODO</a><p>This section MUST be ignored for now.</p>
+<div id="todo-112" class="notice todo"><a class="notice-link" href="#todo-112">TODO</a><p>This section MUST be ignored for now.</p>
 </div>
 <h2 id="initial-data-requirements"><a class="toc-anchor" href="#initial-data-requirements" >§</a> Initial Data Requirements</h2>
 <h3 id="glo-global-variables"><a class="toc-anchor" href="#glo-global-variables" >§</a> [GLO] Global Variables</h3>
@@ -3672,12 +3643,6 @@ It is not mandatory to register a <a class="term-reference" href="#term:did">DID
 <li><a href="#mod-cs-qry-2-get-credential-schema" >[MOD-CS-QRY-2] Get Credential Schema</a></li>
 <li><a href="#mod-cs-qry-3-render-json-schema" >[MOD-CS-QRY-3] Render Json Schema</a></li>
 <li><a href="#mod-cs-qry-4-list-module-parameters" >[MOD-CS-QRY-4] List Module Parameters</a></li>
-</ul>
-</li>
-<li><a href="#credential-schema-permission-csp-module" >Credential Schema Permission (CSP) Module</a>
-<ul>
-<li><a href="#mod-csp-msg-5-update-module-parameters" >[MOD-CSP-MSG-5] Update Module Parameters</a></li>
-<li><a href="#mod-csp-qry-6-list-module-parameters" >[MOD-CSP-QRY-6] List Module Parameters</a></li>
 </ul>
 </li>
 <li><a href="#permission-module" >Permission Module</a>
