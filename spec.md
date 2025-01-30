@@ -931,8 +931,8 @@ account  --o td: account
 
 - `did` (string) (*mandatory*) (key): the [[ref: DID]]. MUST conform to [[spec-norm:RFC3986]].
 - `controller` (account) (*mandatory*): [[ref: account]] that created the [[ref: DID]].
-- `created` (date) (*mandatory*): date this [[ref: DID]] has been added, in yyyyMMdd format.
-- `modified` (date) (*mandatory*): date this [[ref: DID]] has been modified, in yyyyMMdd format.
+- `created` (date) (*mandatory*): date this [[ref: DID]] has been added, in yyyyMMddHHmm format.
+- `modified` (date) (*mandatory*): date this [[ref: DID]] has been modified, in yyyyMMddHHmm format.
 - `exp` (date) (*mandatory*): expiration date, in yyyyMMdd format.
 - `deposit` (number) (*mandatory*): effective [[ref: trust deposit]] for this [[ref: DID]] (in `denom`)
 
