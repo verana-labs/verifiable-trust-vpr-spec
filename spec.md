@@ -1145,7 +1145,7 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Is Authorized Issuer                    | /perm/v1/authorized_issuer   | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-is-authorized-issuer)  |
 |                                | Is Authorized Verifier                  | /perm/v1/authorized_verifier | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-is-authorized-verifier)  |
 |                                | Get Permission Session                  | /perm/v1/get_session         | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-5-get-permissionsession) |
-|                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |
+|                                | List Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |
 | DID Directory                  | Add a DID                               |                                  | Msg    | [[MOD-DD-MSG-1]](#mod-dd-msg-1-add-a-did)   |
 |                                | Renew a DID                             |                                  | Msg    | [[MOD-DD-MSG-2]](#mod-dd-msg-2-renew-a-did)   |
 |                                | Remove a DID                            |                                  | Msg    | [[MOD-DD-MSG-3]](#mod-dd-msg-3-remove-a-did)   |
