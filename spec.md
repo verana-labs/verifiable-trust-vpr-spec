@@ -1489,7 +1489,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-TR-QRY-2-3] List Trust Registries execution of the query
 
-If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned.
+If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned. If `modified_after` is specified, order by `modified_after` desc.
 
 #### [MOD-TR-QRY-3] List Module Parameters
 
@@ -1734,7 +1734,7 @@ Anyone CAN execute this method. Returned result MUST be ordered by `CredentialSc
 
 ##### [MOD-CS-QRY-1-3] List Credential Schemas execution
 
-return a list of found entry, or an empty list if nothing found. Results MUST be ordered by created ASC.
+return a list of found entry, or an empty list if nothing found. Results MUST be ordered by `modified` ASC.
 
 #### [MOD-CS-QRY-2] Get Credential Schema
 
@@ -3257,7 +3257,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-DD-MSG-4] Touch a DID
 
-This method is used to update the `changed` of a given entry so that crawlers will know [[ref: DID]] should be immediately reindexed.
+This method is used to update the `modified` of a given entry so that crawlers will know [[ref: DID]] should be immediately reindexed.
 
 ##### [MOD-DD-MSG-4-1] touch a DID transaction parameters
 
@@ -3282,7 +3282,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Transaction execution MUST perform the following tasks, and rollback if any error occurs.
 
-- update `changed` to date of the day for the selected entry.
+- update `modified` to datetime of the day for the selected entry.
 
 #### [MOD-DD-MSG-5] Update Module Parameters
 
@@ -3319,14 +3319,14 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 #### [MOD-DD-QRY-1] List DIDs
 
-This method is used to [[ref: query]] the [[ref: DID Directory]] [[ref: keeper]]. Returned data MUST be ordered by `DidDirectory.changed` asc.
+This method is used to [[ref: query]] the [[ref: DID Directory]] [[ref: keeper]]. Returned data MUST be ordered by `modified` asc.
 
 ##### [MOD-DD-QRY-1-1] List DIDs query parameters
 
 The following parameters are optional:
 
 - `account` (account): if specified, returns only [[ref: DIDs]] controlled by `account`.
-- `changed` (date): if specified, returns only [[ref: DIDs]] changed after `changed`.
+- `modified` (date): if specified, returns only [[ref: DIDs]] changed after `modified`.
 - `expired` (boolean): if specified, show expired services, in and over grace period.
 - `over_grace` (boolean): if specified, show expired services, over grace period.
 - `response_max_size` (small number): default to 64. Max 1,024.
