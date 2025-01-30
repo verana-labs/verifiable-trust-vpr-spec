@@ -931,8 +931,8 @@ account  --o td: account
 
 - `did` (string) (*mandatory*) (key): the [[ref: DID]]. MUST conform to [[spec-norm:RFC3986]].
 - `controller` (account) (*mandatory*): [[ref: account]] that created the [[ref: DID]].
-- `created` (date) (*mandatory*): date this [[ref: DID]] has been added, in yyyyMMdd format.
-- `modified` (date) (*mandatory*): date this [[ref: DID]] has been modified, in yyyyMMdd format.
+- `created` (date) (*mandatory*): date this [[ref: DID]] has been added, in yyyyMMddHHmm format.
+- `modified` (date) (*mandatory*): date this [[ref: DID]] has been modified, in yyyyMMddHHmm format.
 - `exp` (date) (*mandatory*): expiration date, in yyyyMMdd format.
 - `deposit` (number) (*mandatory*): effective [[ref: trust deposit]] for this [[ref: DID]] (in `denom`)
 
@@ -1145,7 +1145,8 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Is Authorized Issuer                    | /perm/v1/authorized_issuer   | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-is-authorized-issuer)  |
 |                                | Is Authorized Verifier                  | /perm/v1/authorized_verifier | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-is-authorized-verifier)  |
 |                                | Get Permission Session                  | /perm/v1/get_session         | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-5-get-permissionsession) |
-|                                | List Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |
+|                                | List Permission Module Parameters     |                                 | Query    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |
+|                                | List Permission Sessions     |                                 | Query    | [[MOD-PERM-QRY-7]](#mod-perm-qry-7-list-permission-sessions)   |
 | DID Directory                  | Add a DID                               |                                  | Msg    | [[MOD-DD-MSG-1]](#mod-dd-msg-1-add-a-did)   |
 |                                | Renew a DID                             |                                  | Msg    | [[MOD-DD-MSG-2]](#mod-dd-msg-2-renew-a-did)   |
 |                                | Remove a DID                            |                                  | Msg    | [[MOD-DD-MSG-3]](#mod-dd-msg-3-remove-a-did)   |
@@ -1488,7 +1489,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-TR-QRY-2-3] List Trust Registries execution of the query
 
-If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned.
+If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned. If `modified_after` is specified, order by `modified_after` desc.
 
 #### [MOD-TR-QRY-3] List Module Parameters
 
@@ -1733,7 +1734,7 @@ Anyone CAN execute this method. Returned result MUST be ordered by `CredentialSc
 
 ##### [MOD-CS-QRY-1-3] List Credential Schemas execution
 
-return a list of found entry, or an empty list if nothing found. Results MUST be ordered by created ASC.
+return a list of found entry, or an empty list if nothing found. Results MUST be ordered by `modified` ASC.
 
 #### [MOD-CS-QRY-2] Get Credential Schema
 
@@ -2839,7 +2840,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-PERM-QRY-1-3] List Permissions execution
 
-return a list of found entries, or an empty list if nothing found.
+return a list of found entries, or an empty list if nothing found. Ordered by last modified asc.
 
 #### [MOD-PERM-QRY-2] Get Permission
 
@@ -3014,6 +3015,24 @@ Return the list of the existing parameters and their values.
   }
 }
 ```
+
+#### [MOD-PERM-QRY-7] List Permission Sessions
+
+Anyone CAN execute this method.
+
+##### [MOD-PERM-QRY-7-1] List Permission Sessions parameters
+
+- `modified_after` (datetime) (*optional*): show permissions modified after this datetime.
+- `response_max_size` (small number) (*optional*): default to 64. Min 1, max 1,024.
+
+##### [MOD-PERM-QRY-7-2] List Permission Sessions checks
+
+- `modified_after` (datetime) (*mandatory*): show permissions modified after this datetime.
+- `response_max_size` (small number) (*optional*): Must be min 1, max 1,024.
+
+##### [MOD-PERM-QRY-7-3] List Permission Sessions execution
+
+return a list of found entries, or an empty list if nothing found, ordered by last modified asc.
 
 #### Validation Examples
 
@@ -3238,7 +3257,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-DD-MSG-4] Touch a DID
 
-This method is used to update the `changed` of a given entry so that crawlers will know [[ref: DID]] should be immediately reindexed.
+This method is used to update the `modified` of a given entry so that crawlers will know [[ref: DID]] should be immediately reindexed.
 
 ##### [MOD-DD-MSG-4-1] touch a DID transaction parameters
 
@@ -3263,7 +3282,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Transaction execution MUST perform the following tasks, and rollback if any error occurs.
 
-- update `changed` to date of the day for the selected entry.
+- update `modified` to datetime of the day for the selected entry.
 
 #### [MOD-DD-MSG-5] Update Module Parameters
 
@@ -3300,14 +3319,14 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 #### [MOD-DD-QRY-1] List DIDs
 
-This method is used to [[ref: query]] the [[ref: DID Directory]] [[ref: keeper]]. Returned data MUST be ordered by `DidDirectory.changed` asc.
+This method is used to [[ref: query]] the [[ref: DID Directory]] [[ref: keeper]]. Returned data MUST be ordered by `modified` asc.
 
 ##### [MOD-DD-QRY-1-1] List DIDs query parameters
 
 The following parameters are optional:
 
 - `account` (account): if specified, returns only [[ref: DIDs]] controlled by `account`.
-- `changed` (date): if specified, returns only [[ref: DIDs]] changed after `changed`.
+- `modified` (date): if specified, returns only [[ref: DIDs]] changed after `modified`.
 - `expired` (boolean): if specified, show expired services, in and over grace period.
 - `over_grace` (boolean): if specified, show expired services, over grace period.
 - `response_max_size` (small number): default to 64. Max 1,024.
