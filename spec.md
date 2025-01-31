@@ -2788,6 +2788,7 @@ If new, create entry `PermissionSession` `session`:
 - `session.agent_perm_id`: `agent_perm_id`
 - `session.authz[]`: create and put  (`executor_perm_id`, `beneficiary_perm_id`, `wallet_agent_perm_id`).
 - `session.modified:` : `now`
+- `session.created:` : `now`
 
 Else update:
 
