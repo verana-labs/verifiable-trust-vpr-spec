@@ -188,7 +188,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
 
 [[def: valid permission, valid permissions]]:
-~ For a given country code, a credential schema permission of a given type, which (country attribute is null or equals to the given country code), and effective_from datetime is lower than current datetime, and (effective_until datetime is null or greater than current datetime), and revoked is null and terminated is null.
+~ For a given country code, a credential schema permission of a given type, which (country attribute is null or equals to the given country code), and effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and terminated is null.
 
 [[def: validation process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
@@ -662,9 +662,9 @@ scale max 800 width
 entity "TrustRegistry" as tr {
   *id: uint64
   +did: string
-  +created: datetime
-  +modified: datetime
-  +archived: datetime
+  +created: timestamp
+  +modified: timestamp
+  +archived: timestamp
   +deposit: number
   +aka: string
   +int: active_version
@@ -674,13 +674,13 @@ entity "TrustRegistry" as tr {
 
 entity "GovernanceFrameworkVersion" as gfv {
   *id: uint64
-  +created: datetime
+  +created: timestamp
   +version: integer
 }
 
 entity "GovernanceFrameworkDocument" as gfd {
   *id: uint64
-  +created: datetime
+  +created: timestamp
   +language: string
   +url: string
   +digest_sri: string
@@ -689,9 +689,9 @@ entity "GovernanceFrameworkDocument" as gfd {
 
 entity "CredentialSchema" as cs {
   *id: uint64
-  +created: datetime
-  +modified: datetime
-  +archived: datetime
+  +created: timestamp
+  +modified: timestamp
+  +archived: timestamp
   +deposit: number
   +json_schema: string
   +issuer_grantor_validation_validity_period: number
@@ -715,25 +715,25 @@ entity "(SDK) Account" as account {
 entity "Permission" as csp {
   *id: uint64
   did: string
-  +created: datetime
-  +extended: datetime
-  effective_from: datetime
-  effective_until: datetime
+  +created: timestamp
+  +extended: timestamp
+  effective_from: timestamp
+  effective_until: timestamp
   +validation_fees: number
   +issuance_fees: number
   +verification_fees: number
   +deposit: number
-  revoked: datetime
-  terminated: datetime
+  revoked: timestamp
+  terminated: timestamp
   country: string
   stat: number
-  +vp_exp: datetime
-  +vp_last_state_change: datetime
+  +vp_exp: timestamp
+  +vp_last_state_change: timestamp
   +vp_validator_deposit: number
   +vp_current_fees: number
   +vp_current_deposit: number
   +vp_summary_digest_sri: digest_sri
-  +vp_term_requested: datetime
+  +vp_term_requested: timestamp
 }
 
 enum "ValidationState" as valstate {
@@ -745,6 +745,8 @@ enum "ValidationState" as valstate {
 
 entity "PermissionSession" as csps {
   *id: uuid
+  +created: timestamp
+  +modified: timestamp
   +authz: (uint64, uint64, uint64)[]
 }
 
@@ -765,9 +767,9 @@ enum "CredentialSchemaAuthz" as csa {
 
 entity "DIDDirectory" as did {
   *did: string
-  +created: datetime
-  +modified: datetime
-  +exp: datetime
+  +created: timestamp
+  +modified: timestamp
+  +exp: timestamp
   +deposit: number
 }
 
@@ -780,7 +782,7 @@ entity "GlobalVariables" as gv {
   +credential_schema_verifier_grantor_validation_validity_period_max_days: number
   +credential_schema_issuer_validation_validity_period_max_days: number
   +credential_schema_verifier_validation_validity_period_max_days: number
-  +credential_schema_holder_validation_validity_period_max_days: datetime
+  +credential_schema_holder_validation_validity_period_max_days: timestamp
   +credential_schema_trust_deposit: number
   +validation_term_requested_timeout_days: number
   +did_directory_trust_deposit: number
@@ -831,9 +833,9 @@ account  --o td: account
 - `id` (uint64) (*mandatory*): the id of the trust registry.
 - `did` (string) (*mandatory*): the did of the trust registry.
 - `controller` (account) (*mandatory*): [[ref: account]] that controls this entry.
-- `created` (datetime) (*mandatory*): date this TrustRegistry has been created, in yyyyMMddHHmm format.
-- `modified` (datetime) (*mandatory*): date this TrustRegistry has been modified, in yyyyMMddHHmm format.
-- `archived` (datetime) (*mandatory*): date this TrustRegistry has been archived, in yyyyMMddHHmm format.
+- `created` (timestamp) (*mandatory*): timestamp this TrustRegistry has been created.
+- `modified` (timestamp) (*mandatory*): timestamp this TrustRegistry has been modified.
+- `archived` (timestamp) (*mandatory*): timestamp this TrustRegistry has been archived.
 - `deposit` (number) (*mandatory*): [[ref: trust deposit]] (in `denom`)
 - `aka` (string) (*optional*): optional additional URI of this trust registry.
 - `language` (string(2)) (*mandatory*): primary language alpha-2 code (ISO 3166) of this trust registry.
@@ -845,7 +847,7 @@ account  --o td: account
 
 - `id` (uint64) (*mandatory*): the id of the schema.
 - `tr_id` (uint64) (*mandatory*): the id of the trust registry that controls this `GovernanceFrameworkVersion` entry.
-- `created` (datetime) (*mandatory*): date this GovernanceFrameworkVersion has been created, in yyyyMMddHHmm format.
+- `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkVersion has been created.
 - `version` (int) (*mandatory*): version of this GF. MUST Starts with 1.
 
 ### GovernanceFrameworkDocument
@@ -854,7 +856,7 @@ account  --o td: account
 
 - `id` (uint64) (*mandatory*): the id of the schema.
 - `gfv_id` (uint64) (*mandatory*): the id of the `GovernanceFrameworkVersion` entry.
-- `created` (datetime) (*mandatory*): date this GovernanceFrameworkDocument has been created, in yyyyMMddHHmm format.
+- `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkDocument has been created.
 - `language` (string(2)) (*mandatory*): primary language alpha-2 code (ISO 3166) of this trust registry.
 - `url` (string) (*mandatory*): URL where the document is published.
 - `digest_sri` (string) (*mandatory*): digest_sri of the document.
@@ -867,9 +869,9 @@ account  --o td: account
 
 - `id` (uint64) (*mandatory*): the id of the schema.
 - `tr_id` (uint64) (*mandatory*): the id of the trust registry that controls this `CredentialSchema` entry.
-- `created` (datetime) (*mandatory*): date this CredentialSchema has been created, in yyyyMMddHHmm format.
-- `modified` (datetime) (*mandatory*): date this CredentialSchema has been modified, in yyyyMMddHHmm format.
-- `archived` (datetime) (*mandatory*): date this CredentialSchema has been archived, in yyyyMMddHHmm format.
+- `created` (timestamp) (*mandatory*): timestamp this CredentialSchema has been created.
+- `modified` (timestamp) (*mandatory*): timestamp this CredentialSchema has been modified.
+- `archived` (timestamp) (*mandatory*): timestamp this CredentialSchema has been archived.
 - `deposit` (number) (*mandatory*): [[ref: trust deposit]] (in `denom`)
 - `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
 - `issuer_grantor_validation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor validation process expires and must be renewed.
@@ -889,31 +891,31 @@ account  --o td: account
 - `type` (PermissionType): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, TRUST_REGISTRY, HOLDER
 - `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]].
 - `grantee` (account) (*mandatory*): [[ref: account]] this permission refers to (account granted to act as `type` for schema `schema_id`).
-- `created` (datetime) (*mandatory*): datetime this `Permission` has been created, in yyyyMMddHHmm format.
+- `created` (timestamp) (*mandatory*): timestamp this `Permission` has been created.
 - `created_by` (account) (*mandatory*): [[ref: account]] that created this permission.
-- `extended` (datetime) (*mandatory*): datetime this `Permission` has been extended, in yyyyMMddHHmm format.
+- `extended` (timestamp) (*mandatory*): timestamp this `Permission` has been extended.
 - `extended_by` (account) (*mandatory*): [[ref: account]] that extended this permission.
-- `effective_from` (datetime) (*optional*): date from which (inclusive) this `Permission` is effective, in yyyyMMddHHmm format.
-- `effective_until` (datetime) (*optional*): date until when (exclusive) this `Permission` is effective, in yyyyMMddHHmm format, null if no time limit has been set for this permission.
-- `modified` (datetime) (*mandatory*): date this Permission has been modified, in yyyyMMddHHmm format.
+- `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Permission` is effective.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective, null if no time limit has been set for this permission.
+- `modified` (timestamp) (*mandatory*): timestamp this Permission has been modified.
 - `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (grantee of this perm) for running a validation process for a given validation period, in trust unit. Default to 0.
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is issued, in trust unit. Default to 0.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is verified, in trust unit. Default to 0.
 - `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in `denom`. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `perm.deposit` value as well. If `perm` is, let's say revoked, then corresponding `perm.deposit` value is freed from `perm.grantee` Trust Deposit.
-- `revoked` (datetime) (*optional*): manual revocation datetime of this Perm, in yyyyMMddHHmm format.
+- `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `revoked_by` (account) (*mandatory*): [[ref: account]] that revoked this permission.
-- `terminated` (datetime) (*optional*): manual termination (by grantee) datetime of this Perm, in yyyyMMddHHmm format.
+- `terminated` (timestamp) (*optional*): manual termination (by grantee) timestamp of this Perm.
 - `terminated_by` (account) (*mandatory*): [[ref: account]] that terminated this permission.
 - `country` (string) (*optional*): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country.
 - `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Permission` tree.
 - `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED
-- `vp_exp` (datetime) (*optional*): validation expiration date, yyyyMMdd format. This expiration date is for the validation process itself, not for the issued credential or `Permission` expiration date.
-- `vp_last_state_change` (datetime) (*mandatory*)
+- `vp_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the validation process itself, not for the issued credential or `Permission` expiration timestamp.
+- `vp_last_state_change` (timestamp) (*mandatory*)
 - `vp_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
 - `vp_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon validation process completion, in [[ref: denom]].
 - `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
 - `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `vp_term_requested` (datetime) (*optional*): set when [[ref: controller]] requests the termination of this entry.
+- `vp_term_requested` (timestamp) (*optional*): set when [[ref: controller]] requests the termination of this entry.
 
 ### PermissionSession
 
@@ -923,7 +925,7 @@ account  --o td: account
 - `controller` (account) (*mandatory*): account that controls the entry.
 - `agent_perm_id` (uint64) (*mandatory*): permission id of the agent.
 - `authz` (uint64 (Permission id), uint64 (Permission id), uint64 (Permission id))[] (*mandatory*): permission(s) linked to this session (executor, beneficiary, wallet_agent).
-- `modified` (datetime) (*mandatory*): date this PermissionSession has been modified, in yyyyMMddHHmm format.
+- `modified` (timestamp) (*mandatory*): timestamp this PermissionSession has been modified.
 
 ### DIDDirectory
 
@@ -931,9 +933,9 @@ account  --o td: account
 
 - `did` (string) (*mandatory*) (key): the [[ref: DID]]. MUST conform to [[spec-norm:RFC3986]].
 - `controller` (account) (*mandatory*): [[ref: account]] that created the [[ref: DID]].
-- `created` (date) (*mandatory*): date this [[ref: DID]] has been added, in yyyyMMddHHmm format.
-- `modified` (date) (*mandatory*): date this [[ref: DID]] has been modified, in yyyyMMddHHmm format.
-- `exp` (date) (*mandatory*): expiration date, in yyyyMMdd format.
+- `created` (timestamp) (*mandatory*): timestamp this [[ref: DID]] has been added.
+- `modified` (timestamp) (*mandatory*): timestamp this [[ref: DID]] has been modified.
+- `exp` (timestamp) (*mandatory*): expiration timestamp.
 - `deposit` (number) (*mandatory*): effective [[ref: trust deposit]] for this [[ref: DID]] (in `denom`)
 
 ### TrustDeposit
@@ -1227,7 +1229,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `tr.id` : auto-incremented uint64
 - `tr.did`: `did`
 - `tr.controller`: [[ref: account]] running the method
-- `tr.created`: current datetime, in yyyyMMddHHmm format
+- `tr.created`: current timestamp
 - `tr.modified`: `tr.created`
 - `tr.aka`: `aka`
 - `tr.language`: `language`
@@ -1238,15 +1240,15 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.tr_id`: `tr.id`
-- `gfv.created`: current datetime, in yyyyMMddHHmm format
+- `gfv.created`: current timestamp
 - `gfv.version`: 1
-- `gfv.active_since`: current datetime, in yyyyMMddHHmm format
+- `gfv.active_since`: current timestamp
 
 - create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
 
 - `gfd.id`: auto-incremented uint64
 - `gfd.gfv_id`: `gfv.id`
-- `gfd.created`: current datetime, in yyyyMMddHHmm format
+- `gfd.created`: current timestamp
 - `gfd.language`: `language`
 - `gfd.url`: `doc_url`
 - `gfd.digest_sri`: `doc_digest_sri`
@@ -1293,7 +1295,7 @@ load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or crea
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.tr_id`: `id`
-- `gfv.created`: current datetime, in yyyyMMddHHmm format
+- `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: null
 
@@ -1301,7 +1303,7 @@ load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or crea
 
 - `gfd.id`: auto-incremented uint64
 - `gfd.gfv_id`: `gfv.id`
-- `gfd.created`: current datetime, in yyyyMMddHHmm format
+- `gfd.created`: current timestamp
 - `gfd.language`: `doc_language`
 - `gfd.url`: `doc_url`
 - `gfd.digest_sri`: `doc_digest_sri`
@@ -1338,7 +1340,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort. Else, update `tr.active_version` to `tr.active_version` + 1. Set `tr.modified` to current datetime, and set `gfv.active_since` to current datetime and persist changes.
+- load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort. Else, update `tr.active_version` to `tr.active_version` + 1. Set `tr.modified` to current timestamp, and set `gfv.active_since` to current timestamp and persist changes.
 
 #### [MOD-TR-MSG-4] Update Trust Registry
 
@@ -1378,7 +1380,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `tr.did`: `did`
 - `tr.aka`: `aka`
-- `tr.modified`: current datetime, in yyyyMMddHHmm format
+- `tr.modified`: current timestamp
 
 #### [MOD-TR-MSG-5] Archive Trust Registry
 
@@ -1415,9 +1417,9 @@ If all precondition checks passed, method is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - update `TrustRegistry` entry `tr` with `tr.id` equal to `id`:
-- if `archived` is true: set `cs.archived` to datetime of day, yyyyMMddHHmm format.
+- if `archived` is true: set `cs.archived` to current timestamp.
 - if `archived` is false: set `cs.archived` to null.
-- `tr.modified`: current datetime, in yyyyMMddHHmm format
+- `tr.modified`: current timestamp
 
 #### [MOD-TR-MSG-6] Update Module Parameters
 
@@ -1476,7 +1478,7 @@ This method is used to [[ref: query]] the [[ref: DID Directory]] [[ref: keeper]]
 The following parameters are optional:
 
 - `controller` (account) (*optional*): if specified, filter by controller.
-- `modified_after` (date) (*optional*): if specified, returns only `TrustRegistry` entries with `TrustRegistry.modified` greater than `modified`.
+- `modified_after` (timestamp) (*optional*): if specified, returns only `TrustRegistry` entries with `TrustRegistry.modified` greater than `modified`.
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
@@ -1585,7 +1587,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.holder_validation_validity_period`: `holder_validation_validity_period`
   - `cs.issuer_perm_management_mode`: `issuer_perm_management_mode`
   - `cs.verifier_perm_management_mode`: `verifier_perm_management_mode`
-  - `cs.created`: datetime of day, yyyyMMddHHmm format.
+  - `cs.created`: current timestamp
   - `cs.modified`: `cs.created`.
 
 :::note
@@ -1642,7 +1644,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.issuer_validation_validity_period`: `issuer_validation_validity_period`
   - `cs.verifier_validation_validity_period`: `verifier_validation_validity_period`
   - `cs.holder_validation_validity_period`: `holder_validation_validity_period`
-  - `cs.updated`: datetime of day, yyyyMMddHHmm format.
+  - `cs.updated`: current timestamp.
 
 #### [MOD-CS-MSG-3] Archive Credential Schema
 
@@ -1681,9 +1683,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - update `CredentialSchema` entry `cs` with `cs.id` equal to `id`:
 
-- if `archived` is true: set `cs.archived` to datetime of day, yyyyMMddHHmm format.
+- if `archived` is true: set `cs.archived` to current timestamp.
 - if `archived` is false: set `cs.archived` to null.
-- set `cs.modified` to datetime of day, yyyyMMddHHmm format.
+- set `cs.modified` to current timestamp.
 
 #### [MOD-CS-MSG-4] Update Module Parameters
 
@@ -1724,12 +1726,12 @@ Anyone CAN execute this method. Returned result MUST be ordered by `CredentialSc
 ##### [MOD-CS-QRY-1-1] List Credential Schemas parameters
 
 - `tr_id` (string) (*optional*): to filter by trust registry id.
-- `modified_after` (datetime) (*optional*): show schemas modified after this datetime.
+- `modified_after` (timestamp) (*optional*): show schemas modified after this timestamp.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 
 ##### [MOD-CS-QRY-1-2] List Credential Schemas checks
 
-- `modified_after` must be a datetime.
+- `modified_after` must be a timestamp.
 - `response_max_size` must be between 1 and 1,024.
 
 ##### [MOD-CS-QRY-1-3] List Credential Schemas execution
@@ -1869,10 +1871,10 @@ In all cases, the process is very similar. Example execution of a validation pro
 Validation is valid for a specific period, for example 365 days, as configured in the [[ref: credential schema]] for credential schema related validations, or set by trust registry for user-agent validation.
 
 :::note
-In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration date because the validated attribute(s) might expire before validation expiration: in this case, the [[ref: applicant]] must provide updated information to the [[ref: validator]] before attribute expiration, in order to get issued an updated new permission and/or an updated credential.
+In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the [[ref: applicant]] must provide updated information to the [[ref: validator]] before attribute expiration, in order to get issued an updated new permission and/or an updated credential.
 :::
 
-If validation is set to expire, [[ref: applicant]] that wishes to extend the expiration date must renew its validation.
+If validation is set to expire, [[ref: applicant]] that wishes to extend the expiration timestamp must renew its validation.
 
 At any time, [[ref: applicant]] can cancel the validation process.
 
@@ -1976,7 +1978,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
-- define `now`: datetime of day, yyyyMMddHHmm format.
+- define `now`: current timestamp.
 
 - create an persist a new permission entry `applicant_perm`:
 
@@ -2067,12 +2069,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
-- define `now`: datetime of day, yyyyMMddHHmm format.
+- define `now`: current timestamp.
 
 - update permission entry:
 
   - `applicant_perm.vp_state`: PENDING.
-  - `applicant_perm.vp_last_state_change`: datetime of day, yyyyMMddHHmm format.
+  - `applicant_perm.vp_last_state_change`: current timestamp.
   - `applicant_perm.deposit`: `applicant_perm.applicant_deposit` + `validation_trust_deposit_in_denom`.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
   - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_denom`.
@@ -2087,7 +2089,7 @@ Any [[ref: account]] CAN execute this method.
 An [[ref: account]] that would like to set a validation entry to VALIDATED MUST execute this method by specifying:
 
 - `id` (uint64) (*mandatory*): id of the validation process;
-- `effective_until` (datetime) (*optional*): date until when (exclusive) this `Permission` is effective, in yyyyMMddHHmm format, null if no time limit should been set for this permission or if we want it to be aligned with the validation process expiration datetime calculated by this method.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective, null if no time limit should been set for this permission or if we want it to be aligned with the validation process expiration timestamp calculated by this method.
 - `validation_fees` (number) (*optional*): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
 - `issuance_fees` (number) (*optional*): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
 - `verification_fees` (number) (*optional*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
@@ -2110,19 +2112,19 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `country` (string) (*optional*): MUST be a valid alpha-2 code (ISO 3166), or null. If `applicant_perm.effective_from` is not null (we are in renewal) `country` MUST be equal to `applicant_perm.country`, else abort.
 - `vp_summary_digest_sri` (digest_sri) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
-Calculation of `vp_exp`, the validation process expiration date, required to verify provided `effective_until`:
+Calculation of `vp_exp`, the validation process expiration timestamp, required to verify provided `effective_until`:
 
 - Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_perm.type` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_perm.type` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_perm.type` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_perm.type` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_perm.type` is HOLDER).
 
 - if `validity_period` is NULL:  `vp_exp` = NULL.
-- else if `applicant_perm.vp_exp` is null, `vp_exp` =  datetime of now() plus `validity_period`.
+- else if `applicant_perm.vp_exp` is null, `vp_exp` =  timestamp of now() plus `validity_period`.
 - else `vp_exp` =  `applicant_perm.vp_exp` plus `validity_period`
 
 Now, let's verify `effective_until`:
 
 - if `effective_until` is NULL, no issue.
-- else if `applicant_perm.effective_until` is NULL, `effective_until` MUST be greater than current datetime of day AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
+- else if `applicant_perm.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
 - else `effective_until` MUST be greater than `applicant_perm.effective_until` AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
 
 ###### [MOD-PERM-MSG-3-2-2] Set Permission VP to Validated validator perms
@@ -2146,7 +2148,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Permission` entry `applicant_perm` from `id`.
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
-- define `now` datetime of now().
+- define `now` timestamp of now().
 
 Calculate `vp_exp`:
 
@@ -2154,7 +2156,7 @@ Calculate `vp_exp`:
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_perm.type` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_perm.type` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_perm.type` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_perm.type` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_perm.type` is HOLDER).
 
 - if `validity_period` is NULL:  `vp_exp` = NULL.
-- else if `applicant_perm.vp_exp` is null, `vp_exp` =  datetime of now() plus `validity_period`.
+- else if `applicant_perm.vp_exp` is null, `vp_exp` =  timestamp of now() plus `validity_period`.
 - else `vp_exp` =  `applicant_perm.vp_exp` plus `validity_period`.
 
 Change value of provided `effective_until` if needed, and abort if needed:
@@ -2236,12 +2238,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 Define vars:
 
-- define `now`  datetime of day, yyyyMMddHHmm format.
+- define `now`  current timestamp.
 
 Update perm:
 
 - set `applicant_perm.modified` to `now`.
-- set `applicant_perm.vp_term_requested` to current datetime.
+- set `applicant_perm.vp_term_requested` to current timestamp.
 - set `applicant_perm.vp_last_state_change` to `now`.
 if `applicant_perm.type` is not HOLDER, or `applicant_perm.vp_exp` is lower than `now`:
 - set `applicant_perm.vp_state` to TERMINATED.
@@ -2294,7 +2296,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 Timeout not reached: only validator can call the method:
 
-if `applicant_perm.term_requested` + `GlobalVariables.validation_term_requested_timeout_days` is after or equal to current datetime:
+if `applicant_perm.term_requested` + `GlobalVariables.validation_term_requested_timeout_days` is after or equal to current timestamp:
 
 - Load `Permission` entry `validator_perm` with id `applicant_perm.validator_perm_id`. It MUST exist, and `validator_perm.grantee` MUST be the account executing the method. Else MUST abort.
 
@@ -2322,7 +2324,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Define vars:
 
-- define `now`  datetime of day, yyyyMMddHHmm format.
+- define `now`  current timestamp.
 
 Update:
 
@@ -2378,7 +2380,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - Load `Permission` entry `applicant_perm` with `id`. It MUST exist.
-- define `now`: datetime of day, yyyyMMddHHmm format.
+- define `now`: current timestamp.
 
 - set `applicant_perm.modified` to `now`.
 - if `applicant_perm.vp_exp` is null (validation never completed), set `applicant_perm.vp_state` to TERMINATED, else set `applicant_perm.vp_state` to VALIDATED.
@@ -2402,8 +2404,8 @@ An [[ref: account]] that would like to create a `Permission` entry MUST call thi
 - `schema_id` (uint64) (*mandatory*)
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
 - `country` (*optional*).
-- `effective_from` (datetime) (*optional*): date from when (exclusive) this Perm is effective, in yyyyMMddHHmm format. MUST be in the future.
-- `effective_until` (datetime) (*optional*): date until when (exclusive) this Perm is effective, in yyyyMMddHHmm format, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
+- `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in trust unit. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.
@@ -2448,7 +2450,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- define `now`: datetime of day, yyyyMMddHHmm format.
+- define `now`: current timestamp.
 
 A new entry `Permission` `perm` MUST be created:
 
@@ -2474,10 +2476,10 @@ This method can only be called by a validator.
 
 ##### [MOD-PERM-MSG-8-1] Extend Permission parameters
 
-An [[ref: account]] that would like to extend the effective_until date of a permission MUST call this methid by specifying:
+An [[ref: account]] that would like to extend the effective_until timestamp of a permission MUST call this methid by specifying:
 
 - `id` (uint64) (*mandatory*): id of the permission;
-- `effective_until` (datetime) (*optional*): date until when (exclusive) this `Permission` is effective, in yyyyMMddHHmm format.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective.
 
 ##### [MOD-PERM-MSG-8-2] Extend Permission precondition checks
 
@@ -2507,7 +2509,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- define `now`: datetime of day, yyyyMMddHHmm format.
+- define `now`: current timestamp.
 
 - Load `Permission` entry `applicant_perm` from `id`.
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
@@ -2522,7 +2524,7 @@ This method can only be called by a validator.
 
 ##### [MOD-PERM-MSG-9-1] Revoke Permission parameters
 
-An [[ref: account]] that would like to extend the effective_until date of a permission MUST call this methid by specifying:
+An [[ref: account]] that would like to extend the effective_until timestamp of a permission MUST call this methid by specifying:
 
 - `id` (uint64) (*mandatory*): id of the permission;
 
@@ -2552,7 +2554,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- define `now`: datetime of day, yyyyMMddHHmm format.
+- define `now`: current timestamp.
 
 - Load `Permission` entry `applicant_perm` from `id`.
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
@@ -2763,7 +2765,7 @@ If all precondition checks passed, method is executed.
 
 - Load `executor_perm` from `executor_perm_id`.
 
-- define `now`: datetime of day, yyyyMMddHHmm format.
+- define `now`: current timestamp.
 
 - use [MOD-PERM-MSG-10-2-2] to build `found_perm_set`.
 
@@ -2830,12 +2832,12 @@ Anyone CAN execute this method.
 
 ##### [MOD-PERM-QRY-1-1] List Permissions parameters
 
-- `modified_after` (datetime) (*optional*): show permissions modified after this datetime.
+- `modified_after` (timestamp) (*optional*): show permissions modified after this timestamp.
 - `response_max_size` (small number) (*optional*): default to 64. Min 1, max 1,024.
 
 ##### [MOD-PERM-QRY-1-2] List Permissions checks
 
-- `modified_after` (datetime) (*mandatory*): show permissions modified after this datetime.
+- `modified_after` (timestamp) (*mandatory*): show permissions modified after this timestamp.
 - `response_max_size` (small number) (*optional*): Must be min 1, max 1,024.
 
 ##### [MOD-PERM-QRY-1-3] List Permissions execution
@@ -2871,7 +2873,7 @@ If the target wallet is a VS, `agent_did` and `wallet_agent_did` will be equal t
 - `wallet_agent_did` (string) (*mandatory*): did of the user agent wallet where the credential is stored.
 - `schema_id` (uint64) (*mandatory*): the schema_id.
 - `country` (string) (*optional*): a country code, to select Permission with this country code or with a null country code.
-- `when` (datetime) (*optional*): if null, find permission *at* the current date. Else find permission *at* `when`.
+- `when` (timestamp) (*optional*): if null, find permission *at* the current timestamp. Else find permission *at* `when`.
 - `session_id` (uint64) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
 
 ##### [MOD-PERM-QRY-3-2] Is Authorized Issuer checks
@@ -2881,7 +2883,7 @@ If the target wallet is a VS, `agent_did` and `wallet_agent_did` will be equal t
 - `wallet_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
 - `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
 - `country` (string) (*optional*): if specified, MUST be a country code.
-- `when` (datetime) (*optional*): if specified, MUST be a datetime.
+- `when` (timestamp) (*optional*): if specified, MUST be a timestamp.
 - `session_id` (uint64) (*optional*): if specified, MUST be a uint64.
 
 ##### [MOD-PERM-QRY-3-3] Is Authorized Issuer execution
@@ -2927,7 +2929,7 @@ This method is used to query if a DID is (or was) authorized to verify a credent
 - `wallet_agent_did` (string) (*mandatory*): did of the user agent wallet where the credential is stored.
 - `schema_id` (uint64) (*mandatory*): the schema_id.
 - `country` (string) (*optional*): a country code, to select CSP with this country code or with a null country code.
-- `when` (datetime) (*optional*): if null, find permission *at* the current date. Else find permission *at* `when`.
+- `when` (timestamp) (*optional*): if null, find permission *at* the current timestamp. Else find permission *at* `when`.
 - `session_id` (uint64) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
 
 ##### [MOD-PERM-QRY-4-2] Is Authorized Verifier checks
@@ -2938,7 +2940,7 @@ This method is used to query if a DID is (or was) authorized to verify a credent
 - `wallet_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
 - `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
 - `country` (string) (*optional*): if specified, MUST be a country code.
-- `when` (datetime) (*optional*): if specified, MUST be a datetime.
+- `when` (timestamp) (*optional*): if specified, MUST be a timestamp.
 - `session_id` (uint64) (*optional*): if specified, MUST be a uint64.
 
 ##### [MOD-PERM-QRY-4-3] Is Authorized Verifier execution
@@ -3022,12 +3024,12 @@ Anyone CAN execute this method.
 
 ##### [MOD-PERM-QRY-7-1] List Permission Sessions parameters
 
-- `modified_after` (datetime) (*optional*): show permissions modified after this datetime.
+- `modified_after` (timestamp) (*optional*): show permissions modified after this timestamp.
 - `response_max_size` (small number) (*optional*): default to 64. Min 1, max 1,024.
 
 ##### [MOD-PERM-QRY-7-2] List Permission Sessions checks
 
-- `modified_after` (datetime) (*mandatory*): show permissions modified after this datetime.
+- `modified_after` (timestamp) (*mandatory*): show permissions modified after this timestamp.
 - `response_max_size` (small number) (*optional*): Must be min 1, max 1,024.
 
 ##### [MOD-PERM-QRY-7-3] List Permission Sessions execution
@@ -3129,7 +3131,7 @@ Note that it is possible to register any [[ref: DID]] from any method.
 
 #### [MOD-DD-MSG-1] Add a DID
 
-Add a [[ref: DID]] to the DID Directory, with expiration date set to current date + *years* years.
+Add a [[ref: DID]] to the DID Directory, with expiration timestamp set to current timestamp + *years* years.
 
 Any [[ref: account]] CAN run this method.
 
@@ -3168,21 +3170,21 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
   - set `entry.did` to `did`;
   - set `entry.controller` to `account`;
-  - set `entry.created` to date of day;
-  - set `entry.modified` to date of day;
-  - set `entry.exp` to date of day + `years` years;
+  - set `entry.created` to timestamp of day;
+  - set `entry.modified` to timestamp of day;
+  - set `entry.exp` to timestamp of day + `years` years;
   - set `entry.deposit` to `trust_deposit_in_denom`
 
 #### [MOD-DD-MSG-2] Renew a DID
 
-Renew a [[ref: DID]], by adding *years* years no current expiration date.
+Renew a [[ref: DID]], by adding *years* years to current expiration timestamp.
 
 This method MUST be run by controller of the [[ref: DID]] entry.
 
 ##### [MOD-DD-MSG-2-1] Renew a DID transaction parameters
 
 - `did` (string) (*mandatory*): the [[ref: DID]].
-- `years` (tiny number) (*optional*): the number of years we want to ad to the current expiration date, 1-31 years. Default to 1 year.
+- `years` (tiny number) (*optional*): the number of years we want to ad to the current expiration timestamp, 1-31 years. Default to 1 year.
 
 ##### [MOD-DD-MSG-2-2] Renew a DID precondition checks
 
@@ -3217,7 +3219,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Update DIDDirectory entry:
 
-  - set `entry.modified` to date of day;
+  - set `entry.modified` to timestamp of day;
   - set `entry.exp` to entry.exp` + `years` years;
   - set `entry.deposit` to `entry.deposit` + `trust_deposit_in_denom`.
 
@@ -3282,7 +3284,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Transaction execution MUST perform the following tasks, and rollback if any error occurs.
 
-- update `modified` to datetime of the day for the selected entry.
+- update `modified` to timestamp of the day for the selected entry.
 
 #### [MOD-DD-MSG-5] Update Module Parameters
 
@@ -3326,7 +3328,7 @@ This method is used to [[ref: query]] the [[ref: DID Directory]] [[ref: keeper]]
 The following parameters are optional:
 
 - `account` (account): if specified, returns only [[ref: DIDs]] controlled by `account`.
-- `modified` (date): if specified, returns only [[ref: DIDs]] changed after `modified`.
+- `modified` (timestamp): if specified, returns only [[ref: DIDs]] changed after `modified`.
 - `expired` (boolean): if specified, show expired services, in and over grace period.
 - `over_grace` (boolean): if specified, show expired services, over grace period.
 - `response_max_size` (small number): default to 64. Max 1,024.
@@ -3654,7 +3656,7 @@ The following requirements of the [ToIP Trust Registry QueryProtocol version 2.0
 
 [TRQP-1], [TRQP-2], [TRQP-3], [TRQP-4], [TRQP-5].
 
-Be aware that data answered by API MUST comply with data format defined in ToIP Trust Registry QueryProtocol version 2.0 which sometimes is different from data in VPR (at least for datetime datatype).
+Be aware that data answered by API MUST comply with data format defined in ToIP Trust Registry QueryProtocol version 2.0 which sometimes is different from data in VPR (at least for timestamp datatype).
 
 Base API for QueryProtocol is `/${tr.did}/trqp-2.0` where tr_did is the `did` of the `TrustRegistry` entry. So to consume the /metadata service below, one MUST query `/${tr.did}/trqp-2.0/metadata`
 
@@ -3705,7 +3707,7 @@ for each `perm`, create an "authorization" object with:
 - `simplename`: `perm.type` + '-' `cs.id` + '-' + `tr.vid`;
 - `description`: `perm.type` + ' granted permission on credential schema ' + `cs.id`;
 - `authorizationUniqueString`: `perm.id`;
-- `authorizationStatus`: if `perm.terminated` is not null: "terminated", else if `perm.revoked` is not null: "revoked", else if `perm.effective_until` is not null and lower than current datetime: "expired", else "current" ([[ref: valid permission]]);
+- `authorizationStatus`: if `perm.terminated` is not null: "terminated", else if `perm.revoked` is not null: "revoked", else if `perm.effective_until` is not null and lower than current timestamp: "expired", else "current" ([[ref: valid permission]]);
 - `authorizationValidity`: present only if [[ref: valid permission]]:
   - `validFromDT`: `perm.effective_from`;
   - `validUntilDT`: `perm.effective_until`;
