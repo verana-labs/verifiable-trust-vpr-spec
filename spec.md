@@ -908,7 +908,7 @@ account  --o td: account
 - `terminated_by` (account) (*mandatory*): [[ref: account]] that terminated this permission.
 - `country` (string) (*optional*): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country.
 - `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Permission` tree.
-- `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED
+- `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED, TERMINATION_REQUESTED.
 - `vp_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the validation process itself, not for the issued credential or `Permission` expiration timestamp.
 - `vp_last_state_change` (timestamp) (*mandatory*)
 - `vp_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
