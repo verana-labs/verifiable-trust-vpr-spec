@@ -2875,7 +2875,7 @@ If the target wallet is a VS, `agent_did` and `wallet_agent_did` will be equal t
 - `schema_id` (uint64) (*mandatory*): the schema_id.
 - `country` (string) (*optional*): a country code, to select Permission with this country code or with a null country code.
 - `when` (timestamp) (*optional*): if null, find permission *at* the current timestamp. Else find permission *at* `when`.
-- `session_id` (uint64) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
+- `session_id` (uuid) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
 
 ##### [MOD-PERM-QRY-3-2] Is Authorized Issuer checks
 
@@ -2885,7 +2885,7 @@ If the target wallet is a VS, `agent_did` and `wallet_agent_did` will be equal t
 - `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
 - `country` (string) (*optional*): if specified, MUST be a country code.
 - `when` (timestamp) (*optional*): if specified, MUST be a timestamp.
-- `session_id` (uint64) (*optional*): if specified, MUST be a uint64.
+- `session_id` (uuid) (*optional*): if specified, MUST be a uint64.
 
 ##### [MOD-PERM-QRY-3-3] Is Authorized Issuer execution
 
@@ -2931,7 +2931,7 @@ This method is used to query if a DID is (or was) authorized to verify a credent
 - `schema_id` (uint64) (*mandatory*): the schema_id.
 - `country` (string) (*optional*): a country code, to select CSP with this country code or with a null country code.
 - `when` (timestamp) (*optional*): if null, find permission *at* the current timestamp. Else find permission *at* `when`.
-- `session_id` (uint64) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
+- `session_id` (uuid) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
 
 ##### [MOD-PERM-QRY-4-2] Is Authorized Verifier checks
 
@@ -2942,7 +2942,7 @@ This method is used to query if a DID is (or was) authorized to verify a credent
 - `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
 - `country` (string) (*optional*): if specified, MUST be a country code.
 - `when` (timestamp) (*optional*): if specified, MUST be a timestamp.
-- `session_id` (uint64) (*optional*): if specified, MUST be a uint64.
+- `session_id` (uuid) (*optional*): if specified, MUST be a uint64.
 
 ##### [MOD-PERM-QRY-4-3] Is Authorized Verifier execution
 
