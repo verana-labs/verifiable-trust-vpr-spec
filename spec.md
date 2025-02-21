@@ -747,7 +747,7 @@ entity "PermissionSession" as csps {
   *id: uuid
   +created: timestamp
   +modified: timestamp
-  +authz: (uint64, uint64, uint64)[]
+  authz: (uint64, uint64, uint64)[]
 }
 
 enum "PermissionType" as cspt {
@@ -817,6 +817,7 @@ csp o-- "0..1" account: terminated_by
 
 csps o-- account: controller
 csps o-- csp: agent_perm_id
+
 account --o did: controller
 account --o val: applicant
 valstate --o csp: vp_state
@@ -924,8 +925,9 @@ account  --o td: account
 - `id` (uuid) (*mandatory*): session uuid.
 - `controller` (account) (*mandatory*): account that controls the entry.
 - `agent_perm_id` (uint64) (*mandatory*): permission id of the agent.
-- `authz` (uint64 (Permission id), uint64 (Permission id), uint64 (Permission id))[] (*mandatory*): permission(s) linked to this session (executor, beneficiary, wallet_agent).
 - `modified` (timestamp) (*mandatory*): timestamp this PermissionSession has been modified.
+- `created` (timestamp) (*mandatory*): timestamp this PermissionSession has been created.
+- `authz` (uint64 (Permission id), uint64 (Permission id), uint64 (Permission id))[] (mandatory): permission(s) linked to this session (issuer, verifier, wallet_agent).
 
 ### DIDDirectory
 
@@ -945,6 +947,7 @@ account  --o td: account
 - `share` (number) (*mandatory*): share of the module total deposit.
 - `account` (account) (*mandatory*) (key): the [[ref: account]]
 - `amount` (number) (*mandatory*): amount of deposit in `denom`.
+- `claimable` (number) (*mandatory*): amount of claimable deposit in `denom`.
 
 ### GlobalVariables
 
@@ -1144,8 +1147,8 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |
 |                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |
 |                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |
-|                                | Is Authorized Issuer                    | /perm/v1/authorized_issuer   | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-is-authorized-issuer)  |
-|                                | Is Authorized Verifier                  | /perm/v1/authorized_verifier | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-is-authorized-verifier)  |
+|                                | Find Permissions With DID               | /perm/v1/find_with_did       | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-find-permissions-with-did)  |
+|                                | Find Beneficiaries                      | /perm/v1/beneficiaries       | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-find-beneficiaries)  |
 |                                | Get Permission Session                  | /perm/v1/get_session         | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-5-get-permissionsession) |
 |                                | List Permission Module Parameters     |                                 | Query    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |
 |                                | List Permission Sessions     |                                 | Query    | [[MOD-PERM-QRY-7]](#mod-perm-qry-7-list-permission-sessions)   |
@@ -2568,11 +2571,17 @@ Any credential exchange that requires issuer or verifier to pay fees implies the
 
 The `agent`, the Verifiable User Agent or Verifiable Service that receive the request, MUST send to issuer/verifier:
 
-- an `uuid` for session identification and creation;
-- a `agent_did` (`agent` [[ref: DID]]);
-- a `wallet_agent_did`, if wallet that contain the credential (presentation request) or wallet that will store the credential (in case of issuance) is an agent different than `agent`.
+If the peer wants to issue a credential, agent must send to peer:
 
-`payer` MUST create a Permission Session, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
+- a `uuid` for session identification;
+- the `wallet_agent_perm_id` permission id of the agent wallet that will store the credential.
+
+If the peer wants to verify a credential, agent must send to peer:
+
+- a `uuid` for session identification;
+- a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64: wallet_agent_perm_id, string[] issuer_dids>
+
+`payer` MUST create a Permission Session using the above information, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
 
 ```plantuml
 scale max 800 width
@@ -2582,200 +2591,101 @@ participant "VPR" as vpr
 
 
 Issued <-- Issuer: I want to issue a credential from schema id ... to you
-Issued --> Issuer: Here is the session UUID, agent_did, wallet_agent_did
-Issuer --> vpr: create CSPS session
+Issued --> Issuer: Here is the session uuid and the wallet_agent_perm_id
+Issuer --> vpr: create session
 Issued <-- Issuer: session created, you can verify
-Issued --> vpr: /vpr/v1/csp/authorized_issuer?...
-Issued <-- vpr: AUTHORIZED
-Issued --> Issuer: OK, you can send the credential
+Issued --> vpr: getSession(uuid)
+Issued <-- vpr: session object
+Issued --> Issuer: I verified the session it is OK, you can send the credential
 Issued <-- Issuer: Send credential
-Issued <-- Issued: Store credential
+Issued <-- Issued: Store credential to wallet agent
 
 ```
 
 See [TR-RESOL] in [VS-SPECS].
 
-::: todo
-Define how and when UUID is exchanged. (Not needed for implementing this spec). Verifier MUST be able to query `agent` and check, for a given credential schema(s), if holder has (a) credential(s) of this schema and who is (are) the issuer(s), before creating the CSPS.
-:::
 
 ##### [MOD-PERM-MSG-10-1] Create or Update Permission Session parameters
 
 An [[ref: account]] that would like to create or update a `PermissionSession` entry MUST send a Msg by specifying:
 
 - `id` (uuid) (*mandatory*): id of the `PermissionSession`.
-- `executor_perm_id` (uint64) (*mandatory*): the id of the perm the [[ref: account]] executing the method is acting as: if I want to verify, I'll pass here the id of my VERIFIER perm that justifies I am authorized to verify credentials of `executor_perm.schema_id`, if I want to issue, I'll pass here the did of my VERIFIER perm that justifies I am authorized to verify credentials of `executor_perm.schema_id`.
-- `beneficiary_perm_id` (uint64) (*MAY be mandatory*): the id of the perm the [[ref: account]] executing the method is referring to (if I want to verify, it is mandatory and I MUST pass here the id of the ISSUER perm I'm interested in).
-- `agent_perm_id` (uint64) (*mandatory*): the HOLDER permission of the agent.
-- `wallet_agent_perm_id` (uint64) (*option al*): the HOLDER permission of the wallet agent, if different than agent.
+- `issuer_perm_id` (uint64) (*optional*): the id of the perm od the issuer, if we are dealing with the issuance of a credential.
+- `verifier_perm_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the verification of a credential.
+- `agent_perm_id` (uint64) (*mandatory*): the agent that received the request (credential offer for issuance, presentation request for verification).
+- `wallet_agent_perm_id` (uint64) (*mandatory*): the wallet agent where the credential will be or is stored, if different than agent.
 
 ##### [MOD-PERM-MSG-10-2] Create or Update Permission Session precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-if `executor_perm.type` is ISSUER:
+if `issuer_perm_id` is null AND `verifier_perm_id` is null, MUST abort.
 
-- Load `executor_perm` from `executor_perm_id`. If not found, MUST abort.
-- `executor_perm` MUST be a [[ref: valid permission]] else MUST abort.
+- define `issuer_perm` as null.
+- define `verifier_perm` as null.
 
-else if `executor_perm.type` is VERIFIER:
+if `issuer_perm_id` is no null:
 
-- Load `executor_perm` from `executor_perm_id`. If not found, MUST abort.
-- `executor_perm` MUST be a [[ref: valid permission]] else MUST abort.
-- Load `beneficiary_perm` from `beneficiary_perm_id`. If not found, MUST abort.
-- `beneficiary_perm` MUST be a [[ref: valid permission]] else MUST abort.
-- `beneficiary_perm.schema_id` MUST be equal to `executor_perm.schema_id`
-- `beneficiary_perm.type` MUST be ISSUER else MUST abort.
+- Load `issuer_perm` from `issuer_perm_id`.
+- if `issuer_perm.type` is not ISSUER, abort.
+- if `issuer_perm` is not a [[ref: valid permission]], abort.
 
-else `executor_perm.type` is different than ISSUER or VERIFIER: MUST abort.
+if `verifier_perm_id` is no null:
 
-Additionally:
+- Load `verifier_perm` from `verifier_perm_id`.
+- if `verifier_perm.type` is not VERIFIER, abort.
+- if `verifier_perm` is not a [[ref: valid permission]], abort.
 
-- Load `agent_perm` from `agent_perm_id`. If not found, MUST abort.
-- `agent_perm` MUST be a [[ref: valid permission]] else MUST abort.
-- `agent_perm.type` MUST be equal to HOLDER.
+agent:
 
-If `wallet_agent_perm_id` is specified:
+- Load `agent_perm` from `agent_perm_id`.
+- if `agent_perm.type` is not ISSUER, abort.
+- if `agent_perm` is not a [[ref: valid permission]], abort.
 
-- Load `wallet_agent_perm` from `wallet_agent_perm_id`. If not found, MUST abort.
-- `wallet_agent_perm` MUST be a [[ref: valid permission]] else MUST abort.
-- `wallet_agent_perm.type` MUST be equal to HOLDER.
+wallet_agent:
+
+- Load `wallet_agent_perm` from `wallet_agent_perm_id`.
+- if `wallet_agent_perm.type` is not ISSUER, abort.
+- if `wallet_agent_perm` is not a [[ref: valid permission]], abort.
 
 :::warn
 we might want to check that credential schema of agent and wallet_agent perms is an ECS of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.
 :::
 
-###### [MOD-PERM-MSG-10-2-2] Find Beneficiaries
-
-To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches `executor_perm` and `beneficiary_perm`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. `executor_perm` is never added to the set.
-
-Example 1: `executor_perm.type` is equal to ISSUER, and `cs.issuer_perm_management_mode` is equal to GRANTOR_VALIDATION:
-
-```plantuml
-
-@startuml
-scale max 800 width
-object "TRUST_REGISTRY executor ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
-}
-object "ISSUER_GRANTOR executor ancestor perm" as ig #3fbdb6 {
-  add me to found_perm_set
-}
-object "ISSUER executor perm" as i #7677ed {
-  don't add me to found_perm_set
-}
-
-ig --> tr
-i --> ig 
-@enduml
-
-```
-
-Example 2: `executor_perm.type` is equal to ISSUER, and `cs.issuer_perm_management_mode` is equal to TRUST_REGISTRY:
-
-```plantuml
-
-@startuml
-scale max 800 width
-object "TRUST_REGISTRY executor ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
-}
-object "ISSUER executor perm" as i #7677ed {
-  don't add me to found_perm_set
-}
-
-
-i --> tr
-@enduml
-
-```
-
-Example 3: `executor_perm.type` is equal to VERIFIER, `beneficiary_perm.type` is equal to ISSUER, `cs.issuer_perm_management_mode` is equal to GRANTOR_VALIDATION, and `cs.verifier_perm_management_mode` is equal to GRANTOR_VALIDATION:
-
-```plantuml
-
-@startuml
-scale max 800 width
-object "TRUST_REGISTRY beneficiary ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
-}
-object "ISSUER_GRANTOR beneficiary ancestor perm" as ig #3fbdb6 {
-  add me to found_perm_set
-}
-object "ISSUER beneficiary perm" as i #3fbdb6 {
-  add me to found_perm_set
-}
-
-object "VERIFIER_GRANTOR executor ancestor perm" as vg #3fbdb6 {
-  add me to found_perm_set
-}
-object "VERIFIER executor perm" as v #7677ed {
-  don't add me to found_perm_set
-}
-
-ig --> tr
-i --> ig 
-vg --> tr
-v --> vg 
-
-@enduml
-
-```
-
-Now, let's build the set. Revoked and terminated permissions will not be added to the set. Expired permissions, if not revoked/terminated, will be considered.
-
-- create Set `found_perm_set`.
-
-- Load `executor_perm` from `executor_perm_id`. If `executor_perm` is not a [[ref: valid permission]], MUST abort.
-
-if `executor_perm.type` is equal to VERIFIER or ISSUER, we MUST process ancestors of `executor_perm`:
-
-- while `executor_perm.validator_perm_id` is not null:
-  - load `Permission` `executor_perm` from `executor_perm.validator_perm_id`.
-  - if `executor_perm.revoked` AND `executor_perm.terminated` is NULL, Add `executor_perm.id` to `found_perm_set`.
-
-Additionally, if `executor_perm.type` is equal to VERIFIER, we MUST add `beneficiary_perm_id` and process its ancestors (else omit):
-
-- load `Permission` `beneficiary_perm` from `beneficiary_perm_id`.
-- if `beneficiary_perm.revoked` is NULL AND `beneficiary_perm.terminated` is NULL, Add `beneficiary_perm.id` to `found_perm_set`.
-- while `beneficiary_perm.validator_perm_id` is not null:
-  - load `Permission` `beneficiary_perm` from `beneficiary_perm.validator_perm_id`.
-  - if `beneficiary_perm.revoked` is NULL AND `beneficiary_perm.terminated` is NULL, Add `beneficiary_perm.id` to `found_perm_set`.
-
-###### [MOD-PERM-MSG-10-2-3] Create or Update Permission Session fee checks
+###### [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks
 
 Account MUST have sufficient available balance for:
 
 - the required [[ref: estimated transaction fees]];
 - the required beneficiary fees and its corresponding trust deposit `trust_fees` as explained below:
 
-To calculate the required beneficiary fees, use [MOD-PERM-MSG-10-2-2] to create a Set with all beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
+To calculate the required beneficiary fees, use "Find Beneficiaries" query method below to get the set of beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
 
 - define `beneficiary_fees` = 0
-- if `executor_type` is equal to VERIFIER: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`.
-- else `executor_type` is equal to ISSUER: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.issuance_fees`.
+- if `verifier_perm` is null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.issuance_fees`.
+- if `verifier_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`.
 
 Total required fees including Trust Deposit:
 
 `trust_fees` = `beneficiary_fees` \* `GlobalVariables.trust_unit_price` \* (`GlobalVariables.trust_deposit_rate`), plus wallet and user agent rewards `rewards` = `beneficiary_fees` \* `GlobalVariables.trust_unit_price` \* (`GlobalVariables.user_agent_reward_rate` + `GlobalVariables.wallet_user_agent_reward_rate`).
 
-##### [MOD-PERM-MSG-10-3] Create or Update Permission Session execution
+##### [MOD-PERM-MSG-10-4] Create or Update Permission Session execution
 
 If all precondition checks passed, method is executed.
 
-- Load `executor_perm` from `executor_perm_id`.
+- Load all permissions as in basic checks.
 
 - define `now`: current timestamp.
 
-- use [MOD-PERM-MSG-10-2-2] to build `found_perm_set`.
+- use "Find Beneficiaries" above to build `found_perm_set`.
 
-- if `executor_perm.type` is equal to ISSUER:
+- if `verifier_perm` is null:
   - for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
     - transfer `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
     - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`.
     - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `executor_perm.grantee`.
 
-- else `executor_perm.type` is equal to VERIFIER:
+- else :
   - for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
     - transfer `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
     - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`.
@@ -2786,14 +2696,18 @@ If new, create entry `PermissionSession` `session`:
 - `session.id`: `id`
 - `session.controller`: account running the method
 - `session.agent_perm_id`: `agent_perm_id`
-- `session.authz[]`: create and put  (`executor_perm_id`, `beneficiary_perm_id`, `wallet_agent_perm_id`).
+- `session.authz[]`: create and put  (`issuer_perm_id`, `verifier_perm_id`, `wallet_agent_perm_id`).
 - `session.modified:` : `now`
 - `session.created:` : `now`
 
 Else update:
 
-- add (`executor_perm_id`, `beneficiary_perm_id`, `wallet_agent_perm_id`) to `session.authz[]`
+- add (`issuer_perm_id`, `verifier_perm_id`, `wallet_agent_perm_id`) to `session.authz[]`
 - `session.modified:` : `now`
+
+:::warn
+`session.authz[]` can contain null `issuer_perm_id` OR `verifier_perm_id`
+:::
 
 #### [MOD-PERM-MSG-11] Update Permission Module Parameters
 
@@ -2861,127 +2775,172 @@ Anyone CAN execute this method.
 
 return found entry (if any).
 
-#### [MOD-PERM-QRY-3] Is Authorized Issuer
+#### [MOD-PERM-QRY-3] Find Permissions With DID
 
-This method is used to query if a DID is (or was) authorized to issue a credential of a given schema, country, user_agent, wallet_user_agent. Called by the Verifiable User Agents to verify if they can accept the credential from this DID or not.
+Usually, Verifiable Trust verification flow will work as in the example below. To simplify, we suppose VUAa is both a User Agent and a Verifiable Credential Wallet.
 
-If the target wallet is a VS, `agent_did` and `wallet_agent_did` will be equal to the DID of the VS.
+- a User of Verifiable User Agent A (VUAa) wants to connect to Verifiable Service S (VSs)
+- VUAa verifies credentials of VSs, including presented Organization or Person credential. For this credential, VUAa calls the *Find Permissions With DID* to verify issuer was authorized and get the corresponding permission(s).
+- If everything went well, VUAa connects to VSs and presents its VUA credential. For this credential, VSs calls the *Find Permissions With DID* to verify issuer was authorized to deliver this credential to VUAa and get the corresponding permission(s).
+- Now, VSs wants to issue a credential to User of VUAa. VSs will request a session_id to VUAa, execute a transaction to create the session, and sends a driving license credential to VUAa.
+- VUAa gets the PermissionSession and dereferences the linked permission Ids to verify issuer paid and is authorized for this session and this driving license schema.
 
-##### [MOD-PERM-QRY-3-1] Is Authorized Issuer parameters
+##### [MOD-PERM-QRY-3-1] Find Permission With DID parameters
 
-- `issuer_did` (string) (*mandatory*): did of the service that want to issue a credential.
-- `agent_did` (string) (*mandatory*): did of the user agent that received the presentation request.
-- `wallet_agent_did` (string) (*mandatory*): did of the user agent wallet where the credential is stored.
+- `did` (string) (*mandatory*): did of the service that want to issue a credential.
+- `type` (PermissionType) (*mandatory*): type of the permission.
 - `schema_id` (uint64) (*mandatory*): the schema_id.
 - `country` (string) (*optional*): a country code, to select Permission with this country code or with a null country code.
-- `when` (timestamp) (*optional*): if null, find permission *at* the current timestamp. Else find permission *at* `when`.
-- `session_id` (uuid) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
+- `when` (timestamp) (*optional*): Find permission *at* `when`. When set, means find only valid permission *at* `when`, when unspecified, means find all permissions.
 
-##### [MOD-PERM-QRY-3-2] Is Authorized Issuer checks
+##### [MOD-PERM-QRY-3-2] Find Permission With DID checks
 
-- `issuer_did` (*mandatory*): (string): MUST be a [[ref: DID]].
-- `agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
-- `wallet_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
+- `did` (string) (*mandatory*): MUST be a [[ref: DID]].
+- `type` (PermissionType) (*mandatory*): MUST be a PermissionType.
 - `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
 - `country` (string) (*optional*): if specified, MUST be a country code.
-- `when` (timestamp) (*optional*): if specified, MUST be a timestamp.
-- `session_id` (uuid) (*optional*): if specified, MUST be a uint64.
+- `when` (timestamp) (*optional*): MUST be a timestamp.
 
-##### [MOD-PERM-QRY-3-3] Is Authorized Issuer execution
+##### [MOD-PERM-QRY-3-3] Find Permission With DID execution
 
 This method should use an index per `cs.id` and insert any new entry hash(`perm.did`;`perm.type`) when `perm.effective_from` and `perm.did` are not null (updated when `perm` is modified). Index example:
 
 SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, terminated)
 
-- load `CredentialSchema` `cs` from `schema_id`. If `cs.issuer_mode` is equal to OPEN, return AUTHORIZED.
-- define `Permission` `issuer_perm` as null.
-- define `time` = `when`, or `time` = now() if `when` is null.
+- load `CredentialSchema` `cs` from `schema_id`.
+- define `Permission[]` `found_perms` as empty list.
 
-Using example index, calculate hash(`issuer_did`;ISSUER) to get the list of matching permissions `perms[]`.
-
-- then for each `perm` in `perms[]`:
-  - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.
-  - if `perm` is valid for requested `country`, then check perm validity: if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `issuer_perm` to `perm` and exit the *for* loop.
-
-if a `issuer_perm` is null, return FORBIDDEN. Else:
-
-- use [MOD-PERM-MSG-10-2-2] to calculate `found_perm_set`. Calculate, as in [MOD-PERM-MSG-10-2-3], if some fees need to be paid. Let's call these fees `trust_fees`.
-
-- if `trust_fees` is equal to 0, set `authzResult` return AUTHORIZED.
-- else if `session_id` is undefined, set `authzResult` return SESSION_REQUIRED.
-- else if `session_id` is defined, load `PermissionSession` `session` from `session_id`.
-  - load `Permission` `agent_perm` from 
-  - is `session.agent_did` is equal to `agent_did` and `session.authz[]` contains `(issuer_perm.id, null, wallet_agent_did)`, return AUTHORIZED.
-  - else set `authzResult` return SESSION_REQUIRED.
-
-:::note
-We do not need to verify if a HOLDER perm exists for agent_did and for wallet_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for agent_did and for wallet_agent_did.
-:::
-
-#### [MOD-PERM-QRY-4] Is Authorized Verifier
-
-This method is used to query if a DID is (or was) authorized to verify a credential of a given schema and country. Called by the browsers and apps to verify if they can accept the presentation request from this DID or not.
-
-##### [MOD-PERM-QRY-4-1] Is Authorized Verifier parameters
-
-- `verifier_did` (string) (*mandatory*): did of the service that want to verify a credential.
-- `issuer_did` (string) (*mandatory*): did of the service that issued the credential that needs to be requested to holder.
-- `agent_did` (string) (*mandatory*): did of the user agent that received the presentation request.
-- `wallet_agent_did` (string) (*mandatory*): did of the user agent wallet where the credential is stored.
-- `schema_id` (uint64) (*mandatory*): the schema_id.
-- `country` (string) (*optional*): a country code, to select CSP with this country code or with a null country code.
-- `when` (timestamp) (*optional*): if null, find permission *at* the current timestamp. Else find permission *at* `when`.
-- `session_id` (uuid) (*optional*): if a payment is required, specify the session_id to check if a `PermissionSession` entry exists.
-
-##### [MOD-PERM-QRY-4-2] Is Authorized Verifier checks
-
-- `verifier_did` (*mandatory*): (string): MUST be a [[ref: DID]].
-- `issuer_did` (*mandatory*): (string): MUST be a [[ref: DID]].
-- `agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
-- `wallet_agent_did` (string) (*mandatory*): MUST be a [[ref: DID]].
-- `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
-- `country` (string) (*optional*): if specified, MUST be a country code.
-- `when` (timestamp) (*optional*): if specified, MUST be a timestamp.
-- `session_id` (uuid) (*optional*): if specified, MUST be a uint64.
-
-##### [MOD-PERM-QRY-4-3] Is Authorized Verifier execution
-
-This method should use an index (same index proposed in [MOD-PERM-QRY-4]) per `cs.id` and insert any new entry hash(`perm.did`;`perm.type`) when `perm.effective_from` and `perm.did` are not null. Index example:
-
-SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, terminated)
-
-- define `time` = `when`, or `time` = now() if `when` is null.
-- define `Permission` `verifier_perm` as null.
-- define `Permission` `issuer_perm` as null.
-
-- load `CredentialSchema` `cs` from `schema_id`. If `cs.verifier_mode` is equal to OPEN, return AUTHORIZED.
-
-Using example index, calculate hash(`verifier_did`;VERIFIER) to get the list of matching permissions `verifier_perms[]`.
-
-- then for each `perm` in `verifier_perms[]`
-  - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.
-  - if `perm` is valid for requested `country`, then check perm validity: if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `verifier_perm` to `perm` and exit the *for* loop.
-
-- if  `verifier_perm` is null (no permission has been found), return FORBIDDEN. Else:
-
-Using example index, calculate hash(`issuer_did`;ISSUER) to get the list of matching permissions `issuer_perms[]`.
+Using example index, calculate hash(`did`;`type`) to get the list of matching permissions `perms[]`.
 
 - then for each `perm` in `perms[]`:
   - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.
-  - if `perm` is valid for requested `country`, then check perm validity: if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, set `issuer_perm` to `perm` and exit the *for* loop.
+  - if `perm` is valid for requested `country`:
+    - if time is unset, add `perm` to  `found_perms`.
+    - else check perm validity: if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, add it to `found_perms`
+  - end
+- end
 
-if a `issuer_perm` is null, return FORBIDDEN. Else:
+return `found_perms`.
 
-- use [MOD-CSPS-MSG-1-2-2] to calculate `found_perm_set`. Calculate, as in [MOD-CSPS-MSG-1-2-3], if some fees need to be paid. Let's call these fees `trust_fees`.
+#### [MOD-PERM-QRY-4] Find Beneficiaries
 
-- if `trust_fees` is equal to 0, return AUTHORIZED.
-- else if `session_id` is undefined, return SESSION_REQUIRED.
-- else if `session_id` is defined, load `PermissionSession` `session` from `session_id`.
-  - if `session.agent_did` is equal to `agent_did` and if `session.authz[]` contains `(verifier_perm.id, issuer_perm.id, wallet_agent_did)`: return AUTHORIZED.
-  - else return SESSION_REQUIRED.
+Anyone can execute this method.
+
+To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches `issuer_perm` and `verifier_perm`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_perm` is null, `issuer_perm` is never added to the set. If `verifier_perm` is NOT null, `issuer_perm` is added to the set if it exists but `verifier_perm` is not added to the set.
+
+Example 1: `verifier_perm`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
+
+```plantuml
+
+@startuml
+scale max 800 width
+object "TRUST_REGISTRY executor ancestor perm" as tr #3fbdb6 {
+  add me to found_perm_set
+}
+object "ISSUER_GRANTOR executor ancestor perm" as ig #3fbdb6 {
+  add me to found_perm_set
+}
+object "ISSUER executor perm" as i #7677ed {
+  don't add me to found_perm_set
+}
+
+ig --> tr
+i --> ig 
+@enduml
+
+```
+
+Example 2: `verifier_perm`: is not set: it's a credential offer. Schema configured to NOT have Issuer Grantors.
+
+```plantuml
+
+@startuml
+scale max 800 width
+object "TRUST_REGISTRY executor ancestor perm" as tr #3fbdb6 {
+  add me to found_perm_set
+}
+object "ISSUER executor perm" as i #7677ed {
+  don't add me to found_perm_set
+}
+
+
+i --> tr
+@enduml
+
+```
+
+Example 3: `verifier_perm` is set, it's a presentation request. Schema configured to have Verifier and Issuer Grantors.
+
+```plantuml
+
+@startuml
+scale max 800 width
+object "TRUST_REGISTRY beneficiary ancestor perm" as tr #3fbdb6 {
+  add me to found_perm_set
+}
+object "ISSUER_GRANTOR beneficiary ancestor perm" as ig #3fbdb6 {
+  add me to found_perm_set
+}
+object "ISSUER beneficiary perm" as i #3fbdb6 {
+  add me to found_perm_set
+}
+
+object "VERIFIER_GRANTOR executor ancestor perm" as vg #3fbdb6 {
+  add me to found_perm_set
+}
+object "VERIFIER executor perm" as v #7677ed {
+  don't add me to found_perm_set
+}
+
+ig --> tr
+i --> ig 
+vg --> tr
+v --> vg 
+
+@enduml
+
+```
+
+##### [MOD-PERM-QRY-4-1] Find Beneficiaries parameters
+
+- `issuer_perm_id` (uint64) (*optional*): id of issuer permission.
+- `verifier_perm_id` (uint64) (*optional*): id of verifier permission.
+
+##### [MOD-PERM-QRY-4-2] Find Beneficiaries checks
+
+- if `issuer_perm_id` and `verifier_perm_id` are unset then MUST abort.
+- if `issuer_perm_id` is specified, load `issuer_perm` from `issuer_perm_id`, Permission MUST exist and MUST be a [[ref: valid permission]].
+- if `verifier_perm_id` is specified, load `verifier_perm` from `verifier_perm_id`, Permission MUST exist and MUST be a [[ref: valid permission]].
+
+##### [MOD-PERM-QRY-4-3] Find Beneficiaries execution
+
+Let's build the set. Revoked and terminated permissions will not be added to the set. Expired permissions, if not revoked/terminated, will be considered.
+
+- create Set `found_perm_set`.
+
+- define permission `current_perm` as null.
+
+- load perms `issuer_perm` and optional `verifier_perm` as specified in basic checks above.
+
+if `issuer_perm` is not null:
+
+- set `current_perm` = `issuer_perm`
+- while `current_perm.validator_perm_id` is not null:
+  - set `current_perm` to loaded permission from  `current_perm.validator_perm_id`.
+  - if `current_perm.revoked` AND `current_perm.terminated` is NULL, Add `current_perm` to `found_perm_set`.
+
+Additionally, if `verifier_perm` is not null:
+
+- if `issuer_perm` is not null, add `issuer_perm` to `found_perm_set`
+- set `current_perm` = `verifier_perm`
+- while `verifier_perm.validator_perm_id` is not null:
+  - set `current_perm` to loaded permission from  `current_perm.validator_perm_id`.
+  - if `current_perm.revoked` AND `current_perm.terminated` is NULL, Add `current_perm` to `found_perm_set`.
+
+return `found_perms`.
 
 :::note
-We do not need to verify if a HOLDER perm exists for agent_did and for wallet_agent_did, because at this point, trust layer already verified the existence of a user agent credential(s) for agent_did and for wallet_agent_did.
+This works even is schema is open to any issuer or open to any verifier.
 :::
 
 #### [MOD-PERM-QRY-5] Get PermissionSession
@@ -3058,7 +3017,7 @@ autonumber "<font color='#7677ed'><b>(end start method)"
 Applicant <-- VPR: Transaction completed and Validation entry created
 autonumber stop
 autonumber "<font color='#7677ed'><b>(connects to Certification Entity Validation VS)"
-Applicant --> CE: share id of Validation Entry
+Applicant --> CE: share id of Permission
 autonumber stop
 Applicant <-- CE: Request proof of account and DID ownership (blind sign)
 Applicant --> CE: send blind sign proofs 
@@ -3087,14 +3046,14 @@ actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
 
 participant "Verifiable Public Registry" as VPR #3fbdb6
 
-ApplicantAccount --> VPR: /validation/new
-VPR <-- VPR: create validation entry.
-ApplicantAccount <-- VPR: validation entry created,\nassigned validation.perm from ISSUER_GRANTOR permissions.
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validation.perm\nby creating a DIDComm connection
+ApplicantAccount --> VPR: Start Permission VP
+VPR <-- VPR: create permission entry.
+ApplicantAccount <-- VPR: permission entry created,\nassigned perm.validator_perm_id from ISSUER_GRANTOR permissions.
+ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validator_perm.did\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
-ApplicantBrowser --> ValidatorVS: I want to proceed with validation.id=...
-ValidatorVS --> ValidatorVS: load validation with id=...\nand verify the associated validation.perm is referring to me
-ApplicantBrowser <-- ValidatorVS: request proof of control\nof validation.applicant account (blind sign)
+ApplicantBrowser --> ValidatorVS: I want to proceed with perm.id=...
+ValidatorVS --> ValidatorVS: load perm with id=...\nand verify the associated perm.validator_perm_id is referring to me
+ApplicantBrowser <-- ValidatorVS: request proof of control\nof perm.applicant account (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proof of account
 ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof validation entry, I trust you.
 ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
@@ -3108,7 +3067,7 @@ ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by fil
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
 note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
 ApplicantBrowser <-- ValidatorVS: Your are a legitimate issuer. I'll now create an ISSUER permission for your account and DID.
-ValidatorAccount --> VPR #3fbdb6: /validation/set_validated\nset validation.state to VALIDATED\ncreate permission(s) for applicant.
+ValidatorAccount --> VPR #3fbdb6: Set Permission VP to Validated\nset validation.state to VALIDATED\n.
 VPR --> ValidatorAccount: Receive trust fees.
 ApplicantBrowser <-- ValidatorVS: notify permission added for your DID.\nDID can now issue credentials of this schema.
 ```
@@ -3447,8 +3406,10 @@ Value checks:
 ###### [MOD-TD-MSG-1-2-2] Adjust Trust Deposit fee checks
 
 - load `TrustDeposit` entry `td` for `account` running the method.
-- if `augend` is positive, calculate `needed_deposit` = `augend` - `td.claimable`.
-- else `needed_deposit` = 0.
+- if `td` exists:
+  - if `augend` is positive, calculate `needed_deposit` = `augend` - `td.claimable`.
+  - else `needed_deposit` = 0.
+- else `needed_deposit` = `augend`.
 
 Account running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]] plus `needed_deposit`, else [[ref: transaction]] MUST abort.
 
@@ -3465,6 +3426,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `td.account` to `account`;
   - set `td.deposit` to `augend`;
   - set `td.share` to `augend_share`;
+  - set `td.claimable` to 0.
 
 - else if `augend` > 0:
   
@@ -3479,6 +3441,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
       - set `td.share` to `td.share` + `missing_augend_share`
   
   - else
+    - use bank? to transfer `augend` from `account` to `TrustDeposit` account.
     - calculate `augend_share` by using [a similar method than this one](https://docs.cosmos.network/main/build/modules/staking#delegator-shares) using `GlobalVariables.trust_deposit_share_value`.
     - set `td.deposit` to `td.deposit` + `augend`
     - set `td.share` to `td.share` + `augend_share`
@@ -3620,7 +3583,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-TD-QRY-1-3] Get Trust Deposit execution of the query
 
-If found, returns [[ref: trust deposit]], else return 0.
+If found, returns [[ref: trust deposit]], else return not found.
 
 #### [MOD-TD-QRY-2] List Module Parameters
 
