@@ -1170,6 +1170,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>doc_digest_sri</code> (string) (<em>mandatory</em>): digest_sri of the document.</li>
 <li><code>version</code> (int) (<em>mandatory</em>): targeted version.</li>
 </ul>
+<p>If for a given language, a document already exists, the execution of this transaction would replace the corresponding entry. Else, a new entry is created.</p>
 <h5 id="mod-tr-msg-2-2-add-governance-framework-document-precondition-checks"><a class="toc-anchor" href="#mod-tr-msg-2-2-add-governance-framework-document-precondition-checks" >§</a> [MOD-TR-MSG-2-2] Add Governance Framework Document precondition checks</h5>
 <p>If any of these precondition checks fail, method MUST abort.</p>
 <h6 id="mod-tr-msg-2-2-1-add-governance-framework-document-basic-checks"><a class="toc-anchor" href="#mod-tr-msg-2-2-1-add-governance-framework-document-basic-checks" >§</a> [MOD-TR-MSG-2-2-1] Add Governance Framework Document basic checks</h6>
@@ -1216,7 +1217,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <p><code>gfv.active_since</code>: null</p>
 </li>
 <li>
-<p>create and persist a new <code>GovernanceFrameworkDocument</code> entry <code>gfd</code>:</p>
+<p>create and persist or (replace if already exist) a <code>GovernanceFrameworkDocument</code> entry <code>gfd</code>:</p>
 </li>
 <li>
 <p><code>gfd.id</code>: auto-incremented uint64</p>
