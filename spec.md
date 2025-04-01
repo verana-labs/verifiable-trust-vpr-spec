@@ -1270,6 +1270,8 @@ An [[ref: account]] that would like to add a governance framework document MUST 
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
 - `version` (int) (*mandatory*): targeted version.
 
+If for a given language, a document already exists, the execution of this transaction would replace the corresponding entry. Else, a new entry is created.
+
 ##### [MOD-TR-MSG-2-2] Add Governance Framework Document precondition checks
 
 If any of these precondition checks fail, method MUST abort.
@@ -1302,7 +1304,7 @@ load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or crea
 - `gfv.version`: 1
 - `gfv.active_since`: null
 
-- create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
+- create and persist or (replace if already exist) a `GovernanceFrameworkDocument` entry `gfd`:
 
 - `gfd.id`: auto-incremented uint64
 - `gfd.gfv_id`: `gfv.id`
