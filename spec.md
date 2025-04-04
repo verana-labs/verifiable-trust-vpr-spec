@@ -22,19 +22,23 @@
 
 ## Abstract
 
-The Internet is broken. All existing communication channels are insecure, and obsolete. Because all existing communication channels rely on public identifiers, anyone that knows your identifier can reach you.
+The internet is broken. Existing communication channels are insecure and outdated. Because they rely on public identifiers — like email addresses, usernames, or phone numbers — anyone who knows your identifier can reach you, whether you invited them or not.
 
-Furthermore, existing communication channel do not provide a sure-fire way of verifying service provider and end-user Identity. This is an open door to spam, phishing, fraud, identity theft...
+Worse, there’s no reliable way to verify the identity of either service providers or users. This leaves the door wide open to spam, phishing, fraud, and identity theft.
 
-Regarding service providers and services, each service has it own registration process, fastidious password rules... And/or they are usually using federated login, that makes you depend on a third party service for accessing your accounts.
+On the service side, each provider imposes its own fragmented registration process, often with complex password requirements or forced reliance on federated login systems—effectively handing control over to large third-party platforms.
 
-If the World Wide Web was initially designed for interoperability, major companies have managed to transform it to a closed, centralized internet, that we all depend on.
+Although the World Wide Web was originally built for openness and interoperability, dominant players have reshaped it into a closed, centralized system that most people and organizations now depend on. Privacy has become an afterthought, and personal data is routinely harvested, exploited, or leaked.
 
-Not to talk about privacy, and what's done with our data.
+To rebuild a trustworthy internet, we need new communication channels — channels that are secure by design, based on mutual verification, and governed by decentralized trust. 
 
-To build a new, trustable internet, we need new, trustable communication channels, where both ends can be clearly identified, and where providing a service, accessing a service, or creating a new account, should be as simple as presenting a credential.
+Connecting to a service, proving who you are, or creating an account should be as simple and safe as presenting a verifiable credential.
 
-A **trust layer**, open to any participant, is required for that. This is the purpose of a Verifiable Public Registry.
+A universal, open trust layer is essential for this vision to succeed.
+
+That’s the purpose of **Verifiable Trust**. The concept of **Verifiable Trust** is specified in the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec).
+
+This specification deals with the Verifiable Public Registry (VPR), part of the Verifiable Trust concept.
 
 ## About this Document
 
@@ -379,7 +383,7 @@ ApplicantBrowser <-- ValidatorVS: notify ISSUER permission created for your acco
 The [[ref: DID]] directory is a public database of [[ref: DID]] that can be used by crawlers to index the metadata of the [[ref: VS]] provided by these [[ref: DID]].
 
 Search engines simply need to iterate over the [[ref: DID Directory]] and index [[ref: VSs]] based on [[ref: VS]] metadata (DID Document, presented credentials,...)
-For example, the DID directory is essential to dts browsers, such as social dts browsers, cdn dts browsers,... but can although be used by a general classic form-based **search engine** that would return simple link(s) for accessing [[ref: VSs]].
+For example, the DID directory is essential to Verifiable User Agents (VUAs), such as social browsers, cdn browsers,... but can although be used by a general classic form-based **search engine** that would return simple link(s) for accessing [[ref: VSs]].
 
 Any [[ref: participant]] can register a [[ref: DID]] in the DID directory by passing some [[ref: trust fees]] and/or [[ref: trust deposit]] .
 
@@ -392,7 +396,7 @@ object "Crawler" as crawler #3fbdb6
 object "Index" as index #3fbdb6
 object "VS #1" as dts1 #7677ed
 object "VS #2" as dts2 #7677ed
-object "Browser" as browser #00b0f0
+object "VUA" as browser #00b0f0
 object "User" as user
 didd <|-- crawler : iterate over DID directory
 crawler --|> dts1 : resolve DID, get linked-vps, index data
