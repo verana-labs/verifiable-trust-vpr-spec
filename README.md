@@ -1,8 +1,18 @@
-# verifiable-trust-vpr-spec
+# Verifiable Public Registry Specification (VPR Spec)
 
 ## About
 
-Draft specification for a Verifiable Public Registry (VPR), a decentralized, ledger-based system designed to improve internet security and trust. The VPR manages trust registries, credential schemas, and permissions for issuing and verifying credentials. It uses a tokenized business model to incentivize participation and maintain the system. The specification details the data model, module requirements, and various methods for managing trust registries, credential schemas, permissions, validation processes, and a DID directory. A governance framework ensures adherence to established rules.
+The Verifiable Public Registry Specification describes a decentralized infrastructure — a “registry of trust registries” — used to manage digital trust at scale.
+
+It provides:
+
+- **Trust Registries**: Lists of authorized entities who can issue or verify specific credentials within an Ecosystem.
+- **Credential Schema Management**: Defining credential types, their governance, and permissions (who can issue/verify them).
+- **Validation Process**: Transparent procedures to authorize issuers, verifiers, and grantors.
+- **Tokenized Trust Model**: A mechanism using tokens to reward trustworthy participants, ensure accountability, and prevent misuse.
+- **DID Directory**: A public listing of DIDs to help discovery and indexing of trusted services.
+
+Its goal is to support open, transparent governance of trust ecosystems and enable global, decentralized identity management.
 
 Browsable spec: [https://verana-labs.github.io/verifiable-trust-vpr-spec/](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
