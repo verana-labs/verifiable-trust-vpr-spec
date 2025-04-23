@@ -9,7 +9,8 @@
 ~ [Fabrice Rochette](https://www.linkedin.com/in/fabricerochette) ([The Verana Foundation](https://verana.foundation), [2060.io](https://verana.foundation))
 
 **Contributors:**
-<!-- -->
+
+~ [Ariel Gentile](https://www.linkedin.com/in/aogentile/), [Mathieu Gauthron](https://www.linkedin.com/in/mathieugauthron/), [Pratik Kumar](https://www.linkedin.com/in/pratik-kumar-/)
 
 **Participate:**
 
