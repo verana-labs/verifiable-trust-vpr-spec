@@ -677,10 +677,10 @@ For example, the DID directory is essential to Verifiable User Agents (VUAs), su
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-13" class="notice warning"><a class="notice-link" href="#warning-13">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-17" class="notice warning"><a class="notice-link" href="#warning-17">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-81" class="notice note"><a class="notice-link" href="#note-81">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="1.2.3.4"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="http://1.2.3.4/verana/tr/v1/get" ><span>http://1.2.3.4/verana/tr/v1/get</span></a>.</p>
+<div id="note-109" class="notice note"><a class="notice-link" href="#note-109">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="1.2.3.4"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="http://1.2.3.4/verana/tr/v1/get" ><span>http://1.2.3.4/verana/tr/v1/get</span></a>.</p>
 </div>
 <table>
 <thead>
@@ -1038,7 +1038,7 @@ For example, the DID directory is essential to Verifiable User Agents (VUAs), su
 </tr>
 </tbody>
 </table>
-<div id="note-82" class="notice note"><a class="notice-link" href="#note-82">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-110" class="notice note"><a class="notice-link" href="#note-110">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1076,7 +1076,7 @@ For example, the DID directory is essential to Verifiable User Agents (VUAs), su
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-83" class="notice note"><a class="notice-link" href="#note-83">NOTE</a><p>It is not a problem if several Trust Registries are created with the same did. Identifier of a Trust Registry is its id, and the Verifiable Trust Spec includes the id of the Trust Registry in the DID Document. DID unique constraint is then not needed.</p>
+<div id="note-111" class="notice note"><a class="notice-link" href="#note-111">NOTE</a><p>It is not a problem if several Trust Registries are created with the same did. Identifier of a Trust Registry is its id, and the Verifiable Trust Spec includes the id of the Trust Registry in the DID Document. DID unique constraint is then not needed.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Applicant MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following:</p>
@@ -1084,7 +1084,7 @@ For example, the DID directory is essential to Verifiable User Agents (VUAs), su
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.trust_registry_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-84" class="notice note"><a class="notice-link" href="#note-84">NOTE</a><p>Trust Registry trust deposit is not reclaimable.</p>
+<div id="note-112" class="notice note"><a class="notice-link" href="#note-112">NOTE</a><p>Trust Registry trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-tr-msg-1-3-create-new-trust-registry-execution"><a class="toc-anchor" href="#mod-tr-msg-1-3-create-new-trust-registry-execution" >§</a> [MOD-TR-MSG-1-3] Create New Trust Registry execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1461,7 +1461,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.credential_schema_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-85" class="notice note"><a class="notice-link" href="#note-85">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
+<div id="note-113" class="notice note"><a class="notice-link" href="#note-113">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-cs-msg-1-3-create-new-credential-schema-execution"><a class="toc-anchor" href="#mod-cs-msg-1-3-create-new-credential-schema-execution" >§</a> [MOD-CS-MSG-1-3] Create New Credential Schema execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1489,7 +1489,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 </ul>
 </li>
 </ul>
-<div id="note-86" class="notice note"><a class="notice-link" href="#note-86">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a TRUST_REGISTRY <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-114" class="notice note"><a class="notice-link" href="#note-114">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a TRUST_REGISTRY <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any <a class="term-reference" href="#term:account">account</a> CAN execute this method.</p>
@@ -1699,7 +1699,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-87" class="notice note"><a class="notice-link" href="#note-87">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-115" class="notice note"><a class="notice-link" href="#note-115">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -1729,7 +1729,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>country</code> (string) (<em>mandatory</em>) MUST be a valid alpha-2 code (ISO 3166).</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 </ul>
-<div id="note-88" class="notice note"><a class="notice-link" href="#note-88">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
+<div id="note-116" class="notice note"><a class="notice-link" href="#note-116">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
@@ -2137,7 +2137,7 @@ else</li>
 </ul>
 </li>
 </ul>
-<div id="note-89" class="notice note"><a class="notice-link" href="#note-89">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
+<div id="note-117" class="notice note"><a class="notice-link" href="#note-117">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
 </div>
 <h4 id="mod-perm-msg-5-confirm-permission-vp-termination"><a class="toc-anchor" href="#mod-perm-msg-5-confirm-permission-vp-termination" >§</a> [MOD-PERM-MSG-5] Confirm Permission VP Termination</h4>
 <p>This method is called by a validator to confirm the termination of a vp when permission type is HOLDER, usually after revoking (or not) the verifiable credential of the holder. It can be although called by the grantee after a timeout, defined in <code>GlobalVariables.validation_term_requested_timeout_days</code>.</p>
@@ -2172,7 +2172,7 @@ OR
 <code>applicant_perm.grantee</code> CAN be the account executing the method.</li>
 </ul>
 <p>Else MUST abort.</p>
-<div id="note-90" class="notice note"><a class="notice-link" href="#note-90">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
+<div id="note-118" class="notice note"><a class="notice-link" href="#note-118">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
 </div>
 <h6 id="mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks" >§</a> [MOD-PERM-MSG-5-2-3] Confirm Permission VP Termination fee checks</h6>
 <p>Account executing the method MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -2210,7 +2210,7 @@ OR
 </ul>
 </li>
 </ul>
-<div id="note-91" class="notice note"><a class="notice-link" href="#note-91">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
+<div id="note-119" class="notice note"><a class="notice-link" href="#note-119">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
 </div>
 <h4 id="mod-perm-msg-6-cancel-permission-vp-last-request"><a class="toc-anchor" href="#mod-perm-msg-6-cancel-permission-vp-last-request" >§</a> [MOD-PERM-MSG-6] Cancel Permission VP Last Request</h4>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> of a permission validation process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and paid <a class="term-reference" href="#term:trust-fees">trust fees</a> are refunded. If <code>vp_exp</code> is not null, <code>vp_state</code> is set back to VALIDATED, else <code>vp_state</code> is set to TERMINATED.</p>
@@ -2301,7 +2301,7 @@ OR
 <li><a class="term-reference" href="#term:account">account</a> executing the method MUST be the <a class="term-reference" href="#term:controller">controller</a> of <code>tr</code>.</li>
 <li>else MUST abort.</li>
 </ul>
-<div id="note-92" class="notice note"><a class="notice-link" href="#note-92">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
+<div id="note-120" class="notice note"><a class="notice-link" href="#note-120">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
 </div>
 <h6 id="mod-perm-msg-7-2-3-create-root-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-7-2-3-create-root-permission-fee-checks" >§</a> [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks</h6>
 <p>Account MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> available.</p>
@@ -2550,7 +2550,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 <li>add (<code>issuer_perm_id</code>, <code>verifier_perm_id</code>, <code>wallet_agent_perm_id</code>) to <code>session.authz[]</code></li>
 <li><code>session.modified:</code> : <code>now</code></li>
 </ul>
-<div id="warning-14" class="notice warning"><a class="notice-link" href="#warning-14">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
+<div id="warning-18" class="notice warning"><a class="notice-link" href="#warning-18">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
 </div>
 <h4 id="mod-perm-msg-11-update-permission-module-parameters"><a class="toc-anchor" href="#mod-perm-msg-11-update-permission-module-parameters" >§</a> [MOD-PERM-MSG-11] Update Permission Module Parameters</h4>
 <p>Update Permission Module Parameters.</p>
@@ -2704,7 +2704,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-93" class="notice note"><a class="notice-link" href="#note-93">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-121" class="notice note"><a class="notice-link" href="#note-121">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -2759,8 +2759,9 @@ we might want to check that credential schema of agent and wallet_agent perms is
 <p>It is important to note that registering a <a class="term-reference" href="#term:did">DID</a> is optional and not required for Trust Resolution. However, it may be desirable for certain use cases. For example, a Social Browser might rely on the <a class="term-reference" href="#term:did-directory">DID Directory</a> to crawl and index all <a class="term-reference" href="#term:dids">DIDs</a> that reference Social Channel <a class="term-reference" href="#term:vss">VSs</a>. This enables users to search and discover these indexed <a class="term-reference" href="#term:vss">VSs</a> through the Social Browser app.</p>
 <p>The <a class="term-reference" href="#term:did-directory">DID Directory</a> is open for registration by anyone, meaning that there is no built-in verification at the <a class="term-reference" href="#term:vpr">VPR</a> level to confirm whether the account registering a <a class="term-reference" href="#term:did">DID</a> is actually the controller of that <a class="term-reference" href="#term:did">DID</a>. As the <a class="term-reference" href="#term:vpr">VPR</a> does not resolve <a class="term-reference" href="#term:dids">DIDs</a>, it cannot verify ownership or control. This implies that a <a class="term-reference" href="#term:did">DID</a> could potentially be registered by someone who is not its legitimate controller. This is an inherent limitation of the model. However, why would anyone be willing to pay fees to register a DID they do not control?</p>
 <p>Anyway, to ensure that a <a class="term-reference" href="#term:vs">VS</a> provider retains control over whether their <a class="term-reference" href="#term:did">DID</a>, related services, or credentials are indexed, registration in the <a class="term-reference" href="#term:did-directory">DID Directory</a> alone is not sufficient to trigger indexing. Instead, indexing behavior is governed by optional crawler directives included in the <a class="term-reference" href="#term:did-document">DID Document</a> itself (e.g., <code>index</code>, <code>noindex</code>). This guarantees that indexation control remains with the actual <a class="term-reference" href="#term:did">DID</a> controller, even if someone else registers the <a class="term-reference" href="#term:did">DID</a> in the <a class="term-reference" href="#term:did-directory">DID Directory</a>.</p>
-<p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
-<div id="note-94" class="notice note"><a class="notice-link" href="#note-94">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
+<div id="note-122" class="notice note"><a class="notice-link" href="#note-122">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
+</div>
+<div id="note-123" class="notice note"><a class="notice-link" href="#note-123">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
 </div>
 <h4 id="mod-dd-msg-1-add-a-did"><a class="toc-anchor" href="#mod-dd-msg-1-add-a-did" >§</a> [MOD-DD-MSG-1] Add a DID</h4>
 <p>Add a <a class="term-reference" href="#term:did">DID</a> to the DID Directory, with expiration timestamp set to current timestamp + <em>years</em> years.</p>

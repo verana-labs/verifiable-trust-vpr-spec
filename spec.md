@@ -3098,7 +3098,9 @@ The [[ref: DID Directory]] is open for registration by anyone, meaning that ther
 
 Anyway, to ensure that a [[ref: VS]] provider retains control over whether their [[ref: DID]], related services, or credentials are indexed, registration in the [[ref: DID Directory]] alone is not sufficient to trigger indexing. Instead, indexing behavior is governed by optional crawler directives included in the [[ref: DID Document]] itself (e.g., `index`, `noindex`). This guarantees that indexation control remains with the actual [[ref: DID]] controller, even if someone else registers the [[ref: DID]] in the [[ref: DID Directory]].
 
+:::note
 Note that it is possible to register any [[ref: DID]] from any method.
+:::
 
 :::note
 It is not needed to register DIDs that are already present in Trust Registries, Permissions,... as services linked to these DIDs are indexed like if they were registered in the DID Directory.
