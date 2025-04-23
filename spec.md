@@ -3616,11 +3616,7 @@ Return the list of the existing parameters and their values.
 }
 ```
 
-### ToIP Trust Registry QueryProtocol version 2.0 (NOT TO BE IMPLEMENTED)
-
-::: todo
-Due to the pre-draft status of the trqp-2.0 spec, everything dealing with the trqp-2.0 MUST be ignored for now.
-:::
+### ToIP Trust Registry QueryProtocol version 2.0
 
 The following requirements of the [ToIP Trust Registry QueryProtocol version 2.0](https://trustoverip.github.io/tswg-trust-registry-protocol/) MUST be implemented:
 
