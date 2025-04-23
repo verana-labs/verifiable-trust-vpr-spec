@@ -56,14 +56,14 @@ A trust registry, or verifiable data registry, is an approved list of [[ref: iss
 
 A trust registry typically expose APIs that are consumed by services that would like to [[ref: query]] its database, and take decisions based on the returned result:
 
-- can [[ref: participant]] #1 issue credential for schema ABC?
-- can [[ref: participant]] #2 request credential presentation of credential issued by issuer DEF from schema GHI?
+- can `[[ref: participant]]` #1 issue credential for `schema` ABC of `ecosystem` E1?
+- can `[[ref: participant]]` #2 request credential presentation of credential issued by `issuer` DEF from `schema` GHI of `ecosystem` E2, for `jurisdiction` France in `context` CONTEXT?
 
 ### What is a Verifiable Public Registry?
 
 *This section is non-normative.*
 
-A Verifiable Public Registry ([[ref: VPR]]) is a public "registry of trust registries" service, which provides:
+A Verifiable Public Registry ([[ref: VPR]]) is a public "registry of trust registries" service, which provides, for any ecosystem that wishes to use it:
 
 - trust registry features, that can be used by all its [[ref: participants]]: create trust registries, for each trust registry, define its credential schemas, who can issue, verify credential of a specific credential schema,...
 - a tokenized business model(s), for charging [[ref: participants]] for [[ref: trust fees]], that are transferred to other [[ref: participants]], and/or locked into [[ref: trust deposits]].
@@ -3090,14 +3090,19 @@ The [[ref: DID Directory]] is a keystore of [[ref: DIDs]].
 
 *This section is non-normative.*
 
-Registering a [[ref: DID]] in the [[ref: DID Directory]] makes the [[ref: DID]], its presented credentials and its related services, such as [[ref: VSs]], publicly "findable" by crawlers and then by users.
-It is not mandatory to register a [[ref: DID]], nor needed for Trust Resolution, but it might desirable for some use cases. For example, a Social Browser will need the [[ref: DID Directory]] in order to crawl and index all the [[ref: DIDs]] that refers to Social Channel [[ref: VSs]], so that users will be able to search the indexed [[ref: VSs]] in the Social Browser App.
+Registering a [[ref: DID]] in the [[ref: DID Directory]] makes the [[ref: DID]], its associated credentials, and its related services (such as [[ref: VSs]]) publicly discoverable by crawlers / indexers.
 
-Anyone can register any [[ref: DID]]. That mean, as there are no way of verifying from an [[ref: VPR]] that the [[ref: account]] that registers a [[ref: DID]] *is the controller of the DID*, there might be some case of [[ref: DID]] registered by someone that is not the DID controller. This is inevitable, as an [[ref: VPR]] does not know how to resolve [[ref: DIDs]] and then cannot verify who is the controller.
+It is important to note that registering a [[ref: DID]] is optional and not required for Trust Resolution. However, it may be desirable for certain use cases. For example, a Social Browser might rely on the [[ref: DID Directory]] to crawl and index all [[ref: DIDs]] that reference Social Channel [[ref: VSs]]. This enables users to search and discover these indexed [[ref: VSs]] through the Social Browser app.
 
-To make sure a [[ref: VS]] provider will have the control and decide if a [[ref: DID]] and its related services, linked credentials... should be indexed or not, registering the [[ref: VS]] in the [[ref: DID Directory]] will not be enough for the information to be indexed by a crawler. DID Document will optionally include crawler rules (index, do not index...) so the indexation control reminds on hands of the DID controller, even if someone that does not control a [[ref: DID]] registers it in the [[ref: DID Directory]].
+The [[ref: DID Directory]] is open for registration by anyone, meaning that there is no built-in verification at the [[ref: VPR]] level to confirm whether the account registering a [[ref: DID]] is actually the controller of that [[ref: DID]]. As the [[ref: VPR]] does not resolve [[ref: DIDs]], it cannot verify ownership or control. This implies that a [[ref: DID]] could potentially be registered by someone who is not its legitimate controller. This is an inherent limitation of the model. However, why would anyone be willing to pay fees to register a DID they do not control?
+
+Anyway, to ensure that a [[ref: VS]] provider retains control over whether their [[ref: DID]], related services, or credentials are indexed, registration in the [[ref: DID Directory]] alone is not sufficient to trigger indexing. Instead, indexing behavior is governed by optional crawler directives included in the [[ref: DID Document]] itself (e.g., `index`, `noindex`). This guarantees that indexation control remains with the actual [[ref: DID]] controller, even if someone else registers the [[ref: DID]] in the [[ref: DID Directory]].
 
 Note that it is possible to register any [[ref: DID]] from any method.
+
+:::note
+It is not needed to register DIDs that are already present in Trust Registries, Permissions,... as services linked to these DIDs are indexed like if they were registered in the DID Directory.
+:::
 
 #### [MOD-DD-MSG-1] Add a DID
 
