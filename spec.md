@@ -78,7 +78,7 @@ A **Verifiable Public Registry (VPR)** is a **“registry of registries”**, a 
   - Custom **business models** and permission policies
 
 - **Query API for Trust Resolution**:  
-  A standardized API used by **Verifiable Services (VSs)** and **Verifiable User Agents (VUAs)** to perform trust resolution, enabling them to query registry data and validate roles and permissions in real time. Query API must include support for the [TRQP](https://trustoverip.github.io/tswg-trust-registry-protocol/).
+  A standardized API used by **verifiable services (VSs)** and **verifiable user agents (VUAs)** to perform trust resolution, enabling them to query registry data and validate roles and permissions in real time. Query API must include support for the [TRQP](https://trustoverip.github.io/tswg-trust-registry-protocol/).
 
 ```plantuml
 
@@ -117,7 +117,7 @@ Additionally, a [[ref: VPR]] provides a **DID Directory**, a simple list of serv
 
 Any account registered in the VPR can add a DID to the DID Directory.
 
-This directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: Verifiable Services]], and index them.
+This directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: verifiable services]], and index them.
 
 Indexers may expose this data through APIs for querying the indexed services or use it to build a **Verifiable Service search engine**.
 
@@ -163,6 +163,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: Verifiable Trust Specification, DT Specs, DT Spec]]:
 ~ see [DT Spec](https://github.com/verana-labs/verifiable-trust-spec).
+
+[[def: decentralized web nodes, DWN, dwn]]:
+~ Decentralized web nodes, see [DIF spec](https://identity.foundation/decentralized-web-node/spec/)
 
 [[def: denom]]:
 ~ Native token of a [[ref: VPR]], example: VNA.
@@ -253,6 +256,12 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: validator]]:
 ~ A role an [[ref: entity]] performs by participating in validation processes with [[ref: applicants]] in order to register them as [[ref: issuer]], or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them.
+
+[[def: verifiable service, verifiable services, VS, VSs]]:
+~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable [[ref: proof of trust]]. This can be a [[ref: DIDComm]] service, a [[ref: DWN]] service, o any other service.
+
+[[def: verifiable user agent, verifiable user agents, VUA, VUAs]]:
+~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services.
 
 [[def: verifier, verifiers]]:
 ~ A role an entity performs by receiving one or more verifiable credentials, optionally inside a verifiable presentation for processing. Example verifiers include service providers.
@@ -483,11 +492,11 @@ ApplicantBrowser <-- ValidatorVS: notify ISSUER permission created for your acco
 
 *This section is non-normative.*
 
-The **[[ref: DID Directory]]** is a public database of services that can be used by crawlers to index the metadata associated with [[ref: Verifiable Services]].
+The **[[ref: DID Directory]]** is a public database of services that can be used by crawlers to index the metadata associated with [[ref: verifiable services]].
 
 Search engines can iterate over the DID Directory and index [[ref: VSs]] by resolving the service identifier (at the moment a DID, that could be extended in the future), verify if service is a [[ref: Verifiable Service]], and in such a case extracting their verifiable metadata, such as [[ref: linked-vp]] **presented credentials**.
 
-The DID Directory is particularly important for **[[ref: Verifiable User Agents]]**, such as social browsers, CDN enabled browsers... However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
+The DID Directory is particularly important for **[[ref: verifiable user agents]]**, such as social browsers, CDN enabled browsers... However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
 
 Any [[ref: participant]] can register a [[ref: DID]] in the DID Directory by executing a transaction involving [[ref: trust fees]] and/or [[ref: trust deposit]].
 
@@ -583,7 +592,7 @@ Key points:
 
 - When a participant is granted ISSUER permission for a specific schema, the Ecosystem (and optionally the issuer grantor) may define **issuance fees** per credential. In such cases, the ISSUER must pay these fees to have the right to issue and deliver the credential to the holder.
 
-- **Wallet User Agents** and **User Agents** that implement the [[ref: verifiable trust spec]] must verify that the ISSUER paid, else they must refuse the credential. They **receive a share of the fees** as a reward.
+- **Wallet User Agents** and **User Agents** that implement the [verifiable trust spec](https://verana-labs.github.io/verifiable-trust-spec/) must verify that the ISSUER paid, else they must refuse the credential. They **receive a share of the fees** as a reward.
 
 - A portion of the fees paid by ISSUER is allocated to **trust deposits**, reinforcing the Proof-of-Trust mechanism.
 
@@ -668,7 +677,7 @@ Key points:
 
 - When a participant is granted VERIFIER permission for a specific schema, the Ecosystem, the involved issuer grantor, issuer, and verifier grantor may define **verification fees** for each verified credential. In such cases, the **VERIFIER must pay these fees** to be authorized to request the **presentation** of a credential issued by a specific issuer — from the holder.
 
-- If they are [[ref: Verifiable User Agents]], the **Wallet User Agent** and the **User Agent** involved in the interaction **receive a share of the fees** as a reward.
+- If they are [[ref: verifiable user agents]], the **Wallet User Agent** and the **User Agent** involved in the interaction **receive a share of the fees** as a reward.
 
 - A portion of the fees is also allocated to **trust deposits**, supporting the Proof-of-Trust mechanism.
 
@@ -2739,7 +2748,7 @@ Issued <-- Issued: Store credential in wallet agent
 
 ```
 
-See [VS-SPECS].
+See [verifiable trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
 
 ##### [MOD-PERM-MSG-10-1] Create or Update Permission Session parameters
 
