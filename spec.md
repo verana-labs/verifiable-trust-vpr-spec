@@ -51,19 +51,19 @@ In order to fully understand the concepts developed in this document, you should
 ## Introduction
 
 :::note
-Before exploring this spec, it is highly recommended to **read first** the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/).
+Before exploring this spec, it is highly recommended to **first read** the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/).
 :::
 
 ### What is a Trust Registry?
 
 *This section is non-normative.*
 
-A trust registry, or verifiable data registry, is an approved list of [[ref: issuers]] and [[ref: verifiers]] that are authorized to issue/verify certain credentials in an Ecosystem.
+A trust registry is an approved list of ecosystem participants, such as trust registry operators, [[ref: issuers]] and [[ref: verifiers]] that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
 
 A trust registry typically expose APIs that are consumed by services that would like to [[ref: query]] its database, and take decisions based on the returned result:
 
-- can `[[ref: participant]]` #1 issue credential for `schema` ABC of `ecosystem` E1?
-- can `[[ref: participant]]` #2 request credential presentation of credential issued by `issuer` DEF from `schema` GHI of `ecosystem` E2, for `jurisdiction` France in `context` CONTEXT?
+- can [[ref: participant]] #1 issue credential for `schema` ABC of `ecosystem` E1?
+- can [[ref: participant]] #2 request credential presentation of credential issued by `issuer` DEF from `schema` GHI of `ecosystem` E2, for `jurisdiction` France in `context` CONTEXT?
 
 ### What is a Verifiable Public Registry?
 
@@ -72,7 +72,7 @@ A trust registry typically expose APIs that are consumed by services that would 
 A **Verifiable Public Registry (VPR)** is a **“registry of registries”**, a public service that provides foundational infrastructure for decentralized trust ecosystems. It offers:
 
 - **Trust Registry Management**:  
-  Ecosystems can create and manage their own **Trust Registries**, each with:
+  ecosystems can create and manage their own **Trust Registries**, each with:
   - Defined **Credential Schemas**
   - Assigned roles for **Issuers**, **Verifiers**, and **Grantors** (Trust Registry Operators)
   - Custom **business models** and permission policies
@@ -141,7 +141,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
 
 [[def: credential schema permission, credential schema permissions, CSP]]:
-~ A permission, linked to a [[ref: credential schema]], that represent a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], or [[ref: verifier grantor]] of a [[ref: credential schema]].
+~ A permission, linked to a [[ref: credential schema]], that represent, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], or [[ref: verifier grantor]] of a [[ref: credential schema]].
 
 [[def: decentralized identifier, DID, DIDs]]:
 ~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]].
@@ -152,18 +152,6 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: decentralized identifier document, DID Document, DID Documents]]:
 ~ A DID Document, as specified in [[spec-norm:DID-CORE]].
 
-[[def: verifiable public registry, VPR, VPRs]]:
-~ a public, normally decentralized, ledger-based network, which provides: trust registry features, that can be used by all its [[ref: participants]]: create trust registries, for each trust registry, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
-
-[[def: verifiable service, VS, VSs]]:
-~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable [[ref: proof of trust]]. See [[ref: VT Spec]].
-
-[[def: verifiable user agent, VUA, VUAs]]:
-~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: VT Spec]].
-
-[[def: Verifiable Trust Specification, Verifiable Trust Spec, VT Specs, VT Spec]]:
-~ see [VT Spec](https://github.com/verana-labs/verifiable-trust-spec).
-
 [[def: decentralized web nodes, DWN, dwn]]:
 ~ Decentralized web nodes, see [DIF spec](https://identity.foundation/decentralized-web-node/spec/)
 
@@ -171,7 +159,15 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ Native token of a [[ref: VPR]], example: VNA.
 
 [[def: DID Directory, DID directory]]:
-~ A repository of DIDs in an VPR.
+~ A repository of DIDs in a VPR.
+
+[[def: ecosystem, ecosystems]]: a network of interacting entities, both technical and human, that work together to establish and maintain digital trust. It encompasses applications, credentials, governance frameworks, and the underlying technical infrastructure, all designed to facilitate trustworthy interactions.
+
+[[def: ecosystem governance framework, EGF]]:
+~ The governance framework (GF) of an ecosystem].
+
+[[def: ecosystem governance authority, EGA]]:
+~ The governance authority (GA) of an [[ref: ecosystem]].
 
 [[def: entity, entities]]:
 ~ An [[ref: account]], a [[ref: group]], or the [[ref: governance authority]].
@@ -195,10 +191,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A role an entity might perform by possessing one or more verifiable credentials and generating verifiable presentations from them. A holder is often, but not always, a [[ref: subject]] of the verifiable credentials they are holding. Holders store their credentials in credential repositories. Example holders include organizations, persons, things.
 
 [[def: issuer, issuers]]:
-~ A role an entity can perform by asserting claims about one or more [[ref: subjects]], creating a verifiable credential from these claims, and transmitting the verifiable credential to a [[ref: holder]]. Example issuers include corporations, non-profit organizations, trade associations, governments, and individuals.
+~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or an [[ref: issuer grantor]] for issuing credentials of a given [[ref: credential schema]] to [[ref: holders]].
 
 [[def: issuer grantor, issuer grantors]]:
-~ A role an entity can perform in a credential schema by adding or revoking issuers.
+~ A trust registry operator role an [[ref: entity]] is granted by an [[ref: ecosystem]] for a given [[ref: credential schema]] for adding or revoking issuers.
 
 [[def: json schema, json schemas, Json Schema, Json Schemas]]
 ~ a Json Schema, as specified in [https://json-schema.org/specification](https://json-schema.org/specification).
@@ -210,7 +206,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A presentation of a [[ref: verifiable credential]] as specified in [LINKED-VP](https://identity.foundation/linked-vp/).
 
 [[def: participant, participants]]:
-~ An entity that uses an [[ref: VPR]] and its trust layer to provide or use services.
+~ An entity that is recognized by one or several ecosystem(s) in a [[ref: VPR]].
 
 [[def: proof of trust]]:
 ~ Visual representation using [[ref: essential credential schemas]] of a [[ref: trust resolution]] process of a [[ref: VS]], for identifying the [[ref: VS]], its owner, and the [[ref: issuer]] of the verifiable credential of its owner.
@@ -233,9 +229,6 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: trust fees]]:
 ~ Fees paid by an [[ref: applicant]] when running a validation process and/or when registering [[ref: DID]] in the DID directory.
 
-[[def: trust registry governance framework, TRGF]]:
-~ The ecosystem governance framework (EGF) of a [[ref: Trust Registry]].
-
 [[def: trust unit, trust units]]:
 ~ Price, in [[ref: denom]], of one unit of trust.
 
@@ -257,17 +250,23 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: validator]]:
 ~ A role an [[ref: entity]] performs by participating in validation processes with [[ref: applicants]] in order to register them as [[ref: issuer]], or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them.
 
+[[def: verifiable public registry, VPR, VPRs]]:
+~ a public, normally decentralized, ledger-based network, which provides: trust registry features, that can be used by all its [[ref: participants]]: create trust registries, for each trust registry, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
+
 [[def: verifiable service, verifiable services, VS, VSs]]:
-~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable [[ref: proof of trust]]. This can be a [[ref: DIDComm]] service, a [[ref: DWN]] service, o any other service.
+~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable [[ref: proof of trust]]. See [[ref: VT Spec]].
 
 [[def: verifiable user agent, verifiable user agents, VUA, VUAs]]:
-~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services.
+~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: VT Spec]].
+
+[[def: Verifiable Trust Specification, Verifiable Trust Spec, VT Specs, VT Spec]]:
+~ see [VT Spec](https://github.com/verana-labs/verifiable-trust-spec).
 
 [[def: verifier, verifiers]]:
-~ A role an entity performs by receiving one or more verifiable credentials, optionally inside a verifiable presentation for processing. Example verifiers include service providers.
+~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or a [[ref: verifier grantor]] for verifying credentials of a given [[ref: credential schema]].
 
 [[def: verifier grantor, verifier grantors]]:
-~ A role an [[ref: entity]] can perform in a [[ref: credential schema]] by adding or revoking verifiers.
+~ A trust registry operator role an [[ref: entity]] is granted by an [[ref: ecosystem]] for a given [[ref: credential schema]] for adding or revoking verifiers.
 
 [[def: verifiable credential, verifiable credentials]]:
 ~ A verifiable credential as defined in [[spec-norm:VC-DATA-MODEL]].
@@ -290,9 +289,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 *This section is non-normative.*
 
-In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]] of an Ecosystem. Each **Trust Registry** must provide, at a minimum:
+In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each **Trust Registry** must provide, at a minimum:
 
-- an Ecosystem controlled **resolvable DID**
+- an ecosystem controlled **resolvable DID**
 - One or more **Governance Framework** document(s)
 - Zero or more **Credential Schemas**
 
@@ -317,17 +316,17 @@ object "Trust Registry" as tra #3fbdb6 {
 
 *This section is non-normative.*
 
-**Credential Schemas** are created and managed by **Trust Registry** controller (Ecosystems). Each Credential Schema includes, at a minimum:
+**Credential schemas** are created and managed by **trust registry** controller ([[ref: ecosystems]]). Each Credential Schema includes, at a minimum:
 
-- A **JSON Schema** that defines the structure of the corresponding **Verifiable Credential**
-- A **PermissionManagementMode** for **issuance policy**, which determines how `Issuer` permissions are granted. Modes include:
+- A **JSON Schema** that defines the structure of the corresponding **verifiable credential**
+- A **PermissionManagementMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
   - `OPEN`: Anyone can become an Issuer
-  - `ECOSYSTEM`: Permissions are granted directly by the Ecosystem, the Trust Registry controller
-  - `GRANTOR`: Permissions are granted by one or several `Issuer Grantor(s)` (Trust Registry operator(s) responsible for selecting issuers for the ecosystem), selected by the Ecosystem.
-- A **PermissionManagementMode** for **verification policy**, which determines how `Verifier` permissions are granted. Modes include:
+  - `ECOSYSTEM`: Permissions are granted directly by the [[ref: ecosystem]], the Trust Registry controller
+  - `GRANTOR`: Permissions are granted by one or several `Issuer Grantor(s)` (Trust Registry operator(s) responsible for selecting issuers for the [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
+- A **PermissionManagementMode** for **verification policy**, which determines how `VERIFIER` permissions are granted. Modes include:
   - `OPEN`: Anyone can act as a Verifier
-  - `ECOSYSTEM`: Permissions are granted directly by the Ecosystem, the Trust Registry controller
-  - `GRANTOR`: Permissions are granted by one or several `Verifier Grantor(s)` (Trust Registry operator(s) responsible for selecting verifiers for the Ecosystem), selected by the Ecosystem.
+  - `ECOSYSTEM`: Permissions are granted directly by the [[ref: ecosystem]], the Trust Registry controller
+  - `GRANTOR`: Permissions are granted by one or several `Verifier Grantor(s)` (Trust Registry operator(s) responsible for selecting verifiers for the [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
 - A **Permission Tree** that defines the roles and relationships involved in managing the schema’s lifecycle.
 
 ```plantuml
@@ -381,7 +380,7 @@ Participant roles are defined in the table below:
 
 | **Participant Role**   | **Description**                                                  |
 |-----------------------|------------------------------------------------------------------|
-| **Trust Registry**    | Create and control Credential Schemas. Grant other roles.        |
+| **Ecosystem**    | Create and control trust registries and credential Schemas. Recognize other participants by granting permission(s) to them.        |
 | **Issuer Grantor**    | Trust Registry operator that grants Issuer permissions to candidate issuers.                   |
 | **Verifier Grantor**  | Trust Registry operator that grants Verifier permissions to candidate verifiers.               |
 | **Issuer**            | Can issue credentials of this schema.                            |
@@ -437,7 +436,7 @@ Example of a Json Schema credential schema:
 }
 ```
 
-To participate in an **Ecosystem**, an entity must have an [[ref: account]] in the [[ref: VPR]] and complete a **validation process**.
+To participate in an **ecosystem**, an entity must have an [[ref: account]] in the [[ref: VPR]] and complete a **validation process**.
 
 A **validation process** takes place between:
 
@@ -446,9 +445,9 @@ A **validation process** takes place between:
 
 Running a validation process **typically involves the payment of fees**.
 
-In contrast, receiving a **Verifiable Credential** from a given schema **does not usually require an [[ref: account]]**, since the purpose is to issue a credential, not to assign permissions within the [[ref: VPR]].
+In contrast, receiving a **verifiable credential** from a given schema **does not usually require an [[ref: account]], since the purpose is to issue a credential, not to assign permissions within the [[ref: VPR]].
 
-However, if the **issuer intends to charge** the holder for issuing the credential, the **holder (applicant)** must have an account to complete the transaction.
+However, if the **issuer intends to charge** the holder for issuing the credential, the holder (applicant) must have an account to complete the transaction.
 
 *Example of a candidate [[ref: issuer]] ([[ref: applicant]]) that would like to be granted an ISSUER permission by a [[ref: validator]] that has a ISSUER_GRANTOR permission:*
 
@@ -494,7 +493,7 @@ ApplicantBrowser <-- ValidatorVS: notify ISSUER permission created for your acco
 
 The **[[ref: DID Directory]]** is a public database of services that can be used by crawlers to index the metadata associated with [[ref: verifiable services]].
 
-Search engines can iterate over the DID Directory and index [[ref: VSs]] by resolving the service identifier (at the moment a DID, that could be extended in the future), verify if service is a [[ref: Verifiable Service]], and in such a case extracting their verifiable metadata, such as [[ref: linked-vp]] **presented credentials**.
+Search engines can iterate over the DID Directory and index [[ref: VSs]] by resolving the service identifier (at the moment a DID, that could be extended in the future), verify if service is a [[ref: verifiable service]], and in such a case extracting their verifiable metadata, such as [[ref: linked-vp]] **presented credentials**.
 
 The DID Directory is particularly important for **[[ref: verifiable user agents]]**, such as social browsers, CDN enabled browsers... However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
 
@@ -539,11 +538,11 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 - The more you use the [[ref: VPR]], the more your [[ref: trust deposit]] grows.
 - Trust deposits **generate yield**: block execution fees are distributed not only to network validators, but also to **trust deposit holders**.
 - If a participant **violates the governance framework** of the [[ref: VPR]] or engages in fraudulent behavior, their trust deposit **MAY be partially or fully slashed** by the governance authority.
-- If a participant fails to comply with the governance rules of a specific Ecosystem (as a grantor, issuer, verifier, or holder), their Ecosystem-related deposit **MAY be slashed** by that Ecosystem’s governance authority.
+- If a participant fails to comply with the governance rules of a specific ecosystem (as a grantor, issuer, verifier, or holder), their ecosystem-related deposit **MAY be slashed** by that ecosystem’s governance authority.
 - A slashed deposit must be **refilled** to continue using the services that triggered the penalty.
 - When a participant stops using a service, the associated accumulated trust deposit can be **freed**.
 - Freed deposits can be **reused** in other services or **withdrawn**, however, withdrawals incur penalties, and **a portion of the withdrawn amount is burned**.
-- Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **CANNOT gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size.
+- Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size.
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
 
@@ -559,7 +558,7 @@ Creating an instance of the following entities **requires payment of fees**, wit
 
 The following operations **only require network fees**:
 
-- Updating the **governance framework documents** of an Ecosystem Trust Registry  
+- Updating the **governance framework documents** of an ecosystem trust registry  
 - Removing a **DID** from the DID Directory  
 
 #### Pay per execution of the validation process
@@ -569,7 +568,7 @@ The following operations **only require network fees**:
 **Validation fees** are **partially allocated to specific participant(s)** involved in the validation process.  
 The remaining portion is either **credited to trust deposits** or **treated as standard network fees**, distributed according to the normal distribution rules of the [[ref: VPR]].
 
-| Payee → Payer ↓  | Trust Registry                      | Issuer Grantor                        | Verifier Grantor                    | Issuer                              | Verifier | Holder                                  |
+| Payee → Payer ↓  | Ecosystem                      | Issuer Grantor                        | Verifier Grantor                    | Issuer                              | Verifier | Holder                                  |
 |------------------|-------------------------------------|---------------------------------------|-------------------------------------|-------------------------------------|----------|-----------------------------------------|
 | Issuer Grantor   | renewable subscription (1)          |                                       |                                     |                                     |          |                                         |
 | Verifier Grantor | renewable subscription (2)          |                                       |                                     |                                     |          |                                         |
@@ -590,7 +589,7 @@ Pay-per-issued credential fees are partially allocated to specific participants,
 
 Key points:
 
-- When a participant is granted ISSUER permission for a specific schema, the Ecosystem (and optionally the issuer grantor) may define **issuance fees** per credential. In such cases, the ISSUER must pay these fees to have the right to issue and deliver the credential to the holder.
+- When a participant is granted ISSUER permission for a specific schema, the ecosystem (and optionally the issuer grantor) may define **issuance fees** per credential. In such cases, the ISSUER must pay these fees to have the right to issue and deliver the credential to the holder.
 
 - **Wallet User Agents** and **User Agents** that implement the [[ref: VT spec]] must verify that the ISSUER paid, else they must refuse the credential. They **receive a share of the fees** as a reward.
 
@@ -604,7 +603,7 @@ Key points:
 scale max 800 width
  
 
-package "Ecosystem" as tr #3fbdb6 {
+package "ecosystem" as tr #3fbdb6 {
     object "E Account" as tra {
          \t+8 TUs
     }
@@ -675,7 +674,7 @@ Pay-per-verified credential fees are partially allocated to specific participant
 
 Key points:
 
-- When a participant is granted VERIFIER permission for a specific schema, the Ecosystem, the involved issuer grantor, issuer, and verifier grantor may define **verification fees** for each verified credential. In such cases, the **VERIFIER must pay these fees** to be authorized to request the **presentation** of a credential issued by a specific issuer — from the holder.
+- When a participant is granted VERIFIER permission for a specific schema, the ecosystem, the involved issuer grantor, issuer, and verifier grantor may define **verification fees** for each verified credential. In such cases, the **VERIFIER must pay these fees** to be authorized to request the **presentation** of a credential issued by a specific issuer - from the holder.
 
 - If they are [[ref: verifiable user agents]], the **Wallet User Agent** and the **User Agent** involved in the interaction **receive a share of the fees** as a reward.
 
@@ -689,7 +688,7 @@ Key points:
 scale max 800 width
  
 
-package "Ecosystem" as tr #3fbdb6 {
+package "ecosystem" as tr #3fbdb6 {
     object "E Account" as tra {
          \t+16 TUs
     }
@@ -966,7 +965,7 @@ account  --o td: account
 `TrustRegistry`:
 
 - `id` (uint64) (*mandatory*): the id of the trust registry.
-- `did` (string) (*mandatory*): the did of the ecosystem trust registry.
+- `did` (string) (*mandatory*): the did of the ecosystem.
 - `controller` (account) (*mandatory*): [[ref: account]] that controls this entry.
 - `created` (timestamp) (*mandatory*): timestamp this TrustRegistry has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this TrustRegistry has been modified.
@@ -1015,7 +1014,7 @@ account  --o td: account
 - `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier validation process expires and must be renewed.
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder validation process expires and must be renewed.
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can create its own ISSUER permission; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
-- `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and an VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an VERIFIER permission;
+- `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
 
 ### Permission
 
@@ -1135,11 +1134,11 @@ Note about Query REST API:
 
 - all query methods MUST return valid JSON.
 - objects MUST be nested when needed, such as when returning a trust registry.
-- JSON formatting MUST obey to data model regarding attribute names. A method that returns a Trust Registry entry MUST return an entry called "trust_registry". A method that returns a list of Trust Registries MUST return an entry called "trustRegistries" that contain a list of Trust Registry entries.
+- JSON formatting MUST obey to data model regarding attribute names. A method that returns a `TrustRegistry` entry MUST return an entry called "trust_registry". A method that returns a list of Trust Registries MUST return an entry called "trustRegistries" that contain a list of `TrustRegistry` entries.
 
 Examples:
 
-Get a Trust Registry
+Get a `TrustRegistry`
 
 ```json
 "trust_registry": {
@@ -1246,7 +1245,7 @@ For Msg methods, all precondition checks MUST be verified first for accepting th
 A VPR implementation MUST implement all the following requirements.
 
 :::note
-The relative REST path is the path suffix. Implementer can set any prefix, like http://1.2.3.4/verana/tr/v1/get.
+The relative REST path is the path suffix. Implementer can set any prefix, like https://example/verana/tr/v1/get.
 :::
 
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      |
@@ -1338,7 +1337,7 @@ If any of these precondition checks fail, method MUST abort.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
 :::note
-It is not a problem if several Trust Registries are created with the same Ecosystem DID. Identifier of a Trust Registry is its id, and the Verifiable Trust Spec includes the id of the Trust Registry in the DID Document. DID unique constraint is then not needed.
+It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a `TrustRegistry` is its id, and the Verifiable Trust Spec includes the id of the `TrustRegistry` in the DID Document. DID unique constraint is then not needed.
 :::
 
 ###### [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks
@@ -1349,7 +1348,7 @@ Applicant MUST have an available balance in its [[ref: account]], to cover the f
 - the required `trust_deposit_in_denom`: `GlobalVariables.trust_registry_trust_deposit` * `GlobalVariables.trust_unit_price`.
 
 :::note
-Trust Registry trust deposit is not reclaimable.
+`TrustRegistry` trust deposit is not reclaimable.
 :::
 
 ##### [MOD-TR-MSG-1-3] Create New Trust Registry execution
@@ -1399,7 +1398,7 @@ Any [[ref: account]] CAN execute this method.
 An [[ref: account]] that would like to add a governance framework document MUST call this method by specifying:
 
 - `tr_id` (uint64) (*mandatory*): the id of the trust registry.
-- `doc_language` (string(2)) (*mandatory*): language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)) of the [[ref: TRGF]] document.
+- `doc_language` (string(2)) (*mandatory*): language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)) of the [[ref: EGF]] document, provided by the [[ref: EGA]].
 - `doc_url` (string) (*mandatory*): URL where the document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
 - `version` (int) (*mandatory*): targeted version.
@@ -1542,8 +1541,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - load `TrustRegistry` `tr` from `id`. `tr.controller` MUST be the account executing the method, else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean.
-  - If `archive` is true and `tr.archived` is not null, MUST abort as Trust Registry is already archived.
-  - If `archive` is false and `tr.archived` is null, MUST abort as Trust Registry is already not archived.
+  - If `archive` is true and `tr.archived` is not null, MUST abort as `TrustRegistry` is already archived.
+  - If `archive` is false and `tr.archived` is null, MUST abort as `TrustRegistry` is already not archived.
 
 ###### [MOD-TR-MSG-5-2-2] Archive Trust Registry fee checks
 
@@ -2145,7 +2144,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 This action must be initiated by the [[ref: applicant]].
 
-During a validation process, if the associated `validator_perm` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
+During a validation process, if the associated `validator_perm` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]] or [[ref: DWN]].
 
 Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by the [[ref: validator]] to complete one or more of the following tasks:
 
@@ -3778,7 +3777,9 @@ Return the list of the existing parameters and their values.
 
 ### ToIP Trust Registry QueryProtocol version 2.0
 
-Implementations MUST provide support for ToIP Trust Registry QueryProtocol version 2.0.
+*This section is non-normative.*
+
+Implementations must provide support for ToIP Trust Registry QueryProtocol version 2.0. This will be developed when TRQP spec stabilizes.
 
 ## Initial Data Requirements
 

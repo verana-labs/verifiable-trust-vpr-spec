@@ -90,15 +90,15 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:trust-registry">trust registry</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
-<div id="note-246" class="notice note"><a class="notice-link" href="#note-246">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>read first</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-722" class="notice note"><a class="notice-link" href="#note-722">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h3 id="what-is-a-trust-registry"><a class="toc-anchor" href="#what-is-a-trust-registry" >§</a> What is a Trust Registry?</h3>
 <p><em>This section is non-normative.</em></p>
-<p>A trust registry, or verifiable data registry, is an approved list of <a class="term-reference" href="#term:issuers">issuers</a> and <a class="term-reference" href="#term:verifiers">verifiers</a> that are authorized to issue/verify certain credentials in an Ecosystem.</p>
+<p>A trust registry is an approved list of ecosystem participants, such as trust registry operators, <a class="term-reference" href="#term:issuers">issuers</a> and <a class="term-reference" href="#term:verifiers">verifiers</a> that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.</p>
 <p>A trust registry typically expose APIs that are consumed by services that would like to <a class="term-reference" href="#term:query">query</a> its database, and take decisions based on the returned result:</p>
 <ul>
-<li>can <code>[[ref: participant]]</code> #1 issue credential for <code>schema</code> ABC of <code>ecosystem</code> E1?</li>
-<li>can <code>[[ref: participant]]</code> #2 request credential presentation of credential issued by <code>issuer</code> DEF from <code>schema</code> GHI of <code>ecosystem</code> E2, for <code>jurisdiction</code> France in <code>context</code> CONTEXT?</li>
+<li>can <a class="term-reference" href="#term:participant">participant</a> #1 issue credential for <code>schema</code> ABC of <code>ecosystem</code> E1?</li>
+<li>can <a class="term-reference" href="#term:participant">participant</a> #2 request credential presentation of credential issued by <code>issuer</code> DEF from <code>schema</code> GHI of <code>ecosystem</code> E2, for <code>jurisdiction</code> France in <code>context</code> CONTEXT?</li>
 </ul>
 <h3 id="what-is-a-verifiable-public-registry"><a class="toc-anchor" href="#what-is-a-verifiable-public-registry" >§</a> What is a Verifiable Public Registry?</h3>
 <p><em>This section is non-normative.</em></p>
@@ -106,7 +106,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <ul>
 <li>
 <p><strong>Trust Registry Management</strong>:<br>
-Ecosystems can create and manage their own <strong>Trust Registries</strong>, each with:</p>
+ecosystems can create and manage their own <strong>Trust Registries</strong>, each with:</p>
 <ul>
 <li>Defined <strong>Credential Schemas</strong></li>
 <li>Assigned roles for <strong>Issuers</strong>, <strong>Verifiers</strong>, and <strong>Grantors</strong> (Trust Registry Operators)</li>
@@ -137,27 +137,26 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <dt><span id="term:credential-schemas"><span id="term:credential-schema">credential schema</span></span>:</dt>
 <dd>An <a class="term-reference" href="#term:vpr">VPR</a> resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.</dd>
 <dt><span id="term:csp"><span id="term:credential-schema-permissions"><span id="term:credential-schema-permission">credential schema permission</span></span></span>:</dt>
-<dd>A permission, linked to a <a class="term-reference" href="#term:credential-schema">credential schema</a>, that represent a grant for being <a class="term-reference" href="#term:issuer">issuer</a>, <a class="term-reference" href="#term:verifier">verifier</a>, <a class="term-reference" href="#term:issuer-grantor">issuer grantor</a>, or <a class="term-reference" href="#term:verifier-grantor">verifier grantor</a> of a <a class="term-reference" href="#term:credential-schema">credential schema</a>.</dd>
+<dd>A permission, linked to a <a class="term-reference" href="#term:credential-schema">credential schema</a>, that represent, in a given <a class="term-reference" href="#term:ecosystem">ecosystem</a>, a grant for being <a class="term-reference" href="#term:issuer">issuer</a>, <a class="term-reference" href="#term:verifier">verifier</a>, <a class="term-reference" href="#term:issuer-grantor">issuer grantor</a>, or <a class="term-reference" href="#term:verifier-grantor">verifier grantor</a> of a <a class="term-reference" href="#term:credential-schema">credential schema</a>.</dd>
 <dt><span id="term:dids"><span id="term:did"><span id="term:decentralized-identifier">decentralized identifier</span></span></span>:</dt>
 <dd>A decentralized identifier, as specified in [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</dd>
 <dt><span id="term:didcomm"><span id="term:decentralized-identifier-communication">decentralized identifier communication</span></span>:</dt>
 <dd><a path-0="identity.foundation"path-1="didcomm-messaging"path-2="spec"path-3=""href="https://identity.foundation/didcomm-messaging/spec/" >DIDComm</a> uses <a class="term-reference" href="#term:dids">DIDs</a> to establish confidential, ongoing connections.</dd>
 <dt><span id="term:did-documents"><span id="term:did-document"><span id="term:decentralized-identifier-document">decentralized identifier document</span></span></span>:</dt>
 <dd>A DID Document, as specified in [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</dd>
-<dt><span id="term:vprs"><span id="term:vpr"><span id="term:verifiable-public-registry">verifiable public registry</span></span></span>:</dt>
-<dd>a public, normally decentralized, ledger-based network, which provides: trust registry features, that can be used by all its <a class="term-reference" href="#term:participants">participants</a>: create trust registries, for each trust registry, define its credential schemas, who can issue, verify credential of a specific credential schema,… and a tokenized business model for charging/rewarding <a class="term-reference" href="#term:participants">participants</a>.</dd>
-<dt><span id="term:vss"><span id="term:vs"><span id="term:verifiable-service">verifiable service</span></span></span>:</dt>
-<dd>A service, identified by a resolvable <a class="term-reference" href="#term:did">DID</a> that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable <a class="term-reference" href="#term:proof-of-trust">proof of trust</a>. See <a class="term-reference" href="#term:vt-spec">VT Spec</a>.</dd>
-<dt><span id="term:vuas"><span id="term:vua"><span id="term:verifiable-user-agent">verifiable user agent</span></span></span>:</dt>
-<dd>A user agent for accessing and using <a class="term-reference" href="#term:vss">VSs</a>. To be considered a <a class="term-reference" href="#term:vua">VUA</a>, a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to <a class="term-reference" href="#term:vs">VS</a> compliant services, and refuse connecting to not compliant services. See <a class="term-reference" href="#term:vt-spec">VT Spec</a>.</dd>
-<dt><span id="term:vt-spec"><span id="term:vt-specs"><span id="term:verifiable-trust-spec"><span id="term:verifiable-trust-specification">Verifiable Trust Specification</span></span></span></span>:</dt>
-<dd>see <a path-0="github.com"path-1="verana-labs"path-2="verifiable-trust-spec"href="https://github.com/verana-labs/verifiable-trust-spec" >VT Spec</a>.</dd>
 <dt><span id="term:dwn"><span id="term:dwn"><span id="term:decentralized-web-nodes">decentralized web nodes</span></span></span>:</dt>
 <dd>Decentralized web nodes, see <a path-0="identity.foundation"path-1="decentralized-web-node"path-2="spec"path-3=""href="https://identity.foundation/decentralized-web-node/spec/" >DIF spec</a></dd>
 <dt><span id="term:denom">denom</span>:</dt>
 <dd>Native token of a <a class="term-reference" href="#term:vpr">VPR</a>, example: VNA.</dd>
 <dt><span id="term:did-directory"><span id="term:did-directory">DID Directory</span></span>:</dt>
-<dd>A repository of DIDs in an VPR.</dd>
+<dd>A repository of DIDs in a VPR.</dd>
+</dl>
+<p><span id="term:ecosystems"><span id="term:ecosystem">ecosystem</span></span>: a network of interacting entities, both technical and human, that work together to establish and maintain digital trust. It encompasses applications, credentials, governance frameworks, and the underlying technical infrastructure, all designed to facilitate trustworthy interactions.</p>
+<dl>
+<dt><span id="term:egf"><span id="term:ecosystem-governance-framework">ecosystem governance framework</span></span>:</dt>
+<dd>The governance framework (GF) of an ecosystem].</dd>
+<dt><span id="term:ega"><span id="term:ecosystem-governance-authority">ecosystem governance authority</span></span>:</dt>
+<dd>The governance authority (GA) of an <a class="term-reference" href="#term:ecosystem">ecosystem</a>.</dd>
 <dt><span id="term:entities"><span id="term:entity">entity</span></span>:</dt>
 <dd>An <a class="term-reference" href="#term:account">account</a>, a <a class="term-reference" href="#term:group">group</a>, or the <a class="term-reference" href="#term:governance-authority">governance authority</a>.</dd>
 <dt><span id="term:essential-credential-schemas"><span id="term:essential-credential-schema">essential credential schema</span></span>:</dt>
@@ -173,9 +172,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <dt><span id="term:holders"><span id="term:holder">holder</span></span>:</dt>
 <dd>A role an entity might perform by possessing one or more verifiable credentials and generating verifiable presentations from them. A holder is often, but not always, a <a class="term-reference" href="#term:subject">subject</a> of the verifiable credentials they are holding. Holders store their credentials in credential repositories. Example holders include organizations, persons, things.</dd>
 <dt><span id="term:issuers"><span id="term:issuer">issuer</span></span>:</dt>
-<dd>A role an entity can perform by asserting claims about one or more <a class="term-reference" href="#term:subjects">subjects</a>, creating a verifiable credential from these claims, and transmitting the verifiable credential to a <a class="term-reference" href="#term:holder">holder</a>. Example issuers include corporations, non-profit organizations, trade associations, governments, and individuals.</dd>
+<dd>A role an <a class="term-reference" href="#term:entity">entity</a> is granted by an <a class="term-reference" href="#term:ecosystem">ecosystem</a> or an <a class="term-reference" href="#term:issuer-grantor">issuer grantor</a> for issuing credentials of a given <a class="term-reference" href="#term:credential-schema">credential schema</a> to <a class="term-reference" href="#term:holders">holders</a>.</dd>
 <dt><span id="term:issuer-grantors"><span id="term:issuer-grantor">issuer grantor</span></span>:</dt>
-<dd>A role an entity can perform in a credential schema by adding or revoking issuers.</dd>
+<dd>A trust registry operator role an <a class="term-reference" href="#term:entity">entity</a> is granted by an <a class="term-reference" href="#term:ecosystem">ecosystem</a> for a given <a class="term-reference" href="#term:credential-schema">credential schema</a> for adding or revoking issuers.</dd>
 <dt><span id="term:json-schemas"><span id="term:json-schema"><span id="term:json-schemas"><span id="term:json-schema">json schema</span></span></span></span></dt>
 <dd>a Json Schema, as specified in <a path-0="json-schema.org"path-1="specification"href="https://json-schema.org/specification" >https://json-schema.org/specification</a>.</dd>
 <dt><span id="term:keeper">keeper</span>:</dt>
@@ -183,7 +182,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <dt><span id="term:linked-vp">linked-vp</span>:</dt>
 <dd>A presentation of a <a class="term-reference" href="#term:verifiable-credential">verifiable credential</a> as specified in <a path-0="identity.foundation"path-1="linked-vp"path-2=""href="https://identity.foundation/linked-vp/" >LINKED-VP</a>.</dd>
 <dt><span id="term:participants"><span id="term:participant">participant</span></span>:</dt>
-<dd>An entity that uses an <a class="term-reference" href="#term:vpr">VPR</a> and its trust layer to provide or use services.</dd>
+<dd>An entity that is recognized by one or several ecosystem(s) in a <a class="term-reference" href="#term:vpr">VPR</a>.</dd>
 <dt><span id="term:proof-of-trust">proof of trust</span>:</dt>
 <dd>Visual representation using <a class="term-reference" href="#term:essential-credential-schemas">essential credential schemas</a> of a <a class="term-reference" href="#term:trust-resolution">trust resolution</a> process of a <a class="term-reference" href="#term:vs">VS</a>, for identifying the <a class="term-reference" href="#term:vs">VS</a>, its owner, and the <a class="term-reference" href="#term:issuer">issuer</a> of the verifiable credential of its owner.</dd>
 <dt><span id="term:query">query</span>:</dt>
@@ -198,8 +197,6 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <dd>A financial deposit that is used as a trust guarantee. For a given <a class="term-reference" href="#term:controller">controller</a>, its trust deposit is increased when running validation process (either as an <a class="term-reference" href="#term:applicant">applicant</a> or as a <a class="term-reference" href="#term:validator">validator</a>), or when registering <a class="term-reference" href="#term:did">DID</a> in the DID directory.</dd>
 <dt><span id="term:trust-fees">trust fees</span>:</dt>
 <dd>Fees paid by an <a class="term-reference" href="#term:applicant">applicant</a> when running a validation process and/or when registering <a class="term-reference" href="#term:did">DID</a> in the DID directory.</dd>
-<dt><span id="term:trgf"><span id="term:trust-registry-governance-framework">trust registry governance framework</span></span>:</dt>
-<dd>The ecosystem governance framework (EGF) of a <a class="term-reference" href="#term:trust-registry">Trust Registry</a>.</dd>
 <dt><span id="term:trust-units"><span id="term:trust-unit">trust unit</span></span>:</dt>
 <dd>Price, in <a class="term-reference" href="#term:denom">denom</a>, of one unit of trust.</dd>
 <dt><span id="term:trust-registries"><span id="term:trust-registry">trust registry</span></span></dt>
@@ -214,14 +211,18 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <dd>A process run by <a class="term-reference" href="#term:applicants">applicants</a> that want to, for a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>, be a <a class="term-reference" href="#term:issuer">issuer</a>, be a <a class="term-reference" href="#term:verifier">verifier</a>, or simply hold a verifiable credential linked to the <a class="term-reference" href="#term:credential-schema">credential schema</a>.</dd>
 <dt><span id="term:validator">validator</span>:</dt>
 <dd>A role an <a class="term-reference" href="#term:entity">entity</a> performs by participating in validation processes with <a class="term-reference" href="#term:applicants">applicants</a> in order to register them as <a class="term-reference" href="#term:issuer">issuer</a>, or <a class="term-reference" href="#term:verifier">verifier</a> of a <a class="term-reference" href="#term:credential-schema">credential schema</a>, or to deliver a verifiable credential to them.</dd>
+<dt><span id="term:vprs"><span id="term:vpr"><span id="term:verifiable-public-registry">verifiable public registry</span></span></span>:</dt>
+<dd>a public, normally decentralized, ledger-based network, which provides: trust registry features, that can be used by all its <a class="term-reference" href="#term:participants">participants</a>: create trust registries, for each trust registry, define its credential schemas, who can issue, verify credential of a specific credential schema,… and a tokenized business model for charging/rewarding <a class="term-reference" href="#term:participants">participants</a>.</dd>
 <dt><span id="term:vss"><span id="term:vs"><span id="term:verifiable-services"><span id="term:verifiable-service">verifiable service</span></span></span></span>:</dt>
-<dd>A service, identified by a resolvable <a class="term-reference" href="#term:did">DID</a> that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable <a class="term-reference" href="#term:proof-of-trust">proof of trust</a>. This can be a <a class="term-reference" href="#term:didcomm">DIDComm</a> service, a <a class="term-reference" href="#term:dwn">DWN</a> service, o any other service.</dd>
+<dd>A service, identified by a resolvable <a class="term-reference" href="#term:did">DID</a> that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable <a class="term-reference" href="#term:proof-of-trust">proof of trust</a>. See <a class="term-reference" href="#term:vt-spec">VT Spec</a>.</dd>
 <dt><span id="term:vuas"><span id="term:vua"><span id="term:verifiable-user-agents"><span id="term:verifiable-user-agent">verifiable user agent</span></span></span></span>:</dt>
-<dd>A user agent for accessing and using <a class="term-reference" href="#term:vss">VSs</a>. To be considered a <a class="term-reference" href="#term:vua">VUA</a>, a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to <a class="term-reference" href="#term:vs">VS</a> compliant services, and refuse connecting to not compliant services.</dd>
+<dd>A user agent for accessing and using <a class="term-reference" href="#term:vss">VSs</a>. To be considered a <a class="term-reference" href="#term:vua">VUA</a>, a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to <a class="term-reference" href="#term:vs">VS</a> compliant services, and refuse connecting to not compliant services. See <a class="term-reference" href="#term:vt-spec">VT Spec</a>.</dd>
+<dt><span id="term:vt-spec"><span id="term:vt-specs"><span id="term:verifiable-trust-spec"><span id="term:verifiable-trust-specification">Verifiable Trust Specification</span></span></span></span>:</dt>
+<dd>see <a path-0="github.com"path-1="verana-labs"path-2="verifiable-trust-spec"href="https://github.com/verana-labs/verifiable-trust-spec" >VT Spec</a>.</dd>
 <dt><span id="term:verifiers"><span id="term:verifier">verifier</span></span>:</dt>
-<dd>A role an entity performs by receiving one or more verifiable credentials, optionally inside a verifiable presentation for processing. Example verifiers include service providers.</dd>
+<dd>A role an <a class="term-reference" href="#term:entity">entity</a> is granted by an <a class="term-reference" href="#term:ecosystem">ecosystem</a> or a <a class="term-reference" href="#term:verifier-grantor">verifier grantor</a> for verifying credentials of a given <a class="term-reference" href="#term:credential-schema">credential schema</a>.</dd>
 <dt><span id="term:verifier-grantors"><span id="term:verifier-grantor">verifier grantor</span></span>:</dt>
-<dd>A role an <a class="term-reference" href="#term:entity">entity</a> can perform in a <a class="term-reference" href="#term:credential-schema">credential schema</a> by adding or revoking verifiers.</dd>
+<dd>A trust registry operator role an <a class="term-reference" href="#term:entity">entity</a> is granted by an <a class="term-reference" href="#term:ecosystem">ecosystem</a> for a given <a class="term-reference" href="#term:credential-schema">credential schema</a> for adding or revoking verifiers.</dd>
 <dt><span id="term:verifiable-credentials"><span id="term:verifiable-credential">verifiable credential</span></span>:</dt>
 <dd>A verifiable credential as defined in [<a class="spec-reference" href="#ref:VC-DATA-MODEL">VC-DATA-MODEL</a>].</dd>
 </dl>
@@ -239,9 +240,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <h2 id="high-level-vpr-features"><a class="toc-anchor" href="#high-level-vpr-features" >§</a> High Level VPR Features</h2>
 <h3 id="trust-registry-management"><a class="toc-anchor" href="#trust-registry-management" >§</a> Trust Registry Management</h3>
 <p><em>This section is non-normative.</em></p>
-<p>In an <a class="term-reference" href="#term:vpr">VPR</a>, any <a class="term-reference" href="#term:account">account</a> can create (and become the <a class="term-reference" href="#term:controller">controller</a> of) a <code>TrustRegistry</code> entry that represents a <a class="term-reference" href="#term:trust-registry">trust registry</a> of an Ecosystem. Each <strong>Trust Registry</strong> must provide, at a minimum:</p>
+<p>In an <a class="term-reference" href="#term:vpr">VPR</a>, any <a class="term-reference" href="#term:account">account</a> can create (and become the <a class="term-reference" href="#term:controller">controller</a> of) a <code>TrustRegistry</code> entry that represents a <a class="term-reference" href="#term:trust-registry">trust registry</a> of an ecosystem. Each <strong>Trust Registry</strong> must provide, at a minimum:</p>
 <ul>
-<li>an Ecosystem controlled <strong>resolvable DID</strong></li>
+<li>an ecosystem controlled <strong>resolvable DID</strong></li>
 <li>One or more <strong>Governance Framework</strong> document(s)</li>
 <li>Zero or more <strong>Credential Schemas</strong></li>
 </ul>
@@ -249,21 +250,21 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <img src="https://www.plantuml.com/plantuml/svg/NOv12i9040Jlyuf6Fn0Gn6FU87vWiZj9LhExC3Cn1l7lYeA7zAMBfWxTchFwd2Tg_sI19q7c1qvDWoL57mbKkwi4n-wYipdECYHpNNTWWojZV-Yxs1tn97mYeTfgBXannSqILA8KJpp1mYYPRICCzIvQk0H1hvnbgNf3hC7eHTHAYT-xltu3" alt="uml diagram">
 <h3 id="credential-schemas-and-permissions"><a class="toc-anchor" href="#credential-schemas-and-permissions" >§</a> Credential Schemas and Permissions</h3>
 <p><em>This section is non-normative.</em></p>
-<p><strong>Credential Schemas</strong> are created and managed by <strong>Trust Registry</strong> controller (Ecosystems). Each Credential Schema includes, at a minimum:</p>
+<p><strong>Credential schemas</strong> are created and managed by <strong>trust registry</strong> controller (<a class="term-reference" href="#term:ecosystems">ecosystems</a>). Each Credential Schema includes, at a minimum:</p>
 <ul>
-<li>A <strong>JSON Schema</strong> that defines the structure of the corresponding <strong>Verifiable Credential</strong></li>
-<li>A <strong>PermissionManagementMode</strong> for <strong>issuance policy</strong>, which determines how <code>Issuer</code> permissions are granted. Modes include:
+<li>A <strong>JSON Schema</strong> that defines the structure of the corresponding <strong>verifiable credential</strong></li>
+<li>A <strong>PermissionManagementMode</strong> for <strong>issuance policy</strong>, which determines how <code>ISSUER</code> permissions are granted. Modes include:
 <ul>
 <li><code>OPEN</code>: Anyone can become an Issuer</li>
-<li><code>ECOSYSTEM</code>: Permissions are granted directly by the Ecosystem, the Trust Registry controller</li>
-<li><code>GRANTOR</code>: Permissions are granted by one or several <code>Issuer Grantor(s)</code> (Trust Registry operator(s) responsible for selecting issuers for the ecosystem), selected by the Ecosystem.</li>
+<li><code>ECOSYSTEM</code>: Permissions are granted directly by the <a class="term-reference" href="#term:ecosystem">ecosystem</a>, the Trust Registry controller</li>
+<li><code>GRANTOR</code>: Permissions are granted by one or several <code>Issuer Grantor(s)</code> (Trust Registry operator(s) responsible for selecting issuers for the <a class="term-reference" href="#term:ecosystem">ecosystem</a>), selected by the <a class="term-reference" href="#term:ecosystem">ecosystem</a>.</li>
 </ul>
 </li>
-<li>A <strong>PermissionManagementMode</strong> for <strong>verification policy</strong>, which determines how <code>Verifier</code> permissions are granted. Modes include:
+<li>A <strong>PermissionManagementMode</strong> for <strong>verification policy</strong>, which determines how <code>VERIFIER</code> permissions are granted. Modes include:
 <ul>
 <li><code>OPEN</code>: Anyone can act as a Verifier</li>
-<li><code>ECOSYSTEM</code>: Permissions are granted directly by the Ecosystem, the Trust Registry controller</li>
-<li><code>GRANTOR</code>: Permissions are granted by one or several <code>Verifier Grantor(s)</code> (Trust Registry operator(s) responsible for selecting verifiers for the Ecosystem), selected by the Ecosystem.</li>
+<li><code>ECOSYSTEM</code>: Permissions are granted directly by the <a class="term-reference" href="#term:ecosystem">ecosystem</a>, the Trust Registry controller</li>
+<li><code>GRANTOR</code>: Permissions are granted by one or several <code>Verifier Grantor(s)</code> (Trust Registry operator(s) responsible for selecting verifiers for the <a class="term-reference" href="#term:ecosystem">ecosystem</a>), selected by the <a class="term-reference" href="#term:ecosystem">ecosystem</a>.</li>
 </ul>
 </li>
 <li>A <strong>Permission Tree</strong> that defines the roles and relationships involved in managing the schema’s lifecycle.</li>
@@ -279,8 +280,8 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 </thead>
 <tbody>
 <tr>
-<td><strong>Trust Registry</strong></td>
-<td>Create and control Credential Schemas. Grant other roles.</td>
+<td><strong>Ecosystem</strong></td>
+<td>Create and control trust registries and credential Schemas. Recognize other participants by granting permission(s) to them.</td>
 </tr>
 <tr>
 <td><strong>Issuer Grantor</strong></td>
@@ -350,21 +351,21 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
   <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<p>To participate in an <strong>Ecosystem</strong>, an entity must have an <a class="term-reference" href="#term:account">account</a> in the <a class="term-reference" href="#term:vpr">VPR</a> and complete a <strong>validation process</strong>.</p>
+<p>To participate in an <strong>ecosystem</strong>, an entity must have an <a class="term-reference" href="#term:account">account</a> in the <a class="term-reference" href="#term:vpr">VPR</a> and complete a <strong>validation process</strong>.</p>
 <p>A <strong>validation process</strong> takes place between:</p>
 <ul>
 <li>an <em>applicant</em> — the entity requesting permission for a given credential schema, and</li>
 <li>a <em>validator</em> — an entity with delegated authority to validate applicants and grant them the necessary permissions.</li>
 </ul>
 <p>Running a validation process <strong>typically involves the payment of fees</strong>.</p>
-<p>In contrast, receiving a <strong>Verifiable Credential</strong> from a given schema <strong>does not usually require an <a class="term-reference" href="#term:account">account</a></strong>, since the purpose is to issue a credential, not to assign permissions within the <a class="term-reference" href="#term:vpr">VPR</a>.</p>
-<p>However, if the <strong>issuer intends to charge</strong> the holder for issuing the credential, the <strong>holder (applicant)</strong> must have an account to complete the transaction.</p>
+<p>In contrast, receiving a <strong>verifiable credential</strong> from a given schema **does not usually require an <a class="term-reference" href="#term:account">account</a>, since the purpose is to issue a credential, not to assign permissions within the <a class="term-reference" href="#term:vpr">VPR</a>.</p>
+<p>However, if the <strong>issuer intends to charge</strong> the holder for issuing the credential, the holder (applicant) must have an account to complete the transaction.</p>
 <p><em>Example of a candidate <a class="term-reference" href="#term:issuer">issuer</a> (<a class="term-reference" href="#term:applicant">applicant</a>) that would like to be granted an ISSUER permission by a <a class="term-reference" href="#term:validator">validator</a> that has a ISSUER_GRANTOR permission:</em></p>
 <img src="https://www.plantuml.com/plantuml/svg/hLPDJzj04BtxLupAeO22XLIfgb0_I0k7I3qWKY9LocLZZvCLwrrtTqtAl-_RjUEOcBQcAk90O6RUcpTlPhbqNbXVbofncL1CfVX9xyxFQIjplqb4vesbLzEgKZ8JsY_riNIkPalubCjSU3vPwccMcLhxLoGSTQ7jBsbaZSNTz6d-Psks3a79hi12g11ixBx0sYBGs90-ZzbTp68-AgtFl0jiVvaa5PIHcQmGZJfiPI752XhTr2jmf5jUI-VjOvDzSqj7RufLldgR90CHpiu-XeWBoYoZNzAyfOS6JneDiVrcZqz9AFR-xEn9IY-SDL3J8KgNSXZRriYJWRgHs5uqe1cjEVFapQuA22tcT3MxeW8eEKdTgvzMRCkbNhKGKgz9XDWlfYntjH0s18vS-y33969u4qgx3UVf2EepseP9WNbbJSQSDxhsoChyGvgcIIzhM4KPaGzcqoGkDGnB3y48Z-GtZBaxaycWxA4a91rPBjZQ80aebJn20yi_QZGT-9k2y0qnl3LggV5p3q7iAf5eHtyCdS3DoRK-6I6LOmJlK_Q0RRqHN9iKn7E5_YVqQ6eIbgCkBMt5ze1vOyS9HkLjZKQHzCna1rZRZSmsqOAvYK2xGTkuWaZ11WfDpNv_6Yi02lxP2vQTKGySaSFerupPr2kwvqVtB-CqMytMRMGLPGbAXSheOyLTAnmtBFnjDf_VNTzIi1CQ2-hzZocF8JvkjXHxWD7HnC58jS75CjYKmJsVz97ew3f-NT3ngQc2GOGwFO4K5Mv9H2k0PBPXX-1AgSWBT-_0eQmKFtlG1hrCmJlo9mM5lIp3CMsDijGt5Yn9-WdXX1LIgG1L65kwIPGlVCnDLfSmhWktu--gOrwXm6xwc6Sa7P9VBClBs_rkQXjdzQJVxgLDQVPQAT9cktjNi3P3ew6189hjxejergLtEm-UjjtZ5rpd-xSADnmeyFXY-dLsDVrsVRNKBVGUyDYTHCpkiANn3NoYRGjuWNStOucfDNuhcDsO6mBjmzaUzjg-ZR_lUQd3bg9ub2rQ9oJbi8GKodLhuB8Dbo9DBk4R_4Fr2m00" alt="uml diagram">
 <h3 id="did-directory-management"><a class="toc-anchor" href="#did-directory-management" >§</a> DID Directory Management</h3>
 <p><em>This section is non-normative.</em></p>
 <p>The <strong><a class="term-reference" href="#term:did-directory">DID Directory</a></strong> is a public database of services that can be used by crawlers to index the metadata associated with <a class="term-reference" href="#term:verifiable-services">verifiable services</a>.</p>
-<p>Search engines can iterate over the DID Directory and index <a class="term-reference" href="#term:vss">VSs</a> by resolving the service identifier (at the moment a DID, that could be extended in the future), verify if service is a <a class="term-reference" href="#term:verifiable-service">Verifiable Service</a>, and in such a case extracting their verifiable metadata, such as <a class="term-reference" href="#term:linked-vp">linked-vp</a> <strong>presented credentials</strong>.</p>
+<p>Search engines can iterate over the DID Directory and index <a class="term-reference" href="#term:vss">VSs</a> by resolving the service identifier (at the moment a DID, that could be extended in the future), verify if service is a <a class="term-reference" href="#term:verifiable-service">verifiable service</a>, and in such a case extracting their verifiable metadata, such as <a class="term-reference" href="#term:linked-vp">linked-vp</a> <strong>presented credentials</strong>.</p>
 <p>The DID Directory is particularly important for <strong><a class="term-reference" href="#term:verifiable-user-agents">verifiable user agents</a></strong>, such as social browsers, CDN enabled browsers… However, it can also be leveraged by <strong>traditional, form-based search engines</strong>, which may return simple links for accessing <a class="term-reference" href="#term:vss">VSs</a>.</p>
 <p>Any <a class="term-reference" href="#term:participant">participant</a> can register a <a class="term-reference" href="#term:did">DID</a> in the DID Directory by executing a transaction involving <a class="term-reference" href="#term:trust-fees">trust fees</a> and/or <a class="term-reference" href="#term:trust-deposit">trust deposit</a>.</p>
 <img src="https://www.plantuml.com/plantuml/svg/bP8nRuCm48Lt_ufJM8FgK2bKgAg8mfAvIdU3BubR1wUsWKJAZo-s0GanTV8xVtVdzoJdnZ9jcwia-QHCnIJ2bTtXZLBe1BSNeiflh2oiYaC1XT2zLlgn0cQ02yudlDUiawWzg8A6wFLKyd8xzHngZdVV8PnQyAzFY3PXjJKRYD9jcYAVuMJ4oH8VTnwMMdN6lKvfIKzquaSps6jwGPnvU7_6yUGs0s5HCukWshwSvILZKnm_FuAx33GQ9LjqdMiuemKfwX_aSNipwo4XPvOjPfD_p8vX_Ao_p-2tGVq8nNptm2kDVOgNviPTcB2CkD0XxxWo0tDHdNFII4johBd_3E7y0m00" alt="uml diagram">
@@ -382,11 +383,11 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>The more you use the <a class="term-reference" href="#term:vpr">VPR</a>, the more your <a class="term-reference" href="#term:trust-deposit">trust deposit</a> grows.</li>
 <li>Trust deposits <strong>generate yield</strong>: block execution fees are distributed not only to network validators, but also to <strong>trust deposit holders</strong>.</li>
 <li>If a participant <strong>violates the governance framework</strong> of the <a class="term-reference" href="#term:vpr">VPR</a> or engages in fraudulent behavior, their trust deposit <strong>MAY be partially or fully slashed</strong> by the governance authority.</li>
-<li>If a participant fails to comply with the governance rules of a specific Ecosystem (as a grantor, issuer, verifier, or holder), their Ecosystem-related deposit <strong>MAY be slashed</strong> by that Ecosystem’s governance authority.</li>
+<li>If a participant fails to comply with the governance rules of a specific ecosystem (as a grantor, issuer, verifier, or holder), their ecosystem-related deposit <strong>MAY be slashed</strong> by that ecosystem’s governance authority.</li>
 <li>A slashed deposit must be <strong>refilled</strong> to continue using the services that triggered the penalty.</li>
 <li>When a participant stops using a service, the associated accumulated trust deposit can be <strong>freed</strong>.</li>
 <li>Freed deposits can be <strong>reused</strong> in other services or <strong>withdrawn</strong>, however, withdrawals incur penalties, and <strong>a portion of the withdrawn amount is burned</strong>.</li>
-<li>Holding a large trust deposit <strong>does not grant governance rights</strong> in the <a class="term-reference" href="#term:vpr">VPR</a>: participants who generate high transaction volume <strong>CANNOT gain control</strong> over the governance of the <a class="term-reference" href="#term:vpr">VPR</a> solely through usage or deposit size.</li>
+<li>Holding a large trust deposit <strong>does not grant governance rights</strong> in the <a class="term-reference" href="#term:vpr">VPR</a>: participants who generate high transaction volume <strong>cannot gain control</strong> over the governance of the <a class="term-reference" href="#term:vpr">VPR</a> solely through usage or deposit size.</li>
 </ul>
 <p>This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <h4 id="entity-creation"><a class="toc-anchor" href="#entity-creation" >§</a> Entity creation</h4>
@@ -399,7 +400,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 </ul>
 <p>The following operations <strong>only require network fees</strong>:</p>
 <ul>
-<li>Updating the <strong>governance framework documents</strong> of an Ecosystem Trust Registry</li>
+<li>Updating the <strong>governance framework documents</strong> of an ecosystem trust registry</li>
 <li>Removing a <strong>DID</strong> from the DID Directory</li>
 </ul>
 <h4 id="pay-per-execution-of-the-validation-process"><a class="toc-anchor" href="#pay-per-execution-of-the-validation-process" >§</a> Pay per execution of the validation process</h4>
@@ -410,7 +411,7 @@ The remaining portion is either <strong>credited to trust deposits</strong> or <
 <thead>
 <tr>
 <th>Payee → Payer ↓</th>
-<th>Trust Registry</th>
+<th>Ecosystem</th>
 <th>Issuer Grantor</th>
 <th>Verifier Grantor</th>
 <th>Issuer</th>
@@ -478,7 +479,7 @@ The remaining portion is either <strong>credited to trust deposits</strong> or <
 <p>Key points:</p>
 <ul>
 <li>
-<p>When a participant is granted ISSUER permission for a specific schema, the Ecosystem (and optionally the issuer grantor) may define <strong>issuance fees</strong> per credential. In such cases, the ISSUER must pay these fees to have the right to issue and deliver the credential to the holder.</p>
+<p>When a participant is granted ISSUER permission for a specific schema, the ecosystem (and optionally the issuer grantor) may define <strong>issuance fees</strong> per credential. In such cases, the ISSUER must pay these fees to have the right to issue and deliver the credential to the holder.</p>
 </li>
 <li>
 <p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> must verify that the ISSUER paid, else they must refuse the credential. They <strong>receive a share of the fees</strong> as a reward.</p>
@@ -488,14 +489,14 @@ The remaining portion is either <strong>credited to trust deposits</strong> or <
 </li>
 </ul>
 <p><em>Example:</em></p>
-<img src="https://www.plantuml.com/plantuml/svg/bTDDRu9040RWExzYeiT60jgAyT10qiPurtZfPOGjfUN3x4Teq_ZVkoves04IknS8C-_oP1P28P5BLUHEUBiJCUOC2lo6bUT1dINomm77EM7yXIc3oMjSYHyXMJ41520vJ1Vln-IuX5y7zAgEdooMkWsYEAvKATisREjclSc75UpsmZmvazoEAo7XXPqgaLtJCY7nUIT-xkYsGYZ6OSEnb1KtwImbjEt6icLfrwRtVXoXwLpVbgMMJSTzYqPaJQP1JeDb4B24wcoSQIN3cytzCUAGq6pHc-2YiuKrmhtGjYXbhK0X0UuZIwYG7gtlpaTuEjhtAQGJz5o2kzaEcETC0Y7MFUE18El_A0-3pFeEvsLTJsp6Py_worsRTtccpwvbgQazaLAYImgRc3jKh4UhbqtRmrvtpjW9MPcOdxov_W40" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/bTDDRu9040RWExzYeiT60zYgyT10qiPubtZfPOGjfUN3x4Teq_ZVkoves04IknS8i-_mP0S28P5BLUHESBiJCUOC2lo6jUj2dINomm77EM7yXIc32OihyICaAoQ00YI7wUBzc1oNyEk0NjNnayKI9gyGnd6bIjbkmxPkrfjyMCC-4kR9cUJsN0a9B-nKYUoQbWc9-vtukQFR2Q4OXot7KbRSfBEKq7PRovQbNPlk_JX2qxc-BKijcuvx5et8cao3dAwMgnLBgCx6cQtay6Q-DqOS4feMlHDST5fOHnW9RGjJrWeK4c0KMaA5TBJUt1_XwMZVfv2Ue3idk9ljW7dE911YtJCU2BB-Z_8moAplS5xMTM8pFdlMN-x6lCir--nQbfhQ4oabkgImYSs7YlLezTAq7VQcCsCdO6LYVlBc-WS0" alt="uml diagram">
 <h4 id="pay-per-verified-credential"><a class="toc-anchor" href="#pay-per-verified-credential" >§</a> Pay per verified credential</h4>
 <p><em>This section is non-normative.</em></p>
 <p>Pay-per-verified credential fees are partially allocated to specific participants, while the remaining portion is either credited to trust deposits or distributed according to the standard distribution rules of the <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>Key points:</p>
 <ul>
 <li>
-<p>When a participant is granted VERIFIER permission for a specific schema, the Ecosystem, the involved issuer grantor, issuer, and verifier grantor may define <strong>verification fees</strong> for each verified credential. In such cases, the <strong>VERIFIER must pay these fees</strong> to be authorized to request the <strong>presentation</strong> of a credential issued by a specific issuer — from the holder.</p>
+<p>When a participant is granted VERIFIER permission for a specific schema, the ecosystem, the involved issuer grantor, issuer, and verifier grantor may define <strong>verification fees</strong> for each verified credential. In such cases, the <strong>VERIFIER must pay these fees</strong> to be authorized to request the <strong>presentation</strong> of a credential issued by a specific issuer - from the holder.</p>
 </li>
 <li>
 <p>If they are <a class="term-reference" href="#term:verifiable-user-agents">verifiable user agents</a>, the <strong>Wallet User Agent</strong> and the <strong>User Agent</strong> involved in the interaction <strong>receive a share of the fees</strong> as a reward.</p>
@@ -505,7 +506,7 @@ The remaining portion is either <strong>credited to trust deposits</strong> or <
 </li>
 </ul>
 <p><em>Example:</em></p>
-<img src="https://www.plantuml.com/plantuml/svg/bTHRRu8m50VmTpv5eu-BfCmBpeT5aot6ToylUobGMJSKqmjiMVpkWu9AJs6Nla0yvz_yF0NcGX8krI5nvjSx4PA4eWFvG5ECKSuY-UeWnpcHy9t45FMUmrHy2aaFFKG4aXprX_iW2YReoq75IeCt6igY3It2C5L7MRUHkgxNYxpp9cYz4VgdCmYkkH8IFT5JAjWbBYEG7pNYvmPl9OIY72qvESgKwpIBWMsrD70iRkB0tY1dsrXisCg_Pj20hCfKoBu_yNqQGPs9qwrmUlUTn3QXtiAQOFC0ciujvMpFm0mpECEjESCCpj1pkmvuspR5p9eYTaU_0AlWHTl7EC1x39ccicushGF_mPrsOTkizIxMkNkTv8qeX8kOrWv507EpC9oAm0CVkUEkUHPPswY8fNEzBjsE90cL221pIxa3pFnVpbqhDF-Bj5otinlmmMFnIPZf5m7hJbZDughQMcHLSMmLexAeNnRTCBJtBZiKgUAktrhEVwYNikl3CpCV6cTEZv7-55VNRm00" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/bTHRRu8m50VmTpx5YJukaZ8lE1yMJROOtxsyxAL0PTrGJ5jWo-9tdnJcw2diqXU8v_oRdwV0N2egL7P8dFdrJeOqON2WRp0b10eUgMS77ET4mrSQC-YnC9NlKh533wW49Q0_t0THC84F1ouh3LvOgA3t28imJBEZgjjeNTVhITru4rXlfFxfZ89haKa53-oKIluLLn7AZnhnSuEtaZ9Z0fQ27bKgT9h7oBPQ6ZWUDt5eRvIpRJmsRELVCsX8LcKgPD-V-3wBiCx4wLOylTjEOfjGRs5Di7a0JUUM2RxdQ8Ovdk7Md66EP-YvNGUyRPjYRasHkADVW5NmIzid921xWfccicushGF_pfrsOTkizIxMkNkTv8sy21SngnqPHSpDmd1c51_uo1rtpVEIjOqPjNIkrwNRqIHX2X2oi9Gxn2p-vTorGek_IClrVNO3CRY_V19c-aKWkXDNyxYgjXPvLHnRnQWiwfT5DmpjlSkEZ5Pnrsyj5p_KIzdruPcP3uqpPyT8VughwoS0" alt="uml diagram">
 <h2 id="governance-of-a-vpr"><a class="toc-anchor" href="#governance-of-a-vpr" >§</a> Governance of a VPR</h2>
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
@@ -519,7 +520,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <p><code>TrustRegistry</code>:</p>
 <ul>
 <li><code>id</code> (uint64) (<em>mandatory</em>): the id of the trust registry.</li>
-<li><code>did</code> (string) (<em>mandatory</em>): the did of the ecosystem trust registry.</li>
+<li><code>did</code> (string) (<em>mandatory</em>): the did of the ecosystem.</li>
 <li><code>controller</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> that controls this entry.</li>
 <li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this TrustRegistry has been created.</li>
 <li><code>modified</code> (timestamp) (<em>mandatory</em>): timestamp this TrustRegistry has been modified.</li>
@@ -564,7 +565,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>verifier_validation_validity_period</code> (number) (<em>mandatory</em>): number of days after which a verifier validation process expires and must be renewed.</li>
 <li><code>holder_validation_validity_period</code> (number) (<em>mandatory</em>): number of days after which an holder validation process expires and must be renewed.</li>
 <li><code>issuer_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>): defines how permissions are managed for issuers of this <code>CredentialSchema</code>. OPEN means anyone can create its own ISSUER permission; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the <code>CredentialSchema</code> entry in order to create an ISSUER permission;</li>
-<li><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>): defines how permissions are managed for verifiers of this <code>CredentialSchema</code>. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and an VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the <code>CredentialSchema</code> entry in order to create an VERIFIER permission;</li>
+<li><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>): defines how permissions are managed for verifiers of this <code>CredentialSchema</code>. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the <code>CredentialSchema</code> entry in order to create a VERIFIER permission;</li>
 </ul>
 <h3 id="permission"><a class="toc-anchor" href="#permission" >§</a> Permission</h3>
 <p><code>Permission</code>:</p>
@@ -677,10 +678,10 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <ul>
 <li>all query methods MUST return valid JSON.</li>
 <li>objects MUST be nested when needed, such as when returning a trust registry.</li>
-<li>JSON formatting MUST obey to data model regarding attribute names. A method that returns a Trust Registry entry MUST return an entry called “trust_registry”. A method that returns a list of Trust Registries MUST return an entry called “trustRegistries” that contain a list of Trust Registry entries.</li>
+<li>JSON formatting MUST obey to data model regarding attribute names. A method that returns a <code>TrustRegistry</code> entry MUST return an entry called “trust_registry”. A method that returns a list of Trust Registries MUST return an entry called “trustRegistries” that contain a list of <code>TrustRegistry</code> entries.</li>
 </ul>
 <p>Examples:</p>
-<p>Get a Trust Registry</p>
+<p>Get a <code>TrustRegistry</code></p>
 <pre class="language-json"><code class="language-json"><span class="token property">"trust_registry"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
   <span class="token punctuation">{</span>
     <span class="token property">"active_version"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
@@ -775,10 +776,10 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-31" class="notice warning"><a class="notice-link" href="#warning-31">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-87" class="notice warning"><a class="notice-link" href="#warning-87">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-247" class="notice note"><a class="notice-link" href="#note-247">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="1.2.3.4"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="http://1.2.3.4/verana/tr/v1/get" ><span>http://1.2.3.4/verana/tr/v1/get</span></a>.</p>
+<div id="note-723" class="notice note"><a class="notice-link" href="#note-723">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
 </div>
 <table>
 <thead>
@@ -1136,7 +1137,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 </tr>
 </tbody>
 </table>
-<div id="note-248" class="notice note"><a class="notice-link" href="#note-248">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-724" class="notice note"><a class="notice-link" href="#note-724">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1174,7 +1175,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-249" class="notice note"><a class="notice-link" href="#note-249">NOTE</a><p>It is not a problem if several Trust Registries are created with the same Ecosystem DID. Identifier of a Trust Registry is its id, and the Verifiable Trust Spec includes the id of the Trust Registry in the DID Document. DID unique constraint is then not needed.</p>
+<div id="note-725" class="notice note"><a class="notice-link" href="#note-725">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Applicant MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following:</p>
@@ -1182,7 +1183,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.trust_registry_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-250" class="notice note"><a class="notice-link" href="#note-250">NOTE</a><p>Trust Registry trust deposit is not reclaimable.</p>
+<div id="note-726" class="notice note"><a class="notice-link" href="#note-726">NOTE</a><p><code>TrustRegistry</code> trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-tr-msg-1-3-create-new-trust-registry-execution"><a class="toc-anchor" href="#mod-tr-msg-1-3-create-new-trust-registry-execution" >§</a> [MOD-TR-MSG-1-3] Create New Trust Registry execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1268,7 +1269,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <p>An <a class="term-reference" href="#term:account">account</a> that would like to add a governance framework document MUST call this method by specifying:</p>
 <ul>
 <li><code>tr_id</code> (uint64) (<em>mandatory</em>): the id of the trust registry.</li>
-<li><code>doc_language</code> (string(2)) (<em>mandatory</em>): language tag (<a path-0="www.ietf.org"path-1="rfc"path-2="rfc1766.txt"href="https://www.ietf.org/rfc/rfc1766.txt" >rfc1766</a>) of the <a class="term-reference" href="#term:trgf">TRGF</a> document.</li>
+<li><code>doc_language</code> (string(2)) (<em>mandatory</em>): language tag (<a path-0="www.ietf.org"path-1="rfc"path-2="rfc1766.txt"href="https://www.ietf.org/rfc/rfc1766.txt" >rfc1766</a>) of the <a class="term-reference" href="#term:egf">EGF</a> document, provided by the <a class="term-reference" href="#term:ega">EGA</a>.</li>
 <li><code>doc_url</code> (string) (<em>mandatory</em>): URL where the document is published.</li>
 <li><code>doc_digest_sri</code> (string) (<em>mandatory</em>): digest_sri of the document.</li>
 <li><code>version</code> (int) (<em>mandatory</em>): targeted version.</li>
@@ -1439,8 +1440,8 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>
 <p><code>archive</code> (boolean) (<em>mandatory</em>) MUST be a boolean.</p>
 <ul>
-<li>If <code>archive</code> is true and <code>tr.archived</code> is not null, MUST abort as Trust Registry is already archived.</li>
-<li>If <code>archive</code> is false and <code>tr.archived</code> is null, MUST abort as Trust Registry is already not archived.</li>
+<li>If <code>archive</code> is true and <code>tr.archived</code> is not null, MUST abort as <code>TrustRegistry</code> is already archived.</li>
+<li>If <code>archive</code> is false and <code>tr.archived</code> is null, MUST abort as <code>TrustRegistry</code> is already not archived.</li>
 </ul>
 </li>
 </ul>
@@ -1559,7 +1560,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.credential_schema_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-251" class="notice note"><a class="notice-link" href="#note-251">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
+<div id="note-727" class="notice note"><a class="notice-link" href="#note-727">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-cs-msg-1-3-create-new-credential-schema-execution"><a class="toc-anchor" href="#mod-cs-msg-1-3-create-new-credential-schema-execution" >§</a> [MOD-CS-MSG-1-3] Create New Credential Schema execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1587,7 +1588,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 </ul>
 </li>
 </ul>
-<div id="note-252" class="notice note"><a class="notice-link" href="#note-252">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-728" class="notice note"><a class="notice-link" href="#note-728">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any <a class="term-reference" href="#term:account">account</a> CAN execute this method.</p>
@@ -1797,7 +1798,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-253" class="notice note"><a class="notice-link" href="#note-253">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-729" class="notice note"><a class="notice-link" href="#note-729">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -1827,7 +1828,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>country</code> (string) (<em>mandatory</em>) MUST be a valid alpha-2 code (ISO 3166).</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 </ul>
-<div id="note-254" class="notice note"><a class="notice-link" href="#note-254">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
+<div id="note-730" class="notice note"><a class="notice-link" href="#note-730">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
@@ -1956,7 +1957,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <h4 id="connecting-to-the-vs-of-the-validator"><a class="toc-anchor" href="#connecting-to-the-vs-of-the-validator" >§</a> Connecting to the VS of the Validator</h4>
 <p><em>This section is non-normative, and provided for understanding only.</em></p>
 <p>This action must be initiated by the <a class="term-reference" href="#term:applicant">applicant</a>.</p>
-<p>During a validation process, if the associated <code>validator_perm</code> includes a specific <code>did</code>, the <a class="term-reference" href="#term:applicant">applicant</a> should establish a secure connection with the validator’s <a class="term-reference" href="#term:vs">VS</a> (Verifiable Service) using a secure communication protocol such as <a class="term-reference" href="#term:didcomm">DIDComm</a>.</p>
+<p>During a validation process, if the associated <code>validator_perm</code> includes a specific <code>did</code>, the <a class="term-reference" href="#term:applicant">applicant</a> should establish a secure connection with the validator’s <a class="term-reference" href="#term:vs">VS</a> (Verifiable Service) using a secure communication protocol such as <a class="term-reference" href="#term:didcomm">DIDComm</a> or <a class="term-reference" href="#term:dwn">DWN</a>.</p>
 <p>Upon connecting to the <a class="term-reference" href="#term:vs">VS</a>, the <a class="term-reference" href="#term:applicant">applicant</a> should be required by the <a class="term-reference" href="#term:validator">validator</a> to complete one or more of the following tasks:</p>
 <ol>
 <li><strong>Prove control</strong> over the <a class="term-reference" href="#term:controller">controller</a> <a class="term-reference" href="#term:account">account</a> that initiated the validation process (e.g., via blind signature or cryptographic challenge).</li>
@@ -2246,7 +2247,7 @@ else</li>
 </ul>
 </li>
 </ul>
-<div id="note-255" class="notice note"><a class="notice-link" href="#note-255">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
+<div id="note-731" class="notice note"><a class="notice-link" href="#note-731">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
 </div>
 <h4 id="mod-perm-msg-5-confirm-permission-vp-termination"><a class="toc-anchor" href="#mod-perm-msg-5-confirm-permission-vp-termination" >§</a> [MOD-PERM-MSG-5] Confirm Permission VP Termination</h4>
 <p>This method is called by a validator to confirm the termination of a vp when permission type is HOLDER, usually after revoking (or not) the verifiable credential of the holder. It can be although called by the grantee after a timeout, defined in <code>GlobalVariables.validation_term_requested_timeout_days</code>.</p>
@@ -2281,7 +2282,7 @@ OR
 <code>applicant_perm.grantee</code> CAN be the account executing the method.</li>
 </ul>
 <p>Else MUST abort.</p>
-<div id="note-256" class="notice note"><a class="notice-link" href="#note-256">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
+<div id="note-732" class="notice note"><a class="notice-link" href="#note-732">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
 </div>
 <h6 id="mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks" >§</a> [MOD-PERM-MSG-5-2-3] Confirm Permission VP Termination fee checks</h6>
 <p>Account executing the method MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -2319,7 +2320,7 @@ OR
 </ul>
 </li>
 </ul>
-<div id="note-257" class="notice note"><a class="notice-link" href="#note-257">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
+<div id="note-733" class="notice note"><a class="notice-link" href="#note-733">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
 </div>
 <h4 id="mod-perm-msg-6-cancel-permission-vp-last-request"><a class="toc-anchor" href="#mod-perm-msg-6-cancel-permission-vp-last-request" >§</a> [MOD-PERM-MSG-6] Cancel Permission VP Last Request</h4>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> of a permission validation process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and paid <a class="term-reference" href="#term:trust-fees">trust fees</a> are refunded. If <code>vp_exp</code> is not null, <code>vp_state</code> is set back to VALIDATED, else <code>vp_state</code> is set to TERMINATED.</p>
@@ -2410,7 +2411,7 @@ OR
 <li><a class="term-reference" href="#term:account">account</a> executing the method MUST be the <a class="term-reference" href="#term:controller">controller</a> of <code>tr</code>.</li>
 <li>else MUST abort.</li>
 </ul>
-<div id="note-258" class="notice note"><a class="notice-link" href="#note-258">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
+<div id="note-734" class="notice note"><a class="notice-link" href="#note-734">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
 </div>
 <h6 id="mod-perm-msg-7-2-3-create-root-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-7-2-3-create-root-permission-fee-checks" >§</a> [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks</h6>
 <p>Account MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> available.</p>
@@ -2658,7 +2659,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 <li>add (<code>issuer_perm_id</code>, <code>verifier_perm_id</code>, <code>wallet_agent_perm_id</code>) to <code>session.authz[]</code></li>
 <li><code>session.modified:</code> : <code>now</code></li>
 </ul>
-<div id="warning-32" class="notice warning"><a class="notice-link" href="#warning-32">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
+<div id="warning-88" class="notice warning"><a class="notice-link" href="#warning-88">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
 </div>
 <h4 id="mod-perm-msg-11-update-permission-module-parameters"><a class="toc-anchor" href="#mod-perm-msg-11-update-permission-module-parameters" >§</a> [MOD-PERM-MSG-11] Update Permission Module Parameters</h4>
 <p>Update Permission Module Parameters.</p>
@@ -2760,7 +2761,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 <h4 id="mod-perm-qry-4-find-beneficiaries"><a class="toc-anchor" href="#mod-perm-qry-4-find-beneficiaries" >§</a> [MOD-PERM-QRY-4] Find Beneficiaries</h4>
 <p>Anyone can execute this method.</p>
 <p>To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches <code>issuer_perm</code> and <code>verifier_perm</code>. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If <code>verifier_perm</code> is null, <code>issuer_perm</code> is never added to the set. If <code>verifier_perm</code> is NOT null, <code>issuer_perm</code> is added to the set if it exists but <code>verifier_perm</code> is not added to the set.</p>
-<div id="note-259" class="notice note"><a class="notice-link" href="#note-259">NOTE</a><p>If a Credential Schema is configured with permission management mode set to <code>OPEN</code> for either issuance or verification, it is necessary to check whether the associated ECOSYSTEM permission requires issuance or verification fees. This check MUST be performed by calling this method and passing the id of the ECOSYSTEM permission. In this case, the only beneficiary of the fees is the ECOSYSTEM permission itself.</p>
+<div id="note-735" class="notice note"><a class="notice-link" href="#note-735">NOTE</a><p>If a Credential Schema is configured with permission management mode set to <code>OPEN</code> for either issuance or verification, it is necessary to check whether the associated ECOSYSTEM permission requires issuance or verification fees. This check MUST be performed by calling this method and passing the id of the ECOSYSTEM permission. In this case, the only beneficiary of the fees is the ECOSYSTEM permission itself.</p>
 </div>
 <p>Example 1: <code>verifier_perm</code>: is not set: it’s a credential offer, schema configured to have Issuer Grantors.</p>
 <img src="https://www.plantuml.com/plantuml/svg/dT312e9040RW-px5e8TEWX1efp12eaC9hXqwoUgEPRXkk2C9qRkd1dhpq6d-WU4RPW93eg5MLIoOaib5XQ141nlNXLSfwSvqzi2Sm0ht4R_o93m1TfYtf1iGTOvc24zib0N203LWhujCPXwy6O2G4XG2QIXqMyjqc4iD4ljCx97pInYdXtXtJg9uoIvl_zcpELDW-vxlenmbgUiLBNciN-qus_uwLewXxrc0jHo_zwjV" alt="uml diagram">
@@ -2814,7 +2815,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-260" class="notice note"><a class="notice-link" href="#note-260">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-736" class="notice note"><a class="notice-link" href="#note-736">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -2879,9 +2880,9 @@ However, it may be useful for certain use cases, for example, a <strong>Social B
 That said, the deterrent is economic: why would anyone pay registration fees for a <a class="term-reference" href="#term:did">DID</a> they do not control?</p>
 <p>To protect the intent of the actual <a class="term-reference" href="#term:did">DID</a> controller, registration alone does not trigger indexing.<br>
 Indexers must respect optional <strong>crawler directives</strong> included in the <a class="term-reference" href="#term:did-document">DID Document</a> (e.g., <code>index</code>, <code>noindex</code>), ensuring that <strong>control over indexation remains with the <a class="term-reference" href="#term:did">DID</a> controller</strong>, regardless of who registered the DID in the directory.</p>
-<div id="note-261" class="notice note"><a class="notice-link" href="#note-261">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
+<div id="note-737" class="notice note"><a class="notice-link" href="#note-737">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
 </div>
-<div id="note-262" class="notice note"><a class="notice-link" href="#note-262">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
+<div id="note-738" class="notice note"><a class="notice-link" href="#note-738">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
 </div>
 <h4 id="mod-dd-msg-1-add-a-did"><a class="toc-anchor" href="#mod-dd-msg-1-add-a-did" >§</a> [MOD-DD-MSG-1] Add a DID</h4>
 <p>Add a <a class="term-reference" href="#term:did">DID</a> to the DID Directory, with expiration timestamp set to current timestamp + <em>years</em> years.</p>
@@ -3331,7 +3332,8 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <span class="token punctuation">}</span>
 </code></pre>
 <h3 id="toip-trust-registry-queryprotocol-version-20"><a class="toc-anchor" href="#toip-trust-registry-queryprotocol-version-20" >§</a> ToIP Trust Registry QueryProtocol version 2.0</h3>
-<p>Implementations MUST provide support for ToIP Trust Registry QueryProtocol version 2.0.</p>
+<p><em>This section is non-normative.</em></p>
+<p>Implementations must provide support for ToIP Trust Registry QueryProtocol version 2.0. This will be developed when TRQP spec stabilizes.</p>
 <h2 id="initial-data-requirements"><a class="toc-anchor" href="#initial-data-requirements" >§</a> Initial Data Requirements</h2>
 <h3 id="glo-global-variables"><a class="toc-anchor" href="#glo-global-variables" >§</a> [GLO] Global Variables</h3>
 <p>Global variables CAN only be changed by the <a class="term-reference" href="#term:governance-authority">governance authority</a> through proposals.</p>
