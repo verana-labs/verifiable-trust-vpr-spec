@@ -156,13 +156,13 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ a public, normally decentralized, ledger-based network, which provides: trust registry features, that can be used by all its [[ref: participants]]: create trust registries, for each trust registry, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
 
 [[def: verifiable service, VS, VSs]]:
-~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable [[ref: proof of trust]]. See [[ref: DT Spec]].
+~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable [[ref: proof of trust]]. See [[ref: VT Spec]].
 
 [[def: verifiable user agent, VUA, VUAs]]:
-~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: DT Spec]].
+~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: VT Spec]].
 
-[[def: Verifiable Trust Specification, DT Specs, DT Spec]]:
-~ see [DT Spec](https://github.com/verana-labs/verifiable-trust-spec).
+[[def: Verifiable Trust Specification, Verifiable Trust Spec, VT Specs, VT Spec]]:
+~ see [VT Spec](https://github.com/verana-labs/verifiable-trust-spec).
 
 [[def: decentralized web nodes, DWN, dwn]]:
 ~ Decentralized web nodes, see [DIF spec](https://identity.foundation/decentralized-web-node/spec/)
@@ -592,7 +592,7 @@ Key points:
 
 - When a participant is granted ISSUER permission for a specific schema, the Ecosystem (and optionally the issuer grantor) may define **issuance fees** per credential. In such cases, the ISSUER must pay these fees to have the right to issue and deliver the credential to the holder.
 
-- **Wallet User Agents** and **User Agents** that implement the [verifiable trust spec](https://verana-labs.github.io/verifiable-trust-spec/) must verify that the ISSUER paid, else they must refuse the credential. They **receive a share of the fees** as a reward.
+- **Wallet User Agents** and **User Agents** that implement the [[ref: VT spec]] must verify that the ISSUER paid, else they must refuse the credential. They **receive a share of the fees** as a reward.
 
 - A portion of the fees paid by ISSUER is allocated to **trust deposits**, reinforcing the Proof-of-Trust mechanism.
 
@@ -2748,7 +2748,7 @@ Issued <-- Issued: Store credential in wallet agent
 
 ```
 
-See [verifiable trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
+See [[ref: VT spec]].
 
 ##### [MOD-PERM-MSG-10-1] Create or Update Permission Session parameters
 
