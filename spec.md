@@ -2792,7 +2792,7 @@ wallet_agent:
 - if `wallet_agent_perm.type` is not ISSUER, abort.
 - if `wallet_agent_perm` is not a [[ref: valid permission]], abort.
 
-:::warn
+:::warning
 we might want to check that credential schema of agent and wallet_agent perms is an ECS of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.
 :::
 
@@ -3823,16 +3823,6 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `trust_deposit_rate`(number) (*mandatory*): 0.20.
 - `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.20.
 - `user_agent_reward_rate`(number) (*mandatory*): 0.20.
-
-## [DISTRIB] Fee Distribution
-
-*This section is non-normative.*
-
-Fee must be distributed as follows:
-
-- 45% to network validators
-- 45% to trust deposit
-- 10% to community pools
 
 ## References
 
