@@ -533,11 +533,11 @@ user <|-- browser : show result
 
 *This section is non-normative.*
 
-In a [[ref: VPR]], each participant's [[ref: account]] is associated with a [[ref: trust deposit]].
+In a [[ref: VPR]], each [[ref: account]] is associated with a [[ref: trust deposit]].
 
-This trust deposit is automatically funded through transactions involving **trust operations**, such as:
+This [[ref: trust deposit]] is automatically funded through transactions involving **trust operations**, such as:
 
-- Creating entities (e.g., ecosystem trust registries, credential schemas, DIDs in the DID Directory)
+- Creating trust-related objects int the VPR (e.g., ecosystem trust registries, credential schemas, DIDs in the DID Directory)
 - Paying trust fees between participants when enforcing ecosystem governance rules for services, credential issuance, or presentation...
 
 The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: VPR]], and it operates as follows:
@@ -545,7 +545,7 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 - The more you use the [[ref: VPR]], the more your [[ref: trust deposit]] grows.
 - Trust deposits **generate yield**: block execution fees are distributed not only to network validators, but also to **trust deposit holders**.
 - **Network-level penalties**: If a participant **violates the governance framework** of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit MAY be partially or fully slashed** by the [[ref: VPR]]'s governance authority.
-- **Ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a **grantor**, **issuer**, **verifier**, or **holder**,...) and **fails to comply** with that ecosystem’s governance framework, their **ecosystem-specific trust deposit CAN be slashed** by the corresponding **ecosystem governance authority**.
+- **Ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a **grantor**, **issuer**, **verifier**, or **holder**,...) and **fails to comply** with that ecosystem’s governance framework (EGF), their **ecosystem-specific trust deposit CAN be slashed** by the corresponding **ecosystem governance authority**.
 - A slashed deposit must be **refilled** to continue using the services that triggered the penalty.
 - When a participant stops using a service, the associated accumulated trust deposit can be **freed**.
 - Freed deposits can be **reused** in other services or **withdrawn**, however, withdrawals incur penalties, and **a portion of the withdrawn amount is burned**.
@@ -553,28 +553,28 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
 
-#### Entity creation
+#### Object creation
 
 *This section is non-normative.*
 
-Creating an instance of the following entities **requires payment of trust fees**, with a portion of the funds allocated to the participant's **trust deposit**, the remaining fees are treated as normal network fees and distributed using the normal fee distribution principle of the involved [[ref: VPR]]:
+Creating the following objects requires both a contribution to the [[ref: trust deposit]] and the payment of applicable [[ref: network fees]]:
 
-- **Trust Registries** (one-time fee)  
-- **Credential Schemas** (one-time fee)  
-- **DID Directory entries** (renewable subscription)
+- **Trust Registries**: requires `trust_registry_trust_deposit` trust units, plus associated [[ref: network fees]]  
+- **Credential Schemas**: requires `credential_schema_trust_deposit` trust units, plus associated [[ref: network fees]]  
+- **DID Directory entries**: requires `did_directory_trust_deposit` trust units, plus associated [[ref: network fees]]
 
-The following operations **only require network fees**:
+The following operations **only require payment of network fees** (no trust deposit is involved):
 
 - Updating the **governance framework documents** of an ecosystem trust registry  
-- Removing a **DID** from the DID Directory  
+- Removing a **DID** from the DID Directory
 
-#### Pay per execution of the validation process
+#### Validation process trust fees
 
 *This section is non-normative.*
 
 We've explained in the [Credential Schemas and Permissions](#credential-schemas-and-permissions) section above what is a validation process.
 
-The table below summarizes the possible validation processes:
+The table below summarizes the possible combinations of applicants and validators:
 
 | Payee → Payer ↓  | Ecosystem                      | Issuer Grantor                        | Verifier Grantor                    | Issuer                              | Verifier | Holder                                  |
 |------------------|-------------------------------------|---------------------------------------|-------------------------------------|-------------------------------------|----------|-----------------------------------------|
@@ -634,6 +634,7 @@ The **total fees** paid by the applicant consists of:
 - The validation [[ref: trust fees]] defined in the permission of the validator participating in the validation process, **plus**
 - An additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant’s trust deposit** when the validation process begins.
 - [[ref: network fees]] (not part of the escrowed amount).
+.
 
 ```plantuml
 
@@ -666,6 +667,7 @@ Upon completion of the validation process, **escrowed trust fees are distributed
 
 - A portion defined by `trust_deposit_rate` is allocated to the **validator’s trust deposit**.  
 - The remaining amount is **transferred directly to the validator’s wallet**.
+.
 
 ```plantuml
 
@@ -692,7 +694,7 @@ ig --> igtd: \t+200 TUs
 
 ```
 
-#### "Pay-Per" business models
+#### "Pay-Per" trust fees
 
 *This section is non-normative.*
 
@@ -768,7 +770,8 @@ If not, they **must reject** the issuance or verification request.
 Note: The **User Agent** and **Wallet User Agent** may refer to the same implementation.
 :::
 
-Distribution example for credential issuance, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
+Distribution example for the issuance by ISSUER #C of a credential, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
+.
 
 ```plantuml
 
@@ -836,7 +839,8 @@ issuera --> issuertd:  \t+3 TUs
 
 ```
 
-Distribution example for credential verification, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
+Distribution example for the verification by VERIFIER #E of a credential issued by ISSUER #C, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
+.
 
 ```plantuml
 
