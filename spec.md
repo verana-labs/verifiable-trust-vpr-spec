@@ -530,15 +530,15 @@ In a [[ref: VPR]], each participant's [[ref: account]] is associated with a [[re
 
 This trust deposit is automatically funded through transactions involving **trust operations**, such as:
 
-- Creating entities (e.g., trust registries, credential schemas, DIDs in the DID Directory)
+- Creating entities (e.g., ecosystem trust registries, credential schemas, DIDs in the DID Directory)
 - Paying trust fees between participants when enforcing ecosystem governance rules for services, credential issuance, or presentation...
 
 The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: VPR]], and it operates as follows:
 
 - The more you use the [[ref: VPR]], the more your [[ref: trust deposit]] grows.
 - Trust deposits **generate yield**: block execution fees are distributed not only to network validators, but also to **trust deposit holders**.
-- If a participant **violates the governance framework** of the [[ref: VPR]] or engages in fraudulent behavior, their trust deposit **MAY be partially or fully slashed** by the governance authority.
-- If a participant fails to comply with the governance rules of a specific ecosystem (as a grantor, issuer, verifier, or holder), their ecosystem-related deposit **MAY be slashed** by that ecosystem’s governance authority.
+- **Network-level penalties**: If a participant **violates the governance framework** of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit MAY be partially or fully slashed** by the [[ref: VPR]]'s governance authority.
+- **Ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a **grantor**, **issuer**, **verifier**, or **holder**,...) and **fails to comply** with that ecosystem’s governance framework, their **ecosystem-specific trust deposit CAN be slashed** by the corresponding **ecosystem governance authority**.
 - A slashed deposit must be **refilled** to continue using the services that triggered the penalty.
 - When a participant stops using a service, the associated accumulated trust deposit can be **freed**.
 - Freed deposits can be **reused** in other services or **withdrawn**, however, withdrawals incur penalties, and **a portion of the withdrawn amount is burned**.
@@ -565,6 +565,48 @@ The following operations **only require network fees**:
 
 *This section is non-normative.*
 
+Validation fees are defined at the permission level.
+
+```plantuml
+
+@startuml
+scale max 800 width
+ 
+package "Pay per candidate validation Fee Structure" as cs {
+
+    object "Ecosystem A - Credential Schema Root Permission" as tr #3fbdb6 {
+        did:example:ecosystemA
+        Grantor candidate validation cost: 1000 TUs
+    }
+    object "Issuer Grantor B - Credential Schema Permission" as ig {
+        did:example:igB
+        Issuer validation cost: 1000 TUs
+    }
+    object "Issuer C - Credential Schema Permission" as issuer #7677ed  {
+        did:example:iC
+        Holder validation cost: 10 TUs
+    }
+    object "Verifier Grantor D -  Credential Schema Permission" as vg {
+        did:example:vgD
+        Verifier validation cost: 200 TUs
+    }
+    object "Verifier E - Credential Schema Permission" as verifier #00b0f0 {
+        did:example:vE
+    }
+}
+
+
+
+tr --> ig : granted schema permission
+ig --> issuer : granted schema permission
+
+tr --> vg : granted schema permission
+vg --> verifier : granted schema permission
+
+@enduml
+
+```
+
 **Validation fees** are **partially allocated to specific participant(s)** involved in the validation process.  
 The remaining portion is either **credited to trust deposits** or **treated as standard network fees**, distributed according to the normal distribution rules of the [[ref: VPR]].
 
@@ -584,6 +626,50 @@ The remaining portion is either **credited to trust deposits** or **treated as s
 #### Pay per issued credential
 
 *This section is non-normative.*
+
+Pay per issued credential (as well as pay per verified credential) fees are defined at the permission level.
+
+```plantuml
+
+@startuml
+scale max 800 width
+ 
+package "Pay per issuance/verification Fee Structure" as cs {
+
+    object "Ecosystem A - Credential Schema Root Permission" as tr #3fbdb6 {
+        did:example:ecosystemA
+        issuance cost: 10 TUs
+        verification cost: 20 TUs
+    }
+    object "Issuer Grantor B - Credential Schema Permission" as ig {
+        did:example:igB
+        issuance cost: 5 TUs
+        verification cost: 5 TUs
+    }
+    object "Issuer C - Credential Schema Permission" as issuer #7677ed  {
+        did:example:iC
+        verification cost: 30 TUs
+    }
+    object "Verifier Grantor D - Credential Schema Permission" as vg {
+        did:example:vgD
+        verification cost: 2 TUs
+    }
+    object "Verifier E - Credential Schema Permission" as verifier #00b0f0 {
+        did:example:vE
+    }
+}
+
+
+
+tr --> ig : granted schema permission
+ig --> issuer : granted schema permission
+
+tr --> vg : granted schema permission
+vg --> verifier : granted schema permission
+
+@enduml
+
+```
 
 Pay-per-issued credential fees are partially allocated to specific participants, while the remaining portion is either credited to trust deposits or distributed according to the standard fee distribution rules of the [[ref: VPR]].
 
