@@ -227,7 +227,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A financial deposit that is used as a trust guarantee. For a given [[ref: controller]], its trust deposit is increased when running validation process (either as an [[ref: applicant]] or as a [[ref: validator]]), or when registering [[ref: DID]] in the DID directory.
 
 [[def: trust fees]]:
-~ Fees paid by an [[ref: applicant]] when running a validation process and/or when registering [[ref: DID]] in the DID directory.
+~ Fees paid by a [[ref: participant]] that are distributed to other [[ref: participants]].
+
+[[def: network fees]]:
+~ Fees paid by a [[ref: participant]] that are distributed to network validators and trust deposit holders.
 
 [[def: trust unit, trust units]]:
 ~ Price, in [[ref: denom]], of one unit of trust.
@@ -327,7 +330,7 @@ object "Trust Registry" as tra #3fbdb6 {
   - `OPEN`: Anyone can act as a Verifier
   - `ECOSYSTEM`: Permissions are granted directly by the [[ref: ecosystem]], the Trust Registry controller
   - `GRANTOR`: Permissions are granted by one or several `Verifier Grantor(s)` (Trust Registry operator(s) responsible for selecting verifiers for the [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
-- A **Permission Tree** that defines the roles and relationships involved in managing the schema’s lifecycle.
+- A **Permission Tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
 
 ```plantuml
 
@@ -436,56 +439,60 @@ Example of a Json Schema credential schema:
 }
 ```
 
-To participate in an **ecosystem**, an entity must have an [[ref: account]] in the [[ref: VPR]] and complete a **validation process**.
+To participate in an **ecosystem** and assume a role associated with a specific **credential schema**, an entity **must** have an [[ref: account]] in the [[ref: VPR]] and complete a **validation process** to obtain the required permission.
 
-A **validation process** takes place between:
+The **validation process** involves two parties:
 
-- an *applicant* — the entity requesting permission for a given credential schema, and  
-- a *validator* — an entity with delegated authority to validate applicants and grant them the necessary permissions.
+- The *applicant* — the entity requesting permission for a credential schema within the ecosystem.  
+- The *validator* — an entity that already holds permission for the same credential schema and has been **delegated authority** to validate applicants and issue permissions.
 
-Running a validation process **typically involves the payment of fees**.
-
-In contrast, receiving a **verifiable credential** from a given schema **does not usually require an [[ref: account]], since the purpose is to issue a credential, not to assign permissions within the [[ref: VPR]].
-
-However, if the **issuer intends to charge** the holder for issuing the credential, the holder (applicant) must have an account to complete the transaction.
-
-*Example of a candidate [[ref: issuer]] ([[ref: applicant]]) that would like to be granted an ISSUER permission by a [[ref: validator]] that has a ISSUER_GRANTOR permission:*
+Running a validation process **typically involves the payment of [[ref: trust fees]]**. [[ref: Trust fees]] to be paid by the *applicant* are defined in the permission of the *validator*:
 
 ```plantuml
+
+@startuml
 scale max 800 width
-actor "Applicant\n(issuer candidate)\nAccount" as ApplicantAccount 
-actor "Applicant\n(issuer candidate)\nVUA" as ApplicantBrowser 
+ 
+package "Pay per validation Fee Structure" as cs {
 
-actor "Validator\n(issuer grantor)\nVS" as ValidatorVS
-actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
+    object "Ecosystem A - Credential Schema Root Permission" as tr #3fbdb6 {
+        did:example:ecosystemA
+        Grantor candidate validation cost: 1000 TUs
+    }
+    object "Issuer Grantor B - Credential Schema Permission" as ig {
+        did:example:igB
+        Issuer validation cost: 1000 TUs
+    }
+    object "Issuer C - Credential Schema Permission" as issuer #7677ed  {
+        did:example:iC
+        Holder validation cost: 10 TUs
+    }
+    object "Verifier Grantor D -  Credential Schema Permission" as vg {
+        did:example:vgD
+        Verifier validation cost: 200 TUs
+    }
+    object "Verifier E - Credential Schema Permission" as verifier #00b0f0 {
+        did:example:vE
+    }
+}
 
-participant "Verifiable Public Registry" as VPR #3fbdb6
 
-ApplicantAccount --> VPR: create new validation with Validator 
-VPR <-- VPR: create validation entry.
-ApplicantAccount <-- VPR: validation entry created
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validation.perm\nby creating a DIDComm connection
-ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
-ApplicantBrowser --> ValidatorVS: I want to proceed with validation.id=...
-ValidatorVS --> ValidatorVS: load validation with id=...\nand verify the associated validation.perm is referring to me
-ApplicantBrowser <-- ValidatorVS: request proof of control\nof validation.applicant account (blind sign)
-ApplicantBrowser --> ValidatorVS: send blind sign proof of account
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof validation entry, I trust you.
-ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
-ApplicantBrowser --> ValidatorVS: send DID
-ValidatorVS --> ValidatorVS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be registered in the ISSUER permission (blind sign)
-ApplicantBrowser --> ValidatorVS: send blind sign proofs
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of this DID, I trust you.
-note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
-ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
-ApplicantBrowser --> ValidatorVS: perform requested tasks...
-note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorVS: Your are a legitimate candidate. I'll now create an ISSUER permission for your account and DID.
-ValidatorAccount --> VPR #3fbdb6: set validation.state to VALIDATED\ncreate permission(s) for applicant.
-VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify ISSUER permission created for your account and DID.\nDID can now issue credentials of this schema.
+
+tr --> ig : granted schema permission
+ig --> issuer : granted schema permission
+
+tr --> vg : granted schema permission
+vg --> verifier : granted schema permission
+
+@enduml
+
 ```
+
+:::note
+If an **issuer chooses to charge [[ref: trust fees]]** to a credential holder using the **tokenized payment system** of the [[ref: VPR]], a validation process must take place and the **holder (applicant) MUST have an [[ref: account]]** to complete the transaction.
+
+Alternatively, the issuer **MAY opt not to use the VPR validation process** for holder verification. In such cases, validation occurs **outside the VPR**, and the issuer is free to use **external payment methods** (e.g., credit card) to collect fees from the holder candidate.
+:::
 
 ### DID Directory Management
 
@@ -550,7 +557,7 @@ This system ensures that participation in the trust ecosystem is backed by econo
 
 *This section is non-normative.*
 
-Creating an instance of the following entities **requires payment of fees**, with a portion of the funds allocated to the participant's **trust deposit**, the remaining fees are treated as normal network fees and distributed using the normal distribution principle of a [[ref: VPR]]:
+Creating an instance of the following entities **requires payment of trust fees**, with a portion of the funds allocated to the participant's **trust deposit**, the remaining fees are treated as normal network fees and distributed using the normal fee distribution principle of the involved [[ref: VPR]]:
 
 - **Trust Registries** (one-time fee)  
 - **Credential Schemas** (one-time fee)  
@@ -565,50 +572,9 @@ The following operations **only require network fees**:
 
 *This section is non-normative.*
 
-Validation fees are defined at the permission level.
+We've explained in the [Credential Schemas and Permissions](#credential-schemas-and-permissions) section above what is a validation process.
 
-```plantuml
-
-@startuml
-scale max 800 width
- 
-package "Pay per candidate validation Fee Structure" as cs {
-
-    object "Ecosystem A - Credential Schema Root Permission" as tr #3fbdb6 {
-        did:example:ecosystemA
-        Grantor candidate validation cost: 1000 TUs
-    }
-    object "Issuer Grantor B - Credential Schema Permission" as ig {
-        did:example:igB
-        Issuer validation cost: 1000 TUs
-    }
-    object "Issuer C - Credential Schema Permission" as issuer #7677ed  {
-        did:example:iC
-        Holder validation cost: 10 TUs
-    }
-    object "Verifier Grantor D -  Credential Schema Permission" as vg {
-        did:example:vgD
-        Verifier validation cost: 200 TUs
-    }
-    object "Verifier E - Credential Schema Permission" as verifier #00b0f0 {
-        did:example:vE
-    }
-}
-
-
-
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
-
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
-
-@enduml
-
-```
-
-**Validation fees** are **partially allocated to specific participant(s)** involved in the validation process.  
-The remaining portion is either **credited to trust deposits** or **treated as standard network fees**, distributed according to the normal distribution rules of the [[ref: VPR]].
+The table below summarizes the possible validation processes:
 
 | Payee → Payer ↓  | Ecosystem                      | Issuer Grantor                        | Verifier Grantor                    | Issuer                              | Verifier | Holder                                  |
 |------------------|-------------------------------------|---------------------------------------|-------------------------------------|-------------------------------------|----------|-----------------------------------------|
@@ -623,38 +589,141 @@ The remaining portion is either **credited to trust deposits** or **treated as s
 - (3): if *issuer mode* is set to ECOSYSTEM.
 - (4): if *verifier mode* is set to ECOSYSTEM.
 
-#### Pay per issued credential
+Validation process is started by the applicant.
+
+*Example of a candidate [[ref: issuer]] ([[ref: applicant]]) that would like to be granted an ISSUER permission for a credential schema of an ecosystem, by a [[ref: validator]] that has a ISSUER_GRANTOR permission:*
+
+```plantuml
+scale max 800 width
+actor "Applicant\n(issuer candidate)\nAccount" as ApplicantAccount 
+actor "Applicant\n(issuer candidate)\nVUA" as ApplicantBrowser 
+
+actor "Validator\n(issuer grantor)\nVS" as ValidatorVS
+actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
+
+participant "Verifiable Public Registry" as VPR #3fbdb6
+
+ApplicantAccount --> VPR: create new validation with Validator 
+VPR <-- VPR: create validation entry.
+ApplicantAccount <-- VPR: validation entry created
+ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validation.perm\nby creating a DIDComm connection
+ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
+ApplicantBrowser --> ValidatorVS: I want to proceed with validation.id=...
+ValidatorVS --> ValidatorVS: load validation with id=...\nand verify the associated validation.perm is referring to me
+ApplicantBrowser <-- ValidatorVS: request proof of control\nof validation.applicant account (blind sign)
+ApplicantBrowser --> ValidatorVS: send blind sign proof of account
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof validation entry, I trust you.
+ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
+ApplicantBrowser --> ValidatorVS: send DID
+ValidatorVS --> ValidatorVS: resolve DID and get pub keys
+ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be registered in the ISSUER permission (blind sign)
+ApplicantBrowser --> ValidatorVS: send blind sign proofs
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of this DID, I trust you.
+note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
+ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
+ApplicantBrowser --> ValidatorVS: perform requested tasks...
+note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
+ApplicantBrowser <-- ValidatorVS: Your are a legitimate candidate. I'll now create an ISSUER permission for your account and DID.
+ValidatorAccount --> VPR #3fbdb6: set validation.state to VALIDATED\ncreate permission(s) for applicant.
+VPR --> ValidatorAccount: Receive trust fees.
+ApplicantBrowser <-- ValidatorVS: notify ISSUER permission created for your account and DID.\nDID can now issue credentials of this schema.
+```
+
+The **total fees** paid by the applicant consists of:
+
+- The validation [[ref: trust fees]] defined in the permission of the validator participating in the validation process, **plus**
+- An additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant’s trust deposit** when the validation process begins.
+- [[ref: network fees]] (not part of the escrowed amount).
+
+```plantuml
+
+@startuml
+scale max 1200 width
+ 
+
+
+package "Applicant" as issuer #7677ed {
+    object "A Account" as issuera {
+         \t-1200 TUs
+    }
+    object "A Trust Deposit" as issuertd {
+         \t+200 TUs
+    }
+
+}
+
+object "Escrow Account" as escrow
+
+issuera -r-> escrow: \t+1000 TUs
+issuera --> issuertd:  \t+200 TUs
+
+
+@enduml
+
+```
+
+Upon completion of the validation process, **escrowed trust fees are distributed to the validator** as follows:
+
+- A portion defined by `trust_deposit_rate` is allocated to the **validator’s trust deposit**.  
+- The remaining amount is **transferred directly to the validator’s wallet**.
+
+```plantuml
+
+@startuml
+scale max 1200 width
+
+package "Issuer Grantor B" as ig {
+    object "IG Account" as iga {
+        \t+800 TUs
+    }
+    object "IG Trust Deposit" as igtd {
+        \t+200 TUs
+    }
+}
+object "Escrow Account" as escrow
+
+
+
+escrow -r-> ig: \t+1000 TUs \t\t\t\t\t
+ig --> iga: \t+800 TUs
+ig --> igtd: \t+200 TUs
+
+@enduml
+
+```
+
+#### "Pay-Per" business models
 
 *This section is non-normative.*
 
-Pay per issued credential (as well as pay per verified credential) fees are defined at the permission level.
+**Pay-per-issuance** and **pay-per-verification** [[ref: trust fees]] are defined **at the permission level** for each role within the ecosystem.
 
 ```plantuml
 
 @startuml
 scale max 800 width
  
-package "Pay per issuance/verification Fee Structure" as cs {
+package "Ecosystem #A - Credential Schema #1" as cs {
 
-    object "Ecosystem A - Credential Schema Root Permission" as tr #3fbdb6 {
+    object "Ecosystem #A - Credential Schema #1 Root Permission" as tr #3fbdb6 {
         did:example:ecosystemA
         issuance cost: 10 TUs
         verification cost: 20 TUs
     }
-    object "Issuer Grantor B - Credential Schema Permission" as ig {
+    object "Issuer Grantor #B - Credential Schema #1 Permission" as ig {
         did:example:igB
         issuance cost: 5 TUs
         verification cost: 5 TUs
     }
-    object "Issuer C - Credential Schema Permission" as issuer #7677ed  {
+    object "Issuer #C - Credential Schema #1 Permission" as issuer #7677ed  {
         did:example:iC
         verification cost: 30 TUs
     }
-    object "Verifier Grantor D - Credential Schema Permission" as vg {
+    object "Verifier Grantor #D - Credential #1 Schema Permission" as vg {
         did:example:vgD
         verification cost: 2 TUs
     }
-    object "Verifier E - Credential Schema Permission" as verifier #00b0f0 {
+    object "Verifier #E - Credential Schema #1 Permission" as verifier #00b0f0 {
         did:example:vE
     }
 }
@@ -671,17 +740,35 @@ vg --> verifier : granted schema permission
 
 ```
 
-Pay-per-issued credential fees are partially allocated to specific participants, while the remaining portion is either credited to trust deposits or distributed according to the standard fee distribution rules of the [[ref: VPR]].
+Entities acting as **issuers** or **verifiers** for a given credential schema **may be required to pay trust fees** based on the schema's configuration and permission tree.
 
-Key points:
+If trust fee payment is required, the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**.
 
-- When a participant is granted ISSUER permission for a specific schema, the ecosystem (and optionally the issuer grantor) may define **issuance fees** per credential. In such cases, the ISSUER must pay these fees to have the right to issue and deliver the credential to the holder.
+Key Points for "Pay-Per" Business Models
 
-- **Wallet User Agents** and **User Agents** that implement the [[ref: VT spec]] must verify that the ISSUER paid, else they must refuse the credential. They **receive a share of the fees** as a reward.
+- For a given credential schema, **ecosystem** and their participants may define **pay-per-issuance** (or **pay-per-verification**) [[ref: trust fees]] in their respective permissions.
 
-- A portion of the fees paid by ISSUER is allocated to **trust deposits**, reinforcing the Proof-of-Trust mechanism.
+- In such cases, a participant ISSUER (or VERIFIER) **must pay**:
+  - The corresponding **issuance** (or **verification**) trust fees for each involved permission;
+  - An additional amount equal to the `trust_deposit_rate` of the calculated trust fees, allocated to the **applicant’s trust deposit**;
+  - An amount equal to `wallet_user_agent_reward_rate` of the calculated trust fees, used to **reward the Wallet User Agent**;
+  - An amount equal to `user_agent_reward_rate` of the calculated trust fees, used to **reward the User Agent**.
 
-*Example:*
+Fee Distribution Model
+
+Trust fees are **consistently distributed** across participants:
+
+- A portion defined by `trust_deposit_rate` is allocated to the **participant’s trust deposit**.  
+- The remaining portion is **transferred directly to the participant’s wallet**.
+
+:::note
+**Wallet User Agents** and **User Agents** that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment.  
+If not, they **must reject** the issuance or verification request.
+
+Note: The **User Agent** and **Wallet User Agent** may refer to the same implementation.
+:::
+
+Distribution example for credential issuance, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
 
 ```plantuml
 
@@ -689,7 +776,7 @@ Key points:
 scale max 800 width
  
 
-package "ecosystem" as tr #3fbdb6 {
+package "Ecosystem #A" as tr #3fbdb6 {
     object "E Account" as tra {
          \t+8 TUs
     }
@@ -698,7 +785,7 @@ package "ecosystem" as tr #3fbdb6 {
     }
 }
 
-package "Issuer Grantor" as ig {
+package "Issuer Grantor #B" as ig {
     object "IG Account" as iga {
         \t+4 TUs
     }
@@ -706,7 +793,7 @@ package "Issuer Grantor" as ig {
         \t+1 TUs
     }
 }
-package "Issuer" as issuer #7677ed {
+package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
          \t-21 TUs
     }
@@ -735,9 +822,6 @@ package "Wallet User Agent" as wua {
 
 }
 
-
-
-
 issuera -r-> tr: \t+10 TUs
 
 issuera -r-> ig: \t+5 TUs
@@ -752,21 +836,7 @@ issuera --> issuertd:  \t+3 TUs
 
 ```
 
-#### Pay per verified credential
-
-*This section is non-normative.*
-
-Pay-per-verified credential fees are partially allocated to specific participants, while the remaining portion is either credited to trust deposits or distributed according to the standard distribution rules of the [[ref: VPR]].
-
-Key points:
-
-- When a participant is granted VERIFIER permission for a specific schema, the ecosystem, the involved issuer grantor, issuer, and verifier grantor may define **verification fees** for each verified credential. In such cases, the **VERIFIER must pay these fees** to be authorized to request the **presentation** of a credential issued by a specific issuer - from the holder.
-
-- If they are [[ref: verifiable user agents]], the **Wallet User Agent** and the **User Agent** involved in the interaction **receive a share of the fees** as a reward.
-
-- A portion of the fees is also allocated to **trust deposits**, supporting the Proof-of-Trust mechanism.
-
-*Example:*
+Distribution example for credential verification, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
 
 ```plantuml
 
@@ -774,7 +844,7 @@ Key points:
 scale max 800 width
  
 
-package "ecosystem" as tr #3fbdb6 {
+package "Ecosystem #A" as tr #3fbdb6 {
     object "E Account" as tra {
          \t+16 TUs
     }
@@ -783,7 +853,7 @@ package "ecosystem" as tr #3fbdb6 {
     }
 }
 
-package "Issuer Grantor" as ig {
+package "Issuer Grantor #B" as ig {
     object "IG Account" as iga {
         \t+4 TUs
     }
@@ -791,7 +861,7 @@ package "Issuer Grantor" as ig {
         \t+1 TUs
     }
 }
-package "Issuer" as issuer #7677ed {
+package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
          \t+24 TUs
     }
@@ -800,7 +870,7 @@ package "Issuer" as issuer #7677ed {
     }
 
 }
-package "Verifier Grantor" as vg {
+package "Verifier Grantor #D" as vg {
     object "VG Account" as vga {
         \t+1.6 TUs
     }
@@ -809,7 +879,7 @@ package "Verifier Grantor" as vg {
     }
 
 }
-package "Verifier" as verifier #00b0f0 {
+package "Verifier #E" as verifier #00b0f0 {
     object "V Account" as verifiera {
         \t-79.8 TUs
     }
@@ -836,8 +906,6 @@ package "Wallet User Agent" as wua {
     }
 
 }
-
-
 
 
 verifiera -r-> tr: \t+20 TUs
@@ -3907,8 +3975,8 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `trust_deposit_reclaim_burn_rate` (number) (*mandatory*): 0.60.
 - `trust_deposit_share_value`(number) (*mandatory*): 1.
 - `trust_deposit_rate`(number) (*mandatory*): 0.20.
-- `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.20.
-- `user_agent_reward_rate`(number) (*mandatory*): 0.20.
+- `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.10.
+- `user_agent_reward_rate`(number) (*mandatory*): 0.10.
 
 ## References
 
