@@ -129,10 +129,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ## Terminology
 
 [[def: account, accounts]]:
-~ A [[ref: verifiable public registry]] account. An account has one or more controller, that can be a user, groups...
+~ A [[ref: verifiable public registry]] account.
 
 [[def: applicant, applicants]]:
-~ A [[ref: controller]] that starts a [[ref: validation process]].
+~ A [[ref: account]] that starts a [[ref: validation process]].
 
 [[def: controller, controllers]]:
 ~ An [[ref: account]] which is the controller of a specific resource in an [[ref: VPR]].
@@ -170,10 +170,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The governance authority (GA) of an [[ref: ecosystem]].
 
 [[def: entity, entities]]:
-~ An [[ref: account]], a [[ref: group]], or the [[ref: governance authority]].
-
-[[def: essential credential schema, essential credential schemas]]:
-~ Default [[ref: credential schema]], created at genesis of an [[ref: VPR]], that provide the basis for a trust layer to exist in the ecosystem so that [[ref: VUA]] can generate a [[ref: proof of trust]].
+~ An [[ref: account]] controller.
 
 [[def: estimated transaction fees]]:
 ~ Estimated fees required, in [[ref: denom]], that is passed when execute a [[ref: transaction]] in an [[ref: VPR]]. Usually, a estimated transaction fees are always slightly greater than [[ref: transaction fees]], to make sure the execution of the transaction will not be aborted for an out-of-gas situation. Unused gas is refunded to account.
@@ -183,9 +180,6 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: governance authority, GA]]:
 ~ The governance authority (GA) of a [[ref: VPR]].
-
-[[def: group]]:
-~ A group.
 
 [[def: holder, holders]]:
 ~ A role an entity might perform by possessing one or more verifiable credentials and generating verifiable presentations from them. A holder is often, but not always, a [[ref: subject]] of the verifiable credentials they are holding. Holders store their credentials in credential repositories. Example holders include organizations, persons, things.
@@ -208,9 +202,6 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: participant, participants]]:
 ~ An entity that is recognized by one or several ecosystem(s) in a [[ref: VPR]].
 
-[[def: proof of trust]]:
-~ Visual representation using [[ref: essential credential schemas]] of a [[ref: trust resolution]] process of a [[ref: VS]], for identifying the [[ref: VS]], its owner, and the [[ref: issuer]] of the verifiable credential of its owner.
-
 [[def: query]]:
 ~ A read-only action that perform some reading in an [[ref: VPR]] and returns value.
 
@@ -226,10 +217,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: trust deposit, trust deposits]]:
 ~ A financial deposit that is used as a trust guarantee. For a given [[ref: controller]], its trust deposit is increased when running validation process (either as an [[ref: applicant]] or as a [[ref: validator]]), or when registering [[ref: DID]] in the DID directory.
 
-[[def: trust fees]]:
+[[def: trust fee, trust fees]]:
 ~ Fees paid by a [[ref: participant]] that are distributed to other [[ref: participants]].
 
-[[def: network fees]]:
+[[def: network fee, network fees]]:
 ~ Fees paid by a [[ref: participant]] that are distributed to network validators and trust deposit holders.
 
 [[def: trust unit, trust units]]:
@@ -237,9 +228,6 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def:trust registry, trust registries]]
 ~ An approved list of [[ref: issuers]] and [[ref: verifiers]] that are authorized to issue/verify certain credentials in an ecosystem.
-
-[[def: trust resolution]]:
-~ Process run by, for example a [[ref: VUA]] or a [[ref: VS]], which purpose is to recursively resolve [[ref: DID]] by digging into [[ref: DID Documents]] and look for [[ref: linked-vp]] entries and their [[ref: issuer]] [[ref: DIDs]], and trust-registry entries to gather whether the service provided by the [[ref: DID]] is trustable (and legitimate), or not.
 
 [[def: URI, URIs]]
 ~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
@@ -257,7 +245,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ a public, normally decentralized, ledger-based network, which provides: trust registry features, that can be used by all its [[ref: participants]]: create trust registries, for each trust registry, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
 
 [[def: verifiable service, verifiable services, VS, VSs]]:
-~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable [[ref: proof of trust]]. See [[ref: VT Spec]].
+~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
 
 [[def: verifiable user agent, verifiable user agents, VUA, VUAs]]:
 ~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: VT Spec]].
@@ -286,13 +274,13 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 - All JSON content MUST use Snake Case for object, attribute... names.
 - Object attributes and Json Content in general can be returned in any order.
 
-## Introduction to the Verifiable Public Registry (VPR)
+## Features of a Verifiable Public Registry (VPR)
 
 ### Trust Registry Management
 
 *This section is non-normative.*
 
-In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each **trust registry** must provide, at a minimum:
+In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each trust registry must provide, at a minimum:
 
 - an ecosystem controlled **resolvable DID**
 - One or more **Ecosystem Governance Framework** document(s)
@@ -319,7 +307,7 @@ object "Trust Registry" as tra #3fbdb6 {
 
 *This section is non-normative.*
 
-**Credential schemas** are created and managed by **trust registry** controller ([[ref: ecosystems]]). Each Credential Schema includes, at a minimum:
+**Credential schemas** are created and managed by trust registry controller ([[ref: ecosystems]]). Each Credential Schema includes, at a minimum:
 
 - A **JSON Schema** that defines the structure of the corresponding **verifiable credential**
 - A **PermissionManagementMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
@@ -538,7 +526,7 @@ This [[ref: trust deposit]] is automatically funded through transactions involvi
 - Creating trust-related objects int the VPR (e.g., ecosystem trust registries, credential schemas, DIDs in the DID Directory)
 - Paying trust fees between participants when enforcing ecosystem governance rules for services, credential issuance, or presentation...
 
-The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: VPR]], and it operates as follows:
+The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
 
 - The more you use the [[ref: VPR]], the more your [[ref: trust deposit]] grows.
 - Trust deposits **generate yield**: block execution fees are distributed not only to network validators, but also to **trust deposit holders**.
