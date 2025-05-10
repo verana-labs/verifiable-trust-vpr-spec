@@ -696,7 +696,7 @@ ig --> igtd: \t+200 TUs
 
 *This section is non-normative.*
 
-**Pay-per-issued** and **pay-per-verified** credential [[ref: trust fees]] are defined **at the permission level** for each role within the ecosystem.
+**Pay-per-issuance** and **pay-per-verification** [[ref: trust fees]] are defined **at the permission level** for each role within the ecosystem.
 
 ```plantuml
 
@@ -742,14 +742,14 @@ vg --> verifier : granted schema permission
 
 Entities acting as **issuers** or **verifiers** for a given credential schema **may be required to pay trust fees** based on the schema's configuration and permission tree.
 
-If trust fee payment is required, the entity **MUmustST execute a transaction** in the [[ref: VPR]] to pay the appropriate fees **before issuing or verifying a credential**.
+If trust fee payment is required, the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**.
 
 Key Points for "Pay-Per" Business Models
 
-- When a participant is granted **ISSUER** (or **VERIFIER**) permission for a credential schema, the **ecosystem**, and optionally the **issuer grantor** (and/or **verifier grantor**) may define **pay-per-issued** (or **pay-per-verified**) credential [[ref: trust fees]] in their permission.
+- For a given credential schema, **ecosystem** and their participants may define **pay-per-issuance** (or **pay-per-verification**) [[ref: trust fees]] in their respective permissions.
 
-- In such cases, the ISSUER (or VERIFIER) **MUST pay**:
-  - The defined **issuance** (or **verification**) trust fees;
+- In such cases, a participant ISSUER (or VERIFIER) **must pay**:
+  - The corresponding **issuance** (or **verification**) trust fees for each involved permission;
   - An additional amount equal to the `trust_deposit_rate` of the calculated trust fees, allocated to the **applicant’s trust deposit**;
   - An amount equal to `wallet_user_agent_reward_rate` of the calculated trust fees, used to **reward the Wallet User Agent**;
   - An amount equal to `user_agent_reward_rate` of the calculated trust fees, used to **reward the User Agent**.
@@ -768,7 +768,7 @@ If not, they **must reject** the issuance or verification request.
 Note: The **User Agent** and **Wallet User Agent** may refer to the same implementation.
 :::
 
-*Distribution example for credential issuance:*
+Distribution example for credential issuance, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
 
 ```plantuml
 
@@ -776,7 +776,7 @@ Note: The **User Agent** and **Wallet User Agent** may refer to the same impleme
 scale max 800 width
  
 
-package "ecosystem" as tr #3fbdb6 {
+package "Ecosystem #A" as tr #3fbdb6 {
     object "E Account" as tra {
          \t+8 TUs
     }
@@ -785,7 +785,7 @@ package "ecosystem" as tr #3fbdb6 {
     }
 }
 
-package "Issuer Grantor" as ig {
+package "Issuer Grantor #B" as ig {
     object "IG Account" as iga {
         \t+4 TUs
     }
@@ -793,7 +793,7 @@ package "Issuer Grantor" as ig {
         \t+1 TUs
     }
 }
-package "Issuer" as issuer #7677ed {
+package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
          \t-21 TUs
     }
@@ -836,7 +836,7 @@ issuera --> issuertd:  \t+3 TUs
 
 ```
 
-*Distribution example for credential verification:*
+Distribution example for credential verification, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
 
 ```plantuml
 
@@ -844,7 +844,7 @@ issuera --> issuertd:  \t+3 TUs
 scale max 800 width
  
 
-package "ecosystem" as tr #3fbdb6 {
+package "Ecosystem #A" as tr #3fbdb6 {
     object "E Account" as tra {
          \t+16 TUs
     }
@@ -853,7 +853,7 @@ package "ecosystem" as tr #3fbdb6 {
     }
 }
 
-package "Issuer Grantor" as ig {
+package "Issuer Grantor #B" as ig {
     object "IG Account" as iga {
         \t+4 TUs
     }
@@ -861,7 +861,7 @@ package "Issuer Grantor" as ig {
         \t+1 TUs
     }
 }
-package "Issuer" as issuer #7677ed {
+package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
          \t+24 TUs
     }
@@ -870,7 +870,7 @@ package "Issuer" as issuer #7677ed {
     }
 
 }
-package "Verifier Grantor" as vg {
+package "Verifier Grantor #D" as vg {
     object "VG Account" as vga {
         \t+1.6 TUs
     }
@@ -879,7 +879,7 @@ package "Verifier Grantor" as vg {
     }
 
 }
-package "Verifier" as verifier #00b0f0 {
+package "Verifier #E" as verifier #00b0f0 {
     object "V Account" as verifiera {
         \t-79.8 TUs
     }
@@ -906,8 +906,6 @@ package "Wallet User Agent" as wua {
     }
 
 }
-
-
 
 
 verifiera -r-> tr: \t+20 TUs
