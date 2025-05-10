@@ -443,10 +443,10 @@ To participate in an **ecosystem** and assume a role associated with a specific 
 
 The **validation process** involves two parties:
 
-- The *applicant* — the entity requesting permission for a credential schema within the ecosystem.  
-- The *validator* — an entity that already holds permission for the same credential schema and has been **delegated authority** to validate applicants and issue permissions.
+- The [[ref: applicant]] — the entity requesting permission for a credential schema within the ecosystem.  
+- The [[ref: validator]] — an entity that already holds permission for the same credential schema and has been **delegated authority** to validate applicants and issue permissions.
 
-Running a validation process **typically involves the payment of [[ref: trust fees]]**. [[ref: Trust fees]] to be paid by the *applicant* are defined in the permission of the *validator*:
+Running a validation process **typically involves the payment of [[ref: trust fees]]**. [[ref: Trust fee]] amount to be paid by the [[ref: applicant]] is defined in the permission of the [[ref: validator]]:
 
 ```plantuml
 
@@ -457,26 +457,24 @@ package "Pay per validation Fee Structure" as cs {
 
     object "Ecosystem A - Credential Schema Root Permission" as tr #3fbdb6 {
         did:example:ecosystemA
-        Grantor candidate validation cost: 1000 TUs
+        Grantor applicant validation cost: 1000 TUs
     }
     object "Issuer Grantor B - Credential Schema Permission" as ig {
         did:example:igB
-        Issuer validation cost: 1000 TUs
+        Issuer applicant validation cost: 1000 TUs
     }
     object "Issuer C - Credential Schema Permission" as issuer #7677ed  {
         did:example:iC
-        Holder validation cost: 10 TUs
+        Holder applicant validation cost: 10 TUs
     }
     object "Verifier Grantor D -  Credential Schema Permission" as vg {
         did:example:vgD
-        Verifier validation cost: 200 TUs
+        Verifier applicant validation cost: 200 TUs
     }
     object "Verifier E - Credential Schema Permission" as verifier #00b0f0 {
         did:example:vE
     }
 }
-
-
 
 tr --> ig : granted schema permission
 ig --> issuer : granted schema permission
@@ -489,9 +487,9 @@ vg --> verifier : granted schema permission
 ```
 
 :::note
-If an **issuer chooses to charge [[ref: trust fees]]** to a credential holder using the **tokenized payment system** of the [[ref: VPR]], a validation process must take place and the **holder (applicant) MUST have an [[ref: account]]** to complete the transaction.
+If an issuer chooses to charge [[ref: trust fees]] to a credential holder using the tokenized payment system of the [[ref: VPR]], a validation process must take place and the holder (applicant) MUST have an [[ref: account]] to complete the transaction.
 
-Alternatively, the issuer **MAY opt not to use the VPR validation process** for holder verification. In such cases, validation occurs **outside the VPR**, and the issuer is free to use **external payment methods** (e.g., credit card) to collect fees from the holder candidate.
+Alternatively, the issuer may opt not to use the VPR validation process for holder verification. In such cases, validation occurs outside the VPR, and the issuer is free to use external payment methods (e.g., credit card) to collect fees from the holder candidate.
 :::
 
 ### DID Directory Management
