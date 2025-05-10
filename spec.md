@@ -544,11 +544,11 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 
 - The more you use the [[ref: VPR]], the more your [[ref: trust deposit]] grows.
 - Trust deposits **generate yield**: block execution fees are distributed not only to network validators, but also to **trust deposit holders**.
-- **Network-level penalties**: If a participant **violates the governance framework** of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit MAY be partially or fully slashed** by the [[ref: VPR]]'s governance authority.
-- **Ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a **grantor**, **issuer**, **verifier**, or **holder**,...) and **fails to comply** with that ecosystem’s governance framework (EGF), their **ecosystem-specific trust deposit CAN be slashed** by the corresponding **ecosystem governance authority**.
+- **Network-level penalties**: If a participant **violates the governance framework** of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority.
+- **Ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a **grantor**, **issuer**, **verifier**, or **holder**,...) and **fails to comply** with that ecosystem’s governance framework (EGF), their **ecosystem-specific trust deposit can be slashed** by the corresponding **ecosystem governance authority**.
 - A slashed deposit must be **refilled** to continue using the services that triggered the penalty.
-- When a participant stops using a service, the associated accumulated trust deposit can be **freed**.
-- Freed deposits can be **reused** in other services or **withdrawn**, however, withdrawals incur penalties, and **a portion of the withdrawn amount is burned**.
+- When a participant **withdraws from an ecosystem**, the associated accumulated trust deposit **may be released**.
+- Released deposits can be **reused** in other services or **withdrawn**, however, withdrawals incur penalties, and **a portion of the withdrawn amount is burned**.
 - Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size.
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
@@ -634,7 +634,6 @@ The **total fees** paid by the applicant consists of:
 - The validation [[ref: trust fees]] defined in the permission of the validator participating in the validation process, **plus**
 - An additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant’s trust deposit** when the validation process begins.
 - [[ref: network fees]] (not part of the escrowed amount).
-.
 
 ```plantuml
 
@@ -667,7 +666,6 @@ Upon completion of the validation process, **escrowed trust fees are distributed
 
 - A portion defined by `trust_deposit_rate` is allocated to the **validator’s trust deposit**.  
 - The remaining amount is **transferred directly to the validator’s wallet**.
-.
 
 ```plantuml
 
@@ -771,7 +769,6 @@ Note: The **User Agent** and **Wallet User Agent** may refer to the same impleme
 :::
 
 Distribution example for the issuance by ISSUER #C of a credential, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
-.
 
 ```plantuml
 
@@ -840,7 +837,6 @@ issuera --> issuertd:  \t+3 TUs
 ```
 
 Distribution example for the verification by VERIFIER #E of a credential issued by ISSUER #C, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
-.
 
 ```plantuml
 
