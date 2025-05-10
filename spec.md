@@ -286,16 +286,16 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 - All JSON content MUST use Snake Case for object, attribute... names.
 - Object attributes and Json Content in general can be returned in any order.
 
-## High Level VPR Features
+## Introduction to the Verifiable Public Registry (VPR)
 
 ### Trust Registry Management
 
 *This section is non-normative.*
 
-In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each **Trust Registry** must provide, at a minimum:
+In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each **trust registry** must provide, at a minimum:
 
 - an ecosystem controlled **resolvable DID**
-- One or more **Governance Framework** document(s)
+- One or more **Ecosystem Governance Framework** document(s)
 - Zero or more **Credential Schemas**
 
 The **Verifiable Public Registry (VPR)** is agnostic to the specific **DID methods** used. Trust resolution is performed externally, outside the VPR, allowing flexibility and interoperability across ecosystems.
@@ -323,13 +323,13 @@ object "Trust Registry" as tra #3fbdb6 {
 
 - A **JSON Schema** that defines the structure of the corresponding **verifiable credential**
 - A **PermissionManagementMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
-  - `OPEN`: Anyone can become an Issuer
-  - `ECOSYSTEM`: Permissions are granted directly by the [[ref: ecosystem]], the Trust Registry controller
-  - `GRANTOR`: Permissions are granted by one or several `Issuer Grantor(s)` (Trust Registry operator(s) responsible for selecting issuers for the [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
+  - `OPEN`: Anyone can issue credentials of this schema
+  - `ECOSYSTEM`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the trust registry controller
+  - `GRANTOR`: `ISSUER` permissions are granted by one or several [[ref: issuer grantor]](s) (trust registry operator(s) responsible for selecting issuers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
 - A **PermissionManagementMode** for **verification policy**, which determines how `VERIFIER` permissions are granted. Modes include:
-  - `OPEN`: Anyone can act as a Verifier
-  - `ECOSYSTEM`: Permissions are granted directly by the [[ref: ecosystem]], the Trust Registry controller
-  - `GRANTOR`: Permissions are granted by one or several `Verifier Grantor(s)` (Trust Registry operator(s) responsible for selecting verifiers for the [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
+  - `OPEN`: Anyone can act as a verifier for this schema
+  - `ECOSYSTEM`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Trust Registry controller
+  - `GRANTOR`: `VERIFIER` permissions are granted by one or several [[ref: verifier grantor]](s) (trust registry operator(s) responsible for selecting verifiers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
 - A **Permission Tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
 
 ```plantuml
