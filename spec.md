@@ -934,6 +934,14 @@ A [[ref: governance framework]] must define the governance rules that apply to a
 
 A designated [[ref: governance authority]] is responsible for **enforcing these rules** and, when necessary, **applying financial sanctions** to participants who violate the rules.
 
+:::note
+**Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: VPR]] [[ref: governance framework]].
+
+While the **VPR governance framework** defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each **ecosystem** must define its own **EGF** to govern roles, permissions, credential policies, and compliance within its specific domain.
+
+This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.
+:::
+
 ## Data model
 
 For simplicity, the data model is presented using an **object-relational structure**. However, this representation may not be optimal for all implementation scenarios.
