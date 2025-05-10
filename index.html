@@ -90,7 +90,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:trust-registry">trust registry</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
-<div id="note-20" class="notice note"><a class="notice-link" href="#note-20">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-77" class="notice note"><a class="notice-link" href="#note-77">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h3 id="what-is-a-trust-registry"><a class="toc-anchor" href="#what-is-a-trust-registry" >§</a> What is a Trust Registry?</h3>
 <p><em>This section is non-normative.</em></p>
@@ -361,7 +361,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 </ul>
 <p>Running a validation process <strong>typically involves the payment of <a class="term-reference" href="#term:trust-fees">trust fees</a></strong>. <a class="term-reference" href="#term:trust-fees">Trust fees</a> to be paid by the <em>applicant</em> are defined in the permission of the <em>validator</em>:</p>
 <img src="https://www.plantuml.com/plantuml/svg/dPDBRy8m383l-HKMd96oJOAfXudd7ZSqjjtTn9HiVIb9Ez34VrzeQGGRPMY-j7ASBv-TTcWiQbiaCHlwDoCm9aXm3RUSmwUITiM0vIW-C2Bep743EMaeCLOIhSfIk2U2XTM5i8Mc3g01OU2BCN2HXUyaB7Hc8ZCROoc14VHWeabIQXN6i10hIX2Uiyp2d7IYZ77CYc8rT6-MeGpxZWRxa4e6jCOaZocW1ZhoomyQKvjf49ZAdHyTYhfo6y0LTtszl9fgp_R8yicOmlNMGCOdLNzOggZ5JaLZdz-3_-4okSYXhkqE-eC1IMWJclZqOnRBqpujDc-arL8Tp6RglFuMAzk6KqPJd_ViNphNhTFnUsQNpATighkSXtp9swHc-vEsp8Nx_7gzkztz1X3jkdQJDJK-ztZcbgkg-WRELJR0yZomh85U-InoIAciVj_w-Gq0" alt="uml diagram">
-<div id="note-21" class="notice note"><a class="notice-link" href="#note-21">NOTE</a><p>If an <strong>issuer chooses to charge <a class="term-reference" href="#term:trust-fees">trust fees</a></strong> to a credential holder using the <strong>tokenized payment system</strong> of the <a class="term-reference" href="#term:vpr">VPR</a>, a validation process must take place and the <strong>holder (applicant) MUST have an <a class="term-reference" href="#term:account">account</a></strong> to complete the transaction.</p>
+<div id="note-78" class="notice note"><a class="notice-link" href="#note-78">NOTE</a><p>If an <strong>issuer chooses to charge <a class="term-reference" href="#term:trust-fees">trust fees</a></strong> to a credential holder using the <strong>tokenized payment system</strong> of the <a class="term-reference" href="#term:vpr">VPR</a>, a validation process must take place and the <strong>holder (applicant) MUST have an <a class="term-reference" href="#term:account">account</a></strong> to complete the transaction.</p>
 <p>Alternatively, the issuer <strong>MAY opt not to use the VPR validation process</strong> for holder verification. In such cases, validation occurs <strong>outside the VPR</strong>, and the issuer is free to use <strong>external payment methods</strong> (e.g., credit card) to collect fees from the holder candidate.</p>
 </div>
 <h3 id="did-directory-management"><a class="toc-anchor" href="#did-directory-management" >§</a> DID Directory Management</h3>
@@ -374,10 +374,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <h3 id="business-models"><a class="toc-anchor" href="#business-models" >§</a> Business models</h3>
 <h4 id="trust-deposit"><a class="toc-anchor" href="#trust-deposit" >§</a> Trust Deposit</h4>
 <p><em>This section is non-normative.</em></p>
-<p>In a <a class="term-reference" href="#term:vpr">VPR</a>, each participant’s <a class="term-reference" href="#term:account">account</a> is associated with a <a class="term-reference" href="#term:trust-deposit">trust deposit</a>.</p>
-<p>This trust deposit is automatically funded through transactions involving <strong>trust operations</strong>, such as:</p>
+<p>In a <a class="term-reference" href="#term:vpr">VPR</a>, each <a class="term-reference" href="#term:account">account</a> is associated with a <a class="term-reference" href="#term:trust-deposit">trust deposit</a>.</p>
+<p>This <a class="term-reference" href="#term:trust-deposit">trust deposit</a> is automatically funded through transactions involving <strong>trust operations</strong>, such as:</p>
 <ul>
-<li>Creating entities (e.g., ecosystem trust registries, credential schemas, DIDs in the DID Directory)</li>
+<li>Creating trust-related objects int the VPR (e.g., ecosystem trust registries, credential schemas, DIDs in the DID Directory)</li>
 <li>Paying trust fees between participants when enforcing ecosystem governance rules for services, credential issuance, or presentation…</li>
 </ul>
 <p>The trust deposit is fundamental to the <strong>“Proof-of-Trust” (PoT)</strong> mechanism of the <a class="term-reference" href="#term:vpr">VPR</a>, and it operates as follows:</p>
@@ -385,30 +385,30 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>The more you use the <a class="term-reference" href="#term:vpr">VPR</a>, the more your <a class="term-reference" href="#term:trust-deposit">trust deposit</a> grows.</li>
 <li>Trust deposits <strong>generate yield</strong>: block execution fees are distributed not only to network validators, but also to <strong>trust deposit holders</strong>.</li>
 <li><strong>Network-level penalties</strong>: If a participant <strong>violates the governance framework</strong> of the <a class="term-reference" href="#term:vpr">VPR</a> or engages in <strong>fraudulent activity</strong>, their <strong>trust deposit MAY be partially or fully slashed</strong> by the <a class="term-reference" href="#term:vpr">VPR</a>'s governance authority.</li>
-<li><strong>Ecosystem-level penalties</strong>: If a participant operates within an ecosystem (e.g., as a <strong>grantor</strong>, <strong>issuer</strong>, <strong>verifier</strong>, or <strong>holder</strong>,…) and <strong>fails to comply</strong> with that ecosystem’s governance framework, their <strong>ecosystem-specific trust deposit CAN be slashed</strong> by the corresponding <strong>ecosystem governance authority</strong>.</li>
+<li><strong>Ecosystem-level penalties</strong>: If a participant operates within an ecosystem (e.g., as a <strong>grantor</strong>, <strong>issuer</strong>, <strong>verifier</strong>, or <strong>holder</strong>,…) and <strong>fails to comply</strong> with that ecosystem’s governance framework (EGF), their <strong>ecosystem-specific trust deposit CAN be slashed</strong> by the corresponding <strong>ecosystem governance authority</strong>.</li>
 <li>A slashed deposit must be <strong>refilled</strong> to continue using the services that triggered the penalty.</li>
 <li>When a participant stops using a service, the associated accumulated trust deposit can be <strong>freed</strong>.</li>
 <li>Freed deposits can be <strong>reused</strong> in other services or <strong>withdrawn</strong>, however, withdrawals incur penalties, and <strong>a portion of the withdrawn amount is burned</strong>.</li>
 <li>Holding a large trust deposit <strong>does not grant governance rights</strong> in the <a class="term-reference" href="#term:vpr">VPR</a>: participants who generate high transaction volume <strong>cannot gain control</strong> over the governance of the <a class="term-reference" href="#term:vpr">VPR</a> solely through usage or deposit size.</li>
 </ul>
 <p>This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the <a class="term-reference" href="#term:vpr">VPR</a>.</p>
-<h4 id="entity-creation"><a class="toc-anchor" href="#entity-creation" >§</a> Entity creation</h4>
+<h4 id="object-creation"><a class="toc-anchor" href="#object-creation" >§</a> Object creation</h4>
 <p><em>This section is non-normative.</em></p>
-<p>Creating an instance of the following entities <strong>requires payment of trust fees</strong>, with a portion of the funds allocated to the participant’s <strong>trust deposit</strong>, the remaining fees are treated as normal network fees and distributed using the normal fee distribution principle of the involved <a class="term-reference" href="#term:vpr">VPR</a>:</p>
+<p>Creating the following objects requires both a contribution to the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> and the payment of applicable <a class="term-reference" href="#term:network-fees">network fees</a>:</p>
 <ul>
-<li><strong>Trust Registries</strong> (one-time fee)</li>
-<li><strong>Credential Schemas</strong> (one-time fee)</li>
-<li><strong>DID Directory entries</strong> (renewable subscription)</li>
+<li><strong>Trust Registries</strong>: requires <code>trust_registry_trust_deposit</code> trust units, plus associated <a class="term-reference" href="#term:network-fees">network fees</a></li>
+<li><strong>Credential Schemas</strong>: requires <code>credential_schema_trust_deposit</code> trust units, plus associated <a class="term-reference" href="#term:network-fees">network fees</a></li>
+<li><strong>DID Directory entries</strong>: requires <code>did_directory_trust_deposit</code> trust units, plus associated <a class="term-reference" href="#term:network-fees">network fees</a></li>
 </ul>
-<p>The following operations <strong>only require network fees</strong>:</p>
+<p>The following operations <strong>only require payment of network fees</strong> (no trust deposit is involved):</p>
 <ul>
 <li>Updating the <strong>governance framework documents</strong> of an ecosystem trust registry</li>
 <li>Removing a <strong>DID</strong> from the DID Directory</li>
 </ul>
-<h4 id="pay-per-execution-of-the-validation-process"><a class="toc-anchor" href="#pay-per-execution-of-the-validation-process" >§</a> Pay per execution of the validation process</h4>
+<h4 id="validation-process-trust-fees"><a class="toc-anchor" href="#validation-process-trust-fees" >§</a> Validation process trust fees</h4>
 <p><em>This section is non-normative.</em></p>
 <p>We’ve explained in the <a href="#credential-schemas-and-permissions" >Credential Schemas and Permissions</a> section above what is a validation process.</p>
-<p>The table below summarizes the possible validation processes:</p>
+<p>The table below summarizes the possible combinations of applicants and validators:</p>
 <table>
 <thead>
 <tr>
@@ -482,16 +482,18 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <ul>
 <li>The validation <a class="term-reference" href="#term:trust-fees">trust fees</a> defined in the permission of the validator participating in the validation process, <strong>plus</strong></li>
 <li>An additional amount equal to the <code>trust_deposit_rate</code> of that validation <a class="term-reference" href="#term:trust-fees">trust fees</a>, which is <strong>allocated to the applicant’s trust deposit</strong> when the validation process begins.</li>
-<li><a class="term-reference" href="#term:network-fees">network fees</a> (not part of the escrowed amount).</li>
+<li><a class="term-reference" href="#term:network-fees">network fees</a> (not part of the escrowed amount).
+.</li>
 </ul>
 <img src="https://www.plantuml.com/plantuml/svg/NP112i8m44NtSugXBgNGkh3GXRIWDwWxDp49McsRa4ce8DxT6DjY70OIVdxU7wOYounrVGVLSYFEEeazUs2-oJ8SMs6lW02W6R-pYyIarhfhEHjiWeom9NBIuAhO5eKK-0JqfSutoQstOisvSf6LJPvG9vk6cEP8GNpzVM-C8ujxgHMrln0hOiewXe3l6N8WRjGO3IA3130Fb9fqDudb1vPd4sqn-FSvk8po02evYB32x_a6" alt="uml diagram">
 <p>Upon completion of the validation process, <strong>escrowed trust fees are distributed to the validator</strong> as follows:</p>
 <ul>
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>validator’s trust deposit</strong>.</li>
-<li>The remaining amount is <strong>transferred directly to the validator’s wallet</strong>.</li>
+<li>The remaining amount is <strong>transferred directly to the validator’s wallet</strong>.
+.</li>
 </ul>
 <img src="https://www.plantuml.com/plantuml/svg/NL3B3e8m4BptApPS3GbmCXmC6WtnZZSlQsaG1KgwIp0n_Blb6N1ww6GwCzqs8aR3JLc8Q64aiL1GuWVymFEWpLD-2b6ZV6EcmBaIDSf0RB1YRU3a01Ba6Nm5MEZ7IqcshXYEKkgcukaS9qEFE-_sjZcvqI1r_yd4DCHmLhMcVCvpkYq8DWMTcECNaaQtcylL80cBaO5ht8Ej3FiUtnkBB9-NiAzn1mU6wraNcTDmFOA8L9KEVpZkFm00" alt="uml diagram">
-<h4 id="pay-per-business-models"><a class="toc-anchor" href="#pay-per-business-models" >§</a> “Pay-Per” business models</h4>
+<h4 id="pay-per-trust-fees"><a class="toc-anchor" href="#pay-per-trust-fees" >§</a> “Pay-Per” trust fees</h4>
 <p><em>This section is non-normative.</em></p>
 <p><strong>Pay-per-issuance</strong> and <strong>pay-per-verification</strong> <a class="term-reference" href="#term:trust-fees">trust fees</a> are defined <strong>at the permission level</strong> for each role within the ecosystem.</p>
 <img src="https://www.plantuml.com/plantuml/svg/ZPFBRi8m44Nt_eeHMIEP8g3AeWg4gEgkwclls4DmcmUoJKfLyUyrIGW5oORP9DBSkNDydKJQC6MsHKwY_arpbYCKR0VtbCAt56PDW6mO_s8PmY3XbVxH1Wi8vZ24MA70qaYMmojVOy4W60s0QU0QVWa1MrNwYTpSD0alLMNW6LKXjPPLsJWP1S5ubOfqQXsXAo55Y3jMR78CyMWyxzjsVCjAZc1R9eGHXRTttNThL78bEJDsHQUuEodsPzHFrWaLF2fMcigIB5pe5zGoSz3ARE72d5oZdFWXW_XMk4u_cyvcAC156ljOngx4FXhj_yoMvrYMfoExmAfTcTNPqdjvrqY2vCPWwdw2qfIkg8idwRRjYItxWGw73uSR3o4xdDb6gjiDczwUs7QZQgFtAO-6jT-mRWrxPAzbXALe_lFs-GS0" alt="uml diagram">
@@ -518,13 +520,15 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-22" class="notice note"><a class="notice-link" href="#note-22">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-79" class="notice note"><a class="notice-link" href="#note-79">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
-<p>Distribution example for credential issuance, using the permission tree above, 20% for <code>trust_deposit_rate</code>, 10% for <code>wallet_user_agent_reward_rate</code> and <code>user_agent_reward_rate</code>.</p>
+<p>Distribution example for the issuance by ISSUER #C of a credential, using the permission tree above, 20% for <code>trust_deposit_rate</code>, 10% for <code>wallet_user_agent_reward_rate</code> and <code>user_agent_reward_rate</code>.
+.</p>
 <img src="https://www.plantuml.com/plantuml/svg/bTDDRu9040RW-_wAYHuR36AhnaCZ_OZnBk7IomZRBIs2ONT3cyR_tks2XXqaQRdmCVCEJtPXBHLMIXzojhvSoGHp3WVyXANlGvsbweq1OqTCFb1m63qdfVoIYXzW78u09QWAnhFNVRgVmpS3SvJxTvueqmbXafIwK6qRjdLxlAYR9UmYQP-SI6vNQQdWYHzBcPtJAYNne1C_TO1RAJMlO5DXeKfZUx03Ca5qsut3oqINPyRV3kXChi_BXCCpyQcZexZnOnDhxnRpnOAd5EZwR2jPGY-O3Ycl8Us8tZhEEYESXOoaiOM2jmAD11Y5Zb0ZtU3f91ZWcMZVfv4keZyXk8ijnZpd2WYnxXbZWgp_euolCki_EDbvkxpAkpSVxyg-oBTDRYqJjdP7IgafQMnYasl5Uh3wExJTwLLdWzcQ5wdzrPlp3m00" alt="uml diagram">
-<p>Distribution example for credential verification, using the permission tree above, 20% for <code>trust_deposit_rate</code>, 10% for <code>wallet_user_agent_reward_rate</code> and <code>user_agent_reward_rate</code>.</p>
+<p>Distribution example for the verification by VERIFIER #E of a credential issued by ISSUER #C, using the permission tree above, 20% for <code>trust_deposit_rate</code>, 10% for <code>wallet_user_agent_reward_rate</code> and <code>user_agent_reward_rate</code>.
+.</p>
 <img src="https://www.plantuml.com/plantuml/svg/bPHBSu8m58Nt-HLtPDcH2VM1TT6HLiTnxsFJJO18QL4Saa0x7VzxCL1B4kWZ6mZddZiV9uyPuoJZuf2WsVMD1IIXS21lCC4OYZZapmWGEf7WbKGKUeiWPU-CqmDONWy80vw1DTZxeJ-63mJbIFqN6l2o4hmWICMHrsMarkLuuZVE6DOR9Z-TDUCw4up3d9vI5d_PUQZvXmtxkK6uOapG39OPEVAqX7kG3U98mrij5RuuQl9fxJMVYHT72jxbxnGw7Svwh6prp1sxBWrrG9LFbkePtdPIja7A5aQEpMLeecvf5k_ZPf9psIRNazogIUPwaexTjTBRjYnp8qji3tzZj1QLzph7sCTxh9Ege7MnYjjtx-n95syRRjt5s01E9_M6bOHUH6iEGJJCZQTm2g8l-z0UTKLQUar6GGmws-cYsv4aeHmqoCAWt6cOnRyuTwsWnLz84VfUkNxMloylXway35ZMwMeULMgh65VYo133YoWFZ2mOcBql5O9KTjjjbOiVz0lPTUjCrIs3PlGOodkvUdu2" alt="uml diagram">
 <h2 id="governance-of-a-vpr"><a class="toc-anchor" href="#governance-of-a-vpr" >§</a> Governance of a VPR</h2>
 <p><em>This section is non-normative.</em></p>
@@ -795,10 +799,10 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-4" class="notice warning"><a class="notice-link" href="#warning-4">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-13" class="notice warning"><a class="notice-link" href="#warning-13">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-23" class="notice note"><a class="notice-link" href="#note-23">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
+<div id="note-80" class="notice note"><a class="notice-link" href="#note-80">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
 </div>
 <table>
 <thead>
@@ -1156,7 +1160,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 </tr>
 </tbody>
 </table>
-<div id="note-24" class="notice note"><a class="notice-link" href="#note-24">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-81" class="notice note"><a class="notice-link" href="#note-81">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1194,7 +1198,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-25" class="notice note"><a class="notice-link" href="#note-25">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed.</p>
+<div id="note-82" class="notice note"><a class="notice-link" href="#note-82">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Applicant MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following:</p>
@@ -1202,7 +1206,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.trust_registry_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-26" class="notice note"><a class="notice-link" href="#note-26">NOTE</a><p><code>TrustRegistry</code> trust deposit is not reclaimable.</p>
+<div id="note-83" class="notice note"><a class="notice-link" href="#note-83">NOTE</a><p><code>TrustRegistry</code> trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-tr-msg-1-3-create-new-trust-registry-execution"><a class="toc-anchor" href="#mod-tr-msg-1-3-create-new-trust-registry-execution" >§</a> [MOD-TR-MSG-1-3] Create New Trust Registry execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1579,7 +1583,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.credential_schema_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-27" class="notice note"><a class="notice-link" href="#note-27">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
+<div id="note-84" class="notice note"><a class="notice-link" href="#note-84">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-cs-msg-1-3-create-new-credential-schema-execution"><a class="toc-anchor" href="#mod-cs-msg-1-3-create-new-credential-schema-execution" >§</a> [MOD-CS-MSG-1-3] Create New Credential Schema execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1607,7 +1611,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 </ul>
 </li>
 </ul>
-<div id="note-28" class="notice note"><a class="notice-link" href="#note-28">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-85" class="notice note"><a class="notice-link" href="#note-85">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any <a class="term-reference" href="#term:account">account</a> CAN execute this method.</p>
@@ -1817,7 +1821,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-29" class="notice note"><a class="notice-link" href="#note-29">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-86" class="notice note"><a class="notice-link" href="#note-86">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -1847,7 +1851,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>country</code> (string) (<em>mandatory</em>) MUST be a valid alpha-2 code (ISO 3166).</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 </ul>
-<div id="note-30" class="notice note"><a class="notice-link" href="#note-30">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
+<div id="note-87" class="notice note"><a class="notice-link" href="#note-87">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
@@ -2266,7 +2270,7 @@ else</li>
 </ul>
 </li>
 </ul>
-<div id="note-31" class="notice note"><a class="notice-link" href="#note-31">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
+<div id="note-88" class="notice note"><a class="notice-link" href="#note-88">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
 </div>
 <h4 id="mod-perm-msg-5-confirm-permission-vp-termination"><a class="toc-anchor" href="#mod-perm-msg-5-confirm-permission-vp-termination" >§</a> [MOD-PERM-MSG-5] Confirm Permission VP Termination</h4>
 <p>This method is called by a validator to confirm the termination of a vp when permission type is HOLDER, usually after revoking (or not) the verifiable credential of the holder. It can be although called by the grantee after a timeout, defined in <code>GlobalVariables.validation_term_requested_timeout_days</code>.</p>
@@ -2301,7 +2305,7 @@ OR
 <code>applicant_perm.grantee</code> CAN be the account executing the method.</li>
 </ul>
 <p>Else MUST abort.</p>
-<div id="note-32" class="notice note"><a class="notice-link" href="#note-32">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
+<div id="note-89" class="notice note"><a class="notice-link" href="#note-89">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
 </div>
 <h6 id="mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks" >§</a> [MOD-PERM-MSG-5-2-3] Confirm Permission VP Termination fee checks</h6>
 <p>Account executing the method MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -2339,7 +2343,7 @@ OR
 </ul>
 </li>
 </ul>
-<div id="note-33" class="notice note"><a class="notice-link" href="#note-33">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
+<div id="note-90" class="notice note"><a class="notice-link" href="#note-90">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
 </div>
 <h4 id="mod-perm-msg-6-cancel-permission-vp-last-request"><a class="toc-anchor" href="#mod-perm-msg-6-cancel-permission-vp-last-request" >§</a> [MOD-PERM-MSG-6] Cancel Permission VP Last Request</h4>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> of a permission validation process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and paid <a class="term-reference" href="#term:trust-fees">trust fees</a> are refunded. If <code>vp_exp</code> is not null, <code>vp_state</code> is set back to VALIDATED, else <code>vp_state</code> is set to TERMINATED.</p>
@@ -2430,7 +2434,7 @@ OR
 <li><a class="term-reference" href="#term:account">account</a> executing the method MUST be the <a class="term-reference" href="#term:controller">controller</a> of <code>tr</code>.</li>
 <li>else MUST abort.</li>
 </ul>
-<div id="note-34" class="notice note"><a class="notice-link" href="#note-34">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
+<div id="note-91" class="notice note"><a class="notice-link" href="#note-91">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
 </div>
 <h6 id="mod-perm-msg-7-2-3-create-root-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-7-2-3-create-root-permission-fee-checks" >§</a> [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks</h6>
 <p>Account MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> available.</p>
@@ -2609,7 +2613,7 @@ OR
 <li>if <code>wallet_agent_perm.type</code> is not ISSUER, abort.</li>
 <li>if <code>wallet_agent_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, abort.</li>
 </ul>
-<div id="warning-5" class="notice warning"><a class="notice-link" href="#warning-5">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an ECS of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
+<div id="warning-14" class="notice warning"><a class="notice-link" href="#warning-14">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an ECS of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
 </div>
 <h6 id="mod-perm-msg-10-3-create-or-update-permission-session-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-10-3-create-or-update-permission-session-fee-checks" >§</a> [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks</h6>
 <p>Account MUST have sufficient available balance for:</p>
@@ -2677,7 +2681,7 @@ OR
 <li>add (<code>issuer_perm_id</code>, <code>verifier_perm_id</code>, <code>wallet_agent_perm_id</code>) to <code>session.authz[]</code></li>
 <li><code>session.modified:</code> : <code>now</code></li>
 </ul>
-<div id="warning-6" class="notice warning"><a class="notice-link" href="#warning-6">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
+<div id="warning-15" class="notice warning"><a class="notice-link" href="#warning-15">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
 </div>
 <h4 id="mod-perm-msg-11-update-permission-module-parameters"><a class="toc-anchor" href="#mod-perm-msg-11-update-permission-module-parameters" >§</a> [MOD-PERM-MSG-11] Update Permission Module Parameters</h4>
 <p>Update Permission Module Parameters.</p>
@@ -2779,7 +2783,7 @@ OR
 <h4 id="mod-perm-qry-4-find-beneficiaries"><a class="toc-anchor" href="#mod-perm-qry-4-find-beneficiaries" >§</a> [MOD-PERM-QRY-4] Find Beneficiaries</h4>
 <p>Anyone can execute this method.</p>
 <p>To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches <code>issuer_perm</code> and <code>verifier_perm</code>. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If <code>verifier_perm</code> is null, <code>issuer_perm</code> is never added to the set. If <code>verifier_perm</code> is NOT null, <code>issuer_perm</code> is added to the set if it exists but <code>verifier_perm</code> is not added to the set.</p>
-<div id="note-35" class="notice note"><a class="notice-link" href="#note-35">NOTE</a><p>If a Credential Schema is configured with permission management mode set to <code>OPEN</code> for either issuance or verification, it is necessary to check whether the associated ECOSYSTEM permission requires issuance or verification fees. This check MUST be performed by calling this method and passing the id of the ECOSYSTEM permission. In this case, the only beneficiary of the fees is the ECOSYSTEM permission itself.</p>
+<div id="note-92" class="notice note"><a class="notice-link" href="#note-92">NOTE</a><p>If a Credential Schema is configured with permission management mode set to <code>OPEN</code> for either issuance or verification, it is necessary to check whether the associated ECOSYSTEM permission requires issuance or verification fees. This check MUST be performed by calling this method and passing the id of the ECOSYSTEM permission. In this case, the only beneficiary of the fees is the ECOSYSTEM permission itself.</p>
 </div>
 <p>Example 1: <code>verifier_perm</code>: is not set: it’s a credential offer, schema configured to have Issuer Grantors.</p>
 <img src="https://www.plantuml.com/plantuml/svg/dT312e9040RW-px5e8TEWX1efp12eaC9hXqwoUgEPRXkk2C9qRkd1dhpq6d-WU4RPW93eg5MLIoOaib5XQ141nlNXLSfwSvqzi2Sm0ht4R_o93m1TfYtf1iGTOvc24zib0N203LWhujCPXwy6O2G4XG2QIXqMyjqc4iD4ljCx97pInYdXtXtJg9uoIvl_zcpELDW-vxlenmbgUiLBNciN-qus_uwLewXxrc0jHo_zwjV" alt="uml diagram">
@@ -2833,7 +2837,7 @@ OR
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-36" class="notice note"><a class="notice-link" href="#note-36">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-93" class="notice note"><a class="notice-link" href="#note-93">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -2898,9 +2902,9 @@ However, it may be useful for certain use cases, for example, a <strong>Social B
 That said, the deterrent is economic: why would anyone pay registration fees for a <a class="term-reference" href="#term:did">DID</a> they do not control?</p>
 <p>To protect the intent of the actual <a class="term-reference" href="#term:did">DID</a> controller, registration alone does not trigger indexing.<br>
 Indexers must respect optional <strong>crawler directives</strong> included in the <a class="term-reference" href="#term:did-document">DID Document</a> (e.g., <code>index</code>, <code>noindex</code>), ensuring that <strong>control over indexation remains with the <a class="term-reference" href="#term:did">DID</a> controller</strong>, regardless of who registered the DID in the directory.</p>
-<div id="note-37" class="notice note"><a class="notice-link" href="#note-37">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
+<div id="note-94" class="notice note"><a class="notice-link" href="#note-94">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
 </div>
-<div id="note-38" class="notice note"><a class="notice-link" href="#note-38">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
+<div id="note-95" class="notice note"><a class="notice-link" href="#note-95">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
 </div>
 <h4 id="mod-dd-msg-1-add-a-did"><a class="toc-anchor" href="#mod-dd-msg-1-add-a-did" >§</a> [MOD-DD-MSG-1] Add a DID</h4>
 <p>Add a <a class="term-reference" href="#term:did">DID</a> to the DID Directory, with expiration timestamp set to current timestamp + <em>years</em> years.</p>
@@ -3463,9 +3467,9 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <li><a href="#business-models" >Business models</a>
 <ul>
 <li><a href="#trust-deposit" >Trust Deposit</a></li>
-<li><a href="#entity-creation" >Entity creation</a></li>
-<li><a href="#pay-per-execution-of-the-validation-process" >Pay per execution of the validation process</a></li>
-<li><a href="#pay-per-business-models" >“Pay-Per” business models</a></li>
+<li><a href="#object-creation" >Object creation</a></li>
+<li><a href="#validation-process-trust-fees" >Validation process trust fees</a></li>
+<li><a href="#pay-per-trust-fees" >“Pay-Per” trust fees</a></li>
 </ul>
 </li>
 </ul>
