@@ -282,9 +282,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each trust registry must provide, at a minimum:
 
-- an ecosystem controlled **resolvable DID**
-- One or more **Ecosystem Governance Framework** document(s)
-- Zero or more **Credential Schemas**
+- an ecosystem controlled resolvable [[ref: DID]]
+- One or more [[ref: ecosystem governance framework]] document(s)
+- Zero or more [[credential schemas]]
 
 The **Verifiable Public Registry (VPR)** is agnostic to the specific **DID methods** used. Trust resolution is performed externally, outside the VPR, allowing flexibility and interoperability across ecosystems.
 
