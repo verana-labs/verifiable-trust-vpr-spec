@@ -26,15 +26,15 @@
 
 ## Abstract
 
-The internet is broken. Existing communication channels are insecure and outdated. Because they rely on public identifiers — like email addresses, usernames, or phone numbers — anyone who knows your identifier can reach you, whether you invited them or not.
+The internet is broken. Existing communication channels are insecure and outdated. Because they rely on public identifiers - like email addresses, usernames, or phone numbers - anyone who knows your identifier can reach you, whether you invited them or not.
 
 Worse, there’s no reliable way to verify the identity of either service providers or users. This leaves the door wide open to spam, phishing, fraud, and identity theft.
 
-On the service side, each provider imposes its own fragmented registration process, often with complex password requirements or forced reliance on federated login systems—effectively handing control over to large third-party platforms.
+On the service side, each provider imposes its own fragmented registration process, often with complex password requirements or forced reliance on federated login systems, effectively handing control over to large third-party platforms.
 
 Although the World Wide Web was originally built for openness and interoperability, dominant players have reshaped it into a closed, centralized system that most people and organizations now depend on. Privacy has become an afterthought, and personal data is routinely harvested, exploited, or leaked.
 
-To rebuild a trustworthy internet, we need new communication channels — channels that are secure by design, based on mutual verification, and governed by decentralized trust. 
+To rebuild a trustworthy internet, we need new communication channels - channels that are secure by design, based on mutual verification, and governed by decentralized trust.
 
 Connecting to a service, proving who you are, or creating an account should be as simple and safe as presenting a verifiable credential.
 
@@ -42,23 +42,23 @@ A universal, open trust layer is essential for this vision to succeed.
 
 That’s the purpose of **Verifiable Trust**. The concept of **Verifiable Trust** is specified in the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec).
 
-This specification deals with the Verifiable Public Registry (VPR), part of the Verifiable Trust concept.
+This specification deals with the Verifiable Public Registry (VPR), a decentralized registry of registries, part of the Verifiable Trust concept.
 
 ## About this Document
 
 In order to fully understand the concepts developed in this document, you should have some basic knowledge of [[ref:DID]], [[ref:DIDComm]], [[ref:VS]], [[ref:trust registry]], ledger-based applications, and more generally, all terms present in the [Terminology](#terminology) section.
 
-## Introduction
-
 :::note
 Before exploring this spec, it is highly recommended to **first read** the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/).
 :::
+
+## Introduction
 
 ### What is a Trust Registry?
 
 *This section is non-normative.*
 
-A trust registry is an approved list of ecosystem participants, such as trust registry operators, [[ref: issuers]] and [[ref: verifiers]] that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
+A trust registry is an approved list of recognized ecosystem participants, such as trust registry operators, credential [[ref: issuers]] and [[ref: verifiers]] that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
 
 A trust registry typically expose APIs that are consumed by services that would like to [[ref: query]] its database, and take decisions based on the returned result:
 
@@ -69,16 +69,16 @@ A trust registry typically expose APIs that are consumed by services that would 
 
 *This section is non-normative.*
 
-A **Verifiable Public Registry (VPR)** is a **“registry of registries”**, a public service that provides foundational infrastructure for decentralized trust ecosystems. It offers:
+A Verifiable Public Registry (VPR) is a “registry of registries”, a public service that provides foundational infrastructure for decentralized trust ecosystems. It offers:
 
-- **Trust Registry Management**:  
-  ecosystems can create and manage their own **Trust Registries**, each with:
-  - Defined **Credential Schemas**
-  - Assigned roles for **Issuers**, **Verifiers**, and **Grantors** (Trust Registry Operators)
-  - Custom **business models** and permission policies
+- trust registry management:  
+  ecosystems can create and manage their own trust registries, each with:
+  - defined [[ref: credential schemas]]
+  - assigned roles for [[ref: issuers]], [[ref: verifiers]], and [[ref: grantors]] (trust registry operators)
+  - custom business models and permission policies
 
-- **Query API for Trust Resolution**:  
-  A standardized API used by **verifiable services (VSs)** and **verifiable user agents (VUAs)** to perform trust resolution, enabling them to query registry data and validate roles and permissions in real time. Query API must include support for the [TRQP](https://trustoverip.github.io/tswg-trust-registry-protocol/).
+- query API for trust resolution:  
+  A standardized API used by [[ref: verifiable services]] (VSs) and [[ref: verifiable user agents]] (VUAs) to perform trust resolution, enabling them to query registry data and validate roles and permissions in real time.
 
 ```plantuml
 
@@ -180,6 +180,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: governance authority, GA]]:
 ~ The governance authority (GA) of a [[ref: VPR]].
+
+[[def: grantor, grantors]]:
+~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: trust registry]].
 
 [[def: holder, holders]]:
 ~ A role an entity might perform by possessing one or more verifiable credentials and generating verifiable presentations from them. A holder is often, but not always, a [[ref: subject]] of the verifiable credentials they are holding. Holders store their credentials in credential repositories. Example holders include organizations, persons, things.
