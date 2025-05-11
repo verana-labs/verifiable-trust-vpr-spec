@@ -624,6 +624,8 @@ The **total fees** paid by the applicant consists of:
 - An additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant’s trust deposit** when the validation process begins.
 - [[ref: network fees]] (not part of the escrowed amount).
 
+Example, using 20% for `trust_deposit_rate`:
+
 ```plantuml
 
 @startuml
