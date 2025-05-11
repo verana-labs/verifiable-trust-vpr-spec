@@ -26,15 +26,15 @@
 
 ## Abstract
 
-The internet is broken. Existing communication channels are insecure and outdated. Because they rely on public identifiers — like email addresses, usernames, or phone numbers — anyone who knows your identifier can reach you, whether you invited them or not.
+The internet is broken. Existing communication channels are insecure and outdated. Because they rely on public identifiers - like email addresses, usernames, or phone numbers - anyone who knows your identifier can reach you, whether you invited them or not.
 
 Worse, there’s no reliable way to verify the identity of either service providers or users. This leaves the door wide open to spam, phishing, fraud, and identity theft.
 
-On the service side, each provider imposes its own fragmented registration process, often with complex password requirements or forced reliance on federated login systems—effectively handing control over to large third-party platforms.
+On the service side, each provider imposes its own fragmented registration process, often with complex password requirements or forced reliance on federated login systems, effectively handing control over to large third-party platforms.
 
 Although the World Wide Web was originally built for openness and interoperability, dominant players have reshaped it into a closed, centralized system that most people and organizations now depend on. Privacy has become an afterthought, and personal data is routinely harvested, exploited, or leaked.
 
-To rebuild a trustworthy internet, we need new communication channels — channels that are secure by design, based on mutual verification, and governed by decentralized trust. 
+To rebuild a trustworthy internet, we need new communication channels - channels that are secure by design, based on mutual verification, and governed by decentralized trust.
 
 Connecting to a service, proving who you are, or creating an account should be as simple and safe as presenting a verifiable credential.
 
@@ -42,23 +42,23 @@ A universal, open trust layer is essential for this vision to succeed.
 
 That’s the purpose of **Verifiable Trust**. The concept of **Verifiable Trust** is specified in the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec).
 
-This specification deals with the Verifiable Public Registry (VPR), part of the Verifiable Trust concept.
+This specification deals with the Verifiable Public Registry (VPR), a decentralized registry of registries, part of the Verifiable Trust concept.
 
 ## About this Document
 
 In order to fully understand the concepts developed in this document, you should have some basic knowledge of [[ref:DID]], [[ref:DIDComm]], [[ref:VS]], [[ref:trust registry]], ledger-based applications, and more generally, all terms present in the [Terminology](#terminology) section.
 
-## Introduction
-
 :::note
 Before exploring this spec, it is highly recommended to **first read** the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/).
 :::
+
+## Introduction
 
 ### What is a Trust Registry?
 
 *This section is non-normative.*
 
-A trust registry is an approved list of ecosystem participants, such as trust registry operators, [[ref: issuers]] and [[ref: verifiers]] that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
+A trust registry is an approved list of recognized ecosystem participants, such as trust registry operators, credential [[ref: issuers]] and [[ref: verifiers]] that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
 
 A trust registry typically expose APIs that are consumed by services that would like to [[ref: query]] its database, and take decisions based on the returned result:
 
@@ -69,16 +69,16 @@ A trust registry typically expose APIs that are consumed by services that would 
 
 *This section is non-normative.*
 
-A **Verifiable Public Registry (VPR)** is a **“registry of registries”**, a public service that provides foundational infrastructure for decentralized trust ecosystems. It offers:
+A Verifiable Public Registry (VPR) is a “registry of registries”, a public service that provides foundational infrastructure for decentralized trust ecosystems. It offers:
 
-- **Trust Registry Management**:  
-  ecosystems can create and manage their own **Trust Registries**, each with:
-  - Defined **Credential Schemas**
-  - Assigned roles for **Issuers**, **Verifiers**, and **Grantors** (Trust Registry Operators)
-  - Custom **business models** and permission policies
+- trust registry management:  
+  ecosystems can create and manage their own trust registries, each with:
+  - defined [[ref: credential schemas]]
+  - assigned roles for [[ref: issuers]], [[ref: verifiers]], and [[ref: grantors]] (trust registry operators)
+  - custom business models and permission policies
 
-- **Query API for Trust Resolution**:  
-  A standardized API used by **verifiable services (VSs)** and **verifiable user agents (VUAs)** to perform trust resolution, enabling them to query registry data and validate roles and permissions in real time. Query API must include support for the [TRQP](https://trustoverip.github.io/tswg-trust-registry-protocol/).
+- query API for trust resolution:  
+  A standardized API used by [[ref: verifiable services]] (VSs) and [[ref: verifiable user agents]] (VUAs) to perform trust resolution, enabling them to query registry data and validate roles and permissions in real time.
 
 ```plantuml
 
@@ -113,13 +113,13 @@ package "Verifiable Public Registry" as vpr {
 
 ```
 
-Additionally, a [[ref: VPR]] provides a **DID Directory**, a simple list of service identifiers (DIDs).
+Additionally, a [[ref: VPR]] provides a [[ref: DID directory]], a simple repository of service identifiers (DIDs).
 
-Any account registered in the VPR can add a DID to the DID Directory.
+Any account registered in the VPR can add a [[ref: DID]] to the [[ref: DID directory]].
 
 This directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: verifiable services]], and index them.
 
-Indexers may expose this data through APIs for querying the indexed services or use it to build a **Verifiable Service search engine**.
+Indexers may expose this data through APIs for querying the indexed services or use it to build a search engine for querying the database of indexed [[ref: verifiable services]].
 
 ### Conformance
 
@@ -180,6 +180,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: governance authority, GA]]:
 ~ The governance authority (GA) of a [[ref: VPR]].
+
+[[def: grantor, grantors]]:
+~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: trust registry]].
 
 [[def: holder, holders]]:
 ~ A role an entity might perform by possessing one or more verifiable credentials and generating verifiable presentations from them. A holder is often, but not always, a [[ref: subject]] of the verifiable credentials they are holding. Holders store their credentials in credential repositories. Example holders include organizations, persons, things.
@@ -280,13 +283,13 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 *This section is non-normative.*
 
-In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each trust registry must provide, at a minimum:
+In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each `TrustRegistry` entry must provide, at a minimum:
 
-- an ecosystem controlled resolvable [[ref: DID]]
-- One or more [[ref: ecosystem governance framework]] document(s)
-- Zero or more [[credential schemas]]
+- an ecosystem controlled resolvable [[ref: DID]];
+- one or more [[ref: ecosystem governance framework]] document(s);
+- zero or more [[ref: credential schemas]].
 
-The **Verifiable Public Registry (VPR)** is agnostic to the specific **DID methods** used. Trust resolution is performed externally, outside the VPR, allowing flexibility and interoperability across ecosystems.
+The Verifiable Public Registry (VPR) is agnostic to the specific DID methods used. Trust resolution is performed externally, outside the VPR, allowing flexibility and interoperability across ecosystems.
 
 ```plantuml
 
@@ -307,9 +310,9 @@ object "Trust Registry" as tra #3fbdb6 {
 
 *This section is non-normative.*
 
-**Credential schemas** are created and managed by trust registry controller ([[ref: ecosystems]]). Each Credential Schema includes, at a minimum:
+[[ref: Credential schemas]] are created and managed by trust registry controller ([[ref: ecosystems]]). Each [[ref: Credential schema]] includes, at a minimum:
 
-- A **JSON Schema** that defines the structure of the corresponding **verifiable credential**
+- A **JSON Schema** that defines the structure of the corresponding [[ref: verifiable credential]]
 - A **PermissionManagementMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
   - `OPEN`: Anyone can issue credentials of this schema
   - `ECOSYSTEM`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the trust registry controller
@@ -318,7 +321,7 @@ object "Trust Registry" as tra #3fbdb6 {
   - `OPEN`: Anyone can act as a verifier for this schema
   - `ECOSYSTEM`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Trust Registry controller
   - `GRANTOR`: `VERIFIER` permissions are granted by one or several [[ref: verifier grantor]](s) (trust registry operator(s) responsible for selecting verifiers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
-- A **Permission Tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
+- A **Permission tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
 
 ```plantuml
 
@@ -427,14 +430,14 @@ Example of a Json Schema credential schema:
 }
 ```
 
-To participate in an **ecosystem** and assume a role associated with a specific **credential schema**, an entity **must** have an [[ref: account]] in the [[ref: VPR]] and complete a **validation process** to obtain the required permission.
+To participate in an [[ref: ecosystem]] and assume a role associated with a specific [[ref: credential schema]], an entity must have an [[ref: account]] in the [[ref: VPR]] and complete a [[ref: validation process]] to obtain the required permission.
 
-The **validation process** involves two parties:
+The [[ref: validation process]] involves two parties:
 
 - The [[ref: applicant]] — the entity requesting permission for a credential schema within the ecosystem.  
-- The [[ref: validator]] — an entity that already holds permission for the same credential schema and has been **delegated authority** to validate applicants and issue permissions.
+- The [[ref: validator]] — an entity that already holds permission for the same credential schema and has been delegated authority to validate applicants and issue permissions.
 
-Running a validation process **typically involves the payment of [[ref: trust fees]]**. [[ref: Trust fee]] amount to be paid by the [[ref: applicant]] is defined in the permission of the [[ref: validator]]:
+Running a validation process **typically involves the payment of [[ref: trust fees]]**. [[ref: Trust fee]] amount to be paid by the [[ref: applicant]] is defined in the permission of the [[ref: validator]] involved in the [[ref: validation process]]:
 
 ```plantuml
 
@@ -484,13 +487,13 @@ Alternatively, the issuer may opt not to use the VPR validation process for hold
 
 *This section is non-normative.*
 
-The **[[ref: DID Directory]]** is a public database of services that can be used by crawlers to index the metadata associated with [[ref: verifiable services]].
+The [[ref: DID directory]] is a public database of services that can be used by crawlers to index the metadata associated with [[ref: verifiable services]].
 
-Search engines can iterate over the DID Directory and index [[ref: VSs]] by resolving the service identifier (at the moment a DID, that could be extended in the future), verify if service is a [[ref: verifiable service]], and in such a case extracting their verifiable metadata, such as [[ref: linked-vp]] **presented credentials**.
+Search engines can iterate over the [[ref: DID directory]] and index [[ref: VSs]] by resolving the service identifier (at the moment a [[ref: DID]], that could be extended in the future), verify if service is a [[ref: verifiable service]], and in such a case extracting their verifiable metadata, such as [[ref: linked-vp]] presented credentials.
 
-The DID Directory is particularly important for **[[ref: verifiable user agents]]**, such as social browsers, CDN enabled browsers... However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
+The [[ref: DID directory]] is particularly important for [[ref: verifiable user agents]], such as social browsers, CDN enabled browsers... However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
 
-Any [[ref: participant]] can register a [[ref: DID]] in the DID Directory by executing a transaction involving [[ref: trust fees]] and/or [[ref: trust deposit]].
+Any [[ref: participant]] can register a [[ref: DID]] in the [[ref: DID directory]] by executing a transaction involving [[ref: network fees]] and requiring [[ref: trust deposit]].
 
 ```plantuml
 
@@ -523,15 +526,15 @@ In a [[ref: VPR]], each [[ref: account]] is associated with a [[ref: trust depos
 
 This [[ref: trust deposit]] is automatically funded through transactions involving **trust operations**, such as:
 
-- Creating trust-related objects int the VPR (e.g., ecosystem trust registries, credential schemas, DIDs in the DID Directory)
+- Creating trust-related objects int the VPR (e.g., ecosystem trust registries, credential schemas, DIDs in the [[ref: DID directory]])
 - Paying trust fees between participants when enforcing ecosystem governance rules for services, credential issuance, or presentation...
 
 The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
 
 - The more you use the [[ref: VPR]], the more your [[ref: trust deposit]] grows.
 - Trust deposits **generate yield**: block execution fees are distributed not only to network validators, but also to **trust deposit holders**.
-- **Network-level penalties**: If a participant **violates the governance framework** of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority.
-- **Ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a **grantor**, **issuer**, **verifier**, or **holder**,...) and **fails to comply** with that ecosystem’s governance framework (EGF), their **ecosystem-specific trust deposit can be slashed** by the corresponding **ecosystem governance authority**.
+- **network-level penalties**: If a participant violates the [[ref: governance framework]] of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority.
+- **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), their **ecosystem-specific trust deposit can be slashed** by the corresponding ecosystem governance authority.
 - A slashed deposit must be **refilled** to continue using the services that triggered the penalty.
 - When a participant **withdraws from an ecosystem**, the associated accumulated trust deposit **may be released**.
 - Released deposits can be **reused** in other services or **withdrawn**, however, withdrawals incur penalties, and **a portion of the withdrawn amount is burned**.
