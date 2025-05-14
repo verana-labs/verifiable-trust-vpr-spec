@@ -89,7 +89,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <p>This specification deals with the Verifiable Public Registry (VPR), a decentralized registry of registries, part of the Verifiable Trust concept.</p>
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:trust-registry">trust registry</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
-<div id="note-613" class="notice note"><a class="notice-link" href="#note-613">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-1" class="notice note"><a class="notice-link" href="#note-1">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
 <h3 id="what-is-a-trust-registry"><a class="toc-anchor" href="#what-is-a-trust-registry" >§</a> What is a Trust Registry?</h3>
@@ -202,7 +202,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <dt><span id="term:uris"><span id="term:uri">URI</span></span></dt>
 <dd>An Universal Resource Identifier, as specified in <a path-0="datatracker.ietf.org"path-1="doc"path-2="html"path-3="rfc3986"href="https://datatracker.ietf.org/doc/html/rfc3986" >rfc3986</a>.</dd>
 <dt><span id="term:valid-permissions"><span id="term:valid-permission">valid permission</span></span>:</dt>
-<dd>For a given country code, a credential schema permission of a given type, which (country attribute is null or equals to the given country code), and effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and terminated is null.</dd>
+<dd>For a given country code, a credential schema permission of a given type, which (country attribute is null or equals to the given country code), and effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and terminated is null and slashed is null.</dd>
 <dt><span id="term:validation-process">validation process</span>:</dt>
 <dd>A process run by <a class="term-reference" href="#term:applicants">applicants</a> that want to, for a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>, be a <a class="term-reference" href="#term:issuer">issuer</a>, be a <a class="term-reference" href="#term:verifier">verifier</a>, or simply hold a verifiable credential linked to the <a class="term-reference" href="#term:credential-schema">credential schema</a>.</dd>
 <dt><span id="term:validator">validator</span>:</dt>
@@ -355,7 +355,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 </ul>
 <p>Running a validation process <strong>typically involves the payment of <a class="term-reference" href="#term:trust-fees">trust fees</a></strong>. <a class="term-reference" href="#term:trust-fee">Trust fee</a> amount to be paid by the <a class="term-reference" href="#term:applicant">applicant</a> is defined in the permission of the <a class="term-reference" href="#term:validator">validator</a> involved in the <a class="term-reference" href="#term:validation-process">validation process</a>:</p>
 <img src="https://www.plantuml.com/plantuml/svg/fPDRJyCW583V-HKds_CIr6GpVJ2xUdbRdFfEuQn3QMc0rYrc_rtMhcGQsosHbvB3uUjt3Z2sZXbNf8gCmynofX1IjeLRIk5J2hSXG7B6FrY2q5ko7UHee6HA2kQapk0U4LRE5DmL1dl0B70BNuI07pf-H-wWj-3Qxgp352OmW9b1WPcJJC6ARp1byAorWoMQL5hhcHN56UZVh6CH3pqDZaD84U6MfRd221le92m_69OvRO3bkPBSpqz5VRgBu8hwkbvURRLd_yFooTh2rzP0fd-g_hAKIOkTJAOXVWJ_osfsaKsTsnyDHoCKqAOs2-57hSGvinQlDpHoBK_wDVU6vnNBjeQLoJp40xj3xBgrOs7tufAUbKrsdzAOhccRtkBufpqX_ceE1dU7iuyWELJlUsrhU1xWn2zNMVMPT6KsmB8RMDR08Do976CcggTTVxy1" alt="uml diagram">
-<div id="note-614" class="notice note"><a class="notice-link" href="#note-614">NOTE</a><p>If an issuer chooses to charge <a class="term-reference" href="#term:trust-fees">trust fees</a> to a credential holder using the tokenized payment system of the <a class="term-reference" href="#term:vpr">VPR</a>, a validation process must take place and the holder (applicant) MUST have an <a class="term-reference" href="#term:account">account</a> to complete the transaction.</p>
+<div id="note-2" class="notice note"><a class="notice-link" href="#note-2">NOTE</a><p>If an issuer chooses to charge <a class="term-reference" href="#term:trust-fees">trust fees</a> to a credential holder using the tokenized payment system of the <a class="term-reference" href="#term:vpr">VPR</a>, a validation process must take place and the holder (applicant) MUST have an <a class="term-reference" href="#term:account">account</a> to complete the transaction.</p>
 <p>Alternatively, the issuer may opt not to use the VPR validation process for holder verification. In such cases, validation occurs outside the VPR, and the issuer is free to use external payment methods (e.g., credit card) to collect fees from the holder candidate.</p>
 </div>
 <h3 id="did-directory-management"><a class="toc-anchor" href="#did-directory-management" >§</a> DID Directory Management</h3>
@@ -478,6 +478,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>An additional amount equal to the <code>trust_deposit_rate</code> of that validation <a class="term-reference" href="#term:trust-fees">trust fees</a>, which is <strong>allocated to the applicant’s trust deposit</strong> when the validation process begins.</li>
 <li><a class="term-reference" href="#term:network-fees">network fees</a> (not part of the escrowed amount).</li>
 </ul>
+<p>Example, using 20% for <code>trust_deposit_rate</code>:</p>
 <img src="https://www.plantuml.com/plantuml/svg/NP112i8m44NtSugXBgNGkh3GXRIWDwWxDp49McsRa4ce8DxT6DjY70OIVdxU7wOYounrVGVLSYFEEeazUs2-oJ8SMs6lW02W6R-pYyIarhfhEHjiWeom9NBIuAhO5eKK-0JqfSutoQstOisvSf6LJPvG9vk6cEP8GNpzVM-C8ujxgHMrln0hOiewXe3l6N8WRjGO3IA3130Fb9fqDudb1vPd4sqn-FSvk8po02evYB32x_a6" alt="uml diagram">
 <p>Upon completion of the validation process, <strong>escrowed trust fees are distributed to the validator</strong> as follows:</p>
 <ul>
@@ -512,7 +513,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-615" class="notice note"><a class="notice-link" href="#note-615">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-3" class="notice note"><a class="notice-link" href="#note-3">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
@@ -524,7 +525,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>A designated <a class="term-reference" href="#term:governance-authority">governance authority</a> is responsible for <strong>enforcing these rules</strong> and, when necessary, <strong>applying financial sanctions</strong> to participants who violate the rules.</p>
-<div id="note-616" class="notice note"><a class="notice-link" href="#note-616">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
+<div id="note-4" class="notice note"><a class="notice-link" href="#note-4">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
 <p>While the <strong>VPR governance framework</strong> defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each <strong>ecosystem</strong> must define its own <strong>EGF</strong> to govern roles, permissions, credential policies, and compliance within its specific domain.</p>
 <p>This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.</p>
 </div>
@@ -532,7 +533,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p>For simplicity, the data model is presented using an <strong>object-relational structure</strong>. However, this representation may not be optimal for all implementation scenarios.</p>
 <p>Implementors are responsible for <strong>adapting the data model</strong> to suit their chosen architecture.<br>
 For example, a <strong>key-value store</strong> may be more appropriate for a <strong>ledger-based implementation</strong> than a relational model.</p>
-<img src="https://www.plantuml.com/plantuml/svg/fLVTZzeu47_FNs7nrDwMrLOwLHLFYqgwHTU5bh18lTF9Cea1toPnpX_iqgh_UyTs2Cu75BHFiMT-dY_FZ2UtKX6XT9O6jzLAnYIbA2FFwFtD3NfYYTe40SqLKplKcmijrOokcLHYrqD48YNGZm2XFrWoG9hbwjsViBjAp1OmB5-RRImeKHH8YcKKD6M5eMOyOIlM8XCHRzYsHKvemILJ0vJhR4c5HJuINmje7o0IApYCjrH8ndD3Jac-rcHDFMZmy-3I7GTiJlAOVXGaeqzSF2xSOUlVUhNjSh3RerBh006Ehi78qtf6FDOPy4j5oVcAEdowqYBrjmbR0nvBmIegM5EPyq7GnAn96iKRcX5hGopFD-75j_UVv3cMLddj5gNKLE2r8BdY0cz9oXAY8Afk2SRZWWh64ryMXDOOS-cnKjU5Eiw3RtYQd0qk3G56XZEImysQlC0GOxZYBq0508YuhrZtmAaPTU5HcvWwGxrZY38VYincnFHBE87FtMmucKzdi0e_JADlqJoyzrFyLJJwwpKQnZ7NPL8JjmOP7koWSg-a8-lEwY3qMT4yQPBfQaLT5rW9dXtZWLaiRTRluR9MbChc3PdYRJ7S3SJTfzffB-YMFpOjLYOYUTj16ponym81d5eHRGjCdukc6mLEYQbz05CSRw1Pq3QaT1QAfQCuWHzh8KmcjHm-iBeFIfrbHEomtu4Ewn9aNCQ2_g-1N7UxIir5THkHSSGc2nXjlR8P0qav6a_kOBKOVXwFXlDm1EjvEBiVJuRpyNI2P-7NXp2gqs7JcOmHhUMatmerIovjX4IhpVS1UkKI-WsgVr__yszN2SvtHLLuokeVHz53Q0fk4Sx67yTswMZuK8nx7kwgJuG-JJ-Fu62bhzdwXyRKKYsnMeSFyq_JsVXl6xSeZA9zBCSpItgOU0Wlc2EMZ9Y00kFbT01LxCBuae6WdU3DlFCVjhkKBqcw88AHPKgbUrlT6twbpFW2bSyKBWIBgP-uZYVAsGQxRKU2nrNqoiTh_u6H2KlsdPu6d_syMNa9sSdJyYvu-SwK-Dj7yLBBNYpfjq-f9wUM9srHHw_L4rvlJTX8v5grx8IKXXPNPljnmNKOt1Ay8QNLJOar6M11d1AMuQKMEHPGBiUXSaC4DK7H9q1Mn86f9OGK7lpSQ7eY8ca2daYQKgYMaxYVZN-3aLFcVWrSxLlZFBFQCR9-cchr2zgC1RpVjwqGhXKweqU2NcBlioBrRgwlt_OCU80E3viTYg1tmrnhG4g086480Vosz03VDqVVNbz3ruT17uww0LwYmCpzBGHqfgISsG4IxAURVfzRsJ67rvf3r4IDPOsovKbfcr6sGhpSjNdx-SOm6vwMsC5-e3W5EOmN1XNOnytWAe1dUCMq1hXxtuUnPg3jw4SyXXk0iqMHmboKgw1wj2l7p9HWADKf5yDaiBSf26x1S_jdwhw_0000" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/fHVRRjisz5rVGVYfNUeW1OPXy5ECMasDDNPhEGQwOI0OaRQvIA96KaxSeV--GrAIgOjT6taITSxXkTzugpIHkaYJuBO-gPWa3ANa1Vr-SuEUETNR862PvdgF1ajPABrW6wwqt0yGKKXBz5-0q2-SZb31C_tRh_1tHSqlqF1iOtvZoOXc0D8yPI0fpGqq5PIlUGTCPBpbkmwOibmehaSeAz979Ytb4_6bWFGH8h66otZ7fE8YC-24P9k2R9X76lmuc7GdW3OZMSm-IfAoPo6VLkwojM-ptlKPs6zHANM4W8vjGCdJSYOYBbB0buBe-O9wRBegPEB_Khu1Ugmahw6WJQtE1yceEPCaYhSi9LQ7M9slmgkZzuyI6LPMU2EAIXLCueqacHOIxqZ2AT7WLNS4vN7E91VKvmMkDSfSUgsKTQ6CyyYt8g5d4vUA02B5ASaWiYOlCFWOGlm5e400BEvhr3rW6afTUDKcPf6YmJ6ACX_or6R4_4iuWy_TOZnRpXTm2Z_Ces_HChptK_nDDFdZBHh7iIZAf2Rk33myieF8IaXFrftLGTYBPXdjW5L2rBO3bImdl0LawpLp3MCjHNeC1nRmf5tgXxYk6LFjO9ewxo1SiEB-MpqLKjg1Ur3Ec1wCP3lnrBPT6uzdNGVQuCYzvsZ0DEJiSinUyhRjEGRDeBS0CSFn5feHwvAK7e9YxD4Vy74XfSdKZfSEgFwBgaXJ8lVOxt27SqbaJCQI_Li0k6bsdVghEeIHCSGc8oXjhR8P2Ka_cSxkuBGQVvvEnijm0kTbkBYVpiRBwNo65-7NXp1gmk6dDzaZriXvlzKMd5xQQ4cXjzz7w8qhc7Ue-Ntxrzzz9RxSvtLXQoj_6aKFeIdeLRYOVfpQeuFXGx5NEDnN_mXzcd-UmCLQNdkqZ8sgfLXYfOuVbf_cY-cVrczH64MLBwSB2tgOUHIUCoUSJhY4gXJbzW5TmhdnDGj7Dy7RUUSFphj4F99aHIGdZmbJRdQx7U5Ac_K8sWNNE9SyPdxYEfmiToViVdiIFAwzLmx7wWCh6LRyEpjDVFRujFmesQlJ_2wOh6To_EdGlLIpLtFwwQZs-3JofClgQ5WzvitMX0r7KUYEdjJqzohRZpDkaa6KOF2KMhSvDdY01d52U8eV2vbX2ULod5HjYMJ6ASK98ilYW2mKk1GMYin8UYQIjWcUIP8mg9QJT3zQRu-94-QU7gxshNAUMbqVMJjDjNgmuxFrw6XrCwzljx2Ollt2KcCxPlrcObOUCHpQDWmNe2jx8EXZDfTgqE3c-lhzm12Fq66eseKFvWRix8P8Is0a3I209za0w8VcwllhQvWuy8Y1g-vneb1WtZGT2j2SbkyH80cgpMqu59PtB61J410nsK1PfMnhOAoBADimVjntSTNkPf0jIqlQKRNCd28vh3QdgAfedvHbmmuKWPtEXgP6UjRNI6k5Izmg5WqhxKWwuZO88zpDymIsmKm7zTPHUyUiEGPIttA1eADA9mWpxRN3oqLhp2rusRxmtVT_" alt="uml diagram">
 <h3 id="trustregistry"><a class="toc-anchor" href="#trustregistry" >§</a> TrustRegistry</h3>
 <p><code>TrustRegistry</code>:</p>
 <ul>
@@ -596,6 +597,10 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>created_by</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> that created this permission.</li>
 <li><code>extended</code> (timestamp) (<em>mandatory</em>): timestamp this <code>Permission</code> has been extended.</li>
 <li><code>extended_by</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> that extended this permission.</li>
+<li><code>slashed</code> (timestamp) (<em>mandatory</em>): timestamp this <code>Permission</code> has been slashed.</li>
+<li><code>slashed_by</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> that slashed this permission.</li>
+<li><code>repaid</code> (timestamp) (<em>mandatory</em>): timestamp this <code>Permission</code> has been repaid.</li>
+<li><code>repaid_by</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> that repaid this permission.</li>
 <li><code>effective_from</code> (timestamp) (<em>optional</em>): timestamp from which (inclusive) this <code>Permission</code> is effective.</li>
 <li><code>effective_until</code> (timestamp) (<em>optional</em>): timestamp until when (exclusive) this <code>Permission</code> is effective, null if no time limit has been set for this permission.</li>
 <li><code>modified</code> (timestamp) (<em>mandatory</em>): timestamp this Permission has been modified.</li>
@@ -603,6 +608,8 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>issuance_fees</code> (number) (<em>mandatory</em>): fees requested by grantee of this perm when a credential is issued, in trust unit. Default to 0.</li>
 <li><code>verification_fees</code> (number) (<em>mandatory</em>): fees requested by grantee of this perm when a credential is verified, in trust unit. Default to 0.</li>
 <li><code>deposit</code> (number) (<em>mandatory</em>): accumulated <em>grantee</em> deposit in the context of the <em>use</em> of this permission (including the validation process), in <code>denom</code>. Usually, it is incremented when for example, for a ISSUER type <code>Permission</code> <code>perm</code>, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this <code>perm.deposit</code> value as well. If <code>perm</code> is, let’s say revoked, then corresponding <code>perm.deposit</code> value is freed from <code>perm.grantee</code> Trust Deposit.</li>
+<li><code>slashed_deposit</code> (number) (<em>mandatory</em>): part of the deposit that has been slashed.</li>
+<li><code>repaid_deposit</code> (number) (<em>mandatory</em>): part of the slashed deposit that has been repaid.</li>
 <li><code>revoked</code> (timestamp) (<em>optional</em>): manual revocation timestamp of this Perm.</li>
 <li><code>revoked_by</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> that revoked this permission.</li>
 <li><code>terminated</code> (timestamp) (<em>optional</em>): manual termination (by grantee) timestamp of this Perm.</li>
@@ -645,6 +652,11 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>account</code> (account) (<em>mandatory</em>) (key): the <a class="term-reference" href="#term:account">account</a></li>
 <li><code>amount</code> (number) (<em>mandatory</em>): amount of deposit in <code>denom</code>.</li>
 <li><code>claimable</code> (number) (<em>mandatory</em>): amount of claimable deposit in <code>denom</code>.</li>
+<li><code>slashed_deposit</code> (number) (<em>optional</em>): amount of slashed deposit in <code>denom</code>.</li>
+<li><code>repaid_deposit</code> (number) (<em>optional</em>): amount of slashed deposit in <code>denom</code>.</li>
+<li><code>last_slashed</code> (timestamp) (<em>optional</em>): last time this trust deposit has been slashed.</li>
+<li><code>last_repaid</code> (timestamp) (<em>optional</em>): last time this trust deposit has been slashed.</li>
+<li><code>slash_count</code> (number) (<em>optional</em>): number of times this account has been slashed.</li>
 </ul>
 <h3 id="globalvariables"><a class="toc-anchor" href="#globalvariables" >§</a> GlobalVariables</h3>
 <p><code>GlobalVariables</code>:</p>
@@ -793,10 +805,10 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-94" class="notice warning"><a class="notice-link" href="#warning-94">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-1" class="notice warning"><a class="notice-link" href="#warning-1">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-617" class="notice note"><a class="notice-link" href="#note-617">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
+<div id="note-5" class="notice note"><a class="notice-link" href="#note-5">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
 </div>
 <table>
 <thead>
@@ -1007,6 +1019,27 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 </tr>
 <tr>
 <td></td>
+<td>Slash Permission Trust Deposit</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-perm-msg-12-slash-permission-trust-deposit" >[MOD-PERM-MSG-12]</a></td>
+</tr>
+<tr>
+<td></td>
+<td>Repay Permission Slashed Trust Deposit</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-perm-msg-13-repay-permission-slashed-trust-deposit" >[MOD-PERM-MSG-13]</a></td>
+</tr>
+<tr>
+<td></td>
+<td>Create Permission For Open Schemas</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-perm-msg-14-create-permission" >[MOD-PERM-MSG-14]</a></td>
+</tr>
+<tr>
+<td></td>
 <td>List Permissions</td>
 <td>/perm/v1/list</td>
 <td>Query</td>
@@ -1119,10 +1152,10 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 </tr>
 <tr>
 <td></td>
-<td>Reclaim Trust Deposit Interests</td>
+<td>Reclaim Trust Deposit Yield</td>
 <td></td>
 <td>Msg</td>
-<td><a href="#mod-td-msg-2-reclaim-trust-deposit-interests" >[MOD-TD-MSG-2]</a></td>
+<td><a href="#mod-td-msg-2-reclaim-trust-deposit-yield" >[MOD-TD-MSG-2]</a></td>
 </tr>
 <tr>
 <td></td>
@@ -1140,6 +1173,27 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 </tr>
 <tr>
 <td></td>
+<td>Slash Trust Deposit</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-td-msg-5-slash-trust-deposit" >[MOD-TD-MSG-5]</a></td>
+</tr>
+<tr>
+<td></td>
+<td>Repay Slashed Trust Deposit</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-td-msg-6-repay-slashed-trust-deposit" >[MOD-TD-MSG-6]</a></td>
+</tr>
+<tr>
+<td></td>
+<td>Burn Ecosystem Slashed Trust Deposit</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >[MOD-TD-MSG-7]</a></td>
+</tr>
+<tr>
+<td></td>
 <td>Get Trust Deposit</td>
 <td>/td/v1/get</td>
 <td>Query</td>
@@ -1154,7 +1208,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 </tr>
 </tbody>
 </table>
-<div id="note-618" class="notice note"><a class="notice-link" href="#note-618">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-6" class="notice note"><a class="notice-link" href="#note-6">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1192,7 +1246,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-619" class="notice note"><a class="notice-link" href="#note-619">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed.</p>
+<div id="note-7" class="notice note"><a class="notice-link" href="#note-7">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Applicant MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following:</p>
@@ -1200,7 +1254,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.trust_registry_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-620" class="notice note"><a class="notice-link" href="#note-620">NOTE</a><p><code>TrustRegistry</code> trust deposit is not reclaimable.</p>
+<div id="note-8" class="notice note"><a class="notice-link" href="#note-8">NOTE</a><p><code>TrustRegistry</code> trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-tr-msg-1-3-create-new-trust-registry-execution"><a class="toc-anchor" href="#mod-tr-msg-1-3-create-new-trust-registry-execution" >§</a> [MOD-TR-MSG-1-3] Create New Trust Registry execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1577,7 +1631,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.credential_schema_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-621" class="notice note"><a class="notice-link" href="#note-621">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
+<div id="note-9" class="notice note"><a class="notice-link" href="#note-9">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-cs-msg-1-3-create-new-credential-schema-execution"><a class="toc-anchor" href="#mod-cs-msg-1-3-create-new-credential-schema-execution" >§</a> [MOD-CS-MSG-1-3] Create New Credential Schema execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1605,7 +1659,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 </ul>
 </li>
 </ul>
-<div id="note-622" class="notice note"><a class="notice-link" href="#note-622">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-10" class="notice note"><a class="notice-link" href="#note-10">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any <a class="term-reference" href="#term:account">account</a> CAN execute this method.</p>
@@ -1815,7 +1869,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-623" class="notice note"><a class="notice-link" href="#note-623">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-11" class="notice note"><a class="notice-link" href="#note-11">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -1831,7 +1885,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <p>An Applicant that would like to start a permission validation process MUST execute this method by specifying:</p>
 <ul>
 <li><code>type</code> (PermissionType) (<em>mandatory</em>): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the Applicant would like to get;</li>
-<li><code>validator_perm_id</code> (uint64) (<em>mandatory</em>): the <a class="term-reference" href="#term:validator">validator</a> permission (parent permission in the tree), chosen by the applicant.</li>
+<li><code>validator_perm_id</code> (uint64) (<em>optional</em>): the <a class="term-reference" href="#term:validator">validator</a> permission (parent permission in the tree), chosen by the applicant.</li>
 <li><code>country</code> (string) (<em>mandatory</em>): a country of residence, alpha-2 code (ISO 3166), where applicant is located.</li>
 </ul>
 <p>Available compatible perms can be found by using [MOD-PERM-QRY-1] and presented in a front-end so applicant can choose its validator.</p>
@@ -1845,15 +1899,15 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>country</code> (string) (<em>mandatory</em>) MUST be a valid alpha-2 code (ISO 3166).</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 </ul>
-<div id="note-624" class="notice note"><a class="notice-link" href="#note-624">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
+<div id="note-12" class="notice note"><a class="notice-link" href="#note-12">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
 <li>
-<p>Load <code>Permission</code> entry <code>validator_perm</code> from <code>validator_perm_id</code>. It MUST exist, and be a <a class="term-reference" href="#term:valid-permission">valid permission</a>. <code>validator_perm.country</code> MUST be equal to <code>country</code>, or <code>validator_perm.country</code> MUST be null, else transaction MUST abort.</p>
+<p>Load <code>Permission</code> entry <code>validator_perm</code> from <code>validator_perm_id</code>. It MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a> AND (<code>validator_perm.country</code> MUST be equal to <code>country</code>, or <code>validator_perm.country</code> MUST be null), else transaction MUST abort.</p>
 </li>
 <li>
-<p>Load <code>CredentialSchema</code> entry <code>cs</code> from <code>validator_perm.schema_id</code>.</p>
+<p>Load <code>CredentialSchema</code> entry <code>cs</code> from <code>validator_perm.schema_id</code>. It MUST exist.</p>
 </li>
 <li>
 <p>if <code>type</code> (PermissionType) is equal to ISSUER:</p>
@@ -2013,7 +2067,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 </ul>
 <h6 id="mod-perm-msg-2-2-2-renew-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-2-2-2-renew-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-2-2-2] Renew Permission VP permission checks</h6>
 <ul>
-<li>Load <code>Permission</code> entry <code>applicant_perm</code>. <a class="term-reference" href="#term:account">account</a> running the operation MUST be <code>applicant_perm.grantee</code>, else MUST abort.</li>
+<li>Load <code>Permission</code> entry <code>applicant_perm</code>. <a class="term-reference" href="#term:account">account</a> running the operation MUST be <code>applicant_perm.grantee</code>, else MUST abort. <code>applicant_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a>.</li>
 <li>Load <code>Permission</code> entry <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. It MUST exist, and be a <a class="term-reference" href="#term:valid-permission">valid permission</a>, else MUST abort.</li>
 </ul>
 <h6 id="mod-perm-msg-2-2-3-renew-permission-vp-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-2-2-3-renew-permission-vp-fee-checks" >§</a> [MOD-PERM-MSG-2-2-3] Renew Permission VP fee checks</h6>
@@ -2120,7 +2174,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><a class="term-reference" href="#term:account">account</a> running the method MUST be <code>validator_perm.grantee</code>.</li>
 </ul>
 <p><em>This section is non-normative.</em></p>
-<p>If <code>validator_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a> (expired, revoked,…) then applicant should start a new validation process.</p>
+<p>If <code>validator_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a> (expired, revoked, slashed…) then applicant should start a new validation process.</p>
 <h6 id="mod-perm-msg-3-2-3-set-permission-vp-to-validated-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-3-2-3-set-permission-vp-to-validated-fee-checks" >§</a> [MOD-PERM-MSG-3-2-3] Set Permission VP to Validated fee checks</h6>
 <p>Validator MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
 <h5 id="mod-perm-msg-3-3-set-permission-vp-to-validated-execution"><a class="toc-anchor" href="#mod-perm-msg-3-3-set-permission-vp-to-validated-execution" >§</a> [MOD-PERM-MSG-3-3] Set Permission VP to Validated execution</h5>
@@ -2264,7 +2318,7 @@ else</li>
 </ul>
 </li>
 </ul>
-<div id="note-625" class="notice note"><a class="notice-link" href="#note-625">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
+<div id="note-13" class="notice note"><a class="notice-link" href="#note-13">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
 </div>
 <h4 id="mod-perm-msg-5-confirm-permission-vp-termination"><a class="toc-anchor" href="#mod-perm-msg-5-confirm-permission-vp-termination" >§</a> [MOD-PERM-MSG-5] Confirm Permission VP Termination</h4>
 <p>This method is called by a validator to confirm the termination of a vp when permission type is HOLDER, usually after revoking (or not) the verifiable credential of the holder. It can be although called by the grantee after a timeout, defined in <code>GlobalVariables.validation_term_requested_timeout_days</code>.</p>
@@ -2299,7 +2353,7 @@ OR
 <code>applicant_perm.grantee</code> CAN be the account executing the method.</li>
 </ul>
 <p>Else MUST abort.</p>
-<div id="note-626" class="notice note"><a class="notice-link" href="#note-626">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
+<div id="note-14" class="notice note"><a class="notice-link" href="#note-14">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
 </div>
 <h6 id="mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks" >§</a> [MOD-PERM-MSG-5-2-3] Confirm Permission VP Termination fee checks</h6>
 <p>Account executing the method MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -2323,7 +2377,7 @@ OR
 <li>
 <p>if <code>applicant_perm.deposit</code> &gt; 0:</p>
 <ul>
-<li>call [MOD-TD-MSG-1] to reduce <code>applicant_perm.grantee</code> trust deposit by <code>applicant_perm.deposit</code>.</li>
+<li>call <a href="#mod-td-msg-1-adjust-trust-deposit" >MOD-TD-MSG-1</a> to reduce <code>applicant_perm.grantee</code> trust deposit by <code>applicant_perm.deposit</code>.</li>
 <li>set <code>applicant_perm.deposit</code> to 0.</li>
 </ul>
 </li>
@@ -2337,7 +2391,7 @@ OR
 </ul>
 </li>
 </ul>
-<div id="note-627" class="notice note"><a class="notice-link" href="#note-627">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
+<div id="note-15" class="notice note"><a class="notice-link" href="#note-15">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
 </div>
 <h4 id="mod-perm-msg-6-cancel-permission-vp-last-request"><a class="toc-anchor" href="#mod-perm-msg-6-cancel-permission-vp-last-request" >§</a> [MOD-PERM-MSG-6] Cancel Permission VP Last Request</h4>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> of a permission validation process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and paid <a class="term-reference" href="#term:trust-fees">trust fees</a> are refunded. If <code>vp_exp</code> is not null, <code>vp_state</code> is set back to VALIDATED, else <code>vp_state</code> is set to TERMINATED.</p>
@@ -2428,7 +2482,7 @@ OR
 <li><a class="term-reference" href="#term:account">account</a> executing the method MUST be the <a class="term-reference" href="#term:controller">controller</a> of <code>tr</code>.</li>
 <li>else MUST abort.</li>
 </ul>
-<div id="note-628" class="notice note"><a class="notice-link" href="#note-628">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
+<div id="note-16" class="notice note"><a class="notice-link" href="#note-16">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
 </div>
 <h6 id="mod-perm-msg-7-2-3-create-root-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-7-2-3-create-root-permission-fee-checks" >§</a> [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks</h6>
 <p>Account MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> available.</p>
@@ -2459,7 +2513,7 @@ OR
 <h4 id="mod-perm-msg-8-extend-permission"><a class="toc-anchor" href="#mod-perm-msg-8-extend-permission" >§</a> [MOD-PERM-MSG-8] Extend Permission</h4>
 <p>This method can only be called by a validator.</p>
 <h5 id="mod-perm-msg-8-1-extend-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-8-1-extend-permission-parameters" >§</a> [MOD-PERM-MSG-8-1] Extend Permission parameters</h5>
-<p>An <a class="term-reference" href="#term:account">account</a> that would like to extend the effective_until timestamp of a permission MUST call this methid by specifying:</p>
+<p>An <a class="term-reference" href="#term:account">account</a> that would like to extend the effective_until timestamp of a permission MUST call this method by specifying:</p>
 <ul>
 <li><code>id</code> (uint64) (<em>mandatory</em>): id of the permission;</li>
 <li><code>effective_until</code> (timestamp) (<em>optional</em>): timestamp until when (exclusive) this <code>Permission</code> is effective.</li>
@@ -2471,6 +2525,7 @@ OR
 <ul>
 <li><code>id</code> MUST be a valid uint64.</li>
 <li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
+<li><code>applicant_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a></li>
 <li><code>effective_until</code> MUST be greater than <code>applicant_perm.effective_until</code> else MUST abort.</li>
 <li><code>effective_until</code> MUST be lower or equal to <code>applicant_perm.vp_exp</code> else MUST abort.</li>
 </ul>
@@ -2510,7 +2565,7 @@ OR
 <h4 id="mod-perm-msg-9-revoke-permission"><a class="toc-anchor" href="#mod-perm-msg-9-revoke-permission" >§</a> [MOD-PERM-MSG-9] Revoke Permission</h4>
 <p>This method can only be called by a validator.</p>
 <h5 id="mod-perm-msg-9-1-revoke-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-9-1-revoke-permission-parameters" >§</a> [MOD-PERM-MSG-9-1] Revoke Permission parameters</h5>
-<p>An <a class="term-reference" href="#term:account">account</a> that would like to extend the effective_until timestamp of a permission MUST call this methid by specifying:</p>
+<p>An <a class="term-reference" href="#term:account">account</a> that would like to extend the effective_until timestamp of a permission MUST call this method by specifying:</p>
 <ul>
 <li><code>id</code> (uint64) (<em>mandatory</em>): id of the permission;</li>
 </ul>
@@ -2521,6 +2576,7 @@ OR
 <ul>
 <li><code>id</code> MUST be a valid uint64.</li>
 <li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
+<li><code>applicant_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a></li>
 </ul>
 <h6 id="mod-perm-msg-9-2-2-revoke-permission-validator-perms"><a class="toc-anchor" href="#mod-perm-msg-9-2-2-revoke-permission-validator-perms" >§</a> [MOD-PERM-MSG-9-2-2] Revoke Permission validator perms</h6>
 <ul>
@@ -2607,7 +2663,7 @@ OR
 <li>if <code>wallet_agent_perm.type</code> is not ISSUER, abort.</li>
 <li>if <code>wallet_agent_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, abort.</li>
 </ul>
-<div id="warning-95" class="notice warning"><a class="notice-link" href="#warning-95">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an ECS of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
+<div id="warning-2" class="notice warning"><a class="notice-link" href="#warning-2">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an ECS of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
 </div>
 <h6 id="mod-perm-msg-10-3-create-or-update-permission-session-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-10-3-create-or-update-permission-session-fee-checks" >§</a> [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks</h6>
 <p>Account MUST have sufficient available balance for:</p>
@@ -2623,7 +2679,7 @@ OR
 </ul>
 <p>Total required <code>trust_fees</code> to be paid by account executing the method, including Trust Deposit: (<code>beneficiary_fees</code> + percent fees for agents) * trust deposit percent * trust unit price:</p>
 <p><code>trust_fees</code> = <code>beneficiary_fees</code>  * (1 + (<code>GlobalVariables.user_agent_reward_rate</code> + <code>GlobalVariables.wallet_user_agent_reward_rate</code>)) * (1 + <code>GlobalVariables.trust_deposit_rate</code>) * <code>GlobalVariables.trust_unit_price</code></p>
-<p>See <a href="#pay-per-issued-credential" >Pay per issued credential</a> and <a href="#pay-per-verified-credential" >Pay per verified credential</a> above.</p>
+<p>See <a href="#pay-per-trust-fees" >Pay per trust fees</a> above.</p>
 <h5 id="mod-perm-msg-10-4-create-or-update-permission-session-execution"><a class="toc-anchor" href="#mod-perm-msg-10-4-create-or-update-permission-session-execution" >§</a> [MOD-PERM-MSG-10-4] Create or Update Permission Session execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
 <ul>
@@ -2675,7 +2731,7 @@ OR
 <li>add (<code>issuer_perm_id</code>, <code>verifier_perm_id</code>, <code>wallet_agent_perm_id</code>) to <code>session.authz[]</code></li>
 <li><code>session.modified:</code> : <code>now</code></li>
 </ul>
-<div id="warning-96" class="notice warning"><a class="notice-link" href="#warning-96">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
+<div id="warning-3" class="notice warning"><a class="notice-link" href="#warning-3">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
 </div>
 <h4 id="mod-perm-msg-11-update-permission-module-parameters"><a class="toc-anchor" href="#mod-perm-msg-11-update-permission-module-parameters" >§</a> [MOD-PERM-MSG-11] Update Permission Module Parameters</h4>
 <p>Update Permission Module Parameters.</p>
@@ -2698,6 +2754,176 @@ OR
 <p>for each parameter <code>param</code> &lt;<code>key</code>, <code>value</code>&gt; in <code>parameters</code>:</p>
 <ul>
 <li>update parameter set value = <code>value</code> where key = <code>key</code>.</li>
+</ul>
+<h4 id="mod-perm-msg-12-slash-permission-trust-deposit"><a class="toc-anchor" href="#mod-perm-msg-12-slash-permission-trust-deposit" >§</a> [MOD-PERM-MSG-12] Slash Permission Trust Deposit</h4>
+<p>This method can only be called by either:</p>
+<ul>
+<li>the <code>account</code> of the validator that created the Permission that they want to slash,</li>
+<li>the <code>grantee</code> of the <code>ECOSYSTEM</code> Permission (the Trust Registry controller) of the corresponding credential schema that this Permission is linked to;</li>
+<li>the network governance authority (using a proposal).</li>
+</ul>
+<h5 id="mod-perm-msg-12-1-slash-permission-trust-deposit-parameters"><a class="toc-anchor" href="#mod-perm-msg-12-1-slash-permission-trust-deposit-parameters" >§</a> [MOD-PERM-MSG-12-1] Slash Permission Trust Deposit parameters</h5>
+<p>An <a class="term-reference" href="#term:account">account</a> that would like to slash a permission trust deposit MUST call this method by specifying:</p>
+<ul>
+<li><code>id</code> (uint64) (<em>mandatory</em>): id of the permission;</li>
+<li><code>amount</code> (number) (<em>mandatory</em>): the amount to slash</li>
+</ul>
+<h5 id="mod-perm-msg-12-2-slash-permission-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-perm-msg-12-2-slash-permission-trust-deposit-precondition-checks" >§</a> [MOD-PERM-MSG-12-2] Slash Permission Trust Deposit precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-perm-msg-12-2-1-slash-permission-trust-deposit-basic-checks"><a class="toc-anchor" href="#mod-perm-msg-12-2-1-slash-permission-trust-deposit-basic-checks" >§</a> [MOD-PERM-MSG-12-2-1] Slash Permission Trust Deposit basic checks</h6>
+<p>if a mandatory parameter is not present, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li><code>id</code> MUST be a valid uint64.</li>
+<li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
+<li><code>applicant_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a></li>
+<li><code>amount</code> MUST be lower or equal to <code>applicant_perm.deposit</code> else MUST abort.</li>
+</ul>
+<h6 id="mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms"><a class="toc-anchor" href="#mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms" >§</a> [MOD-PERM-MSG-12-2-2] Slash Permission Trust Deposit validator perms</h6>
+<p>Either Option #1, #2 or #3 MUST be true else abort.</p>
+<p><em>Option #1</em>: executed by validator</p>
+<p>if <code>applicant_perm.validator_perm_id</code> is defined:</p>
+<ul>
+<li>load <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. <code>validator_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a>.</li>
+<li><a class="term-reference" href="#term:account">account</a> running the method MUST be <code>validator_perm.grantee</code>.</li>
+</ul>
+<p><em>Option #2</em>: executed by ecosystem controller</p>
+<ul>
+<li>find <code>ecosystem_perm</code> using <code>ecosystem_perm.type</code> = <code>ECOSYSTEM</code> and <code>ecosystem_perm.schema_id</code> = <code>applicant_perm.schema_id</code>.</li>
+<li><a class="term-reference" href="#term:account">account</a> running the method MUST be <code>ecosystem_perm.grantee</code>.</li>
+</ul>
+<p><em>Option #3</em>: network governance authority</p>
+<p>Account executing the method MUST be the network governance authority (voted proposal).</p>
+<h6 id="mod-perm-msg-12-2-3-slash-permission-trust-deposit-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-12-2-3-slash-permission-trust-deposit-fee-checks" >§</a> [MOD-PERM-MSG-12-2-3] Slash Permission Trust Deposit fee checks</h6>
+<p>Account executing the method MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h5 id="mod-perm-msg-12-3-slash-permission-trust-deposit-execution"><a class="toc-anchor" href="#mod-perm-msg-12-3-slash-permission-trust-deposit-execution" >§</a> [MOD-PERM-MSG-12-3] Slash Permission Trust Deposit execution</h5>
+<p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
+<p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
+<ul>
+<li>
+<p>define <code>now</code>: current timestamp.</p>
+</li>
+<li>
+<p>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>.</p>
+</li>
+<li>
+<p>Load <code>Permission</code> entry <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>.</p>
+</li>
+<li>
+<p>set <code>applicant_perm.slashed</code> to <code>now</code></p>
+</li>
+<li>
+<p>set <code>applicant_perm.modified</code> to <code>now</code></p>
+</li>
+<li>
+<p>set <code>applicant_perm.slashed_deposit</code> to <code>applicant_perm.slashed_deposit</code> + <code>amount</code></p>
+</li>
+<li>
+<p>set <code>applicant_perm.slashed_by</code> to account executing the method.</p>
+</li>
+</ul>
+<p>use <a href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >MOD-TD-MSG-7</a> to burn the slashed <code>amount</code> from the trust deposit of <code>applicant_perm.grantee</code>.</p>
+<h4 id="mod-perm-msg-13-repay-permission-slashed-trust-deposit"><a class="toc-anchor" href="#mod-perm-msg-13-repay-permission-slashed-trust-deposit" >§</a> [MOD-PERM-MSG-13] Repay Permission Slashed Trust Deposit</h4>
+<p>This method can only be called by anyone that want to repay the deposit of a slashed perm. This won’t make the perm re-usable: it will be needed for the grantee to request a new permission, as slashed permissions cannot be revived (same happen for revoked, etc…).</p>
+<p>Nevertheless, to get a new permission for a given ecosystem, it is needed, using this method, to repay the deposit of a slashed permission first.</p>
+<h5 id="mod-perm-msg-13-1-repay-permission-slashed-trust-deposit-parameters"><a class="toc-anchor" href="#mod-perm-msg-13-1-repay-permission-slashed-trust-deposit-parameters" >§</a> [MOD-PERM-MSG-13-1] Repay Permission Slashed Trust Deposit parameters</h5>
+<p>An <a class="term-reference" href="#term:account">account</a> that would like to repay a permission trust deposit MUST call this method by specifying:</p>
+<ul>
+<li><code>id</code> (uint64) (<em>mandatory</em>): id of the permission</li>
+</ul>
+<h5 id="mod-perm-msg-13-2-repay-permission-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-perm-msg-13-2-repay-permission-slashed-trust-deposit-precondition-checks" >§</a> [MOD-PERM-MSG-13-2] Repay Permission Slashed Trust Deposit precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-perm-msg-13-2-1-repay-permission-slashed-trust-deposit-basic-checks"><a class="toc-anchor" href="#mod-perm-msg-13-2-1-repay-permission-slashed-trust-deposit-basic-checks" >§</a> [MOD-PERM-MSG-13-2-1] Repay Permission Slashed Trust Deposit basic checks</h6>
+<p>if a mandatory parameter is not present, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li><code>id</code> MUST be a valid uint64.</li>
+<li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
+</ul>
+<h6 id="mod-perm-msg-13-2-2-repay-permission-slashed-trust-deposit-validator-perms"><a class="toc-anchor" href="#mod-perm-msg-13-2-2-repay-permission-slashed-trust-deposit-validator-perms" >§</a> [MOD-PERM-MSG-13-2-2] Repay Permission Slashed Trust Deposit validator perms</h6>
+<p>Any account can execute this method.</p>
+<h6 id="mod-perm-msg-13-2-3-repay-permission-slashed-trust-deposit-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-13-2-3-repay-permission-slashed-trust-deposit-fee-checks" >§</a> [MOD-PERM-MSG-13-2-3] Repay Permission Slashed Trust Deposit fee checks</h6>
+<p>Account executing the method MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, plus <code>applicant_perm.slashed_deposit</code>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h5 id="mod-perm-msg-13-3-repay-permission-slashed-trust-deposit-execution"><a class="toc-anchor" href="#mod-perm-msg-13-3-repay-permission-slashed-trust-deposit-execution" >§</a> [MOD-PERM-MSG-13-3] Repay Permission Slashed Trust Deposit execution</h5>
+<p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
+<p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
+<ul>
+<li>
+<p>define <code>now</code>: current timestamp.</p>
+</li>
+<li>
+<p>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>.</p>
+</li>
+<li>
+<p>set <code>applicant_perm.repaid</code> to <code>now</code></p>
+</li>
+<li>
+<p>set <code>applicant_perm.modified</code> to <code>now</code></p>
+</li>
+<li>
+<p>set <code>applicant_perm.repaid_deposit</code> to <code>amount</code>.</p>
+</li>
+<li>
+<p>set <code>applicant_perm.repaid_by</code> to account executing the method.</p>
+</li>
+</ul>
+<p>use <a href="#mod-td-msg-1-adjust-trust-deposit" >Adjust Trust Deposit</a> to transfer <code>amount</code> to trust deposit of <code>applicant_perm.grantee</code>.</p>
+<h4 id="mod-perm-msg-14-create-permission"><a class="toc-anchor" href="#mod-perm-msg-14-create-permission" >§</a> [MOD-PERM-MSG-14] Create Permission</h4>
+<p>This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required if Ecosystem decided to charge the issuance (or the verification) of the credentials.</p>
+<h5 id="mod-perm-msg-14-1-create-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-14-1-create-permission-parameters" >§</a> [MOD-PERM-MSG-14-1] Create Permission parameters</h5>
+<p>An <a class="term-reference" href="#term:account">account</a> that would like to create a <code>Permission</code> entry MUST call this method by specifying:</p>
+<ul>
+<li><code>schema_id</code> (uint64) (<em>mandatory</em>)</li>
+<li><code>type</code> (PermissionType) (<em>mandatory</em>): ISSUER or VERIFIER.</li>
+<li><code>did</code> (string) (<em>mandatory</em>): <a class="term-reference" href="#term:did">DID</a> of the VS grantee service.</li>
+<li><code>country</code> (<em>optional</em>).</li>
+<li><code>effective_from</code> (timestamp) (<em>optional</em>): timestamp from when (exclusive) this Perm is effective. MUST be in the future.</li>
+<li><code>effective_until</code> (timestamp) (<em>optional</em>): timestamp until when (exclusive) this Perm is effective, null if it doesn’t expire. If not null, MUST be greater than <code>effective_from</code>.</li>
+<li><code>verification_fees</code> (number) (<em>optional</em>): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.</li>
+</ul>
+<h5 id="mod-perm-msg-14-2-create-permission-precondition-checks"><a class="toc-anchor" href="#mod-perm-msg-14-2-create-permission-precondition-checks" >§</a> [MOD-PERM-MSG-14-2] Create Permission precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-perm-msg-14-2-1-create-permission-basic-checks"><a class="toc-anchor" href="#mod-perm-msg-14-2-1-create-permission-basic-checks" >§</a> [MOD-PERM-MSG-14-2-1] Create Permission basic checks</h6>
+<p>if a mandatory parameter is not present, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li><code>schema_id</code> MUST be a valid uint64 and a <a class="term-reference" href="#term:credential-schema">credential schema</a> entry with this id MUST exist.</li>
+<li><code>type</code> (PermissionType) (<em>mandatory</em>): MUST be ISSUER or VERIFIER, else abort.</li>
+<li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
+<li><code>effective_from</code> must be in the future.</li>
+<li><code>effective_until</code>, if not null, must be greater than <code>effective_from</code></li>
+<li><code>country</code> if not null, MUST be a valid alpha-2 code (ISO 3166).</li>
+<li><code>verification_fees</code> (number) (<em>optional</em>): If specified, MUST be &gt;= 0.</li>
+</ul>
+<h6 id="mod-perm-msg-14-2-2-create-permission-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-14-2-2-create-permission-permission-checks" >§</a> [MOD-PERM-MSG-14-2-2] Create Permission permission checks</h6>
+<p>To execute this method, <a class="term-reference" href="#term:account">account</a> MUST match at least one these rules, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li>The related <code>CredentialSchema</code> entry is loaded with <code>schema_id</code>, and will be named <code>cs</code> in this section.</li>
+<li>if <code>type</code> is equal to ISSUER: if <code>cs.issuer_perm_management_mode</code> is not equal to OPEN, MUST abort.</li>
+<li>if <code>type</code> is equal to VERIFIER: if <code>cs.verifier_perm_management_mode</code> is not equal to OPEN, MUST abort.</li>
+</ul>
+<h6 id="mod-perm-msg-14-2-3-create-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-14-2-3-create-permission-fee-checks" >§</a> [MOD-PERM-MSG-14-2-3] Create Permission fee checks</h6>
+<p>Account MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> available.</p>
+<h5 id="mod-perm-msg-14-3-create-permission-execution"><a class="toc-anchor" href="#mod-perm-msg-14-3-create-permission-execution" >§</a> [MOD-PERM-MSG-14-3] Create Permission execution</h5>
+<p>If all precondition checks passed, method is executed.</p>
+<p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
+<ul>
+<li>define <code>now</code>: current timestamp.</li>
+</ul>
+<p>A new entry <code>Permission</code> <code>perm</code> MUST be created:</p>
+<ul>
+<li><code>perm.id</code>: auto-incremented uint64.</li>
+<li><code>perm.schema_id</code>: <code>schema_id</code>.</li>
+<li><code>perm.modified</code> to <code>now</code>.</li>
+<li><code>perm.type</code>: <code>type</code>.</li>
+<li><code>perm.did</code>: <code>did</code>.</li>
+<li><code>perm.grantee</code>: <code>account</code> executing the method.</li>
+<li><code>perm.created</code>: <code>now</code></li>
+<li><code>perm.created_by</code>: <code>account</code> executing the method.</li>
+<li><code>perm.effective_from</code>: <code>effective_from</code></li>
+<li><code>perm.effective_until</code>: <code>effective_until</code></li>
+<li><code>perm.country</code>: <code>country</code></li>
+<li><code>perm.validation_fees</code>: 0</li>
+<li><code>perm.issuance_fees</code>: 0</li>
+<li><code>perm.verification_fees</code>: <code>verification_fees</code> if specified, else 0.</li>
+<li><code>perm.deposit</code>: 0</li>
 </ul>
 <h4 id="mod-perm-qry-1-list-permissions"><a class="toc-anchor" href="#mod-perm-qry-1-list-permissions" >§</a> [MOD-PERM-QRY-1] List Permissions</h4>
 <p>Anyone CAN execute this method.</p>
@@ -2777,7 +3003,7 @@ OR
 <h4 id="mod-perm-qry-4-find-beneficiaries"><a class="toc-anchor" href="#mod-perm-qry-4-find-beneficiaries" >§</a> [MOD-PERM-QRY-4] Find Beneficiaries</h4>
 <p>Anyone can execute this method.</p>
 <p>To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches <code>issuer_perm</code> and <code>verifier_perm</code>. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If <code>verifier_perm</code> is null, <code>issuer_perm</code> is never added to the set. If <code>verifier_perm</code> is NOT null, <code>issuer_perm</code> is added to the set if it exists but <code>verifier_perm</code> is not added to the set.</p>
-<div id="note-629" class="notice note"><a class="notice-link" href="#note-629">NOTE</a><p>If a Credential Schema is configured with permission management mode set to <code>OPEN</code> for either issuance or verification, it is necessary to check whether the associated ECOSYSTEM permission requires issuance or verification fees. This check MUST be performed by calling this method and passing the id of the ECOSYSTEM permission. In this case, the only beneficiary of the fees is the ECOSYSTEM permission itself.</p>
+<div id="note-17" class="notice note"><a class="notice-link" href="#note-17">NOTE</a><p>If a Credential Schema is configured with permission management mode set to <code>OPEN</code> for either issuance or verification, it is necessary to check whether the associated ECOSYSTEM permission requires issuance or verification fees. This check MUST be performed by calling this method and passing the id of the ECOSYSTEM permission. In this case, the only beneficiary of the fees is the ECOSYSTEM permission itself.</p>
 </div>
 <p>Example 1: <code>verifier_perm</code>: is not set: it’s a credential offer, schema configured to have Issuer Grantors.</p>
 <img src="https://www.plantuml.com/plantuml/svg/dT312e9040RW-px5e8TEWX1efp12eaC9hXqwoUgEPRXkk2C9qRkd1dhpq6d-WU4RPW93eg5MLIoOaib5XQ141nlNXLSfwSvqzi2Sm0ht4R_o93m1TfYtf1iGTOvc24zib0N203LWhujCPXwy6O2G4XG2QIXqMyjqc4iD4ljCx97pInYdXtXtJg9uoIvl_zcpELDW-vxlenmbgUiLBNciN-qus_uwLewXxrc0jHo_zwjV" alt="uml diagram">
@@ -2831,7 +3057,7 @@ OR
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-630" class="notice note"><a class="notice-link" href="#note-630">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-18" class="notice note"><a class="notice-link" href="#note-18">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -2896,9 +3122,9 @@ However, it may be useful for certain use cases, for example, a <strong>Social B
 That said, the deterrent is economic: why would anyone pay registration fees for a <a class="term-reference" href="#term:did">DID</a> they do not control?</p>
 <p>To protect the intent of the actual <a class="term-reference" href="#term:did">DID</a> controller, registration alone does not trigger indexing.<br>
 Indexers must respect optional <strong>crawler directives</strong> included in the <a class="term-reference" href="#term:did-document">DID Document</a> (e.g., <code>index</code>, <code>noindex</code>), ensuring that <strong>control over indexation remains with the <a class="term-reference" href="#term:did">DID</a> controller</strong>, regardless of who registered the DID in the directory.</p>
-<div id="note-631" class="notice note"><a class="notice-link" href="#note-631">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
+<div id="note-19" class="notice note"><a class="notice-link" href="#note-19">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
 </div>
-<div id="note-632" class="notice note"><a class="notice-link" href="#note-632">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
+<div id="note-20" class="notice note"><a class="notice-link" href="#note-20">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
 </div>
 <h4 id="mod-dd-msg-1-add-a-did"><a class="toc-anchor" href="#mod-dd-msg-1-add-a-did" >§</a> [MOD-DD-MSG-1] Add a DID</h4>
 <p>Add a <a class="term-reference" href="#term:did">DID</a> to the DID Directory, with expiration timestamp set to current timestamp + <em>years</em> years.</p>
@@ -3111,30 +3337,90 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <h4 id="trust-deposit-module-overview"><a class="toc-anchor" href="#trust-deposit-module-overview" >§</a> Trust deposit module overview</h4>
 <p><em>This section is non-normative.</em></p>
 <p>Concept: the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> is used to lock trust value as a stake. To process application messages that perform state changes, several modules methods are requiring a trust deposit to be sent, from the executing account, to the trust deposit module.</p>
-<p>Example: an account wants to create a new DidDirectory entry, to execute the transaction it will need:</p>
+<p>We will use a similar method than the one described <a path-0="docs.cosmos.network"path-1="main"path-2="build"path-3="modules"path-4="staking#delegator-shares"href="https://docs.cosmos.network/main/build/modules/staking#delegator-shares" >here</a> to manage trust deposit and yield calculation and easy way.</p>
+<p><em>Example</em>:</p>
+<p>In our example, we suppose a VPR is just starting and no trust transaction have taken place yet. For this reason:</p>
 <ul>
-<li>10 <code>denom</code> (trust deposit) that will be sent to the trust deposit;</li>
-<li>5 <code>denom</code> (transaction fees)</li>
+<li><code>TrustDeposit</code> module has a balance of <code>0</code>: <code>TrustDeposit.deposit</code> : <code>0</code>.</li>
+<li><code>GlobalVariables.trust_deposit_share_value</code> has a value of <code>1</code>.</li>
 </ul>
-<p>Execution of the method will perform the following (we ignore anything that does not have to do with the trust deposit, and we consider this account had no <code>TrustDeposit</code> entry yet):</p>
+<p><em>Operation #1</em>:</p>
+<p>an account <code>account1</code> wants to create a transaction that requires:</p>
 <ul>
-<li>10 <code>denom</code> are sent to the <code>TrustDeposit</code> module.</li>
-<li>a <code>TrustDeposit</code> entry <code>tt</code> is created for <code>account</code> running the service. Using the <code>share</code> exchange rate, (as explained <a path-0="docs.cosmos.network"path-1="main"path-2="build"path-3="modules"path-4="staking#delegator-shares"href="https://docs.cosmos.network/main/build/modules/staking#delegator-shares" >here</a>) calculate the number of <code>share</code> equivalent to the 10 <code>denom</code>, and set it to <code>tt.share</code>. Set <code>tt.deposit</code> to 10.</li>
-<li>In the created <code>DidDirectory</code> entry <code>dd</code>, set <code>dd.trust_deposit_share</code> to <code>tt.share</code>, and .</li>
+<li>10 <code>denom</code> to be sent to the <code>account1</code> trust deposit;</li>
+<li>5 <code>denom</code> for network fees.</li>
 </ul>
-<p>Fee distribution: let’s suppose 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holder. For this specific transaction:</p>
+<p><em>First, the Trust Deposit</em>: execution of the method will perform the following (we consider this account had no <code>TrustDeposit</code> entry yet):</p>
 <ul>
-<li>30% * 5 = 1.5 <code>denom</code> will be sent to <code>trust–deposit</code>, which will increase the <code>GlobalVariables.trust_deposit_share_value</code>.</li>
+<li>
+<p>10 <code>denom</code> are sent to the <code>TrustDeposit</code> module.</p>
+<ul>
+<li><code>TrustDeposit.deposit</code> = <code>TrustDeposit.deposit</code> + <code>10</code></li>
 </ul>
-<p>Now, <code>account</code> can reclaim the difference between the <code>GlobalVariables.trust_deposit_share_value</code> * <code>tt.share</code> minus <code>tt.denom</code>, which represents the trust (stake) gains.</p>
+</li>
+<li>
+<p>a <code>TrustDeposit</code> entry <code>td1</code> is created for <code>account1</code> running the service with:</p>
+<ul>
+<li><code>td1.deposit</code> = <code>10</code></li>
+<li><code>td1.shares</code> = <code>10</code> / <code>GlobalVariables.trust_deposit_share_value</code> = <code>10</code></li>
+</ul>
+</li>
+</ul>
+<p><em>Second, fee distribution</em>: let’s suppose 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holders. For this specific transaction:</p>
+<ul>
+<li>
+<p>30% * 5 = 1.5 <code>denom</code> will be sent to <code>TrustDeposit</code> module, which will increase the <code>GlobalVariables.trust_deposit_share_value</code>:</p>
+</li>
+<li>
+<p><code>TrustDeposit.deposit</code> = <code>11.5</code></p>
+</li>
+<li>
+<p><code>GlobalVariables.trust_deposit_share_value</code> = <code>1.15</code>.</p>
+</li>
+</ul>
+<p>Now, <code>account1</code> can (optionally) reclaim the difference between the <code>GlobalVariables.trust_deposit_share_value</code> * <code>tt.share</code> minus <code>tt.denom</code>, which represents the trust (yield) gains.</p>
+<p><em>Operation #2</em>:</p>
+<p>Another account <code>account2</code> wants to create a transaction that requires:</p>
+<ul>
+<li>20 <code>denom</code> to be sent to the <code>account2</code> trust deposit;</li>
+<li>10 <code>denom</code> for network fees.</li>
+</ul>
+<p><em>First, Trust Deposit</em>:</p>
+<ul>
+<li>
+<p>20 <code>denom</code> are sent to the <code>TrustDeposit</code> module.</p>
+<ul>
+<li><code>TrustDeposit.deposit</code> = <code>31.5</code></li>
+</ul>
+</li>
+<li>
+<p>a <code>TrustDeposit</code> entry <code>td2</code> is created for <code>account2</code>:</p>
+<ul>
+<li><code>td2.deposit</code> = <code>20</code></li>
+<li><code>td2.shares</code> = <code>20</code> / <code>GlobalVariables.trust_deposit_share_value</code> = <code>20</code> / <code>1.15</code> ~=  <code>17.39...</code></li>
+</ul>
+</li>
+</ul>
+<p><em>Second, fee distribution</em>: let’s suppose 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holders. For this specific transaction:</p>
+<ul>
+<li>
+<p>30% * 10 = 3 <code>denom</code> will be sent to <code>TrustDeposit</code> module, which will increase the <code>GlobalVariables.trust_deposit_share_value</code>:</p>
+</li>
+<li>
+<p><code>TrustDeposit.deposit</code> = <code>34.5</code></p>
+</li>
+<li>
+<p><code>GlobalVariables.trust_deposit_share_value</code> = <code>1.15</code> * <code>34.5</code> / <code>31.5</code> ~= <code>1.2595...</code></p>
+</li>
+</ul>
+<p><em>After the 2 operations</em>:</p>
+<ul>
+<li><code>account1</code> real deposit (based on share) is <code>account1.share</code> * <code>GlobalVariables.trust_deposit_share_value</code> ~= <code>12.595...</code>, available withdrawable yield is <code>account1.share</code> * <code>GlobalVariables.trust_deposit_share_value</code> - <code>account1.deposit</code> ~= <code>2.595...</code></li>
+<li><code>account2</code> real deposit (based on share) is <code>account2.share</code> * <code>GlobalVariables.trust_deposit_share_value</code> ~= <code>21.90...</code>, available withdrawable yield is <code>account2.share</code> * <code>GlobalVariables.trust_deposit_share_value</code> - <code>account2.deposit</code> ~= <code>1.90...</code></li>
+</ul>
 <h4 id="mod-td-msg-1-adjust-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-1-adjust-trust-deposit" >§</a> [MOD-TD-MSG-1] Adjust Trust Deposit</h4>
 <p>This method is used to increase or decrease the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of a specific <a class="term-reference" href="#term:account">account</a>.</p>
-<p>Only the following modules can call this method:</p>
-<ul>
-<li>the Validation module</li>
-<li>the Credential Schema Permission Module</li>
-<li>the <a class="term-reference" href="#term:did-directory">DID Directory</a> module</li>
-</ul>
+<p>Only the modules that require trust deposit manipulation CAN call this method. If trust deposit has been slashed and not repaid, method execution MUST abort.</p>
 <h5 id="mod-td-msg-1-1-adjust-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-1-1-adjust-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-1-1] Adjust Trust Deposit method parameters</h5>
 <ul>
 <li><code>account</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to adjust.</li>
@@ -3186,13 +3472,19 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <li>
 <p>if a <code>TrustDeposit</code> entry <code>td</code> does not exist for this <code>account</code>, create entry <code>td</code>:</p>
 <ul>
-<li>use bank? to transfer <code>augend</code> from <code>account</code> to <code>TrustDeposit</code> account.</li>
-<li>calculate <code>augend_share</code> by using <a path-0="docs.cosmos.network"path-1="main"path-2="build"path-3="modules"path-4="staking#delegator-shares"href="https://docs.cosmos.network/main/build/modules/staking#delegator-shares" >a similar method than this one</a> using <code>GlobalVariables.trust_deposit_share_value</code>.</li>
+<li>transfer <code>augend</code> from <code>account</code> to <code>TrustDeposit</code> account.</li>
+<li>calculate <code>augend_share</code> = <code>amount</code> / <code>GlobalVariables.trust_deposit_share_value</code>.</li>
 <li>set <code>td.account</code> to <code>account</code>;</li>
 <li>set <code>td.deposit</code> to <code>augend</code>;</li>
 <li>set <code>td.share</code> to <code>augend_share</code>;</li>
 <li>set <code>td.claimable</code> to 0.</li>
+<li>set <code>td.slashed_deposit</code> to 0.</li>
+<li>set <code>td.repaid_deposit</code> to 0.</li>
+<li>set <code>td.slash_count</code> to 0.</li>
 </ul>
+</li>
+<li>
+<p>else if <code>slashed_deposit</code> &gt; 0 and <code>slashed_deposit</code> &lt; <code>repaid_deposit</code> =&gt; deposit has been slashed and not repaid, so MUST abort.</p>
 </li>
 <li>
 <p>else if <code>augend</code> &gt; 0:</p>
@@ -3210,7 +3502,7 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <li>use bank? to transfer <code>augend</code> - <code>td.claimable</code> from <code>account</code> to <code>TrustDeposit</code> account.</li>
 <li>set <code>td.deposit</code> to <code>td.deposit</code> + <code>augend</code> - <code>td.claimable</code></li>
 <li>set <code>td.claimable</code> to 0</li>
-<li>calculate <code>missing_augend_share</code> from missing tokens <code>augend</code> - <code>td.claimable</code>  by using <a path-0="docs.cosmos.network"path-1="main"path-2="build"path-3="modules"path-4="staking#delegator-shares"href="https://docs.cosmos.network/main/build/modules/staking#delegator-shares" >a similar method than this one</a> using <code>GlobalVariables.trust_deposit_share_value</code>.</li>
+<li>calculate <code>missing_augend_share</code> from missing tokens :  <code>missing_augend_share</code> = (<code>augend</code> - <code>td.claimable</code>) / <code>GlobalVariables.trust_deposit_share_value</code>.</li>
 <li>set <code>td.share</code> to <code>td.share</code> + <code>missing_augend_share</code></li>
 </ul>
 </li>
@@ -3220,7 +3512,7 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <p>else</p>
 <ul>
 <li>use bank? to transfer <code>augend</code> from <code>account</code> to <code>TrustDeposit</code> account.</li>
-<li>calculate <code>augend_share</code> by using <a path-0="docs.cosmos.network"path-1="main"path-2="build"path-3="modules"path-4="staking#delegator-shares"href="https://docs.cosmos.network/main/build/modules/staking#delegator-shares" >a similar method than this one</a> using <code>GlobalVariables.trust_deposit_share_value</code>.</li>
+<li>calculate <code>augend_share</code> = <code>augend</code> / <code>GlobalVariables.trust_deposit_share_value</code>.</li>
 <li>set <code>td.deposit</code> to <code>td.deposit</code> + <code>augend</code></li>
 <li>set <code>td.share</code> to <code>td.share</code> + <code>augend_share</code></li>
 </ul>
@@ -3234,35 +3526,39 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 </ul>
 </li>
 </ul>
-<h4 id="mod-td-msg-2-reclaim-trust-deposit-interests"><a class="toc-anchor" href="#mod-td-msg-2-reclaim-trust-deposit-interests" >§</a> [MOD-TD-MSG-2] Reclaim Trust Deposit Interests</h4>
-<p>This method is used to reclaim interests.</p>
+<p>The last case, <code>augend</code> &lt; 0, is to free trust deposit (ej when terminating a permission).</p>
+<h4 id="mod-td-msg-2-reclaim-trust-deposit-yield"><a class="toc-anchor" href="#mod-td-msg-2-reclaim-trust-deposit-yield" >§</a> [MOD-TD-MSG-2] Reclaim Trust Deposit Yield</h4>
+<p>This method is used to reclaim yield. If trust deposit has been slashed and not repaid, method execution MUST abort.</p>
 <p>Any account MAY call this method.</p>
-<p>For a given <code>TrustDeposit</code> entry <code>td</code>, claimable interest is calculated like this:</p>
-<p><code>claimable_interest</code> = <code>td.share</code> * <code>GlobalVariables.trust_deposit_share_value</code> - <code>td.deposit</code>.</p>
-<p>If <code>claimable_interest</code> is positive, they can be claimed.</p>
-<h5 id="mod-td-msg-2-1-reclaim-trust-deposit-interests-method-parameters"><a class="toc-anchor" href="#mod-td-msg-2-1-reclaim-trust-deposit-interests-method-parameters" >§</a> [MOD-TD-MSG-2-1] Reclaim Trust Deposit Interests method parameters</h5>
+<p>For a given <code>TrustDeposit</code> entry <code>td</code>, claimable yield is calculated like this:</p>
+<p><code>claimable_yield</code> = <code>td.share</code> * <code>GlobalVariables.trust_deposit_share_value</code> - <code>td.deposit</code>.</p>
+<p>If <code>claimable_yield</code> is positive, they can be claimed.</p>
+<h5 id="mod-td-msg-2-1-reclaim-trust-deposit-yield-method-parameters"><a class="toc-anchor" href="#mod-td-msg-2-1-reclaim-trust-deposit-yield-method-parameters" >§</a> [MOD-TD-MSG-2-1] Reclaim Trust Deposit Yield method parameters</h5>
 <p>N/A</p>
-<h5 id="mod-td-msg-2-2-reclaim-trust-deposit-interests-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-2-2-reclaim-trust-deposit-interests-precondition-checks" >§</a> [MOD-TD-MSG-2-2] Reclaim Trust Deposit Interests precondition checks</h5>
+<h5 id="mod-td-msg-2-2-reclaim-trust-deposit-yield-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-2-2-reclaim-trust-deposit-yield-precondition-checks" >§</a> [MOD-TD-MSG-2-2] Reclaim Trust Deposit Yield precondition checks</h5>
 <p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
-<h6 id="mod-td-msg-2-2-1-reclaim-trust-deposit-interests-basic-checks"><a class="toc-anchor" href="#mod-td-msg-2-2-1-reclaim-trust-deposit-interests-basic-checks" >§</a> [MOD-TD-MSG-2-2-1] Reclaim Trust Deposit Interests basic checks</h6>
+<h6 id="mod-td-msg-2-2-1-reclaim-trust-deposit-yield-basic-checks"><a class="toc-anchor" href="#mod-td-msg-2-2-1-reclaim-trust-deposit-yield-basic-checks" >§</a> [MOD-TD-MSG-2-2-1] Reclaim Trust Deposit Yield basic checks</h6>
 <ul>
 <li>Load <code>TrustDeposit</code> entry <code>td</code> from <code>account</code> running the method.</li>
-<li>calculate <code>claimable_interest</code> = <code>td.share</code> * <code>GlobalVariables.trust_deposit_share_value</code> - <code>td.deposit</code>.</li>
-<li>if <code>claimable_interest</code> &lt;= 0, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</li>
+<li>if <code>td.slashed_deposit</code> &gt; 0 and <code>td.slashed_deposit</code> &lt; <code>td.repaid_deposit</code> =&gt; deposit has been slashed and not repaid, so MUST abort.</li>
+<li>calculate <code>claimable_yield</code> = <code>td.share</code> * <code>GlobalVariables.trust_deposit_share_value</code> - <code>td.deposit</code>.</li>
+<li>if <code>claimable_yield</code> &lt;= 0, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</li>
 </ul>
-<h6 id="mod-td-msg-2-2-2-reclaim-trust-deposit-interests-fee-checks"><a class="toc-anchor" href="#mod-td-msg-2-2-2-reclaim-trust-deposit-interests-fee-checks" >§</a> [MOD-TD-MSG-2-2-2] Reclaim Trust Deposit Interests fee checks</h6>
+<h6 id="mod-td-msg-2-2-2-reclaim-trust-deposit-yield-fee-checks"><a class="toc-anchor" href="#mod-td-msg-2-2-2-reclaim-trust-deposit-yield-fee-checks" >§</a> [MOD-TD-MSG-2-2-2] Reclaim Trust Deposit Yield fee checks</h6>
 <p>Account running the <a class="term-reference" href="#term:transaction">transaction</a> MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
-<h5 id="mod-td-msg-2-3-reclaim-trust-deposit-interests-value-execution-of-the-method"><a class="toc-anchor" href="#mod-td-msg-2-3-reclaim-trust-deposit-interests-value-execution-of-the-method" >§</a> [MOD-TD-MSG-2-3] Reclaim Trust Deposit Interests Value execution of the method</h5>
+<h5 id="mod-td-msg-2-3-reclaim-trust-deposit-yield-value-execution-of-the-method"><a class="toc-anchor" href="#mod-td-msg-2-3-reclaim-trust-deposit-yield-value-execution-of-the-method" >§</a> [MOD-TD-MSG-2-3] Reclaim Trust Deposit Yield Value execution of the method</h5>
 <p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
 <p>For the <code>TrustDeposit</code> entry <code>td</code> linked to <code>account</code>:</p>
 <ul>
 <li>Load <code>TrustDeposit</code> entry <code>td</code> from <code>account</code> running the method.</li>
-<li>calculate <code>claimable_interest</code> = <code>td.share</code> * <code>GlobalVariables.trust_deposit_share_value</code> - <code>td.deposit</code>.</li>
-<li>update <code>td.share</code> = <code>td.share</code> - <code>claimable_interest</code> / <code>GlobalVariables.trust_deposit_share_value</code></li>
-<li>transfer <code>claimable_interest</code> from <code>TrustDeposit</code> account to <code>account</code>.</li>
+<li>calculate <code>claimable_yield</code> = <code>td.share</code> * <code>GlobalVariables.trust_deposit_share_value</code> - <code>td.deposit</code>.</li>
+<li>update <code>td.share</code> = <code>td.share</code> - <code>claimable_yield</code> / <code>GlobalVariables.trust_deposit_share_value</code></li>
+<li>transfer <code>claimable_yield</code> from <code>TrustDeposit</code> account to <code>account</code>.</li>
 </ul>
+<div id="note-21" class="notice note"><a class="notice-link" href="#note-21">NOTE</a><p>Maybe here the claimed yield should go to the deposit. TBD.</p>
+</div>
 <h4 id="mod-td-msg-3-reclaim-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-3-reclaim-trust-deposit" >§</a> [MOD-TD-MSG-3] Reclaim Trust Deposit</h4>
-<p>This method is used to reclaim claimable trust deposit value, <code>td.claimable</code>.</p>
+<p>This method is used to reclaim claimable trust deposit value, <code>td.claimable</code>. If trust deposit has been slashed and not repaid, method execution MUST abort.</p>
 <p>Any account MAY call this method.</p>
 <p>In order to discourage user from using this method:</p>
 <ul>
@@ -3279,6 +3575,7 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <p>if any of these conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
 <ul>
 <li><code>claimed</code> must be &gt; 0.</li>
+<li>if <code>td.slashed_deposit</code> &gt; 0 and <code>td.slashed_deposit</code> &lt; <code>td.repaid_deposit</code> =&gt; deposit has been slashed and not repaid, so MUST abort.</li>
 <li><code>TrustDeposit</code> entry <code>td</code> MUST exist for this <code>account</code>, and <code>td.claimable</code> MUST be greater or equal to <code>claimed</code>.</li>
 <li>calculate <code>required_minimum_deposit</code> = <code>td.share</code> * <code>GlobalVariables.trust_deposit_share_value</code>. <code>required_minimum_deposit</code> MUST be greater or equal to <code>td.deposit</code> - <code>claimed</code>, else method MUST abort.</li>
 </ul>
@@ -3294,7 +3591,7 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <li>calculate <code>to_burn</code> = <code>GlobalVariables.trust_deposit_reclaim_burn_rate</code> * <code>claimed</code> from account.</li>
 <li>calculate <code>to_transfer</code> = <code>claimed</code> - <code>to_burn</code></li>
 <li>transfer <code>to_transfer</code> from <code>TrustDeposit</code> account to <code>account</code>.</li>
-<li>burn <code>to_burn</code> from <code>TrustDeposit</code> account to <code>account</code>.</li>
+<li>burn <code>to_burn</code> from <code>TrustDeposit</code> module.</li>
 </ul>
 <h4 id="mod-td-msg-4-update-module-parameters"><a class="toc-anchor" href="#mod-td-msg-4-update-module-parameters" >§</a> [MOD-TD-MSG-4] Update Module Parameters</h4>
 <p>Update Module Parameters.</p>
@@ -3317,6 +3614,104 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <p>for each parameter <code>param</code> &lt;<code>key</code>, <code>value</code>&gt; in <code>parameters</code>:</p>
 <ul>
 <li>update parameter set value = <code>value</code> where key = <code>key</code>.</li>
+</ul>
+<h4 id="mod-td-msg-5-slash-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-5-slash-trust-deposit" >§</a> [MOD-TD-MSG-5] Slash Trust Deposit</h4>
+<p>This method is used by the network governance authority to <strong>globally slash</strong> an <code>account</code> trust deposit.</p>
+<p>This method can only be called by a governance proposal. A globally slashed account MUST repay the slashed deposit in order to continue to use the services provided by the VPR. When and account is slashed, and while slashed deposit has not been repaid, all account linked permissions MUST be considered non trustable.</p>
+<p>This method is for network governance authority slash. For ecosystem slash, see <a href="#mod-perm-msg-12-slash-permission-trust-deposit" >Slash Permission Trust Deposit</a>.</p>
+<h5 id="mod-td-msg-5-1-slash-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-5-1-slash-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters</h5>
+<ul>
+<li><code>account</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to slash.</li>
+<li><code>amount</code> (number) (<em>mandatory</em>): value to slash, in <a class="term-reference" href="#term:denom">denom</a>.</li>
+</ul>
+<h5 id="mod-td-msg-5-2-slash-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-5-2-slash-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-5-2] Slash Trust Deposit precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-td-msg-5-2-1-slash-trust-deposit-basic-checks"><a class="toc-anchor" href="#mod-td-msg-5-2-1-slash-trust-deposit-basic-checks" >§</a> [MOD-TD-MSG-5-2-1] Slash Trust Deposit basic checks</h6>
+<p>if any of these conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li><code>amount</code> must be &gt; 0.</li>
+<li><code>TrustDeposit</code> entry <code>td</code> MUST exist for this <code>account</code>, and <code>td.deposit</code> MUST be greater or equal to <code>amount</code>.</li>
+</ul>
+<h6 id="mod-td-msg-5-2-2-slash-trust-deposit-fee-checks"><a class="toc-anchor" href="#mod-td-msg-5-2-2-slash-trust-deposit-fee-checks" >§</a> [MOD-TD-MSG-5-2-2] Slash Trust Deposit fee checks</h6>
+<p>Account running the <a class="term-reference" href="#term:transaction">transaction</a> MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h5 id="mod-td-msg-5-3-slash-trust-deposit-execution-of-the-method"><a class="toc-anchor" href="#mod-td-msg-5-3-slash-trust-deposit-execution-of-the-method" >§</a> [MOD-TD-MSG-5-3] Slash Trust Deposit execution of the method</h5>
+<p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
+<ul>
+<li>define <code>now</code>: current timestamp.</li>
+</ul>
+<p>For the <code>TrustDeposit</code> entry <code>td</code> linked to <code>account</code>:</p>
+<ul>
+<li>set <code>td.deposit</code> to <code>td.deposit</code> - <code>amount</code>.</li>
+<li>set <code>td.share</code> to <code>td.share</code> - <code>amount</code> / <code>GlobalVariables.trust_deposit_share_value</code></li>
+<li>burn <code>amount</code> from <code>TrustDeposit</code> account.</li>
+<li>set <code>td.slashed_deposit</code> to <code>td.slashed_deposit</code> + <code>amount</code></li>
+<li>set <code>td.last_slashed</code> to now</li>
+<li>set <code>td.repaid_by</code> to undefined.</li>
+<li>if <code>td.slash_count</code> is undefined, set it to <code>1</code>, else set it to <code>td.slash_count</code> + 1</li>
+</ul>
+<h4 id="mod-td-msg-6-repay-slashed-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-6-repay-slashed-trust-deposit" >§</a> [MOD-TD-MSG-6] Repay Slashed Trust Deposit</h4>
+<p>Repay a slashed trust deposit. Can be executed by any account.</p>
+<h5 id="mod-td-msg-6-1-repay-slashed-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-6-1-repay-slashed-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-6-1] Repay Slashed Trust Deposit method parameters</h5>
+<ul>
+<li><code>account</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to repay.</li>
+<li><code>amount</code> (number) (<em>mandatory</em>): value to repay, in <a class="term-reference" href="#term:denom">denom</a>.</li>
+</ul>
+<h5 id="mod-td-msg-6-2-repay-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-6-2-repay-slashed-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-6-2] Repay Slashed Trust Deposit precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-td-msg-6-2-1-repay-slashed-trust-deposit-basic-checks"><a class="toc-anchor" href="#mod-td-msg-6-2-1-repay-slashed-trust-deposit-basic-checks" >§</a> [MOD-TD-MSG-6-2-1] Repay Slashed Trust Deposit basic checks</h6>
+<p>if any of these conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li><code>amount</code> must be &gt; 0.</li>
+<li><code>TrustDeposit</code> entry <code>td</code> MUST exist for this <code>account</code>, and <code>amount</code> MUST be exactly equal to <code>td.slashed_deposit</code> - <code>td.repaid_deposit</code>.</li>
+</ul>
+<h6 id="mod-td-msg-6-2-2-repay-slashed-trust-deposit-fee-checks"><a class="toc-anchor" href="#mod-td-msg-6-2-2-repay-slashed-trust-deposit-fee-checks" >§</a> [MOD-TD-MSG-6-2-2] Repay Slashed Trust Deposit fee checks</h6>
+<p>Account running the <a class="term-reference" href="#term:transaction">transaction</a> MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a> plus <code>amount</code>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h5 id="mod-td-msg-6-3-repay-slashed-trust-deposit-execution-of-the-method"><a class="toc-anchor" href="#mod-td-msg-6-3-repay-slashed-trust-deposit-execution-of-the-method" >§</a> [MOD-TD-MSG-6-3] Repay Slashed Trust Deposit execution of the method</h5>
+<p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
+<ul>
+<li>define <code>now</code>: current timestamp.</li>
+</ul>
+<p>For the <code>TrustDeposit</code> entry <code>td</code> linked to <code>account</code>:</p>
+<ul>
+<li>set <code>td.deposit</code> to <code>td.deposit</code> + <code>amount</code>.</li>
+<li>set <code>td.share</code> to <code>td.share</code> + <code>amount</code> / <code>GlobalVariables.trust_deposit_share_value</code></li>
+<li>add <code>amount</code> to <code>TrustDeposit</code> account.</li>
+<li>set <code>td.repaid_deposit</code> to <code>td.repaid_deposit</code> + <code>amount</code></li>
+<li>set <code>td.last_repaid</code> to now</li>
+<li>set <code>td.last_repaid_by</code> to account executing the transaction.</li>
+</ul>
+<h4 id="mod-td-msg-7-burn-ecosystem-slashed-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >§</a> [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit</h4>
+<p>Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.</p>
+<div id="warning-4" class="notice warning"><a class="notice-link" href="#warning-4">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
+</div>
+<h5 id="mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters</h5>
+<ul>
+<li><code>account</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to burn.</li>
+<li><code>amount</code> (number) (<em>mandatory</em>): value to burn, in <a class="term-reference" href="#term:denom">denom</a>.</li>
+</ul>
+<div id="warning-5" class="notice warning"><a class="notice-link" href="#warning-5">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
+The decision between this method and specifying the amount directly is left to implementers.</p>
+</div>
+<h5 id="mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-td-msg-7-2-1-burn-ecosystem-slashed-trust-deposit-basic-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-1-burn-ecosystem-slashed-trust-deposit-basic-checks" >§</a> [MOD-TD-MSG-7-2-1] Burn Ecosystem Slashed Trust Deposit basic checks</h6>
+<p>if any of these conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li><code>amount</code> must be &gt; 0.</li>
+<li><code>TrustDeposit</code> entry <code>td</code> MUST exist for this <code>account</code>, and <code>amount</code> MUST be lower or equal than <code>td.deposit</code>.</li>
+</ul>
+<h6 id="mod-td-msg-7-2-2-burn-ecosystem-slashed-trust-deposit-fee-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-2-burn-ecosystem-slashed-trust-deposit-fee-checks" >§</a> [MOD-TD-MSG-7-2-2] Burn Ecosystem Slashed Trust Deposit fee checks</h6>
+<p>Account running the <a class="term-reference" href="#term:transaction">transaction</a> MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a> else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h5 id="mod-td-msg-7-3-burn-ecosystem-slashed-trust-deposit-execution-of-the-method"><a class="toc-anchor" href="#mod-td-msg-7-3-burn-ecosystem-slashed-trust-deposit-execution-of-the-method" >§</a> [MOD-TD-MSG-7-3] Burn Ecosystem Slashed Trust Deposit execution of the method</h5>
+<p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
+<ul>
+<li>define <code>now</code>: current timestamp.</li>
+</ul>
+<p>For the <code>TrustDeposit</code> entry <code>td</code> linked to <code>account</code>:</p>
+<ul>
+<li>set <code>td.deposit</code> to <code>td.deposit</code> - <code>amount</code>.</li>
+<li>set <code>td.share</code> to <code>td.share</code> - <code>amount</code> / <code>GlobalVariables.trust_deposit_share_value</code></li>
+<li>burn <code>amount</code> from <code>TrustDeposit</code> account.</li>
 </ul>
 <h4 id="mod-td-qry-1-get-trust-deposit"><a class="toc-anchor" href="#mod-td-qry-1-get-trust-deposit" >§</a> [MOD-TD-QRY-1] Get Trust Deposit</h4>
 <p>Any <a class="term-reference" href="#term:account">account</a> CAN run this <a class="term-reference" href="#term:query">query</a>. As this method does not modify data, it does not require a <a class="term-reference" href="#term:transaction">transaction</a>.</p>
@@ -3524,6 +3919,9 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <li><a href="#mod-perm-msg-9-revoke-permission" >[MOD-PERM-MSG-9] Revoke Permission</a></li>
 <li><a href="#mod-perm-msg-10-create-or-update-permission-session" >[MOD-PERM-MSG-10] Create or Update Permission Session</a></li>
 <li><a href="#mod-perm-msg-11-update-permission-module-parameters" >[MOD-PERM-MSG-11] Update Permission Module Parameters</a></li>
+<li><a href="#mod-perm-msg-12-slash-permission-trust-deposit" >[MOD-PERM-MSG-12] Slash Permission Trust Deposit</a></li>
+<li><a href="#mod-perm-msg-13-repay-permission-slashed-trust-deposit" >[MOD-PERM-MSG-13] Repay Permission Slashed Trust Deposit</a></li>
+<li><a href="#mod-perm-msg-14-create-permission" >[MOD-PERM-MSG-14] Create Permission</a></li>
 <li><a href="#mod-perm-qry-1-list-permissions" >[MOD-PERM-QRY-1] List Permissions</a></li>
 <li><a href="#mod-perm-qry-2-get-permission" >[MOD-PERM-QRY-2] Get Permission</a></li>
 <li><a href="#mod-perm-qry-3-find-permissions-with-did" >[MOD-PERM-QRY-3] Find Permissions With DID</a></li>
@@ -3550,9 +3948,12 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <ul>
 <li><a href="#trust-deposit-module-overview" >Trust deposit module overview</a></li>
 <li><a href="#mod-td-msg-1-adjust-trust-deposit" >[MOD-TD-MSG-1] Adjust Trust Deposit</a></li>
-<li><a href="#mod-td-msg-2-reclaim-trust-deposit-interests" >[MOD-TD-MSG-2] Reclaim Trust Deposit Interests</a></li>
+<li><a href="#mod-td-msg-2-reclaim-trust-deposit-yield" >[MOD-TD-MSG-2] Reclaim Trust Deposit Yield</a></li>
 <li><a href="#mod-td-msg-3-reclaim-trust-deposit" >[MOD-TD-MSG-3] Reclaim Trust Deposit</a></li>
 <li><a href="#mod-td-msg-4-update-module-parameters" >[MOD-TD-MSG-4] Update Module Parameters</a></li>
+<li><a href="#mod-td-msg-5-slash-trust-deposit" >[MOD-TD-MSG-5] Slash Trust Deposit</a></li>
+<li><a href="#mod-td-msg-6-repay-slashed-trust-deposit" >[MOD-TD-MSG-6] Repay Slashed Trust Deposit</a></li>
+<li><a href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >[MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit</a></li>
 <li><a href="#mod-td-qry-1-get-trust-deposit" >[MOD-TD-QRY-1] Get Trust Deposit</a></li>
 <li><a href="#mod-td-qry-2-list-module-parameters" >[MOD-TD-QRY-2] List Module Parameters</a></li>
 </ul>
