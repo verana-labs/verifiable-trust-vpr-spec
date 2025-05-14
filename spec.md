@@ -236,7 +236,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
 
 [[def: valid permission, valid permissions]]:
-~ For a given country code, a credential schema permission of a given type, which (country attribute is null or equals to the given country code), and effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and terminated is null.
+~ For a given country code, a credential schema permission of a given type, which (country attribute is null or equals to the given country code), and effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and terminated is null and slashed is null.
 
 [[def: validation process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
@@ -1003,12 +1003,16 @@ entity "Permission" as csp {
   did: string
   +created: timestamp
   +extended: timestamp
+  +slashed: timestamp
+  +repaid: timestamp
   effective_from: timestamp
   effective_until: timestamp
   +validation_fees: number
   +issuance_fees: number
   +verification_fees: number
   +deposit: number
+  +slashed_deposit: number
+  +repaid_deposit: number
   revoked: timestamp
   terminated: timestamp
   country: string
@@ -1084,6 +1088,11 @@ entity "TrustDeposit" as td {
   share: number
   deposit: number
   claimable: number
+  slashed_deposit: number
+  repaid_deposit: number
+  last_slashed: timestamp
+  last_repaid: timestamp
+  slash_count: number
 }
 
 csp o-- cspt: type
@@ -1100,6 +1109,8 @@ account --o csp: created_by
 account --o csp: extended_by
 csp o-- "0..1" account: revoked_by
 csp o-- "0..1" account: terminated_by
+csp o-- "0..1" account: slashed_by
+csp o-- "0..1" account: repaid_by
 
 csps o-- account: controller
 csps o-- csp: agent_perm_id
@@ -1108,6 +1119,8 @@ account --o did: controller
 account --o val: applicant
 valstate --o csp: vp_state
 account  --o td: account
+
+td o-- "0..1" account: last_repaid_by
 
 @enduml
 
@@ -1182,6 +1195,10 @@ account  --o td: account
 - `created_by` (account) (*mandatory*): [[ref: account]] that created this permission.
 - `extended` (timestamp) (*mandatory*): timestamp this `Permission` has been extended.
 - `extended_by` (account) (*mandatory*): [[ref: account]] that extended this permission.
+- `slashed` (timestamp) (*mandatory*): timestamp this `Permission` has been slashed.
+- `slashed_by` (account) (*mandatory*): [[ref: account]] that slashed this permission.
+- `repaid` (timestamp) (*mandatory*): timestamp this `Permission` has been repaid.
+- `repaid_by` (account) (*mandatory*): [[ref: account]] that repaid this permission.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Permission` is effective.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective, null if no time limit has been set for this permission.
 - `modified` (timestamp) (*mandatory*): timestamp this Permission has been modified.
@@ -1189,6 +1206,8 @@ account  --o td: account
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is issued, in trust unit. Default to 0.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is verified, in trust unit. Default to 0.
 - `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in `denom`. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `perm.deposit` value as well. If `perm` is, let's say revoked, then corresponding `perm.deposit` value is freed from `perm.grantee` Trust Deposit.
+- `slashed_deposit` (number) (*mandatory*): part of the deposit that has been slashed.
+- `repaid_deposit` (number) (*mandatory*): part of the slashed deposit that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `revoked_by` (account) (*mandatory*): [[ref: account]] that revoked this permission.
 - `terminated` (timestamp) (*optional*): manual termination (by grantee) timestamp of this Perm.
@@ -1234,6 +1253,11 @@ account  --o td: account
 - `account` (account) (*mandatory*) (key): the [[ref: account]]
 - `amount` (number) (*mandatory*): amount of deposit in `denom`.
 - `claimable` (number) (*mandatory*): amount of claimable deposit in `denom`.
+- `slashed_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
+- `repaid_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
+- `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed.
+- `last_repaid` (timestamp) (*optional*): last time this trust deposit has been slashed.
+- `slash_count` (number) (*optional*): number of times this account has been slashed.
 
 ### GlobalVariables
 
@@ -1431,6 +1455,9 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Revoke Permission                       |                                 | Msg    | [[MOD-PERM-MSG-9]](#mod-perm-msg-9-revoke-permission)  |
 |                                | Create or update Permission Session     |                                 | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-create-or-update-permission-session)  |
 |                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |
+|                                | Slash Permission Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-12]](#mod-perm-msg-12-slash-permission-trust-deposit) |
+|                            | Repay Permission Slashed Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-13]](#mod-perm-msg-13-repay-permission-slashed-trust-deposit) |
+|                                | Create Permission For Open Schemas     |                                     | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-create-permission) |
 |                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |
 |                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |
 |                                | Find Permissions With DID               | /perm/v1/find_with_did       | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-find-permissions-with-did)  |
@@ -1447,9 +1474,12 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Get a DID                               | /dd/v1/get                  | Query  | [[MOD-DD-QRY-2]](#mod-dd-qry-2-get-a-did)   |
 |                                | List DD Module Parameters               | /dd/v1/params                 | Query  | [[MOD-DD-QRY-3]](#mod-dd-qry-3-list-module-parameters)   |
 | Trust Deposit                  | Adjust Trust Deposit                    |                                  | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-adjust-trust-deposit)   |
-|                                | Reclaim Trust Deposit Interests         |                                  | Msg    | [[MOD-TD-MSG-2]](#mod-td-msg-2-reclaim-trust-deposit-interests)   |
+|                                | Reclaim Trust Deposit Yield         |                                  | Msg    | [[MOD-TD-MSG-2]](#mod-td-msg-2-reclaim-trust-deposit-yield)   |
 |                                | Reclaim Trust Deposit                   |                                  | Msg    | [[MOD-TD-MSG-3]](#mod-td-msg-3-reclaim-trust-deposit)   |
 |                                | Update TD Module Parameters             |                               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |
+|                                | Slash Trust Deposit             |                                       | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |
+|                                | Repay Slashed Trust Deposit          |                                       | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)   |
+|                    | Burn Ecosystem Slashed Trust Deposit          |                                           | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit)   |
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |
 
@@ -2184,7 +2214,7 @@ Any [[ref: account]] CAN execute this method.
 An Applicant that would like to start a permission validation process MUST execute this method by specifying:
 
 - `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the Applicant would like to get;
-- `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
+- `validator_perm_id` (uint64) (*optional*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
 - `country` (string) (*mandatory*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
 
 Available compatible perms can be found by using [MOD-PERM-QRY-1] and presented in a front-end so applicant can choose its validator.
@@ -2208,8 +2238,8 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 ###### [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks
 
-- Load `Permission` entry `validator_perm` from `validator_perm_id`. It MUST exist, and be a [[ref: valid permission]]. `validator_perm.country` MUST be equal to `country`, or `validator_perm.country` MUST be null, else transaction MUST abort.
-- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`.
+- Load `Permission` entry `validator_perm` from `validator_perm_id`. It MUST be a [[ref: valid permission]] AND (`validator_perm.country` MUST be equal to `country`, or `validator_perm.country` MUST be null), else transaction MUST abort.
+- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`. It MUST exist.
 
 - if `type` (PermissionType) is equal to ISSUER:
 
@@ -2344,7 +2374,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PERM-MSG-2-2-2] Renew Permission VP permission checks
 
-- Load `Permission` entry `applicant_perm`. [[ref: account]] running the operation MUST be `applicant_perm.grantee`, else MUST abort.
+- Load `Permission` entry `applicant_perm`. [[ref: account]] running the operation MUST be `applicant_perm.grantee`, else MUST abort. `applicant_perm` MUST be a [[ref: valid permission]].
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`. It MUST exist, and be a [[ref: valid permission]], else MUST abort.
 
 ###### [MOD-PERM-MSG-2-2-3] Renew Permission VP fee checks
@@ -2436,7 +2466,7 @@ Now, let's verify `effective_until`:
 
 *This section is non-normative.*
 
-If `validator_perm` is not a [[ ref: valid permission]] (expired, revoked,...) then applicant should start a new validation process.
+If `validator_perm` is not a [[ ref: valid permission]] (expired, revoked, slashed...) then applicant should start a new validation process.
 
 ###### [MOD-PERM-MSG-3-2-3] Set Permission VP to Validated fee checks
 
@@ -2636,7 +2666,7 @@ Update:
 - set `validation.last_state_change`: `now`.
 
 - if `applicant_perm.deposit` > 0:
-  - call [MOD-TD-MSG-1] to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
+  - call [MOD-TD-MSG-1](#mod-td-msg-1-adjust-trust-deposit) to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
   - set `applicant_perm.deposit` to 0.
 
 If account executing the method is the validator:
@@ -2779,7 +2809,7 @@ This method can only be called by a validator.
 
 ##### [MOD-PERM-MSG-8-1] Extend Permission parameters
 
-An [[ref: account]] that would like to extend the effective_until timestamp of a permission MUST call this methid by specifying:
+An [[ref: account]] that would like to extend the effective_until timestamp of a permission MUST call this method by specifying:
 
 - `id` (uint64) (*mandatory*): id of the permission;
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective.
@@ -2794,6 +2824,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
+- `applicant_perm` MUST be a [[ref: valid permission]]
 - `effective_until` MUST be greater than `applicant_perm.effective_until` else MUST abort.
 - `effective_until` MUST be lower or equal to `applicant_perm.vp_exp` else MUST abort.
 
@@ -2827,7 +2858,7 @@ This method can only be called by a validator.
 
 ##### [MOD-PERM-MSG-9-1] Revoke Permission parameters
 
-An [[ref: account]] that would like to extend the effective_until timestamp of a permission MUST call this methid by specifying:
+An [[ref: account]] that would like to extend the effective_until timestamp of a permission MUST call this method by specifying:
 
 - `id` (uint64) (*mandatory*): id of the permission;
 
@@ -2841,6 +2872,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
+- `applicant_perm` MUST be a [[ref: valid permission]]
 
 ###### [MOD-PERM-MSG-9-2-2] Revoke Permission validator perms
 
@@ -2966,7 +2998,7 @@ Total required `trust_fees` to be paid by account executing the method, includin
 
 `trust_fees` = `beneficiary_fees`  \* (1 + (`GlobalVariables.user_agent_reward_rate` + `GlobalVariables.wallet_user_agent_reward_rate`)) \* (1 + `GlobalVariables.trust_deposit_rate`) * `GlobalVariables.trust_unit_price`
 
-See [Pay per issued credential](#pay-per-issued-credential) and [Pay per verified credential](#pay-per-verified-credential) above.
+See [Pay per trust fees](#pay-per-trust-fees) above.
 
 ##### [MOD-PERM-MSG-10-4] Create or Update Permission Session execution
 
@@ -3039,6 +3071,192 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
+
+#### [MOD-PERM-MSG-12] Slash Permission Trust Deposit
+
+This method can only be called by either:
+
+- the `account` of the validator that created the Permission that they want to slash,
+- the `grantee` of the `ECOSYSTEM` Permission (the Trust Registry controller) of the corresponding credential schema that this Permission is linked to;
+- the network governance authority (using a proposal).
+
+##### [MOD-PERM-MSG-12-1] Slash Permission Trust Deposit parameters
+
+An [[ref: account]] that would like to slash a permission trust deposit MUST call this method by specifying:
+
+- `id` (uint64) (*mandatory*): id of the permission;
+- `amount` (number) (*mandatory*): the amount to slash
+
+##### [MOD-PERM-MSG-12-2] Slash Permission Trust Deposit precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-PERM-MSG-12-2-1] Slash Permission Trust Deposit basic checks
+
+if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
+
+- `id` MUST be a valid uint64.
+- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
+- `applicant_perm` MUST be a [[ref: valid permission]]
+- `amount` MUST be lower or equal to `applicant_perm.deposit` else MUST abort.
+
+###### [MOD-PERM-MSG-12-2-2] Slash Permission Trust Deposit validator perms
+
+Either Option #1, #2 or #3 MUST be true else abort.
+
+*Option #1*: executed by validator
+
+if `applicant_perm.validator_perm_id` is defined:
+
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]].
+- [[ref: account]] running the method MUST be `validator_perm.grantee`.
+
+*Option #2*: executed by ecosystem controller
+
+- find `ecosystem_perm` using `ecosystem_perm.type` = `ECOSYSTEM` and `ecosystem_perm.schema_id` = `applicant_perm.schema_id`.
+- [[ref: account]] running the method MUST be `ecosystem_perm.grantee`.
+
+*Option #3*: network governance authority
+
+Account executing the method MUST be the network governance authority (voted proposal).
+
+###### [MOD-PERM-MSG-12-2-3] Slash Permission Trust Deposit fee checks
+
+Account executing the method MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+
+##### [MOD-PERM-MSG-12-3] Slash Permission Trust Deposit execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp.
+
+- Load `Permission` entry `applicant_perm` from `id`.
+- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
+- set `applicant_perm.slashed` to `now`
+- set `applicant_perm.modified` to `now`
+- set `applicant_perm.slashed_deposit` to `applicant_perm.slashed_deposit` + `amount`
+- set `applicant_perm.slashed_by` to account executing the method.
+
+use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_perm.grantee`.
+
+#### [MOD-PERM-MSG-13] Repay Permission Slashed Trust Deposit
+
+This method can only be called by anyone that want to repay the deposit of a slashed perm. This won't make the perm re-usable: it will be needed for the grantee to request a new permission, as slashed permissions cannot be revived (same happen for revoked, etc...).
+
+Nevertheless, to get a new permission for a given ecosystem, it is needed, using this method, to repay the deposit of a slashed permission first.
+
+##### [MOD-PERM-MSG-13-1] Repay Permission Slashed Trust Deposit parameters
+
+An [[ref: account]] that would like to repay a permission trust deposit MUST call this method by specifying:
+
+- `id` (uint64) (*mandatory*): id of the permission
+
+##### [MOD-PERM-MSG-13-2] Repay Permission Slashed Trust Deposit precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-PERM-MSG-13-2-1] Repay Permission Slashed Trust Deposit basic checks
+
+if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
+
+- `id` MUST be a valid uint64.
+- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
+
+###### [MOD-PERM-MSG-13-2-2] Repay Permission Slashed Trust Deposit validator perms
+
+Any account can execute this method.
+
+###### [MOD-PERM-MSG-13-2-3] Repay Permission Slashed Trust Deposit fee checks
+
+Account executing the method MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], plus `applicant_perm.slashed_deposit`, else [[ref: transaction]] MUST abort.
+
+##### [MOD-PERM-MSG-13-3] Repay Permission Slashed Trust Deposit execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp.
+
+- Load `Permission` entry `applicant_perm` from `id`.
+- set `applicant_perm.repaid` to `now`
+- set `applicant_perm.modified` to `now`
+- set `applicant_perm.repaid_deposit` to `amount`.
+- set `applicant_perm.repaid_by` to account executing the method.
+
+use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `amount` to trust deposit of `applicant_perm.grantee`.
+
+#### [MOD-PERM-MSG-14] Create Permission
+
+This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to `OPEN` for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required if Ecosystem decided to charge the issuance (or the verification) of the credentials.
+
+##### [MOD-PERM-MSG-14-1] Create Permission parameters
+
+An [[ref: account]] that would like to create a `Permission` entry MUST call this method by specifying:
+
+- `schema_id` (uint64) (*mandatory*)
+- `type` (PermissionType) (*mandatory*): ISSUER or VERIFIER.
+- `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
+- `country` (*optional*).
+- `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
+- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.
+
+##### [MOD-PERM-MSG-14-2] Create Permission precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-PERM-MSG-14-2-1] Create Permission basic checks
+
+if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
+
+- `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
+- `type` (PermissionType) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
+- `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `effective_from` must be in the future.
+- `effective_until`, if not null, must be greater than `effective_from`
+- `country` if not null, MUST be a valid alpha-2 code (ISO 3166).
+- `verification_fees` (number) (*optional*): If specified, MUST be >= 0.
+
+###### [MOD-PERM-MSG-14-2-2] Create Permission permission checks
+
+To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
+
+- The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
+- if `type` is equal to ISSUER: if `cs.issuer_perm_management_mode` is not equal to OPEN, MUST abort.
+- if `type` is equal to VERIFIER: if `cs.verifier_perm_management_mode` is not equal to OPEN, MUST abort.
+
+###### [MOD-PERM-MSG-14-2-3] Create Permission fee checks
+
+Account MUST have the required [[ref: estimated transaction fees]] available.
+
+##### [MOD-PERM-MSG-14-3] Create Permission execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp.
+
+A new entry `Permission` `perm` MUST be created:
+
+- `perm.id`: auto-incremented uint64.
+- `perm.schema_id`: `schema_id`.
+- `perm.modified` to `now`.
+- `perm.type`: `type`.
+- `perm.did`: `did`.
+- `perm.grantee`: `account` executing the method.
+- `perm.created`: `now`
+- `perm.created_by`: `account` executing the method.
+- `perm.effective_from`: `effective_from`
+- `perm.effective_until`: `effective_until`
+- `perm.country`: `country`
+- `perm.validation_fees`: 0
+- `perm.issuance_fees`: 0
+- `perm.verification_fees`: `verification_fees` if specified, else 0.
+- `perm.deposit`: 0
 
 #### [MOD-PERM-QRY-1] List Permissions
 
@@ -3670,32 +3888,73 @@ Return the list of the existing parameters and their values.
 
 Concept: the [[ref: trust deposit]] is used to lock trust value as a stake. To process application messages that perform state changes, several modules methods are requiring a trust deposit to be sent, from the executing account, to the trust deposit module.
 
-Example: an account wants to create a new DidDirectory entry, to execute the transaction it will need:
+We will use a similar method than the one described [here](https://docs.cosmos.network/main/build/modules/staking#delegator-shares) to manage trust deposit and yield calculation and easy way.
 
-- 10 `denom` (trust deposit) that will be sent to the trust deposit;
-- 5 `denom` (transaction fees)
+*Example*:
 
-Execution of the method will perform the following (we ignore anything that does not have to do with the trust deposit, and we consider this account had no `TrustDeposit` entry yet):
+In our example, we suppose a VPR is just starting and no trust transaction have taken place yet. For this reason:
+
+- `TrustDeposit` module has a balance of `0`: `TrustDeposit.deposit` : `0`.
+- `GlobalVariables.trust_deposit_share_value` has a value of `1`.
+
+*Operation #1*:
+
+an account `account1` wants to create a transaction that requires:
+
+- 10 `denom` to be sent to the `account1` trust deposit;
+- 5 `denom` for network fees.
+
+*First, the Trust Deposit*: execution of the method will perform the following (we consider this account had no `TrustDeposit` entry yet):
 
 - 10 `denom` are sent to the `TrustDeposit` module.
-- a `TrustDeposit` entry `tt` is created for `account` running the service. Using the `share` exchange rate, (as explained [here](https://docs.cosmos.network/main/build/modules/staking#delegator-shares)) calculate the number of `share` equivalent to the 10 `denom`, and set it to `tt.share`. Set `tt.deposit` to 10.
-- In the created `DidDirectory` entry `dd`, set `dd.trust_deposit_share` to `tt.share`, and .
+  - `TrustDeposit.deposit` = `TrustDeposit.deposit` + `10`
 
-Fee distribution: let's suppose 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holder. For this specific transaction:
+- a `TrustDeposit` entry `td1` is created for `account1` running the service with:
+  - `td1.deposit` = `10`
+  - `td1.shares` = `10` / `GlobalVariables.trust_deposit_share_value` = `10`
 
-- 30% * 5 = 1.5 `denom` will be sent to `trust–deposit`, which will increase the `GlobalVariables.trust_deposit_share_value`.
+*Second, fee distribution*: let's suppose 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holders. For this specific transaction:
 
-Now, `account` can reclaim the difference between the `GlobalVariables.trust_deposit_share_value` * `tt.share` minus `tt.denom`, which represents the trust (stake) gains.
+- 30% * 5 = 1.5 `denom` will be sent to `TrustDeposit` module, which will increase the `GlobalVariables.trust_deposit_share_value`:
+
+- `TrustDeposit.deposit` = `11.5`
+- `GlobalVariables.trust_deposit_share_value` = `1.15`.
+
+Now, `account1` can (optionally) reclaim the difference between the `GlobalVariables.trust_deposit_share_value` \* `tt.share` minus `tt.denom`, which represents the trust (yield) gains.
+
+*Operation #2*:
+
+Another account `account2` wants to create a transaction that requires:
+
+- 20 `denom` to be sent to the `account2` trust deposit;
+- 10 `denom` for network fees.
+
+*First, Trust Deposit*:
+
+- 20 `denom` are sent to the `TrustDeposit` module.
+  - `TrustDeposit.deposit` = `31.5`
+
+- a `TrustDeposit` entry `td2` is created for `account2`:
+  - `td2.deposit` = `20`
+  - `td2.shares` = `20` / `GlobalVariables.trust_deposit_share_value` = `20` / `1.15` ~=  `17.39...`
+
+*Second, fee distribution*: let's suppose 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holders. For this specific transaction:
+
+- 30% * 10 = 3 `denom` will be sent to `TrustDeposit` module, which will increase the `GlobalVariables.trust_deposit_share_value`:
+
+- `TrustDeposit.deposit` = `34.5`
+- `GlobalVariables.trust_deposit_share_value` = `1.15` * `34.5` / `31.5` ~= `1.2595...`
+
+*After the 2 operations*:
+
+- `account1` real deposit (based on share) is `account1.share` \* `GlobalVariables.trust_deposit_share_value` ~= `12.595...`, available withdrawable yield is `account1.share` \* `GlobalVariables.trust_deposit_share_value` - `account1.deposit` ~= `2.595...`
+- `account2` real deposit (based on share) is `account2.share` \* `GlobalVariables.trust_deposit_share_value` ~= `21.90...`, available withdrawable yield is `account2.share` \* `GlobalVariables.trust_deposit_share_value` - `account2.deposit` ~= `1.90...`
 
 #### [MOD-TD-MSG-1] Adjust Trust Deposit
 
 This method is used to increase or decrease the [[ref: trust deposit]] of a specific [[ref: account]].
 
-Only the following modules can call this method:
-
-- the Validation module
-- the Credential Schema Permission Module
-- the [[ref: DID Directory]] module
+Only the modules that require trust deposit manipulation CAN call this method. If trust deposit has been slashed and not repaid, method execution MUST abort.
 
 ##### [MOD-TD-MSG-1-1] Adjust Trust Deposit method parameters
 
@@ -3739,12 +3998,17 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - if a `TrustDeposit` entry `td` does not exist for this `account`, create entry `td`:
 
-  - use bank? to transfer `augend` from `account` to `TrustDeposit` account.
-  - calculate `augend_share` by using [a similar method than this one](https://docs.cosmos.network/main/build/modules/staking#delegator-shares) using `GlobalVariables.trust_deposit_share_value`.
+  - transfer `augend` from `account` to `TrustDeposit` account.
+  - calculate `augend_share` = `amount` / `GlobalVariables.trust_deposit_share_value`.
   - set `td.account` to `account`;
   - set `td.deposit` to `augend`;
   - set `td.share` to `augend_share`;
   - set `td.claimable` to 0.
+  - set `td.slashed_deposit` to 0.
+  - set `td.repaid_deposit` to 0.
+  - set `td.slash_count` to 0.
+
+- else if `slashed_deposit` > 0 and `slashed_deposit` < `repaid_deposit` => deposit has been slashed and not repaid, so MUST abort.
 
 - else if `augend` > 0:
   
@@ -3755,62 +4019,69 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
       - use bank? to transfer `augend` - `td.claimable` from `account` to `TrustDeposit` account.
       - set `td.deposit` to `td.deposit` + `augend` - `td.claimable`
       - set `td.claimable` to 0
-      - calculate `missing_augend_share` from missing tokens `augend` - `td.claimable`  by using [a similar method than this one](https://docs.cosmos.network/main/build/modules/staking#delegator-shares) using `GlobalVariables.trust_deposit_share_value`.
+      - calculate `missing_augend_share` from missing tokens :  `missing_augend_share` = (`augend` - `td.claimable`) / `GlobalVariables.trust_deposit_share_value`.
       - set `td.share` to `td.share` + `missing_augend_share`
   
   - else
     - use bank? to transfer `augend` from `account` to `TrustDeposit` account.
-    - calculate `augend_share` by using [a similar method than this one](https://docs.cosmos.network/main/build/modules/staking#delegator-shares) using `GlobalVariables.trust_deposit_share_value`.
+    - calculate `augend_share` = `augend` / `GlobalVariables.trust_deposit_share_value`.
     - set `td.deposit` to `td.deposit` + `augend`
     - set `td.share` to `td.share` + `augend_share`
 
 - else if `augend` < 0:
   - set `td.claimable` to `td.claimable` - `augend`
 
-#### [MOD-TD-MSG-2] Reclaim Trust Deposit Interests
+The last case, `augend` < 0, is to free trust deposit (ej when terminating a permission).
 
-This method is used to reclaim interests.
+#### [MOD-TD-MSG-2] Reclaim Trust Deposit Yield
+
+This method is used to reclaim yield. If trust deposit has been slashed and not repaid, method execution MUST abort.
 
 Any account MAY call this method.
 
-For a given `TrustDeposit` entry `td`, claimable interest is calculated like this:
+For a given `TrustDeposit` entry `td`, claimable yield is calculated like this:
 
-`claimable_interest` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
+`claimable_yield` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
 
-If `claimable_interest` is positive, they can be claimed.
+If `claimable_yield` is positive, they can be claimed.
 
-##### [MOD-TD-MSG-2-1] Reclaim Trust Deposit Interests method parameters
+##### [MOD-TD-MSG-2-1] Reclaim Trust Deposit Yield method parameters
 
 N/A
 
-##### [MOD-TD-MSG-2-2] Reclaim Trust Deposit Interests precondition checks
+##### [MOD-TD-MSG-2-2] Reclaim Trust Deposit Yield precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-TD-MSG-2-2-1] Reclaim Trust Deposit Interests basic checks
+###### [MOD-TD-MSG-2-2-1] Reclaim Trust Deposit Yield basic checks
 
 - Load `TrustDeposit` entry `td` from `account` running the method.
-- calculate `claimable_interest` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
-- if `claimable_interest` <= 0, [[ref: transaction]] MUST abort.
+- if `td.slashed_deposit` > 0 and `td.slashed_deposit` < `td.repaid_deposit` => deposit has been slashed and not repaid, so MUST abort.
+- calculate `claimable_yield` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
+- if `claimable_yield` <= 0, [[ref: transaction]] MUST abort.
 
-###### [MOD-TD-MSG-2-2-2] Reclaim Trust Deposit Interests fee checks
+###### [MOD-TD-MSG-2-2-2] Reclaim Trust Deposit Yield fee checks
 
 Account running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-TD-MSG-2-3] Reclaim Trust Deposit Interests Value execution of the method
+##### [MOD-TD-MSG-2-3] Reclaim Trust Deposit Yield Value execution of the method
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 For the `TrustDeposit` entry `td` linked to `account`:
 
 - Load `TrustDeposit` entry `td` from `account` running the method.
-- calculate `claimable_interest` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
-- update `td.share` = `td.share` - `claimable_interest` / `GlobalVariables.trust_deposit_share_value`
-- transfer `claimable_interest` from `TrustDeposit` account to `account`.
+- calculate `claimable_yield` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
+- update `td.share` = `td.share` - `claimable_yield` / `GlobalVariables.trust_deposit_share_value`
+- transfer `claimable_yield` from `TrustDeposit` account to `account`.
+
+:::note
+Maybe here the claimed yield should go to the deposit. TBD.
+:::
 
 #### [MOD-TD-MSG-3] Reclaim Trust Deposit
 
-This method is used to reclaim claimable trust deposit value, `td.claimable`.
+This method is used to reclaim claimable trust deposit value, `td.claimable`. If trust deposit has been slashed and not repaid, method execution MUST abort.
 
 Any account MAY call this method.
 
@@ -3832,6 +4103,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `claimed` must be > 0.
+- if `td.slashed_deposit` > 0 and `td.slashed_deposit` < `td.repaid_deposit` => deposit has been slashed and not repaid, so MUST abort.
 - `TrustDeposit` entry `td` MUST exist for this `account`, and `td.claimable` MUST be greater or equal to `claimed`.
 - calculate `required_minimum_deposit` = `td.share` * `GlobalVariables.trust_deposit_share_value`. `required_minimum_deposit` MUST be greater or equal to `td.deposit` - `claimed`, else method MUST abort.
 
@@ -3851,7 +4123,7 @@ For the `TrustDeposit` entry `td` linked to `account`:
 - calculate `to_burn` = `GlobalVariables.trust_deposit_reclaim_burn_rate` * `claimed` from account.
 - calculate `to_transfer` = `claimed` - `to_burn`
 - transfer `to_transfer` from `TrustDeposit` account to `account`.
-- burn `to_burn` from `TrustDeposit` account to `account`.
+- burn `to_burn` from `TrustDeposit` module.
 
 #### [MOD-TD-MSG-4] Update Module Parameters
 
@@ -3884,6 +4156,134 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
+
+#### [MOD-TD-MSG-5] Slash Trust Deposit
+
+This method is used by the network governance authority to **globally slash** an `account` trust deposit.
+
+This method can only be called by a governance proposal. A globally slashed account MUST repay the slashed deposit in order to continue to use the services provided by the VPR. When and account is slashed, and while slashed deposit has not been repaid, all account linked permissions MUST be considered non trustable.
+
+This method is for network governance authority slash. For ecosystem slash, see [Slash Permission Trust Deposit](#mod-perm-msg-12-slash-permission-trust-deposit).
+
+##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
+
+- `account` (account) (*mandatory*): [[ref: account]] of the [[ref: trust deposit]] we want to slash.
+- `amount` (number) (*mandatory*): value to slash, in [[ref: denom]].
+
+##### [MOD-TD-MSG-5-2] Slash Trust Deposit precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-TD-MSG-5-2-1] Slash Trust Deposit basic checks
+
+if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- `amount` must be > 0.
+- `TrustDeposit` entry `td` MUST exist for this `account`, and `td.deposit` MUST be greater or equal to `amount`.
+
+###### [MOD-TD-MSG-5-2-2] Slash Trust Deposit fee checks
+
+Account running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+
+##### [MOD-TD-MSG-5-3] Slash Trust Deposit execution of the method
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp.
+
+For the `TrustDeposit` entry `td` linked to `account`:
+
+- set `td.deposit` to `td.deposit` - `amount`.
+- set `td.share` to `td.share` - `amount` / `GlobalVariables.trust_deposit_share_value`
+- burn `amount` from `TrustDeposit` account.
+- set `td.slashed_deposit` to `td.slashed_deposit` + `amount`
+- set `td.last_slashed` to now
+- set `td.repaid_by` to undefined.
+- if `td.slash_count` is undefined, set it to `1`, else set it to `td.slash_count` + 1
+
+#### [MOD-TD-MSG-6] Repay Slashed Trust Deposit
+
+Repay a slashed trust deposit. Can be executed by any account.
+
+##### [MOD-TD-MSG-6-1] Repay Slashed Trust Deposit method parameters
+
+- `account` (account) (*mandatory*): [[ref: account]] of the [[ref: trust deposit]] we want to repay.
+- `amount` (number) (*mandatory*): value to repay, in [[ref: denom]].
+
+##### [MOD-TD-MSG-6-2] Repay Slashed Trust Deposit precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-TD-MSG-6-2-1] Repay Slashed Trust Deposit basic checks
+
+if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- `amount` must be > 0.
+- `TrustDeposit` entry `td` MUST exist for this `account`, and `amount` MUST be exactly equal to `td.slashed_deposit` - `td.repaid_deposit`.
+
+###### [MOD-TD-MSG-6-2-2] Repay Slashed Trust Deposit fee checks
+
+Account running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]] plus `amount`, else [[ref: transaction]] MUST abort.
+
+##### [MOD-TD-MSG-6-3] Repay Slashed Trust Deposit execution of the method
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp.
+
+For the `TrustDeposit` entry `td` linked to `account`:
+
+- set `td.deposit` to `td.deposit` + `amount`.
+- set `td.share` to `td.share` + `amount` / `GlobalVariables.trust_deposit_share_value`
+- add `amount` to `TrustDeposit` account.
+- set `td.repaid_deposit` to `td.repaid_deposit` + `amount`
+- set `td.last_repaid` to now
+- set `td.last_repaid_by` to account executing the transaction.
+
+#### [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit
+
+Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.
+
+:::warning
+Make sure to **properly protect access to the execution of this method** else it may lead to very destructive actions.
+:::
+
+##### [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters
+
+- `account` (account) (*mandatory*): [[ref: account]] of the [[ref: trust deposit]] we want to burn.
+- `amount` (number) (*mandatory*): value to burn, in [[ref: denom]].
+
+:::warning
+**Alternative approach**: For security and consistency, implementers MAY choose to reference the **ID of the slashed permission**, load it and use its defined `slashed_deposit` value as the slashing amount.
+The decision between this method and specifying the amount directly is left to implementers.
+:::
+
+##### [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-TD-MSG-7-2-1] Burn Ecosystem Slashed Trust Deposit basic checks
+
+if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- `amount` must be > 0.
+- `TrustDeposit` entry `td` MUST exist for this `account`, and `amount` MUST be lower or equal than `td.deposit`.
+
+###### [MOD-TD-MSG-7-2-2] Burn Ecosystem Slashed Trust Deposit fee checks
+
+Account running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]] else [[ref: transaction]] MUST abort.
+
+##### [MOD-TD-MSG-7-3] Burn Ecosystem Slashed Trust Deposit execution of the method
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp.
+
+For the `TrustDeposit` entry `td` linked to `account`:
+
+- set `td.deposit` to `td.deposit` - `amount`.
+- set `td.share` to `td.share` - `amount` / `GlobalVariables.trust_deposit_share_value`
+- burn `amount` from `TrustDeposit` account.
 
 #### [MOD-TD-QRY-1] Get Trust Deposit
 
