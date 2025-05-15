@@ -1,6 +1,6 @@
 # Verifiable Public Registry v2 Specification
 
-**Specification Status:** *Draft*
+**Specification Status:** *Preview*
 
 **Latest Draft:** [verana-labs/verifiable-trust-vpr-spec](https://github.com/verana-labs/verifiable-trust-vpr-spec)
 
@@ -1258,6 +1258,7 @@ td o-- "0..1" account: last_repaid_by
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed.
 - `last_repaid` (timestamp) (*optional*): last time this trust deposit has been slashed.
 - `slash_count` (number) (*optional*): number of times this account has been slashed.
+- `last_repaid_by` (account) (*optional*): [[ref: account]] that repaid the last slash.
 
 ### GlobalVariables
 
@@ -1457,7 +1458,7 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |
 |                                | Slash Permission Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-12]](#mod-perm-msg-12-slash-permission-trust-deposit) |
 |                            | Repay Permission Slashed Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-13]](#mod-perm-msg-13-repay-permission-slashed-trust-deposit) |
-|                                | Create Permission For Open Schemas     |                                     | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-create-permission) |
+|                                | Create Permission                |                                     | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-create-permission) |
 |                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |
 |                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |
 |                                | Find Permissions With DID               | /perm/v1/find_with_did       | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-find-permissions-with-did)  |
