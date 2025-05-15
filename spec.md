@@ -2215,7 +2215,7 @@ Any [[ref: account]] CAN execute this method.
 An Applicant that would like to start a permission validation process MUST execute this method by specifying:
 
 - `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the Applicant would like to get;
-- `validator_perm_id` (uint64) (*optional*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
+- `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
 - `country` (string) (*mandatory*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
 
 Available compatible perms can be found by using [MOD-PERM-QRY-1] and presented in a front-end so applicant can choose its validator.
