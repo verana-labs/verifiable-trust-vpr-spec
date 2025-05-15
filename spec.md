@@ -1258,6 +1258,7 @@ td o-- "0..1" account: last_repaid_by
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed.
 - `last_repaid` (timestamp) (*optional*): last time this trust deposit has been slashed.
 - `slash_count` (number) (*optional*): number of times this account has been slashed.
+- `last_repaid_by` (account) (*optional*): [[ref: account]] that repaid the last slash.
 
 ### GlobalVariables
 
