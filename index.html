@@ -89,7 +89,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <p>This specification deals with the Verifiable Public Registry (VPR), a decentralized registry of registries, part of the Verifiable Trust concept.</p>
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:trust-registry">trust registry</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
-<div id="note-64" class="notice note"><a class="notice-link" href="#note-64">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-1" class="notice note"><a class="notice-link" href="#note-1">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
 <h3 id="what-is-a-trust-registry"><a class="toc-anchor" href="#what-is-a-trust-registry" >§</a> What is a Trust Registry?</h3>
@@ -251,14 +251,14 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A <strong>JSON Schema</strong> that defines the structure of the corresponding <a class="term-reference" href="#term:verifiable-credential">verifiable credential</a></li>
 <li>A <strong>PermissionManagementMode</strong> for <strong>issuance policy</strong>, which determines how <code>ISSUER</code> permissions are granted. Modes include:
 <ul>
-<li><code>OPEN</code>: Anyone can issue credentials of this schema</li>
+<li><code>OPEN</code>: <code>ISSUER</code> permissions can be created by anyone.</li>
 <li><code>ECOSYSTEM</code>: <code>ISSUER</code> permissions are granted directly by the <a class="term-reference" href="#term:ecosystem">ecosystem</a>, the trust registry controller</li>
 <li><code>GRANTOR</code>: <code>ISSUER</code> permissions are granted by one or several <a class="term-reference" href="#term:issuer-grantor">issuer grantor</a>(s) (trust registry operator(s) responsible for selecting issuers for the credential schema of this <a class="term-reference" href="#term:ecosystem">ecosystem</a>), selected by the <a class="term-reference" href="#term:ecosystem">ecosystem</a>.</li>
 </ul>
 </li>
 <li>A <strong>PermissionManagementMode</strong> for <strong>verification policy</strong>, which determines how <code>VERIFIER</code> permissions are granted. Modes include:
 <ul>
-<li><code>OPEN</code>: Anyone can act as a verifier for this schema</li>
+<li><code>OPEN</code>: <code>VERIFIER</code> permissions can be created by anyone.</li>
 <li><code>ECOSYSTEM</code>: <code>VERIFIER</code> permissions are granted directly by the <a class="term-reference" href="#term:ecosystem">ecosystem</a>, the Trust Registry controller</li>
 <li><code>GRANTOR</code>: <code>VERIFIER</code> permissions are granted by one or several <a class="term-reference" href="#term:verifier-grantor">verifier grantor</a>(s) (trust registry operator(s) responsible for selecting verifiers for the credential schema of this <a class="term-reference" href="#term:ecosystem">ecosystem</a>), selected by the <a class="term-reference" href="#term:ecosystem">ecosystem</a>.</li>
 </ul>
@@ -347,7 +347,15 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
   <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<p>To participate in an <a class="term-reference" href="#term:ecosystem">ecosystem</a> and assume a role associated with a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>, an entity must have an <a class="term-reference" href="#term:account">account</a> in the <a class="term-reference" href="#term:vpr">VPR</a> and complete a <a class="term-reference" href="#term:validation-process">validation process</a> to obtain the required permission.</p>
+<p>To participate in an <a class="term-reference" href="#term:ecosystem">ecosystem</a> and assume a role associated with a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>:</p>
+<ul>
+<li>
+<p>if schema is <code>OPEN</code> for issuance and/or verification: an entity must have an <a class="term-reference" href="#term:account">account</a> in the <a class="term-reference" href="#term:vpr">VPR</a> and self-create its permission.</p>
+</li>
+<li>
+<p>if schema is not <code>OPEN</code> for issuance and/or verification: an entity must have an <a class="term-reference" href="#term:account">account</a> in the <a class="term-reference" href="#term:vpr">VPR</a> and complete a <a class="term-reference" href="#term:validation-process">validation process</a> to obtain the required permission.</p>
+</li>
+</ul>
 <p>The <a class="term-reference" href="#term:validation-process">validation process</a> involves two parties:</p>
 <ul>
 <li>The <a class="term-reference" href="#term:applicant">applicant</a> — the entity requesting permission for a credential schema within the ecosystem.</li>
@@ -355,7 +363,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 </ul>
 <p>Running a validation process <strong>typically involves the payment of <a class="term-reference" href="#term:trust-fees">trust fees</a></strong>. <a class="term-reference" href="#term:trust-fee">Trust fee</a> amount to be paid by the <a class="term-reference" href="#term:applicant">applicant</a> is defined in the permission of the <a class="term-reference" href="#term:validator">validator</a> involved in the <a class="term-reference" href="#term:validation-process">validation process</a>:</p>
 <img src="https://www.plantuml.com/plantuml/svg/fPDRJyCW583V-HKds_CIr6GpVJ2xUdbRdFfEuQn3QMc0rYrc_rtMhcGQsosHbvB3uUjt3Z2sZXbNf8gCmynofX1IjeLRIk5J2hSXG7B6FrY2q5ko7UHee6HA2kQapk0U4LRE5DmL1dl0B70BNuI07pf-H-wWj-3Qxgp352OmW9b1WPcJJC6ARp1byAorWoMQL5hhcHN56UZVh6CH3pqDZaD84U6MfRd221le92m_69OvRO3bkPBSpqz5VRgBu8hwkbvURRLd_yFooTh2rzP0fd-g_hAKIOkTJAOXVWJ_osfsaKsTsnyDHoCKqAOs2-57hSGvinQlDpHoBK_wDVU6vnNBjeQLoJp40xj3xBgrOs7tufAUbKrsdzAOhccRtkBufpqX_ceE1dU7iuyWELJlUsrhU1xWn2zNMVMPT6KsmB8RMDR08Do976CcggTTVxy1" alt="uml diagram">
-<div id="note-65" class="notice note"><a class="notice-link" href="#note-65">NOTE</a><p>If an issuer chooses to charge <a class="term-reference" href="#term:trust-fees">trust fees</a> to a credential holder using the tokenized payment system of the <a class="term-reference" href="#term:vpr">VPR</a>, a validation process must take place and the holder (applicant) MUST have an <a class="term-reference" href="#term:account">account</a> to complete the transaction.</p>
+<div id="note-2" class="notice note"><a class="notice-link" href="#note-2">NOTE</a><p>If an issuer chooses to charge <a class="term-reference" href="#term:trust-fees">trust fees</a> to a credential holder using the tokenized payment system of the <a class="term-reference" href="#term:vpr">VPR</a>, a validation process must take place and the holder (applicant) MUST have an <a class="term-reference" href="#term:account">account</a> to complete the transaction.</p>
 <p>Alternatively, the issuer may opt not to use the VPR validation process for holder verification. In such cases, validation occurs outside the VPR, and the issuer is free to use external payment methods (e.g., credit card) to collect fees from the holder candidate.</p>
 </div>
 <h3 id="did-directory-management"><a class="toc-anchor" href="#did-directory-management" >§</a> DID Directory Management</h3>
@@ -513,7 +521,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-66" class="notice note"><a class="notice-link" href="#note-66">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-3" class="notice note"><a class="notice-link" href="#note-3">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
@@ -525,7 +533,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>A designated <a class="term-reference" href="#term:governance-authority">governance authority</a> is responsible for <strong>enforcing these rules</strong> and, when necessary, <strong>applying financial sanctions</strong> to participants who violate the rules.</p>
-<div id="note-67" class="notice note"><a class="notice-link" href="#note-67">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
+<div id="note-4" class="notice note"><a class="notice-link" href="#note-4">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
 <p>While the <strong>VPR governance framework</strong> defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each <strong>ecosystem</strong> must define its own <strong>EGF</strong> to govern roles, permissions, credential policies, and compliance within its specific domain.</p>
 <p>This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.</p>
 </div>
@@ -806,10 +814,10 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-16" class="notice warning"><a class="notice-link" href="#warning-16">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-1" class="notice warning"><a class="notice-link" href="#warning-1">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-68" class="notice note"><a class="notice-link" href="#note-68">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
+<div id="note-5" class="notice note"><a class="notice-link" href="#note-5">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
 </div>
 <table>
 <thead>
@@ -1209,7 +1217,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 </tr>
 </tbody>
 </table>
-<div id="note-69" class="notice note"><a class="notice-link" href="#note-69">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-6" class="notice note"><a class="notice-link" href="#note-6">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1217,7 +1225,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <h5 id="mod-tr-msg-1-1-create-new-trust-registry-parameters"><a class="toc-anchor" href="#mod-tr-msg-1-1-create-new-trust-registry-parameters" >§</a> [MOD-TR-MSG-1-1] Create New Trust Registry parameters</h5>
 <p>An <a class="term-reference" href="#term:account">account</a> that would like to create a <a class="term-reference" href="#term:trust-registry">trust registry</a> MUST call this method by specifying:</p>
 <ul>
-<li><code>did</code> (string) (<em>mandatory</em>): the did of the trust registry.</li>
+<li><code>did</code> (string) (<em>mandatory</em>): the did of the ecosystem that is creating the trust registry.</li>
 <li><code>aka</code> (string) (<em>optional</em>): optional additional URI of this trust registry.</li>
 <li><code>language</code> (string(17)) (<em>mandatory</em>): primary language tag (<a path-0="www.ietf.org"path-1="rfc"path-2="rfc1766.txt"href="https://www.ietf.org/rfc/rfc1766.txt" >rfc1766</a>) of this trust registry.</li>
 <li><code>doc_url</code> (string) (<em>mandatory</em>): URL where the document is published.</li>
@@ -1247,7 +1255,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-70" class="notice note"><a class="notice-link" href="#note-70">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed.</p>
+<div id="note-7" class="notice note"><a class="notice-link" href="#note-7">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Applicant MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following:</p>
@@ -1255,7 +1263,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.trust_registry_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-71" class="notice note"><a class="notice-link" href="#note-71">NOTE</a><p><code>TrustRegistry</code> trust deposit is not reclaimable.</p>
+<div id="note-8" class="notice note"><a class="notice-link" href="#note-8">NOTE</a><p><code>TrustRegistry</code> trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-tr-msg-1-3-create-new-trust-registry-execution"><a class="toc-anchor" href="#mod-tr-msg-1-3-create-new-trust-registry-execution" >§</a> [MOD-TR-MSG-1-3] Create New Trust Registry execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1617,7 +1625,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <ul>
 <li>if a mandatory parameter is not present, method MUST abort.</li>
 <li><code>tr_id</code> MUST represent an existing <code>TrustRegistry</code> entry <code>tr</code> and <code>tr.controller</code> MUST be the account executing the method.</li>
-<li><code>json_schema</code> MUST be a valid <a class="term-reference" href="#term:json-schema">Json Schema</a>, and size must not be greater than <code>GlobalVariables.credential_schema_schema_max_size</code>. <code>$id</code> of the <a class="term-reference" href="#term:json-schema">Json Schema</a> must be a valid https URL that terminates with string <code>/vpr/v1/cs/js/VPR_CREDENTIAL_SCHEMA_ID</code> as specified in [MOD-CS-QRY-3]. VPR_CREDENTIAL_SCHEMA_ID will be replaced during execution by the auto-generated id of this <code>CredentialSchema</code>.</li>
+<li><code>json_schema</code> MUST be a valid <a class="term-reference" href="#term:json-schema">Json Schema</a>, and size must not be greater than <code>GlobalVariables.credential_schema_schema_max_size</code>. <code>$id</code> of the <a class="term-reference" href="#term:json-schema">Json Schema</a> must be a valid https URL that terminates with string <code>/cs/v1/js/VPR_CREDENTIAL_SCHEMA_ID</code> as specified in [MOD-CS-QRY-3]. VPR_CREDENTIAL_SCHEMA_ID will be replaced during execution by the auto-generated id of this <code>CredentialSchema</code>.</li>
 <li><code>issuer_grantor_validation_validity_period</code> must be between 0 (never expire) and <code>GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days</code> days.</li>
 <li><code>verifier_grantor_validation_validity_period</code> must be between 0 (never expire) and <code>GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days</code> days.</li>
 <li><code>issuer_validation_validity_period</code> must be between 0 (never expire) and <code>GlobalVariables.credential_schema_issuer_validation_validity_period_max_days</code> days.</li>
@@ -1632,7 +1640,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.credential_schema_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-72" class="notice note"><a class="notice-link" href="#note-72">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
+<div id="note-9" class="notice note"><a class="notice-link" href="#note-9">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-cs-msg-1-3-create-new-credential-schema-execution"><a class="toc-anchor" href="#mod-cs-msg-1-3-create-new-credential-schema-execution" >§</a> [MOD-CS-MSG-1-3] Create New Credential Schema execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1660,7 +1668,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 </ul>
 </li>
 </ul>
-<div id="note-73" class="notice note"><a class="notice-link" href="#note-73">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-10" class="notice note"><a class="notice-link" href="#note-10">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any <a class="term-reference" href="#term:account">account</a> CAN execute this method.</p>
@@ -1852,7 +1860,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <p><em>This section is non-normative.</em></p>
 <p>Permission are linked to a Credential Schema and representable as a tree.</p>
 <img src="https://www.plantuml.com/plantuml/svg/ZPDTRu8m58Rl-ojEv6QxC24naOMBHKLKacqkm4oscwL0nMvyfQrCi_ZVLwcoBM5rvmOElETzUdhQ4HUOYMsUeL7xncES4SZn3cvC4pve8ZO8K8NZTvmIwBaxd5TIu32Ia49Gd44GRqYEuP6md79Eom92HaWFC8UOmoT28AECtaWie1UoBHVWavHomVOmRcI2WJ5OHqaqb78uHTNwXVkAsE0wo-0v2DrxkFBBKbotmeGcDb7BiWKRDzyFlw0Uvrl2OCvm8Ke6amPAKmtC2u8drt-T--E7SEbtecWw-HlbA8HA36jeMII1YxnkZjE1MH56r_H7JzC6MEjwMhc-D_CkT5MdKntELPXpQfXcPAxDVq2xOMu7Qr5cYRH-WGQrKPancqrCQw01BPPtqnFcW0v8XZnL_VxjSSusfCTjaYFWwgn-5oFvkr6fKUcKPyDQRrWhmtQFj9OdxB50TQfLZqYHDBTLFRy0" alt="uml diagram">
-<p>The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process.</p>
+<p>The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process (or by any account: - for <code>ISSUER</code> permissions if issuer_perm_management_mode is equal to <code>OPEN</code>, - for <code>VERIFIER</code> permissions if verifier_perm_management_mode is equal to <code>OPEN</code>).</p>
 <p>A Validation Process (VP) is a process which involves an <a class="term-reference" href="#term:applicant">applicant</a> (which is the <a class="term-reference" href="#term:controller">controller</a> of validation entry stored in a validation <a class="term-reference" href="#term:keeper">keeper</a>), a <a class="term-reference" href="#term:validator">validator</a> permission, and optional fees plus transaction fees.</p>
 <p>Validation is used by <a class="term-reference" href="#term:applicants">applicants</a> that want to:</p>
 <ul>
@@ -1870,7 +1878,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-74" class="notice note"><a class="notice-link" href="#note-74">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-11" class="notice note"><a class="notice-link" href="#note-11">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -1886,7 +1894,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <p>An Applicant that would like to start a permission validation process MUST execute this method by specifying:</p>
 <ul>
 <li><code>type</code> (PermissionType) (<em>mandatory</em>): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the Applicant would like to get;</li>
-<li><code>validator_perm_id</code> (uint64) (<em>optional</em>): the <a class="term-reference" href="#term:validator">validator</a> permission (parent permission in the tree), chosen by the applicant.</li>
+<li><code>validator_perm_id</code> (uint64) (<em>mandatory</em>): the <a class="term-reference" href="#term:validator">validator</a> permission (parent permission in the tree), chosen by the applicant.</li>
 <li><code>country</code> (string) (<em>mandatory</em>): a country of residence, alpha-2 code (ISO 3166), where applicant is located.</li>
 </ul>
 <p>Available compatible perms can be found by using [MOD-PERM-QRY-1] and presented in a front-end so applicant can choose its validator.</p>
@@ -1900,7 +1908,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>country</code> (string) (<em>mandatory</em>) MUST be a valid alpha-2 code (ISO 3166).</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 </ul>
-<div id="note-75" class="notice note"><a class="notice-link" href="#note-75">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
+<div id="note-12" class="notice note"><a class="notice-link" href="#note-12">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
@@ -2251,7 +2259,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <ul>
 <li>transfer the full amount <code>applicant_perm.vp_current_fees</code> from escrow <a class="term-reference" href="#term:account">account</a> to validator <a class="term-reference" href="#term:account">account</a> <code>validator_perm.grantee</code>;</li>
 <li>Calculate <code>validator_trust_deposit</code> = <code>applicant_perm.vp_current_fees</code> * <code>GlobalVariables.trust_deposit_rate</code>;</li>
-<li>Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by <code>validator_trust_deposit</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of account running the method and transfer the corresponding amount to <code>TrustDeposit</code> module. Set <code>applicant_perm.validator_deposit</code> to <code>applicant_perm.validator_deposit</code> + <code>validator_trust_deposit</code>.</li>
+<li>Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by <code>validator_trust_deposit</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of account running the method and transfer the corresponding amount to <code>TrustDeposit</code> module. Set <code>applicant_perm.vp_validator_deposit</code> to <code>applicant_perm.vp_validator_deposit</code> + <code>validator_trust_deposit</code>.</li>
 </ul>
 <h4 id="mod-perm-msg-4-request-permission-vp-termination"><a class="toc-anchor" href="#mod-perm-msg-4-request-permission-vp-termination" >§</a> [MOD-PERM-MSG-4] Request Permission VP Termination</h4>
 <p><em>This section is non-normative.</em></p>
@@ -2312,14 +2320,14 @@ else</li>
 </ul>
 </li>
 <li>
-<p>if <code>applicant_perm.validator_deposit</code> &gt; 0:</p>
+<p>if <code>applicant_perm.vp_validator_deposit</code> &gt; 0:</p>
 <ul>
-<li>load <code>Permission</code> <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. Call [MOD-TD-MSG-1] to reduce <code>validator_perm.grantee</code> trust deposit by <code>applicant_perm.validator_deposit</code>.</li>
-<li>set <code>applicant_perm.validator_deposit</code> to 0.</li>
+<li>load <code>Permission</code> <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. Call [MOD-TD-MSG-1] to reduce <code>validator_perm.grantee</code> trust deposit by <code>applicant_perm.vp_validator_deposit</code>.</li>
+<li>set <code>applicant_perm.vp_validator_deposit</code> to 0.</li>
 </ul>
 </li>
 </ul>
-<div id="note-76" class="notice note"><a class="notice-link" href="#note-76">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
+<div id="note-13" class="notice note"><a class="notice-link" href="#note-13">NOTE</a><p>if <code>applicant_perm.type</code> is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.</p>
 </div>
 <h4 id="mod-perm-msg-5-confirm-permission-vp-termination"><a class="toc-anchor" href="#mod-perm-msg-5-confirm-permission-vp-termination" >§</a> [MOD-PERM-MSG-5] Confirm Permission VP Termination</h4>
 <p>This method is called by a validator to confirm the termination of a vp when permission type is HOLDER, usually after revoking (or not) the verifiable credential of the holder. It can be although called by the grantee after a timeout, defined in <code>GlobalVariables.validation_term_requested_timeout_days</code>.</p>
@@ -2354,7 +2362,7 @@ OR
 <code>applicant_perm.grantee</code> CAN be the account executing the method.</li>
 </ul>
 <p>Else MUST abort.</p>
-<div id="note-77" class="notice note"><a class="notice-link" href="#note-77">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
+<div id="note-14" class="notice note"><a class="notice-link" href="#note-14">NOTE</a><p>For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless <code>GlobalVariables.validation_term_requested_timeout_days</code> have passed since termination request and validator did not answered.</p>
 </div>
 <h6 id="mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-5-2-3-confirm-permission-vp-termination-fee-checks" >§</a> [MOD-PERM-MSG-5-2-3] Confirm Permission VP Termination fee checks</h6>
 <p>Account executing the method MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -2385,14 +2393,14 @@ OR
 </ul>
 <p>If account executing the method is the validator:</p>
 <ul>
-<li>if <code>applicant_perm.validator_deposit</code> &gt; 0:
+<li>if <code>applicant_perm.vp_validator_deposit</code> &gt; 0:
 <ul>
-<li>load <code>Permission</code> <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. Call [MOD-TD-MSG-1] to reduce <code>validator_perm.grantee</code> trust deposit by <code>applicant_perm.validator_deposit</code>.</li>
-<li>set <code>applicant_perm.validator_deposit</code> to 0.</li>
+<li>load <code>Permission</code> <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. Call [MOD-TD-MSG-1] to reduce <code>validator_perm.grantee</code> trust deposit by <code>applicant_perm.vp_validator_deposit</code>.</li>
+<li>set <code>applicant_perm.vp_validator_deposit</code> to 0.</li>
 </ul>
 </li>
 </ul>
-<div id="note-78" class="notice note"><a class="notice-link" href="#note-78">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
+<div id="note-15" class="notice note"><a class="notice-link" href="#note-15">NOTE</a><p>If account executing the method is the grantee (timeout), validator <strong>is punished</strong> and its trust deposit is not freed.</p>
 </div>
 <h4 id="mod-perm-msg-6-cancel-permission-vp-last-request"><a class="toc-anchor" href="#mod-perm-msg-6-cancel-permission-vp-last-request" >§</a> [MOD-PERM-MSG-6] Cancel Permission VP Last Request</h4>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> of a permission validation process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and paid <a class="term-reference" href="#term:trust-fees">trust fees</a> are refunded. If <code>vp_exp</code> is not null, <code>vp_state</code> is set back to VALIDATED, else <code>vp_state</code> is set to TERMINATED.</p>
@@ -2483,7 +2491,7 @@ OR
 <li><a class="term-reference" href="#term:account">account</a> executing the method MUST be the <a class="term-reference" href="#term:controller">controller</a> of <code>tr</code>.</li>
 <li>else MUST abort.</li>
 </ul>
-<div id="note-79" class="notice note"><a class="notice-link" href="#note-79">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
+<div id="note-16" class="notice note"><a class="notice-link" href="#note-16">NOTE</a><p>HOLDER permission are used so that it is possible to identify grantee account for paying rewards.</p>
 </div>
 <h6 id="mod-perm-msg-7-2-3-create-root-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-7-2-3-create-root-permission-fee-checks" >§</a> [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks</h6>
 <p>Account MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> available.</p>
@@ -2608,6 +2616,20 @@ OR
 <li>
 <p>set <code>applicant_perm.revoked_by</code> to account executing the method.</p>
 </li>
+<li>
+<p>if <code>applicant_perm.deposit</code> &gt; 0:</p>
+<ul>
+<li>call <a href="#mod-td-msg-1-adjust-trust-deposit" >MOD-TD-MSG-1</a> to reduce <code>applicant_perm.grantee</code> trust deposit by <code>applicant_perm.deposit</code>.</li>
+<li>set <code>applicant_perm.deposit</code> to 0.</li>
+</ul>
+</li>
+<li>
+<p>if <code>applicant_perm.vp_validator_deposit</code> &gt; 0:</p>
+<ul>
+<li>load <code>Permission</code> <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. Call [MOD-TD-MSG-1] to reduce <code>validator_perm.grantee</code> trust deposit by <code>applicant_perm.vp_validator_deposit</code>.</li>
+<li>set <code>applicant_perm.vp_validator_deposit</code> to 0.</li>
+</ul>
+</li>
 </ul>
 <h4 id="mod-perm-msg-10-create-or-update-permission-session"><a class="toc-anchor" href="#mod-perm-msg-10-create-or-update-permission-session" >§</a> [MOD-PERM-MSG-10] Create or Update Permission Session</h4>
 <p>Any credential exchange that requires issuer or verifier to pay fees implies the creation of a <code>PermissionSession</code>.</p>
@@ -2664,7 +2686,7 @@ OR
 <li>if <code>wallet_agent_perm.type</code> is not ISSUER, abort.</li>
 <li>if <code>wallet_agent_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, abort.</li>
 </ul>
-<div id="warning-17" class="notice warning"><a class="notice-link" href="#warning-17">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an ECS of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
+<div id="warning-2" class="notice warning"><a class="notice-link" href="#warning-2">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an ECS of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
 </div>
 <h6 id="mod-perm-msg-10-3-create-or-update-permission-session-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-10-3-create-or-update-permission-session-fee-checks" >§</a> [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks</h6>
 <p>Account MUST have sufficient available balance for:</p>
@@ -2699,8 +2721,8 @@ OR
 <li>for each <code>Permission</code> <code>perm</code> from <code>found_perm_set</code>, if <code>perm.issuance_fees</code> &gt; 0:
 <ul>
 <li>transfer <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>) to <code>perm.grantee</code>.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.grantee</code>.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>account</code> executing the method.</li>
+<li>use [MOD-TD-MSG-1] to increase by <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.grantee</code>. Increase <code>perm.deposit</code> by the same value.</li>
+<li>use [MOD-TD-MSG-1] to increase by <code>perm.issuance_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>account</code> executing the method. Add the same amount to <code>issuer_perm.deposit</code>.</li>
 </ul>
 </li>
 </ul>
@@ -2711,8 +2733,8 @@ OR
 <li>for each <code>Permission</code> <code>perm</code> from <code>found_perm_set</code>, if <code>perm.verification_fees</code> &gt; 0:
 <ul>
 <li>transfer <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>) to <code>perm.grantee</code>.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.grantee</code>.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>account</code> executing the method.</li>
+<li>use [MOD-TD-MSG-1] to increase by <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.grantee</code>. Increase <code>perm.deposit</code> by the same value.</li>
+<li>use [MOD-TD-MSG-1] to increase by <code>perm.verification_fees</code> * <code>GlobalVariables.trust_unit_price</code> * <code>GlobalVariables.trust_deposit_rate</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>account</code> executing the method. Add the same amount to <code>verifier_perm.deposit</code>.</li>
 </ul>
 </li>
 </ul>
@@ -2732,7 +2754,7 @@ OR
 <li>add (<code>issuer_perm_id</code>, <code>verifier_perm_id</code>, <code>wallet_agent_perm_id</code>) to <code>session.authz[]</code></li>
 <li><code>session.modified:</code> : <code>now</code></li>
 </ul>
-<div id="warning-18" class="notice warning"><a class="notice-link" href="#warning-18">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
+<div id="warning-3" class="notice warning"><a class="notice-link" href="#warning-3">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
 </div>
 <h4 id="mod-perm-msg-11-update-permission-module-parameters"><a class="toc-anchor" href="#mod-perm-msg-11-update-permission-module-parameters" >§</a> [MOD-PERM-MSG-11] Update Permission Module Parameters</h4>
 <p>Update Permission Module Parameters.</p>
@@ -2761,7 +2783,6 @@ OR
 <ul>
 <li>the <code>account</code> of the validator that created the Permission that they want to slash,</li>
 <li>the <code>grantee</code> of the <code>ECOSYSTEM</code> Permission (the Trust Registry controller) of the corresponding credential schema that this Permission is linked to;</li>
-<li>the network governance authority (using a proposal).</li>
 </ul>
 <h5 id="mod-perm-msg-12-1-slash-permission-trust-deposit-parameters"><a class="toc-anchor" href="#mod-perm-msg-12-1-slash-permission-trust-deposit-parameters" >§</a> [MOD-PERM-MSG-12-1] Slash Permission Trust Deposit parameters</h5>
 <p>An <a class="term-reference" href="#term:account">account</a> that would like to slash a permission trust deposit MUST call this method by specifying:</p>
@@ -2792,8 +2813,6 @@ OR
 <li>find <code>ecosystem_perm</code> using <code>ecosystem_perm.type</code> = <code>ECOSYSTEM</code> and <code>ecosystem_perm.schema_id</code> = <code>applicant_perm.schema_id</code>.</li>
 <li><a class="term-reference" href="#term:account">account</a> running the method MUST be <code>ecosystem_perm.grantee</code>.</li>
 </ul>
-<p><em>Option #3</em>: network governance authority</p>
-<p>Account executing the method MUST be the network governance authority (voted proposal).</p>
 <h6 id="mod-perm-msg-12-2-3-slash-permission-trust-deposit-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-12-2-3-slash-permission-trust-deposit-fee-checks" >§</a> [MOD-PERM-MSG-12-2-3] Slash Permission Trust Deposit fee checks</h6>
 <p>Account executing the method MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
 <h5 id="mod-perm-msg-12-3-slash-permission-trust-deposit-execution"><a class="toc-anchor" href="#mod-perm-msg-12-3-slash-permission-trust-deposit-execution" >§</a> [MOD-PERM-MSG-12-3] Slash Permission Trust Deposit execution</h5>
@@ -2868,7 +2887,9 @@ OR
 </ul>
 <p>use <a href="#mod-td-msg-1-adjust-trust-deposit" >Adjust Trust Deposit</a> to transfer <code>amount</code> to trust deposit of <code>applicant_perm.grantee</code>.</p>
 <h4 id="mod-perm-msg-14-create-permission"><a class="toc-anchor" href="#mod-perm-msg-14-create-permission" >§</a> [MOD-PERM-MSG-14] Create Permission</h4>
-<p>This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required if Ecosystem decided to charge the issuance (or the verification) of the credentials.</p>
+<p>This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a permission for being issuer or verifier of a given schema.</p>
+<div id="note-17" class="notice note"><a class="notice-link" href="#note-17">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
+</div>
 <h5 id="mod-perm-msg-14-1-create-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-14-1-create-permission-parameters" >§</a> [MOD-PERM-MSG-14-1] Create Permission parameters</h5>
 <p>An <a class="term-reference" href="#term:account">account</a> that would like to create a <code>Permission</code> entry MUST call this method by specifying:</p>
 <ul>
@@ -2907,6 +2928,7 @@ OR
 <p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
 <ul>
 <li>define <code>now</code>: current timestamp.</li>
+<li>load the root permission of the schema (the one of type <code>ECOSYSTEM</code>) to <code>ecosystem_perm_id</code>.</li>
 </ul>
 <p>A new entry <code>Permission</code> <code>perm</code> MUST be created:</p>
 <ul>
@@ -2925,6 +2947,7 @@ OR
 <li><code>perm.issuance_fees</code>: 0</li>
 <li><code>perm.verification_fees</code>: <code>verification_fees</code> if specified, else 0.</li>
 <li><code>perm.deposit</code>: 0</li>
+<li><code>perm.validator_perm_id</code>: <code>ecosystem_perm_id</code></li>
 </ul>
 <h4 id="mod-perm-qry-1-list-permissions"><a class="toc-anchor" href="#mod-perm-qry-1-list-permissions" >§</a> [MOD-PERM-QRY-1] List Permissions</h4>
 <p>Anyone CAN execute this method.</p>
@@ -3004,8 +3027,6 @@ OR
 <h4 id="mod-perm-qry-4-find-beneficiaries"><a class="toc-anchor" href="#mod-perm-qry-4-find-beneficiaries" >§</a> [MOD-PERM-QRY-4] Find Beneficiaries</h4>
 <p>Anyone can execute this method.</p>
 <p>To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches <code>issuer_perm</code> and <code>verifier_perm</code>. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If <code>verifier_perm</code> is null, <code>issuer_perm</code> is never added to the set. If <code>verifier_perm</code> is NOT null, <code>issuer_perm</code> is added to the set if it exists but <code>verifier_perm</code> is not added to the set.</p>
-<div id="note-80" class="notice note"><a class="notice-link" href="#note-80">NOTE</a><p>If a Credential Schema is configured with permission management mode set to <code>OPEN</code> for either issuance or verification, it is necessary to check whether the associated ECOSYSTEM permission requires issuance or verification fees. This check MUST be performed by calling this method and passing the id of the ECOSYSTEM permission. In this case, the only beneficiary of the fees is the ECOSYSTEM permission itself.</p>
-</div>
 <p>Example 1: <code>verifier_perm</code>: is not set: it’s a credential offer, schema configured to have Issuer Grantors.</p>
 <img src="https://www.plantuml.com/plantuml/svg/dT312e9040RW-px5e8TEWX1efp12eaC9hXqwoUgEPRXkk2C9qRkd1dhpq6d-WU4RPW93eg5MLIoOaib5XQ141nlNXLSfwSvqzi2Sm0ht4R_o93m1TfYtf1iGTOvc24zib0N203LWhujCPXwy6O2G4XG2QIXqMyjqc4iD4ljCx97pInYdXtXtJg9uoIvl_zcpELDW-vxlenmbgUiLBNciN-qus_uwLewXxrc0jHo_zwjV" alt="uml diagram">
 <p>Example 2: <code>verifier_perm</code>: is not set: it’s a credential offer. Schema configured to NOT have Issuer Grantors.</p>
@@ -3058,7 +3079,7 @@ OR
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-81" class="notice note"><a class="notice-link" href="#note-81">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-18" class="notice note"><a class="notice-link" href="#note-18">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -3123,9 +3144,9 @@ However, it may be useful for certain use cases, for example, a <strong>Social B
 That said, the deterrent is economic: why would anyone pay registration fees for a <a class="term-reference" href="#term:did">DID</a> they do not control?</p>
 <p>To protect the intent of the actual <a class="term-reference" href="#term:did">DID</a> controller, registration alone does not trigger indexing.<br>
 Indexers must respect optional <strong>crawler directives</strong> included in the <a class="term-reference" href="#term:did-document">DID Document</a> (e.g., <code>index</code>, <code>noindex</code>), ensuring that <strong>control over indexation remains with the <a class="term-reference" href="#term:did">DID</a> controller</strong>, regardless of who registered the DID in the directory.</p>
-<div id="note-82" class="notice note"><a class="notice-link" href="#note-82">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
+<div id="note-19" class="notice note"><a class="notice-link" href="#note-19">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
 </div>
-<div id="note-83" class="notice note"><a class="notice-link" href="#note-83">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
+<div id="note-20" class="notice note"><a class="notice-link" href="#note-20">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
 </div>
 <h4 id="mod-dd-msg-1-add-a-did"><a class="toc-anchor" href="#mod-dd-msg-1-add-a-did" >§</a> [MOD-DD-MSG-1] Add a DID</h4>
 <p>Add a <a class="term-reference" href="#term:did">DID</a> to the DID Directory, with expiration timestamp set to current timestamp + <em>years</em> years.</p>
@@ -3556,7 +3577,7 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <li>update <code>td.share</code> = <code>td.share</code> - <code>claimable_yield</code> / <code>GlobalVariables.trust_deposit_share_value</code></li>
 <li>transfer <code>claimable_yield</code> from <code>TrustDeposit</code> account to <code>account</code>.</li>
 </ul>
-<div id="note-84" class="notice note"><a class="notice-link" href="#note-84">NOTE</a><p>Maybe here the claimed yield should go to the deposit. TBD.</p>
+<div id="note-21" class="notice note"><a class="notice-link" href="#note-21">NOTE</a><p>Maybe here the claimed yield should go to the deposit. TBD.</p>
 </div>
 <h4 id="mod-td-msg-3-reclaim-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-3-reclaim-trust-deposit" >§</a> [MOD-TD-MSG-3] Reclaim Trust Deposit</h4>
 <p>This method is used to reclaim claimable trust deposit value, <code>td.claimable</code>. If trust deposit has been slashed and not repaid, method execution MUST abort.</p>
@@ -3683,14 +3704,14 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 </ul>
 <h4 id="mod-td-msg-7-burn-ecosystem-slashed-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >§</a> [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit</h4>
 <p>Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.</p>
-<div id="warning-19" class="notice warning"><a class="notice-link" href="#warning-19">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
+<div id="warning-4" class="notice warning"><a class="notice-link" href="#warning-4">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
 </div>
 <h5 id="mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters</h5>
 <ul>
 <li><code>account</code> (account) (<em>mandatory</em>): <a class="term-reference" href="#term:account">account</a> of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to burn.</li>
 <li><code>amount</code> (number) (<em>mandatory</em>): value to burn, in <a class="term-reference" href="#term:denom">denom</a>.</li>
 </ul>
-<div id="warning-20" class="notice warning"><a class="notice-link" href="#warning-20">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
+<div id="warning-5" class="notice warning"><a class="notice-link" href="#warning-5">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
 The decision between this method and specifying the amount directly is left to implementers.</p>
 </div>
 <h5 id="mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks</h5>

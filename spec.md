@@ -314,11 +314,11 @@ object "Trust Registry" as tra #3fbdb6 {
 
 - A **JSON Schema** that defines the structure of the corresponding [[ref: verifiable credential]]
 - A **PermissionManagementMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
-  - `OPEN`: Anyone can issue credentials of this schema
+  - `OPEN`: `ISSUER` permissions can be created by anyone.
   - `ECOSYSTEM`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the trust registry controller
   - `GRANTOR`: `ISSUER` permissions are granted by one or several [[ref: issuer grantor]](s) (trust registry operator(s) responsible for selecting issuers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
 - A **PermissionManagementMode** for **verification policy**, which determines how `VERIFIER` permissions are granted. Modes include:
-  - `OPEN`: Anyone can act as a verifier for this schema
+  - `OPEN`: `VERIFIER` permissions can be created by anyone.
   - `ECOSYSTEM`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Trust Registry controller
   - `GRANTOR`: `VERIFIER` permissions are granted by one or several [[ref: verifier grantor]](s) (trust registry operator(s) responsible for selecting verifiers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
 - A **Permission tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
@@ -430,7 +430,11 @@ Example of a Json Schema credential schema:
 }
 ```
 
-To participate in an [[ref: ecosystem]] and assume a role associated with a specific [[ref: credential schema]], an entity must have an [[ref: account]] in the [[ref: VPR]] and complete a [[ref: validation process]] to obtain the required permission.
+To participate in an [[ref: ecosystem]] and assume a role associated with a specific [[ref: credential schema]]:
+
+- if schema is `OPEN` for issuance and/or verification: an entity must have an [[ref: account]] in the [[ref: VPR]] and self-create its permission.
+
+- if schema is not `OPEN` for issuance and/or verification: an entity must have an [[ref: account]] in the [[ref: VPR]] and complete a [[ref: validation process]] to obtain the required permission.
 
 The [[ref: validation process]] involves two parties:
 
@@ -1498,7 +1502,7 @@ Any [[ref: account]] CAN execute this method.
 
 An [[ref: account]] that would like to create a [[ref: trust registry]] MUST call this method by specifying:
 
-- `did` (string) (*mandatory*): the did of the trust registry.
+- `did` (string) (*mandatory*): the did of the ecosystem that is creating the trust registry.
 - `aka` (string) (*optional*): optional additional URI of this trust registry.
 - `language` (string(17)) (*mandatory*): primary language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)) of this trust registry.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
@@ -1521,7 +1525,7 @@ If any of these precondition checks fail, method MUST abort.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
 :::note
-It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a `TrustRegistry` is its id, and the Verifiable Trust Spec includes the id of the `TrustRegistry` in the DID Document. DID unique constraint is then not needed.
+It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a `TrustRegistry` is its id, and the Verifiable Trust Spec includes the id of the `TrustRegistry` in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.
 :::
 
 ###### [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks
@@ -1868,7 +1872,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 - `tr_id` MUST represent an existing `TrustRegistry` entry `tr` and `tr.controller` MUST be the account executing the method.
-- `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] must be a valid https URL that terminates with string `/vpr/v1/cs/js/VPR_CREDENTIAL_SCHEMA_ID` as specified in [MOD-CS-QRY-3]. VPR_CREDENTIAL_SCHEMA_ID will be replaced during execution by the auto-generated id of this `CredentialSchema`.
+- `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] must be a valid https URL that terminates with string `/cs/v1/js/VPR_CREDENTIAL_SCHEMA_ID` as specified in [MOD-CS-QRY-3]. VPR_CREDENTIAL_SCHEMA_ID will be replaced during execution by the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
 - `issuer_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
@@ -2171,7 +2175,7 @@ issuer --> holder: granted schema permission
 
 ```
 
-The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process.
+The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process (or by any account: - for `ISSUER` permissions if issuer_perm_management_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_perm_management_mode is equal to `OPEN`).
 
 A Validation Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: controller]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional fees plus transaction fees.
 
@@ -2215,7 +2219,7 @@ Any [[ref: account]] CAN execute this method.
 An Applicant that would like to start a permission validation process MUST execute this method by specifying:
 
 - `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the Applicant would like to get;
-- `validator_perm_id` (uint64) (*optional*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
+- `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
 - `country` (string) (*mandatory*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
 
 Available compatible perms can be found by using [MOD-PERM-QRY-1] and presented in a front-end so applicant can choose its validator.
@@ -2526,7 +2530,7 @@ Fees and Trust Deposits:
 
 - transfer the full amount `applicant_perm.vp_current_fees` from escrow [[ref: account]] to validator [[ref: account]] `validator_perm.grantee`;
 - Calculate `validator_trust_deposit` = `applicant_perm.vp_current_fees` * `GlobalVariables.trust_deposit_rate`;
-- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `validator_trust_deposit` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.validator_deposit` to `applicant_perm.validator_deposit` + `validator_trust_deposit`.
+- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `validator_trust_deposit` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `validator_trust_deposit`.
 
 #### [MOD-PERM-MSG-4] Request Permission VP Termination
 
@@ -2594,9 +2598,9 @@ If `applicant_perm.vp_state` has been set to TERMINATED:
   - call [MOD-TD-MSG-1] to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
   - set `applicant_perm.deposit` to 0.
 
-- if `applicant_perm.validator_deposit` > 0:
-  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.validator_deposit`.
-  - set `applicant_perm.validator_deposit` to 0.
+- if `applicant_perm.vp_validator_deposit` > 0:
+  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.vp_validator_deposit`.
+  - set `applicant_perm.vp_validator_deposit` to 0.
 
 :::note
 if `applicant_perm.type` is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.
@@ -2672,9 +2676,9 @@ Update:
 
 If account executing the method is the validator:
 
-- if `applicant_perm.validator_deposit` > 0:
-  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.validator_deposit`.
-  - set `applicant_perm.validator_deposit` to 0.
+- if `applicant_perm.vp_validator_deposit` > 0:
+  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.vp_validator_deposit`.
+  - set `applicant_perm.vp_validator_deposit` to 0.
 
 :::note
 If account executing the method is the grantee (timeout), validator **is punished** and its trust deposit is not freed.
@@ -2898,6 +2902,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_perm.modified` to `now`
 - set `applicant_perm.revoked_by` to account executing the method.
 
+- if `applicant_perm.deposit` > 0:
+  - call [MOD-TD-MSG-1](#mod-td-msg-1-adjust-trust-deposit) to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
+  - set `applicant_perm.deposit` to 0.
+
+- if `applicant_perm.vp_validator_deposit` > 0:
+  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.vp_validator_deposit`.
+  - set `applicant_perm.vp_validator_deposit` to 0.
+
 #### [MOD-PERM-MSG-10] Create or Update Permission Session
 
 Any credential exchange that requires issuer or verifier to pay fees implies the creation of a `PermissionSession`.
@@ -3014,14 +3026,14 @@ If all precondition checks passed, method is executed.
 - if `verifier_perm` is null:
   - for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
     - transfer `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `account` executing the method.
+    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
+    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `issuer_perm.deposit`.
 
 - else :
   - for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
     - transfer `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `account` executing the method.
+    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
+    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `verifier_perm.deposit`.
 
 If new, create entry `PermissionSession` `session`:
 
@@ -3079,7 +3091,6 @@ This method can only be called by either:
 
 - the `account` of the validator that created the Permission that they want to slash,
 - the `grantee` of the `ECOSYSTEM` Permission (the Trust Registry controller) of the corresponding credential schema that this Permission is linked to;
-- the network governance authority (using a proposal).
 
 ##### [MOD-PERM-MSG-12-1] Slash Permission Trust Deposit parameters
 
@@ -3117,9 +3128,6 @@ if `applicant_perm.validator_perm_id` is defined:
 - find `ecosystem_perm` using `ecosystem_perm.type` = `ECOSYSTEM` and `ecosystem_perm.schema_id` = `applicant_perm.schema_id`.
 - [[ref: account]] running the method MUST be `ecosystem_perm.grantee`.
 
-*Option #3*: network governance authority
-
-Account executing the method MUST be the network governance authority (voted proposal).
 
 ###### [MOD-PERM-MSG-12-2-3] Slash Permission Trust Deposit fee checks
 
@@ -3191,7 +3199,11 @@ use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `amou
 
 #### [MOD-PERM-MSG-14] Create Permission
 
-This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to `OPEN` for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required if Ecosystem decided to charge the issuance (or the verification) of the credentials.
+This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to `OPEN` for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a permission for being issuer or verifier of a given schema.
+
+:::note
+Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.
+:::
 
 ##### [MOD-PERM-MSG-14-1] Create Permission parameters
 
@@ -3240,6 +3252,7 @@ If all precondition checks passed, method is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
+- load the root permission of the schema (the one of type `ECOSYSTEM`) to `ecosystem_perm_id`.
 
 A new entry `Permission` `perm` MUST be created:
 
@@ -3258,6 +3271,7 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.issuance_fees`: 0
 - `perm.verification_fees`: `verification_fees` if specified, else 0.
 - `perm.deposit`: 0
+- `perm.validator_perm_id`: `ecosystem_perm_id`
 
 #### [MOD-PERM-QRY-1] List Permissions
 
@@ -3345,10 +3359,6 @@ return `found_perms`.
 Anyone can execute this method.
 
 To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches `issuer_perm` and `verifier_perm`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_perm` is null, `issuer_perm` is never added to the set. If `verifier_perm` is NOT null, `issuer_perm` is added to the set if it exists but `verifier_perm` is not added to the set.
-
-:::note
-If a Credential Schema is configured with permission management mode set to `OPEN` for either issuance or verification, it is necessary to check whether the associated ECOSYSTEM permission requires issuance or verification fees. This check MUST be performed by calling this method and passing the id of the ECOSYSTEM permission. In this case, the only beneficiary of the fees is the ECOSYSTEM permission itself.
-:::
 
 Example 1: `verifier_perm`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
 
