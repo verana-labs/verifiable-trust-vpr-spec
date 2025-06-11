@@ -481,12 +481,6 @@ vg --> verifier : granted schema permission
 
 ```
 
-:::note
-If an issuer chooses to charge [[ref: trust fees]] to a credential holder using the tokenized payment system of the [[ref: VPR]], a validation process must take place and the holder (applicant) MUST have an [[ref: account]] to complete the transaction.
-
-Alternatively, the issuer may opt not to use the VPR validation process for holder verification. In such cases, validation occurs outside the VPR, and the issuer is free to use external payment methods (e.g., credit card) to collect fees from the holder candidate.
-:::
-
 ### DID Directory Management
 
 *This section is non-normative.*
