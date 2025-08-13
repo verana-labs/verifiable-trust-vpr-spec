@@ -481,12 +481,6 @@ vg --> verifier : granted schema permission
 
 ```
 
-:::note
-If an issuer chooses to charge [[ref: trust fees]] to a credential holder using the tokenized payment system of the [[ref: VPR]], a validation process must take place and the holder (applicant) MUST have an [[ref: account]] to complete the transaction.
-
-Alternatively, the issuer may opt not to use the VPR validation process for holder verification. In such cases, validation occurs outside the VPR, and the issuer is free to use external payment methods (e.g., credit card) to collect fees from the holder candidate.
-:::
-
 ### DID Directory Management
 
 *This section is non-normative.*
@@ -2544,7 +2538,7 @@ Requesting termination of the validation process set permission entry to the TER
 
 An [[ref: account]] that would like to set a `Permission` entry to TERMINATION_REQUESTED MUST execute this method by specifying:
 
-- `id` (uint64) (*mandatory*): id of the validation process;
+- `id` (uint64) (*mandatory*): id of the permission;
 
 ##### [MOD-PERM-MSG-4-2] Request Permission VP Termination precondition checks
 
@@ -2733,7 +2727,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-PERM-MSG-7] Create Root Permission
 
-This method is used by controllers of Trust Registries. When they create a Credential Schema, they need to create (a) permission(s) of type ECOSYSTEM so that other participants can run validation processes.
+This method is used by controllers of Trust Registries. When they create a Credential Schema, they need to create (a) permission(s) of type ECOSYSTEM so that other participants can run validation processes or self create their permissions.
 
 ##### [MOD-PERM-MSG-7-1] Create Root Permission parameters
 
@@ -2810,14 +2804,18 @@ A new entry `Permission` `perm` MUST be created:
 
 #### [MOD-PERM-MSG-8] Extend Permission
 
-This method can only be called by a validator.
+This method can be called:
+
+- by the grantee, if permission is of type ECOSYSTEM.
+- by the grantee, if it is a self-created permission (schema configuration is open)
+- by a validator (if permission is managed by a VP).
 
 ##### [MOD-PERM-MSG-8-1] Extend Permission parameters
 
 An [[ref: account]] that would like to extend the effective_until timestamp of a permission MUST call this method by specifying:
 
 - `id` (uint64) (*mandatory*): id of the permission;
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective.
+- `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Permission` is effective.
 
 ##### [MOD-PERM-MSG-8-2] Extend Permission precondition checks
 
@@ -2831,16 +2829,26 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm` MUST be a [[ref: valid permission]]
 - `effective_until` MUST be greater than `applicant_perm.effective_until` else MUST abort.
-- `effective_until` MUST be lower or equal to `applicant_perm.vp_exp` else MUST abort.
 
-###### [MOD-PERM-MSG-8-2-2] Extend Permission validator perms
+
+###### [MOD-PERM-MSG-8-2-2] Extend Permission advanced checks
+
+1. ECOSYSTEM permissions
 
 - if `applicant_perm.validator_perm_id` is null and `applicant_perm.type` is ECOSYSTEM, [[ref: account]] running the method MUST be `applicant_perm.grantee'.
-- else load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]]. [[ref: account]] running the method MUST be `validator_perm.grantee`.
+
+2. Self-created permissions
+
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]] of type ECOSYSTEM. [[ref: account]] running the method MUST be `applicant_perm.grantee`.
+
+3. VP managed permissions
+
+- `effective_until` MUST be lower or equal to `applicant_perm.vp_exp` else MUST abort.
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]]. [[ref: account]] running the method MUST be `validator_perm.grantee`.
 
 ###### [MOD-PERM-MSG-8-2-3] Extend Permission fee checks
 
-Validator MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+Account executing the method MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
 ##### [MOD-PERM-MSG-8-3] Extend Permission execution
 
@@ -2851,7 +2859,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 
 - Load `Permission` entry `applicant_perm` from `id`.
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
 - set `applicant_perm.effective_until` to `effective_until`
 - set `applicant_perm.extended` to `now`
 - set `applicant_perm.modified` to `now`
@@ -2859,7 +2866,13 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-PERM-MSG-9] Revoke Permission
 
-This method can only be called by a validator.
+This method can only be called:
+
+- by a validator in the permission branch until the root permission if permission is VP managed (GRANTOR or ECOSYSTEM schema mode).
+- by the grantee (OPEN schema mode).
+- by the trust registry controller (always),
+
+To self-revoke a permission that is managed by a VP, a grantee MUST use the [request permission vp termination].(#mod-perm-msg-4-request-permission-vp-termination).
 
 ##### [MOD-PERM-MSG-9-1] Revoke Permission parameters
 
@@ -2879,14 +2892,26 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm` MUST be a [[ref: valid permission]]
 
-###### [MOD-PERM-MSG-9-2-2] Revoke Permission validator perms
+###### [MOD-PERM-MSG-9-2-2] Revoke Permission advanced checks
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]].
-- [[ref: account]] running the method MUST be `validator_perm.grantee`.
+- if applicant permission is of type ECOSYSTEM, [[ref: account]] running the method MUST be the trust registry controller (`applicant_perm.grantee`).
+
+- else if the permission has been self-created (OPEN credential schema mode for an ISSUER or VERIFIER permission), then either:
+  - the `applicant_perm.grantee` can execute this method
+  - or load `validator_perm` from `applicant_perm.validator_perm_id`, the trust registry controller (grantee of the root perm) `validator_perm.grantee` is allowed to run this method (note that we do not need to verify if the root permission is valid)
+
+- else if the permission is managed by a Validation Process (ECOSYSTEM or GRANTOR mode for credential schema for an ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, HOLDER permission), then:  
+
+Process the branch of the permission tree until the root permission to check if account executing the method is allowed.
+
+**Conditions**:
+
+- account running the method CAN be account controller of a root permission even if it is NOT a [[ref: valid permission]].
+- account running the method CAN be the controller of a parent permission (not a root permission) ONLY if it is a [[ref: valid permission]];
 
 ###### [MOD-PERM-MSG-9-2-3] Revoke Permission fee checks
 
-Validator MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+Account running the method MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
 ##### [MOD-PERM-MSG-9-3] Revoke Permission execution
 
@@ -2897,7 +2922,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 
 - Load `Permission` entry `applicant_perm` from `id`.
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
 - set `applicant_perm.revoked` to `now`
 - set `applicant_perm.modified` to `now`
 - set `applicant_perm.revoked_by` to account executing the method.
@@ -3703,7 +3727,7 @@ if any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 
 - `did`: the specified [[ref: DID]] format MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]] and MUST exist in DID directory.
 - `years`: can be null, but if specified, must be between 1 and 31 inclusive.
-- [[ref: account]] executing the [[ref: transaction]] must be the `controller` of the DID.
+- [[ref: account]] executing the [[ref: transaction]] MUST be the `controller` of the DID.
 
 ###### [MOD-DD-MSG-2-2-2] Renew a DID fee checks
 
