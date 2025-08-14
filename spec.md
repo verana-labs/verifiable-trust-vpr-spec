@@ -1457,6 +1457,7 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Slash Permission Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-12]](#mod-perm-msg-12-slash-permission-trust-deposit) |
 |                            | Repay Permission Slashed Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-13]](#mod-perm-msg-13-repay-permission-slashed-trust-deposit) |
 |                                | Create Permission                |                                     | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-create-permission) |
+|                                | Reclaim Permission Deposit                |                                     | Msg    | [[MOD-PERM-MSG-15]](#mod-perm-msg-15-free-permission-deposit) |
 |                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |
 |                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |
 |                                | Find Permissions With DID               | /perm/v1/find_with_did       | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-find-permissions-with-did)  |
@@ -2530,9 +2531,11 @@ Fees and Trust Deposits:
 
 *This section is non-normative.*
 
-At any time, [[ref: applicant]] may request termination of the validation process *current action*.
+When permission has been obtained by running a Validation Process, an [[ref: applicant]] CANNOT revoke its permission using the [revoke method](#mod-perm-msg-9-revoke-permission).
 
-Requesting termination of the validation process set permission entry to the TERMINATION_REQUESTED state so that corresponding permissions can be terminated. Then, the applicant or the validator (if type is not HOLDER) or the validator (if type is HOLDER) MUST confirm termination [[ref: transaction]] for the validation entry to be set to TERMINATED and trust deposits to be freed.
+[[ref: applicant]]s MUST request termination of the validation process to terminate relation with validator and request revocation of their permission using this method.
+
+Requesting termination of the validation process set the permission entry `vp_state` to the TERMINATION_REQUESTED state so that validator can eventually perform some off-chain actions. Then, the [confirm vp termination method](#mod-perm-msg-5-confirm-permission-vp-termination) MUST be called by the validator (or the applicant if validator doesn't call the method within a certain amount of time or if validator permission is revoked), which will revoke the grantee permission.
 
 ##### [MOD-PERM-MSG-4-1] Request Permission VP Termination parameters
 
@@ -2544,6 +2547,16 @@ An [[ref: account]] that would like to set a `Permission` entry to TERMINATION_R
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
+
+
+
+
+SEPARATE RECLAIM PERM DEPOSIT
+
+
+
+
+
 ###### [MOD-PERM-MSG-4-2-1] Request Permission VP Termination basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
@@ -2552,7 +2565,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - Load `Permission` entry `applicant_perm` with this id. It MUST exist.
 - `applicant_perm.vp_state` must be VALIDATED.
 
-If validation process already expired, either party can terminate the validation process to reclaim the deposit. Else, only the grantee can terminate the vp.
+If validation process already expired, either party can terminate the validation process to reclaim the permission deposit. Else, only the grantee can terminate the vp.
 
 - if `applicant_perm.vp_exp` is lower than `now`:
   - Load `Permission` entry `validator_perm` with id equal to `applicant_perm.validator_perm_id`. [[ref: account]] running the [[ref: transaction]] MUST be either `applicant_perm.grantee` OR `validator_perm.grantee`.
@@ -2577,7 +2590,7 @@ Update perm:
 - set `applicant_perm.modified` to `now`.
 - set `applicant_perm.vp_term_requested` to current timestamp.
 - set `applicant_perm.vp_last_state_change` to `now`.
-if `applicant_perm.type` is not HOLDER, or `applicant_perm.vp_exp` is lower than `now`:
+if  `applicant_perm.vp_exp` is lower than `now`:
 - set `applicant_perm.vp_state` to TERMINATED.
 - set `applicant_perm.terminated` to `now`
 - set `applicant_perm.terminated_by` to account executing the method.
@@ -2925,14 +2938,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_perm.revoked` to `now`
 - set `applicant_perm.modified` to `now`
 - set `applicant_perm.revoked_by` to account executing the method.
-
-- if `applicant_perm.deposit` > 0:
-  - call [MOD-TD-MSG-1](#mod-td-msg-1-adjust-trust-deposit) to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
-  - set `applicant_perm.deposit` to 0.
-
-- if `applicant_perm.vp_validator_deposit` > 0:
-  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.vp_validator_deposit`.
-  - set `applicant_perm.vp_validator_deposit` to 0.
 
 #### [MOD-PERM-MSG-10] Create or Update Permission Session
 
@@ -3296,6 +3301,50 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.verification_fees`: `verification_fees` if specified, else 0.
 - `perm.deposit`: 0
 - `perm.validator_perm_id`: `ecosystem_perm_id`
+
+#### [MOD-PERM-MSG-15] Free Permission Deposit
+
+This method can only be called by the grantee of a permission, when permission is revoked.
+
+##### [MOD-PERM-MSG-15-1] Free Permission Deposit parameters
+
+- `id` (uint64) (*mandatory*): id of the permission;
+
+##### [MOD-PERM-MSG-15-2] Free Permission Deposit precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-PERM-MSG-15-2-1] Free Permission Deposit basic checks
+
+if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
+
+- `id` MUST be a valid uint64.
+- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
+- `applicant_perm.revoked` MUST be not null
+- if `applicant_perm.slashed_deposit` is not null ang greater than 0, `applicant_perm.repaid_deposit` MUST be not null and equal to `applicant_perm.slashed_deposit` (slashed deposit must have been repaid).
+
+###### [MOD-PERM-MSG-15-2-3] Free Permission Deposit fee checks
+
+Account running the method MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+
+##### [MOD-PERM-MSG-15-3] Free Permission Deposit execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp.
+
+- Load `Permission` entry `applicant_perm` from `id`.
+
+- if `applicant_perm.deposit` > 0:
+  - call [MOD-TD-MSG-1](#mod-td-msg-1-adjust-trust-deposit) to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
+  - set `applicant_perm.deposit` to 0.
+
+- if `applicant_perm.vp_validator_deposit` > 0:
+  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.vp_validator_deposit`.
+  - set `applicant_perm.vp_validator_deposit` to 0.
+
 
 #### [MOD-PERM-QRY-1] List Permissions
 
@@ -4417,3 +4466,64 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 ### Normative References
 
 [[spec-norm]]
+
+| Schema Mode | Perm Type | Expired     | VP state | VP exp | revoked | slashed | repaid | Grantee can revoke | Validator can revoke | Grantee can claim | Validator can claim | Validator can slash |  Grantee can repay |
+|-------------|-----------|------------------------|--------|---------|---------|--------|--------------------|----------------------|-------------------|---------------------|---------------------|--------------------|
+| OPEN        | ECOSYSTEM | NO          |          |        |  NO     |  NO     | NO     | YES                |                      | NO                |                     |                     |                    |
+| OPEN        | ECOSYSTEM | YES         |          |        |  NO     |  NO     | NO     | YES                |                      | NO                |                     |                     |                    |
+| OPEN        | ECOSYSTEM | NO/YES      |          |        |  YES    |  NO     | NO     |                    |                      | YES               |                     |                     |                    |
+| OPEN        | ISS/VER   | NO          |          |        |  NO     |  NO     | NO     | YES                | YES                  | NO                |                     |  YES                |                    |
+| OPEN        | ISS/VER   | YES         |          |        |  NO     |  NO     | NO     | YES                | YES                  | NO                |                     |  YES                |                    |
+| OPEN        | ISS/VER   |             |          |        |  YES    |  NO     | NO     |                    |                      | YES               |                     |  YES                |                    |
+| OPEN        | ISS/VER   | NO          |          |        |  NO     |  YES    | NO     | YES                | YES                  | NO                |                     |  YES                |    YES             |
+| OPEN        | ISS/VER   | YES         |          |        |  NO     |  YES    | NO     | YES                | YES                  | NO                |                     |  YES                |    YES             |
+| OPEN        | ISS/VER   |             |          |        |  YES    |  YES    | NO     |                    |                      | NO                |                     |  YES                |    YES             |
+| OPEN        | ISS/VER   | NO          |          |        |  NO     |  YES    | YES    | YES                | YES                  | NO                |                     |  YES                |                    |
+| OPEN        | ISS/VER   | YES         |          |        |  NO     |  YES    | YES    | YES                | YES                  | NO                |                     |  YES                |                    |
+| OPEN        | ISS/VER   |             |          |        |  YES    |  YES    | YES    |                    |                      | NO                |                     |  NO                 |                    |
+| OPEN        | HOLDER    | NO          |          |        |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
+| OPEN        | HOLDER    | YES         |          |        |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
+| OPEN        | HOLDER    |             |          |        |  YES    |  NO     | NO     |                    |                      | YES               |                     |  YES                |                    |
+| OP/ECO/GRT  | HOLDER    | NO          |VALIDATED |NO      |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
+| OP/ECO/GRT  | HOLDER    | YES         |VALIDATED |NO      |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
+| OP/ECO/GRT  | HOLDER    |             |VALIDATED |NO      |  YES    |  YES    | NO     |                    |                      | NO                |                     |  YES                |    YES             |
+| OP/ECO/GRT  | HOLDER    | NO          |VALIDATED |NO      |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
+| OP/ECO/GRT  | HOLDER    | YES         |VALIDATED |NO      |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
+| OP/ECO/GRT  | HOLDER    |             |VALIDATED |NO      |  YES    |  YES    | YES    |                    |                      | NO                |                     |  NO                 |                    |
+
+
+
+| Schema Mode | Perm Type | Expired     | VP state | VP exp | revoked | slashed | repaid | Grantee can revoke | Validator can revoke | Grantee can claim | Validator can claim | Validator can slash |  Grantee can repay |
+|-------------|-----------|------------------------|--------|---------|---------|--------|--------------------|----------------------|-------------------|---------------------|---------------------|--------------------|
+| ECOSYSTEM   | ECOSYSTEM | NO          |          |        |  NO     |  NO     | NO     | YES                |                      | NO                |                     |                     |                    |
+| ECOSYSTEM   | ECOSYSTEM | YES         |          |        |  NO     |  NO     | NO     | YES                |                      | NO                |                     |                     |                    |
+| ECOSYSTEM   | ECOSYSTEM | NO/YES      |          |        |  YES    |  NO     | NO     |                    |                      | YES               |                     |                     |                    |
+| ECOSYSTEM   | ISS/VER   | NO          |VALIDATED | false  |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
+| ECOSYSTEM   | ISS/VER   | YES         |VALIDATED | false  |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
+| ECOSYSTEM   | ISS/VER   |             |VALIDATED | false  |  YES    |  NO     | NO     |                    |                      | YES               |                     |  YES                |                    |
+| ECOSYSTEM   | ISS/VER   | NO          |VALIDATED | false  |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
+| ECOSYSTEM   | ISS/VER   | YES         |VALIDATED | false  |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
+| ECOSYSTEM   | ISS/VER   |             |VALIDATED | false  |  YES    |  YES    | NO     |                    |                      | NO                |                     |  YES                |    YES             |
+| ECOSYSTEM   | ISS/VER   | NO          |VALIDATED | false  |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
+| ECOSYSTEM   | ISS/VER   | YES         |VALIDATED | false  |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
+| ECOSYSTEM   | ISS/VER   |             |VALIDATED | false  |  YES    |  YES    | YES    |                    |                      | NO                |                     |  NO                 |                    |
+| ECOSYSTEM   | HOLDER    | NO          |VALIDATED | false  |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
+| ECOSYSTEM   | HOLDER    | YES         |VALIDATED | false  |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
+| ECOSYSTEM   | HOLDER    |             |VALIDATED | false  |  YES    |  NO     | NO     |                    |                      | YES               |                     |  YES                |                    |
+| ECOSYSTEM   | HOLDER    | NO          |VALIDATED | false  |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
+| ECOSYSTEM   | HOLDER    | YES         |VALIDATED | false  |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
+| ECOSYSTEM   | HOLDER    |             |VALIDATED | false  |  YES    |  YES    | NO     |                    |                      | NO                |                     |  YES                |    YES             |
+| ECOSYSTEM   | HOLDER    | NO          |VALIDATED | false  |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
+| ECOSYSTEM   | HOLDER    | YES         |VALIDATED | false  |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
+| ECOSYSTEM   | HOLDER    |             |VALIDATED | false  |  YES    |  YES    | YES    |                    |                      | NO                |                     |  NO                 |                    |
+
+
+- When a user reclaims a permission deposit:
+  - if it has another [[ref: active permission]] of the same role in the same schema, deposit is moved from old perm to new perm.
+  - if is has no other perm of the same role in the same schema, the deposit is freed and available in trustdeposit.reclaimable.
+
+- when a user wants to obtain a new permission of a given role but (a) permission(s) exists from the same credential schema, upon permission creation/vp started, he must deposit the same deposit that was freed.
+- When a user obtain a new permission 
+
+
+=> remove claim trust deposit.
