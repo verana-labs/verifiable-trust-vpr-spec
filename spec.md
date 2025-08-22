@@ -1,4 +1,4 @@
-# Verifiable Public Registry v2 Specification
+# Verifiable Public Registry v3 Specification
 
 **Specification Status:** *Preview*
 
@@ -1446,8 +1446,6 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 | Permission                     | Start Permission VP                     |                                 | Msg    | [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp)    |
 |                                | Renew a Permission VP                   |                                 | Msg    | [[MOD-PERM-MSG-2]](#mod-perm-msg-2-renew-permission-vp)    |
 |                                | Set Permission VP to Validated          |                                 | Msg    | [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated)    |
-|                                | Request Permission VP Termination       |                               | Msg    | [[MOD-PERM-MSG-4]](#mod-perm-msg-4-request-permission-vp-termination)    |
-|                                | Confirm Permission VP Termination       |                                 | Msg    | [[MOD-PERM-MSG-5]](#mod-perm-msg-5-confirm-permission-vp-termination)    |
 |                                | Cancel Permission VP Last Request       |                                 | Msg    | [[MOD-PERM-MSG-6]](#mod-perm-msg-6-cancel-permission-vp-last-request)    |
 |                                | Create Root Permission                  |                                 | Msg    | [[MOD-PERM-MSG-7]](#mod-perm-msg-7-create-root-permission)   |
 |                                | Extend Permission                       |                                 | Msg    | [[MOD-PERM-MSG-8]](#mod-perm-msg-8-extend-permission)  |
@@ -1455,9 +1453,8 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Create or update Permission Session     |                                 | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-create-or-update-permission-session)  |
 |                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |
 |                                | Slash Permission Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-12]](#mod-perm-msg-12-slash-permission-trust-deposit) |
-|                            | Repay Permission Slashed Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-13]](#mod-perm-msg-13-repay-permission-slashed-trust-deposit) |
+|                                | Repay Permission Slashed Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-13]](#mod-perm-msg-13-repay-permission-slashed-trust-deposit) |
 |                                | Create Permission                |                                     | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-create-permission) |
-|                                | Reclaim Permission Deposit                |                                     | Msg    | [[MOD-PERM-MSG-15]](#mod-perm-msg-15-free-permission-deposit) |
 |                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |
 |                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |
 |                                | Find Permissions With DID               | /perm/v1/find_with_did       | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-find-permissions-with-did)  |
@@ -1479,7 +1476,7 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Update TD Module Parameters             |                               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |
 |                                | Slash Trust Deposit             |                                       | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |
 |                                | Repay Slashed Trust Deposit          |                                       | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)   |
-|                    | Burn Ecosystem Slashed Trust Deposit          |                                           | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit)   |
+|                                | Burn Ecosystem Slashed Trust Deposit          |                                           | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit)   |
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |
 
@@ -2213,11 +2210,11 @@ Any [[ref: account]] CAN execute this method.
 
 An Applicant that would like to start a permission validation process MUST execute this method by specifying:
 
-- `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the Applicant would like to get;
+- `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
 - `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
 - `country` (string) (*mandatory*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
 
-Available compatible perms can be found by using [MOD-PERM-QRY-1] and presented in a front-end so applicant can choose its validator.
+Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
 ##### [MOD-PERM-MSG-1-2] Start Permission VP precondition checks
 
@@ -2527,169 +2524,9 @@ Fees and Trust Deposits:
 - Calculate `validator_trust_deposit` = `applicant_perm.vp_current_fees` * `GlobalVariables.trust_deposit_rate`;
 - Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `validator_trust_deposit` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `validator_trust_deposit`.
 
-#### [MOD-PERM-MSG-4] Request Permission VP Termination
+#### [MOD-PERM-MSG-4] Void
 
-*This section is non-normative.*
-
-When permission has been obtained by running a Validation Process, an [[ref: applicant]] CANNOT revoke its permission using the [revoke method](#mod-perm-msg-9-revoke-permission).
-
-[[ref: applicant]]s MUST request termination of the validation process to terminate relation with validator and request revocation of their permission using this method.
-
-Requesting termination of the validation process set the permission entry `vp_state` to the TERMINATION_REQUESTED state so that validator can eventually perform some off-chain actions. Then, the [confirm vp termination method](#mod-perm-msg-5-confirm-permission-vp-termination) MUST be called by the validator (or the applicant if validator doesn't call the method within a certain amount of time or if validator permission is revoked), which will revoke the grantee permission.
-
-##### [MOD-PERM-MSG-4-1] Request Permission VP Termination parameters
-
-An [[ref: account]] that would like to set a `Permission` entry to TERMINATION_REQUESTED MUST execute this method by specifying:
-
-- `id` (uint64) (*mandatory*): id of the permission;
-
-##### [MOD-PERM-MSG-4-2] Request Permission VP Termination precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-
-
-
-
-SEPARATE RECLAIM PERM DEPOSIT
-
-
-
-
-
-###### [MOD-PERM-MSG-4-2-1] Request Permission VP Termination basic checks
-
-if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-
-- `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` with this id. It MUST exist.
-- `applicant_perm.vp_state` must be VALIDATED.
-
-If validation process already expired, either party can terminate the validation process to reclaim the permission deposit. Else, only the grantee can terminate the vp.
-
-- if `applicant_perm.vp_exp` is lower than `now`:
-  - Load `Permission` entry `validator_perm` with id equal to `applicant_perm.validator_perm_id`. [[ref: account]] running the [[ref: transaction]] MUST be either `applicant_perm.grantee` OR `validator_perm.grantee`.
-- else [[ref: account]] running the [[ref: transaction]] MUST be `applicant_perm.grantee`.
-
-###### [MOD-PERM-MSG-4-2-2] Request Permission VP Termination fee checks
-
-Applicant MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
-
-##### [MOD-PERM-MSG-4-3] Request Permission VP Termination execution
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-Define vars:
-
-- define `now`  current timestamp.
-
-Update perm:
-
-- set `applicant_perm.modified` to `now`.
-- set `applicant_perm.vp_term_requested` to current timestamp.
-- set `applicant_perm.vp_last_state_change` to `now`.
-if  `applicant_perm.vp_exp` is lower than `now`:
-- set `applicant_perm.vp_state` to TERMINATED.
-- set `applicant_perm.terminated` to `now`
-- set `applicant_perm.terminated_by` to account executing the method.
-else
-- set `applicant_perm.vp_state` to TERMINATION_REQUESTED.
-
-Update deposits if state is TERMINATED:
-
-If `applicant_perm.vp_state` has been set to TERMINATED:
-
-- if `applicant_perm.deposit` > 0:
-  - call [MOD-TD-MSG-1] to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
-  - set `applicant_perm.deposit` to 0.
-
-- if `applicant_perm.vp_validator_deposit` > 0:
-  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.vp_validator_deposit`.
-  - set `applicant_perm.vp_validator_deposit` to 0.
-
-:::note
-if `applicant_perm.type` is HOLDER, then validator SHOULD revoke the corresponding credential and then call the confirm validation method to free the trust deposits.
-:::
-
-#### [MOD-PERM-MSG-5] Confirm Permission VP Termination
-
-This method is called by a validator to confirm the termination of a vp when permission type is HOLDER, usually after revoking (or not) the verifiable credential of the holder. It can be although called by the grantee after a timeout, defined in `GlobalVariables.validation_term_requested_timeout_days`.
-
-##### [MOD-PERM-MSG-5-1] Confirm Permission VP Termination parameters
-
-An [[ref: account]] that would like to set confirm validation entry termination MUST execute this method by specifying:
-
-- `id` (uint64) (*mandatory*): id of the validation process;
-
-##### [MOD-PERM-MSG-5-2] Confirm Permission VP Termination precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-PERM-MSG-5-2-1] Confirm Permission VP Termination basic checks
-
-if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-
-- `id` MUST be a valid uint64 and a validation entry with the same id MUST exist.
-- `Permission` entry must be in state TERMINATION_REQUESTED.
-
-###### [MOD-PERM-MSG-5-2-2] Confirm Permission VP Termination permission checks
-
-- `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` with this id. It MUST exist.
-
-Timeout not reached: only validator can call the method:
-
-if `applicant_perm.term_requested` + `GlobalVariables.validation_term_requested_timeout_days` is after or equal to current timestamp:
-
-- Load `Permission` entry `validator_perm` with id `applicant_perm.validator_perm_id`. It MUST exist, and `validator_perm.grantee` MUST be the account executing the method. Else MUST abort.
-
-Timeout reached: either the validator or the applicant can call the method:
-
-if `applicant_perm.term_requested` + `GlobalVariables.validation_term_requested_timeout_days` is before now:
-
-- Load `Permission` entry `validator_perm` with id `applicant_perm.validator_perm_id`. It MUST exist, and `validator_perm.grantee` CAN be the account executing the method.
-OR
-`applicant_perm.grantee` CAN be the account executing the method.
-
-Else MUST abort.
-  
-:::note
-For HOLDER type validation, if validation has not expired, only the validator can terminate the validation, unless `GlobalVariables.validation_term_requested_timeout_days` have passed since termination request and validator did not answered.
-:::
-
-###### [MOD-PERM-MSG-5-2-3] Confirm Permission VP Termination fee checks
-
-Account executing the method MUST have the required [[ref: estimated transaction fees]].
-
-##### [MOD-PERM-MSG-5-3] Confirm Permission VP Termination execution
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Define vars:
-
-- define `now`  current timestamp.
-
-Update:
-
-- set `applicant_perm.modified` to `now`.
-- set validation entry `validation.state` to TERMINATED.
-- set `validation.last_state_change`: `now`.
-
-- if `applicant_perm.deposit` > 0:
-  - call [MOD-TD-MSG-1](#mod-td-msg-1-adjust-trust-deposit) to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
-  - set `applicant_perm.deposit` to 0.
-
-If account executing the method is the validator:
-
-- if `applicant_perm.vp_validator_deposit` > 0:
-  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.vp_validator_deposit`.
-  - set `applicant_perm.vp_validator_deposit` to 0.
-
-:::note
-If account executing the method is the grantee (timeout), validator **is punished** and its trust deposit is not freed.
-:::
+#### [MOD-PERM-MSG-5] Void
 
 #### [MOD-PERM-MSG-6] Cancel Permission VP Last Request
 
@@ -2740,7 +2577,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-PERM-MSG-7] Create Root Permission
 
-This method is used by controllers of Trust Registries. When they create a Credential Schema, they need to create (a) permission(s) of type ECOSYSTEM so that other participants can run validation processes or self create their permissions.
+This method is used by controllers of Trust Registries. When they create a Credential Schema, they need to create (a) permission(s) of type ECOSYSTEM so that other participants can run validation processes (if schema mode is ECOSYSTEM) or self create their permissions (schema mode set to OPEN).
 
 ##### [MOD-PERM-MSG-7-1] Create Root Permission parameters
 
@@ -2751,7 +2588,7 @@ An [[ref: account]] that would like to create a `Permission` entry MUST call thi
 - `country` (*optional*).
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
-- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0.
+- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in trust unit. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.
 
@@ -2780,10 +2617,6 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 - The related `TrustRegistry` entry `tr` is loaded from `cs.tr_id`.
 - [[ref: account]] executing the method MUST be the [[ref: controller]] of `tr`.
 - else MUST abort.
-
-:::note
-HOLDER permission are used so that it is possible to identify grantee account for paying rewards.
-:::
 
 ###### [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks
 
@@ -2819,7 +2652,7 @@ A new entry `Permission` `perm` MUST be created:
 
 This method can be called:
 
-- by the grantee, if permission is of type ECOSYSTEM.
+- by the grantee (the trust registry controller), if permission is of type ECOSYSTEM.
 - by the grantee, if it is a self-created permission (schema configuration is open)
 - by a validator (if permission is managed by a VP).
 
@@ -2881,11 +2714,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 This method can only be called:
 
-- by a validator in the permission branch until the root permission if permission is VP managed (GRANTOR or ECOSYSTEM schema mode).
-- by the grantee (OPEN schema mode).
-- by the trust registry controller (always),
-
-To self-revoke a permission that is managed by a VP, a grantee MUST use the [request permission vp termination].(#mod-perm-msg-4-request-permission-vp-termination).
+- by an ancestor (a validator in the permission branch until the root permission (GRANTOR, ECOSYSTEM, OPEN schema mode)).
+- by the grantee (OPEN, GRANTOR, ECOSYSTEM schema mode).
+- by the `TrustRegistry` controller (owner of the credential schema).
 
 ##### [MOD-PERM-MSG-9-1] Revoke Permission parameters
 
@@ -2907,20 +2738,83 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PERM-MSG-9-2-2] Revoke Permission advanced checks
 
-- if applicant permission is of type ECOSYSTEM, [[ref: account]] running the method MUST be the trust registry controller (`applicant_perm.grantee`).
+Either Option #1, #2 or #3 MUST return true, else abort.
 
-- else if the permission has been self-created (OPEN credential schema mode for an ISSUER or VERIFIER permission), then either:
-  - the `applicant_perm.grantee` can execute this method
-  - or load `validator_perm` from `applicant_perm.validator_perm_id`, the trust registry controller (grantee of the root perm) `validator_perm.grantee` is allowed to run this method (note that we do not need to verify if the root permission is valid)
+*Option #1*: executed by a validator ancestor
 
-- else if the permission is managed by a Validation Process (ECOSYSTEM or GRANTOR mode for credential schema for an ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, HOLDER permission), then:  
+if `applicant_perm.validator_perm_id` is defined:
 
-Process the branch of the permission tree until the root permission to check if account executing the method is allowed.
+- set `validator_perm` = `applicant_perm`
+- while `validator_perm.validator_perm_id` is defined, 
+  - load `validator_perm` from `validator_perm.validator_perm_id`.
+  - if `validator_perm` is a [[ref: valid permission]] and `validator_perm.grantee` is who is running the method, => return true.
+- end
+- return false.
 
-**Conditions**:
+*Option #2*: executed by `TrustRegistry` controller
 
-- account running the method CAN be account controller of a root permission even if it is NOT a [[ref: valid permission]].
-- account running the method CAN be the controller of a parent permission (not a root permission) ONLY if it is a [[ref: valid permission]];
+- load `CredentialSchema` `cs` from `applicant_perm.schema_id`
+- load `TrustRegistry` `tr` from `cs.tr_id`
+- if [[ref: account]] running the method is `tr.controller`, return true.
+- else return false.
+
+*Option #3*: executed by `applicant_perm.grantee`: return true.
+
+Example:
+
+In the following permission tree, "Verifier E" permission can be revoked:
+
+- by "Verifier E", if the corresponding permission is a [[ref: valid permission]];
+- by "Verifier Grantor D", if the corresponding permission is a [[ref: valid permission]];
+- by "Ecosystem A", if the corresponding root permission is a [[ref: valid permission]];
+- by the `TrustRegistry` object controller, obtained by resolving perm => credential schema => trust registry.
+
+```plantuml
+
+@startuml
+scale max 800 width
+ 
+package "Example Credential Schema Permission Tree" as cs {
+
+    object "Ecosystem A" as tr #3fbdb6 {
+        permissionType: ECOSYSTEM (Root)
+        did:example:ecosystemA
+    }
+    object "Issuer Grantor B" as ig {
+        permissionType: ISSUER_GRANTOR
+        did:example:igB
+    }
+    object "Issuer C" as issuer #7677ed  {
+        permissionType: ISSUER
+        did:example:iC
+    }
+    object "Verifier Grantor D" as vg {
+        permissionType: VERIFIER_GRANTOR
+        did:example:vgD
+    }
+    object "Verifier E" as verifier #00b0f0 {
+        permissionType: VERIFIER
+        did:example:vE
+    }
+
+    object "Holder Z " as holder #FFB073 {
+        permissionType: HOLDER
+    }
+}
+
+
+
+tr --> ig : granted schema permission
+ig --> issuer : granted schema permission
+
+tr --> vg : granted schema permission
+vg --> verifier : granted schema permission
+
+issuer --> holder: granted schema permission
+
+@enduml
+
+```
 
 ###### [MOD-PERM-MSG-9-2-3] Revoke Permission fee checks
 
@@ -3118,8 +3012,8 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 This method can only be called by either:
 
-- the `account` of the validator that created the Permission that they want to slash,
-- the `grantee` of the `ECOSYSTEM` Permission (the Trust Registry controller) of the corresponding credential schema that this Permission is linked to;
+- an ancestor validator of this permission;
+- the controller of the `TrustRegistry` object, owner of the corresponding credential schema.
 
 ##### [MOD-PERM-MSG-12-1] Slash Permission Trust Deposit parameters
 
@@ -3138,25 +3032,33 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `applicant_perm` MUST be a [[ref: valid permission]]
 - `amount` MUST be lower or equal to `applicant_perm.deposit` else MUST abort.
+
+:::note
+Even if the permission has expired or is revoked, it is still possible to slash it.
+:::
 
 ###### [MOD-PERM-MSG-12-2-2] Slash Permission Trust Deposit validator perms
 
-Either Option #1, #2 or #3 MUST be true else abort.
+Either Option #1, or #2 MUST return true, else abort.
 
-*Option #1*: executed by validator
+*Option #1*: executed by a validator ancestor
 
 if `applicant_perm.validator_perm_id` is defined:
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]].
-- [[ref: account]] running the method MUST be `validator_perm.grantee`.
+- set `validator_perm` = `applicant_perm`
+- while `validator_perm.validator_perm_id` is defined, 
+  - load `validator_perm` from `validator_perm.validator_perm_id`.
+  - if `validator_perm` is a [[ref: valid permission]] and `validator_perm.grantee` is who is running the method, => return true.
+- end
+- return false.
 
-*Option #2*: executed by ecosystem controller
+*Option #2*: executed by `TrustRegistry` controller
 
-- find `ecosystem_perm` using `ecosystem_perm.type` = `ECOSYSTEM` and `ecosystem_perm.schema_id` = `applicant_perm.schema_id`.
-- [[ref: account]] running the method MUST be `ecosystem_perm.grantee`.
-
+- load `CredentialSchema` `cs` from `applicant_perm.schema_id`
+- load `TrustRegistry` `tr` from `cs.tr_id`
+- if [[ref: account]] running the method is `tr.controller`, return true.
+- else return false.
 
 ###### [MOD-PERM-MSG-12-2-3] Slash Permission Trust Deposit fee checks
 
@@ -3244,7 +3146,8 @@ An [[ref: account]] that would like to create a `Permission` entry MUST call thi
 - `country` (*optional*).
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
-- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.
+- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in trust unit. Default to 0.
+- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in trust unit. Default to 0.
 
 ##### [MOD-PERM-MSG-14-2] Create Permission precondition checks
 
@@ -3260,7 +3163,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `effective_from` must be in the future.
 - `effective_until`, if not null, must be greater than `effective_from`
 - `country` if not null, MUST be a valid alpha-2 code (ISO 3166).
-- `verification_fees` (number) (*optional*): If specified, MUST be >= 0.
+- `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
+- `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
 
 ###### [MOD-PERM-MSG-14-2-2] Create Permission permission checks
 
@@ -3269,6 +3173,8 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 - The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
 - if `type` is equal to ISSUER: if `cs.issuer_perm_management_mode` is not equal to OPEN, MUST abort.
 - if `type` is equal to VERIFIER: if `cs.verifier_perm_management_mode` is not equal to OPEN, MUST abort.
+- if `type` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
+- if `type` is equal to VERIFIER and `verification_fees` is specified and different than 0, MUST abort.
 
 ###### [MOD-PERM-MSG-14-2-3] Create Permission fee checks
 
@@ -3296,55 +3202,11 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.effective_from`: `effective_from`
 - `perm.effective_until`: `effective_until`
 - `perm.country`: `country`
-- `perm.validation_fees`: 0
+- `perm.validation_fees`: `validation_fees` if specified and `type` is ISSUER, else 0.
 - `perm.issuance_fees`: 0
-- `perm.verification_fees`: `verification_fees` if specified, else 0.
+- `perm.verification_fees`: `verification_fees` if specified and `type` is ISSUER, else 0.
 - `perm.deposit`: 0
 - `perm.validator_perm_id`: `ecosystem_perm_id`
-
-#### [MOD-PERM-MSG-15] Free Permission Deposit
-
-This method can only be called by the grantee of a permission, when permission is revoked.
-
-##### [MOD-PERM-MSG-15-1] Free Permission Deposit parameters
-
-- `id` (uint64) (*mandatory*): id of the permission;
-
-##### [MOD-PERM-MSG-15-2] Free Permission Deposit precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-PERM-MSG-15-2-1] Free Permission Deposit basic checks
-
-if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-
-- `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `applicant_perm.revoked` MUST be not null
-- if `applicant_perm.slashed_deposit` is not null ang greater than 0, `applicant_perm.repaid_deposit` MUST be not null and equal to `applicant_perm.slashed_deposit` (slashed deposit must have been repaid).
-
-###### [MOD-PERM-MSG-15-2-3] Free Permission Deposit fee checks
-
-Account running the method MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
-
-##### [MOD-PERM-MSG-15-3] Free Permission Deposit execution
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- define `now`: current timestamp.
-
-- Load `Permission` entry `applicant_perm` from `id`.
-
-- if `applicant_perm.deposit` > 0:
-  - call [MOD-TD-MSG-1](#mod-td-msg-1-adjust-trust-deposit) to reduce `applicant_perm.grantee` trust deposit by `applicant_perm.deposit`.
-  - set `applicant_perm.deposit` to 0.
-
-- if `applicant_perm.vp_validator_deposit` > 0:
-  - load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`. Call [MOD-TD-MSG-1] to reduce `validator_perm.grantee` trust deposit by `applicant_perm.vp_validator_deposit`.
-  - set `applicant_perm.vp_validator_deposit` to 0.
-
 
 #### [MOD-PERM-QRY-1] List Permissions
 
@@ -3972,7 +3834,7 @@ Return the list of the existing parameters and their values.
 
 Concept: the [[ref: trust deposit]] is used to lock trust value as a stake. To process application messages that perform state changes, several modules methods are requiring a trust deposit to be sent, from the executing account, to the trust deposit module.
 
-We will use a similar method than the one described [here](https://docs.cosmos.network/main/build/modules/staking#delegator-shares) to manage trust deposit and yield calculation and easy way.
+We will use a similar method [than the one described here](https://docs.cosmos.network/main/build/modules/staking#delegator-shares) to manage trust deposit and yield calculation and easy way.
 
 *Example*:
 
@@ -4033,6 +3895,41 @@ Another account `account2` wants to create a transaction that requires:
 
 - `account1` real deposit (based on share) is `account1.share` \* `GlobalVariables.trust_deposit_share_value` ~= `12.595...`, available withdrawable yield is `account1.share` \* `GlobalVariables.trust_deposit_share_value` - `account1.deposit` ~= `2.595...`
 - `account2` real deposit (based on share) is `account2.share` \* `GlobalVariables.trust_deposit_share_value` ~= `21.90...`, available withdrawable yield is `account2.share` \* `GlobalVariables.trust_deposit_share_value` - `account2.deposit` ~= `1.90...`
+
+#### Trust deposit distribution example
+
+*This section is non-normative.*
+
+In order to produce yield for trust deposits hodlers, collected block rewards and inflation could be distributed to:
+
+- a community pool;
+- trust deposit hodlers;
+- network validators.
+
+```plantuml
+@startuml
+title Distribution Flow
+
+start
+
+:Block rewards (fees + inflation) collected;
+:Send to FeeCollector module account;
+
+partition "Distribution Module" {
+  :Split rewards;
+  split
+    :Send % to Community Pool;
+  split again
+    :Send % to rewards allocated to trust deposit owners;
+  split again
+    :Remaining rewards allocated to network validators;
+  end split
+}
+
+
+stop
+@enduml
+```
 
 #### [MOD-TD-MSG-1] Adjust Trust Deposit
 
@@ -4127,7 +4024,7 @@ For a given `TrustDeposit` entry `td`, claimable yield is calculated like this:
 
 `claimable_yield` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
 
-If `claimable_yield` is positive, they can be claimed.
+If `claimable_yield` is positive, it can be claimed.
 
 ##### [MOD-TD-MSG-2-1] Reclaim Trust Deposit Yield method parameters
 
@@ -4466,64 +4363,3 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 ### Normative References
 
 [[spec-norm]]
-
-| Schema Mode | Perm Type | Expired     | VP state | VP exp | revoked | slashed | repaid | Grantee can revoke | Validator can revoke | Grantee can claim | Validator can claim | Validator can slash |  Grantee can repay |
-|-------------|-----------|------------------------|--------|---------|---------|--------|--------------------|----------------------|-------------------|---------------------|---------------------|--------------------|
-| OPEN        | ECOSYSTEM | NO          |          |        |  NO     |  NO     | NO     | YES                |                      | NO                |                     |                     |                    |
-| OPEN        | ECOSYSTEM | YES         |          |        |  NO     |  NO     | NO     | YES                |                      | NO                |                     |                     |                    |
-| OPEN        | ECOSYSTEM | NO/YES      |          |        |  YES    |  NO     | NO     |                    |                      | YES               |                     |                     |                    |
-| OPEN        | ISS/VER   | NO          |          |        |  NO     |  NO     | NO     | YES                | YES                  | NO                |                     |  YES                |                    |
-| OPEN        | ISS/VER   | YES         |          |        |  NO     |  NO     | NO     | YES                | YES                  | NO                |                     |  YES                |                    |
-| OPEN        | ISS/VER   |             |          |        |  YES    |  NO     | NO     |                    |                      | YES               |                     |  YES                |                    |
-| OPEN        | ISS/VER   | NO          |          |        |  NO     |  YES    | NO     | YES                | YES                  | NO                |                     |  YES                |    YES             |
-| OPEN        | ISS/VER   | YES         |          |        |  NO     |  YES    | NO     | YES                | YES                  | NO                |                     |  YES                |    YES             |
-| OPEN        | ISS/VER   |             |          |        |  YES    |  YES    | NO     |                    |                      | NO                |                     |  YES                |    YES             |
-| OPEN        | ISS/VER   | NO          |          |        |  NO     |  YES    | YES    | YES                | YES                  | NO                |                     |  YES                |                    |
-| OPEN        | ISS/VER   | YES         |          |        |  NO     |  YES    | YES    | YES                | YES                  | NO                |                     |  YES                |                    |
-| OPEN        | ISS/VER   |             |          |        |  YES    |  YES    | YES    |                    |                      | NO                |                     |  NO                 |                    |
-| OPEN        | HOLDER    | NO          |          |        |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
-| OPEN        | HOLDER    | YES         |          |        |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
-| OPEN        | HOLDER    |             |          |        |  YES    |  NO     | NO     |                    |                      | YES               |                     |  YES                |                    |
-| OP/ECO/GRT  | HOLDER    | NO          |VALIDATED |NO      |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
-| OP/ECO/GRT  | HOLDER    | YES         |VALIDATED |NO      |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
-| OP/ECO/GRT  | HOLDER    |             |VALIDATED |NO      |  YES    |  YES    | NO     |                    |                      | NO                |                     |  YES                |    YES             |
-| OP/ECO/GRT  | HOLDER    | NO          |VALIDATED |NO      |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
-| OP/ECO/GRT  | HOLDER    | YES         |VALIDATED |NO      |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
-| OP/ECO/GRT  | HOLDER    |             |VALIDATED |NO      |  YES    |  YES    | YES    |                    |                      | NO                |                     |  NO                 |                    |
-
-
-
-| Schema Mode | Perm Type | Expired     | VP state | VP exp | revoked | slashed | repaid | Grantee can revoke | Validator can revoke | Grantee can claim | Validator can claim | Validator can slash |  Grantee can repay |
-|-------------|-----------|------------------------|--------|---------|---------|--------|--------------------|----------------------|-------------------|---------------------|---------------------|--------------------|
-| ECOSYSTEM   | ECOSYSTEM | NO          |          |        |  NO     |  NO     | NO     | YES                |                      | NO                |                     |                     |                    |
-| ECOSYSTEM   | ECOSYSTEM | YES         |          |        |  NO     |  NO     | NO     | YES                |                      | NO                |                     |                     |                    |
-| ECOSYSTEM   | ECOSYSTEM | NO/YES      |          |        |  YES    |  NO     | NO     |                    |                      | YES               |                     |                     |                    |
-| ECOSYSTEM   | ISS/VER   | NO          |VALIDATED | false  |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
-| ECOSYSTEM   | ISS/VER   | YES         |VALIDATED | false  |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
-| ECOSYSTEM   | ISS/VER   |             |VALIDATED | false  |  YES    |  NO     | NO     |                    |                      | YES               |                     |  YES                |                    |
-| ECOSYSTEM   | ISS/VER   | NO          |VALIDATED | false  |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
-| ECOSYSTEM   | ISS/VER   | YES         |VALIDATED | false  |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
-| ECOSYSTEM   | ISS/VER   |             |VALIDATED | false  |  YES    |  YES    | NO     |                    |                      | NO                |                     |  YES                |    YES             |
-| ECOSYSTEM   | ISS/VER   | NO          |VALIDATED | false  |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
-| ECOSYSTEM   | ISS/VER   | YES         |VALIDATED | false  |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
-| ECOSYSTEM   | ISS/VER   |             |VALIDATED | false  |  YES    |  YES    | YES    |                    |                      | NO                |                     |  NO                 |                    |
-| ECOSYSTEM   | HOLDER    | NO          |VALIDATED | false  |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
-| ECOSYSTEM   | HOLDER    | YES         |VALIDATED | false  |  NO     |  NO     | NO     | NO                 | YES                  | NO                |                     |  YES                |                    |
-| ECOSYSTEM   | HOLDER    |             |VALIDATED | false  |  YES    |  NO     | NO     |                    |                      | YES               |                     |  YES                |                    |
-| ECOSYSTEM   | HOLDER    | NO          |VALIDATED | false  |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
-| ECOSYSTEM   | HOLDER    | YES         |VALIDATED | false  |  NO     |  YES    | NO     | NO                 | YES                  | NO                |                     |  YES                |    YES             |
-| ECOSYSTEM   | HOLDER    |             |VALIDATED | false  |  YES    |  YES    | NO     |                    |                      | NO                |                     |  YES                |    YES             |
-| ECOSYSTEM   | HOLDER    | NO          |VALIDATED | false  |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
-| ECOSYSTEM   | HOLDER    | YES         |VALIDATED | false  |  NO     |  YES    | YES    | NO                 | YES                  | NO                |                     |  YES                |                    |
-| ECOSYSTEM   | HOLDER    |             |VALIDATED | false  |  YES    |  YES    | YES    |                    |                      | NO                |                     |  NO                 |                    |
-
-
-- When a user reclaims a permission deposit:
-  - if it has another [[ref: active permission]] of the same role in the same schema, deposit is moved from old perm to new perm.
-  - if is has no other perm of the same role in the same schema, the deposit is freed and available in trustdeposit.reclaimable.
-
-- when a user wants to obtain a new permission of a given role but (a) permission(s) exists from the same credential schema, upon permission creation/vp started, he must deposit the same deposit that was freed.
-- When a user obtain a new permission 
-
-
-=> remove claim trust deposit.
