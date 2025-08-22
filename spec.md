@@ -4313,7 +4313,7 @@ Return the list of the existing parameters and their values.
 
 *This section is non-normative.*
 
-Implementations must provide support for ToIP Trust Registry QueryProtocol version 2.0. This will be developed when TRQP spec stabilizes.
+Implementations must provide support for ToIP Trust Registry QueryProtocol version 2.0. This will be developed when TRQP spec stabilizes, and defined in the indexer.
 
 ## Initial Data Requirements
 
