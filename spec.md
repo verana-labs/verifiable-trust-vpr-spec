@@ -1,4 +1,4 @@
-# Verifiable Public Registry v3 Specification
+# Verifiable Public Registry v2 Specification
 
 **Specification Status:** *Preview*
 
