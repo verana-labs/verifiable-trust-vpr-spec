@@ -236,7 +236,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
 
 [[def: valid permission, valid permissions]]:
-~ For a given country code, a credential schema permission of a given type, which (country attribute is null or equals to the given country code), and effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and terminated is null and slashed is null.
+~ For a given country code, a credential schema permission of a given type, which (country attribute is null or equals to the given country code), and effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
 
 [[def: validation process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
@@ -1012,7 +1012,6 @@ entity "Permission" as csp {
   +slashed_deposit: number
   +repaid_deposit: number
   revoked: timestamp
-  terminated: timestamp
   country: string
   stat: number
   +vp_exp: timestamp
@@ -1106,7 +1105,6 @@ account --o csp: grantee
 account --o csp: created_by
 account --o csp: extended_by
 csp o-- "0..1" account: revoked_by
-csp o-- "0..1" account: terminated_by
 csp o-- "0..1" account: slashed_by
 csp o-- "0..1" account: repaid_by
 
@@ -1208,8 +1206,6 @@ td o-- "0..1" account: last_repaid_by
 - `repaid_deposit` (number) (*mandatory*): part of the slashed deposit that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `revoked_by` (account) (*mandatory*): [[ref: account]] that revoked this permission.
-- `terminated` (timestamp) (*optional*): manual termination (by grantee) timestamp of this Perm.
-- `terminated_by` (account) (*mandatory*): [[ref: account]] that terminated this permission.
 - `country` (string) (*optional*): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country.
 - `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Permission` tree.
 - `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED, TERMINATION_REQUESTED.
@@ -3272,7 +3268,7 @@ Usually, Verifiable Trust verification flow will work as in the example below. T
 
 This method should use an index per `cs.id` and insert any new entry hash(`perm.did`;`perm.type`) when `perm.effective_from` and `perm.did` are not null (updated when `perm` is modified). Index example:
 
-SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, terminated)
+SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, slashed)
 
 - load `CredentialSchema` `cs` from `schema_id`.
 - define `Permission[]` `found_perms` as empty list.
@@ -3283,7 +3279,7 @@ Using example index, calculate hash(`did`;`type`) to get the list of matching pe
   - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.
   - if `perm` is valid for requested `country`:
     - if time is unset, add `perm` to  `found_perms`.
-    - else check perm validity: if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.terminated` is NULL) OR (`perm.terminated` is greater than `time`)), then the permission matches, add it to `found_perms`
+    - else check perm validity: if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.slashed` is NULL) OR (`perm.slashed` is greater than `time`)), then the permission matches, add it to `found_perms`
   - end
 - end
 
@@ -3381,7 +3377,7 @@ v --> vg
 
 ##### [MOD-PERM-QRY-4-3] Find Beneficiaries execution
 
-Let's build the set. Revoked and terminated permissions will not be added to the set. Expired permissions, if not revoked/terminated, will be considered.
+Let's build the set. Revoked and slashed permissions will not be added to the set. Expired permissions, if not revoked/slashed, will be considered.
 
 - create Set `found_perm_set`.
 
@@ -3394,7 +3390,7 @@ if `issuer_perm` is not null:
 - set `current_perm` = `issuer_perm`
 - while `current_perm.validator_perm_id` is not null:
   - set `current_perm` to loaded permission from  `current_perm.validator_perm_id`.
-  - if `current_perm.revoked` AND `current_perm.terminated` is NULL, Add `current_perm` to `found_perm_set`.
+  - if `current_perm.revoked` AND `current_perm.slashed` is NULL, Add `current_perm` to `found_perm_set`.
 
 Additionally, if `verifier_perm` is not null:
 
@@ -3402,7 +3398,7 @@ Additionally, if `verifier_perm` is not null:
 - set `current_perm` = `verifier_perm`
 - while `verifier_perm.validator_perm_id` is not null:
   - set `current_perm` to loaded permission from  `current_perm.validator_perm_id`.
-  - if `current_perm.revoked` AND `current_perm.terminated` is NULL, Add `current_perm` to `found_perm_set`.
+  - if `current_perm.revoked` AND `current_perm.slashed` is NULL, Add `current_perm` to `found_perm_set`.
 
 return `found_perms`.
 
