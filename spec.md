@@ -1,4 +1,4 @@
-# Verifiable Public Registry v2 Specification
+# Verifiable Public Registry v3 Specification
 
 **Specification Status:** *Preview*
 
@@ -1000,6 +1000,7 @@ entity "Permission" as csp {
   *id: uint64
   did: string
   +created: timestamp
+  +modified: timestamp
   +extended: timestamp
   +slashed: timestamp
   +repaid: timestamp
@@ -1453,7 +1454,6 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Create Permission                |                                     | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-create-permission) |
 |                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |
 |                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |
-|                                | Find Permissions With DID               | /perm/v1/find_with_did       | Query  | [[MOD-PERM-QRY-3]](#mod-perm-qry-3-find-permissions-with-did)  |
 |                                | Find Beneficiaries                      | /perm/v1/beneficiaries       | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-find-beneficiaries)  |
 |                                | Get Permission Session                  | /perm/v1/get_session         | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-5-get-permissionsession) |
 |                                | List Permission Module Parameters     |                                 | Query    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |
@@ -1475,6 +1475,7 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Burn Ecosystem Slashed Trust Deposit          |                                           | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit)   |
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |
+|                                | Get Account Reputation               | /mx/v1/reputation                 | Query  | [[MIXED-QRY-1]](#mixed-qry-1-get-account-reputation)   |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -2042,6 +2043,9 @@ Anyone CAN execute this method. Returned result MUST be ordered by `CredentialSc
 - `tr_id` (string) (*optional*): to filter by trust registry id.
 - `modified_after` (timestamp) (*optional*): show schemas modified after this timestamp.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
+- `only_active` (boolean): if set to true, returns only not archived entries.
+- `issuer_perm_management_mode` (PermissionManagementMode): if set, filter by `issuer_perm_management_mode`.
+- `verifier_perm_management_mode` (PermissionManagementMode): if set, filter by `verifier_perm_management_mode`.
 
 ##### [MOD-CS-QRY-1-2] List Credential Schemas checks
 
@@ -3208,19 +3212,42 @@ A new entry `Permission` `perm` MUST be created:
 
 Anyone CAN execute this method.
 
+Generic query used for (at least):
+
+- find all permissions (all or limit to active) of a given schema;
+- for a given validator, get PENDING validation processes;
+- find all permissions of a given grantee;
+- find all permissions of a given did;
+- find all ISSUER_GRANTOR active permission, so that I can apply to an ISSUER permission;
+...
+
 ##### [MOD-PERM-QRY-1-1] List Permissions parameters
 
-- `modified_after` (timestamp) (*optional*): show permissions modified after this timestamp.
-- `response_max_size` (small number) (*optional*): default to 64. Min 1, max 1,024.
+- `schema_id` (number) (*optional*): the schema id.
+- `grantee` (account) (*optional*): the grantee account.
+- `did` (string) (*optional*): the did the permission refers to.
+- `perm_id` (number) (*optional*): limit to permissions where the `validator_perm_id` is `perm_id`.
+- `type` (PermissionType) (*optional*): if we want to limit to a specific permission type.
+- `only_valid` (boolean) (*optional*): if set to true, only return valid permissions.
+- `only_slashed` (boolean) (*optional*): if set to true, only return slashed permissions.
+- `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed permissions.
+- `modified_after` (timestamp) (*optional*): limit to permissions modified after (or equal to) `modified_after`.
+- `country` (string) (*optional*): limit to `country`.
+- `vp_state` (ValidationState) (*optional*): limit to permissions with a `vp_state` not null and equal to `vp_state`.
+- `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
+- `when` (timestamp) (*optional*): if set, query *at* `when`, else query *at* now(). Used to query the VPR state at a previous datetime.
 
 ##### [MOD-PERM-QRY-1-2] List Permissions checks
 
-- `modified_after` (timestamp) (*mandatory*): show permissions modified after this timestamp.
-- `response_max_size` (small number) (*optional*): Must be min 1, max 1,024.
+Basic type check arg SHOULD be applied.
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
 
 ##### [MOD-PERM-QRY-1-3] List Permissions execution
 
-return a list of found entries, or an empty list if nothing found. Ordered by last modified asc.
+return a list of found entries, or an empty list if nothing found. Ordered by `modified` asc.
 
 #### [MOD-PERM-QRY-2] Get Permission
 
@@ -3238,52 +3265,9 @@ Anyone CAN execute this method.
 
 return found entry (if any).
 
-#### [MOD-PERM-QRY-3] Find Permissions With DID
+#### [MOD-PERM-QRY-3] Void
 
-Usually, Verifiable Trust verification flow will work as in the example below. To simplify, we suppose VUAa is both a User Agent and a Verifiable Credential Wallet.
-
-- a User of Verifiable User Agent A (VUAa) wants to connect to Verifiable Service S (VSs)
-- VUAa verifies credentials of VSs, including presented Organization or Person credential. For this credential, VUAa calls the *Find Permissions With DID* to verify issuer was authorized and get the corresponding permission(s).
-- If everything went well, VUAa connects to VSs and presents its VUA credential. For this credential, VSs calls the *Find Permissions With DID* to verify issuer was authorized to deliver this credential to VUAa and get the corresponding permission(s).
-- Now, VSs wants to issue a credential to User of VUAa. VSs will request a session_id to VUAa, execute a transaction to create the session, and sends a driving license credential to VUAa.
-- VUAa gets the PermissionSession and dereferences the linked permission Ids to verify issuer paid and is authorized for this session and this driving license schema.
-
-##### [MOD-PERM-QRY-3-1] Find Permission With DID parameters
-
-- `did` (string) (*mandatory*): did of the service that want to issue a credential.
-- `type` (PermissionType) (*mandatory*): type of the permission.
-- `schema_id` (uint64) (*mandatory*): the schema_id.
-- `country` (string) (*optional*): a country code, to select Permission with this country code or with a null country code.
-- `when` (timestamp) (*optional*): Find permission *at* `when`. When set, means find only valid permission *at* `when`, when unspecified, means find all permissions.
-
-##### [MOD-PERM-QRY-3-2] Find Permission With DID checks
-
-- `did` (string) (*mandatory*): MUST be a [[ref: DID]].
-- `type` (PermissionType) (*mandatory*): MUST be a PermissionType.
-- `schema_id` (uint64) (*mandatory*): an entry with `id` equal to `schema_id` must be present in `CredentialSchema`.
-- `country` (string) (*optional*): if specified, MUST be a country code.
-- `when` (timestamp) (*optional*): MUST be a timestamp.
-
-##### [MOD-PERM-QRY-3-3] Find Permission With DID execution
-
-This method should use an index per `cs.id` and insert any new entry hash(`perm.did`;`perm.type`) when `perm.effective_from` and `perm.did` are not null (updated when `perm` is modified). Index example:
-
-SchemaId => hash(did;type) => Perm id list => (load perms one by one and filter other query attributes such as country, effective_from, effective_until, revoked, slashed)
-
-- load `CredentialSchema` `cs` from `schema_id`.
-- define `Permission[]` `found_perms` as empty list.
-
-Using example index, calculate hash(`did`;`type`) to get the list of matching permissions `perms[]`.
-
-- then for each `perm` in `perms[]`:
-  - check if perm is matching  `country`: (if `country` is unspecified (`perm.country` IS NULL) else `country` is specified (`perm.country` IS NULL or `perm.country` is equal to `country`)), else ignore `perm`.
-  - if `perm` is valid for requested `country`:
-    - if time is unset, add `perm` to  `found_perms`.
-    - else check perm validity: if `time` is greater or equal to `perm.effective_from` AND `time` is lower than `perm.effective_until` AND ((`perm.revoked` is NULL) OR (`perm.revoked` is greater than `time`)) AND ((`perm.slashed` is NULL) OR (`perm.slashed` is greater than `time`)), then the permission matches, add it to `found_perms`
-  - end
-- end
-
-return `found_perms`.
+Obsoleted by [MOD-PERM-QRY-1].
 
 #### [MOD-PERM-QRY-4] Find Beneficiaries
 
@@ -3377,7 +3361,7 @@ v --> vg
 
 ##### [MOD-PERM-QRY-4-3] Find Beneficiaries execution
 
-Let's build the set. Revoked and slashed permissions will not be added to the set. Expired permissions, if not revoked/slashed, will be considered.
+Example: Let's build the set. Revoked and slashed permissions will not be added to the set. Expired permissions, if not revoked/slashed, will be considered.
 
 - create Set `found_perm_set`.
 
@@ -3457,7 +3441,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-PERM-QRY-7-3] List Permission Sessions execution
 
-return a list of found entries, or an empty list if nothing found, ordered by last modified asc.
+return a list of found entries, or an empty list if nothing found, ordered by `modified` asc.
 
 #### Validation Examples
 
@@ -4305,11 +4289,123 @@ Return the list of the existing parameters and their values.
 }
 ```
 
+### Mixed Queries
+
+Queries that are not tied to a specific module.
+
+#### [MIXED-QRY-1] Get Account Reputation
+
+Get the reputation of an account (trust deposit size, slashs...).
+
+Any [[ref: account]] CAN run this [[ref: query]].
+
+- If user specifies `tr_id`, method returns info of all credential schemas of this trust registry.
+- If user specifies `schema_id`, method returns info of this credential schema, for the trust registry it belongs to. 
+- If nothing is specified, we'll return info of all trust registries and their credential schemas.
+
+##### [MIXED-QRY-1-1] Get Account Reputation query parameters
+
+- `account` (account) (*mandatory*)
+- `tr_id` (number) (*optional*): filter by trust registry id.
+- `schema_id` (number) (*optional*): filter by schema_id.
+- `include_slash_details` (boolean) (*optional*): if we include the detail of slashs/repayments.
+
+##### [MIXED-QRY-1-2] Get Account Reputation query checks
+
+Perform basic type checks.
+
+##### [MIXED-QRY-1-3] Get Account Reputation execution of the query
+
+If account exists, returns an object with the following content.
+
+- the account address `account`;
+- the account balance `balance`;
+- the trust deposit of this account `deposit`;
+- the slashed trust deposit amount of this account `slashed`;
+- the repaid trust deposit amount of this account `repaid`;
+- the number of slashs of this account `slash_count`;
+- the datetime of the first interaction of this account with an ecosystem (trust registry) or the did directory `first_interaction_ts`;
+- the total number of trust registries controlled by this account `trust_registry_count`;
+- the total number of credential schemas controlled by this account `credential_schema_count`;
+
+if `include_slash_details` is true:
+
+- `slashs` (SlashData[]);
+- `repayments` (RepaymentData[]);
+
+`SlashData`:
+
+- `slashed_amount` (number);
+- `slashed_ts`: (timestamp);
+- `slashed_by`: (account);
+
+`RepaymentData`:
+
+- `repaid_amount` (number);
+- `repaid_ts`: (timestamp);
+- `repaid_by`: (account);
+
+Then what's follow depends on filter.
+
+- `trust_registries` (TrustRegistryData[]):
+
+For each Trust Registry: (depends on filter), if account have had at least one interaction linked to one credential schema of this trust registry.
+
+`TrustRegistryData`:
+
+- `tr_id` (number);
+- `tr_did` (did);
+- `credential_schemas` (CredentialSchemaData);
+
+`CredentialSchemaData`:
+
+- `deposit` (number): the calculated permission-based trust deposit of this account in the context of the credential schema;
+- `slashed` (number): the calculated permission-based slashed trust deposit amount of this account in the context of the credential schema;
+- `repaid` (number): the calculated permission-based repaid trust deposit amount of this account in the context of the credential schema;
+- `slash_count` (number): the calculated permission-based number of slashs of this account in the context of the credential schema;
+- `issued` (number): the number of issued credentials (if available (sessions)) in the context of the credential schema;
+- `verified` (number): the number of verified credentials (if available (sessions)) in the context of the credential schema;
+- `run_as_validator_vps` (number): the number of validation processes run as a validator in the context of the credential schema;
+- `run_as_applicant_vps` (number): the number of validation processes run as an applicant in the context of the credential schema;
+
+- `issuer_perm_count` (number): the total number of ISSUER permissions in the context of the credential schema;
+- `verifier_perm_count` (number): the total number of VERIFIER permissions in the context of the credential schema;
+- `issuer_grantor_perm_count` (number): the total number of ISSUER_GRANTOR permissions in the context of the credential schema;
+- `issuer_grantor_perm_count` (number): the total number of VERIFIER_GRANTOR permissions in the context of the credential schema;
+- `ecosystem_perm_count` (number): the total number of ECOSYSTEM permissions in the context of the credential schema;
+
+- `active_issuer_perm_count` (number): the number of active (not revoked, not expired) ISSUER permissions in the context of the credential schema;
+- `active_verifier_perm_count` (number): the number of active (not revoked, not expired) VERIFIER permissions in the context of the credential schema;
+- `active_issuer_grantor_perm_count` (number): the number of active (not revoked, not expired) ISSUER_GRANTOR permissions in the context of the credential schema;
+- `active_issuer_grantor_perm_count` (number): the number of active (not revoked, not expired) VERIFIER_GRANTOR permissions in the context of the credential schema;
+- `active_ecosystem_perm_count` (number): the number of active (not revoked, not expired) ECOSYSTEM permissions in the context of the credential schema;
+
+if `include_slash_details` is true:
+
+- `slashs` (PermissionSlashData[]):
+- `repayments` (PermissionRepaymentData[]);
+
+`PermissionSlashData`:
+
+- perm_id
+- schema_id
+- tr_id
+- slashed_ts
+- slashed_by
+
+`PermissionRepaymentData`:
+
+- perm_id
+- schema_id
+- tr_id
+- repaid_ts
+- repaid_by
+
 ### ToIP Trust Registry QueryProtocol version 2.0
 
 *This section is non-normative.*
 
-Implementations must provide support for ToIP Trust Registry QueryProtocol version 2.0. This will be developed when TRQP spec stabilizes, and defined in the indexer.
+As no data is verifiable in ledger, implementation of a TRQP2.x endpoint should be provided by a trust resolver, independant from the VPR.
 
 ## Initial Data Requirements
 
