@@ -1475,7 +1475,7 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Burn Ecosystem Slashed Trust Deposit          |                                           | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit)   |
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |
-|                                | Get Account Reputation               | /mx/v1/reputation                 | Query  | [[MIXED-QRY-1]](#mixed-qry-1-get-account-reputation)   |
+| Mixed Modules                               | Get Account Reputation               | /mx/v1/reputation                 | Query  | [[MIXED-QRY-1]](#mixed-qry-1-get-account-reputation)   |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
