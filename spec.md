@@ -6,7 +6,7 @@
 
 **Editors:**
 
-~ [Fabrice Rochette](https://www.linkedin.com/in/fabricerochette) ([The Verana Foundation](https://verana.foundation), [2060.io](https://2060.io))
+~ [Fabrice Rochette](https://www.linkedin.com/in/fabricerochette) ([The Verana Foundation](https://verana.io))
 
 **Contributors:**
 
