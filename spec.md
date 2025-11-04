@@ -1078,6 +1078,8 @@ entity "GlobalVariables" as gv {
   +trust_deposit_reclaim_burn_rate: number
   +trust_deposit_share_value: number
   +trust_deposit_rate:number
+  +trust_deposit_max_yield_rate:number
+  +trust_deposit_block_reward_share:number
   +user_agent_reward_rate:number
   +wallet_user_agent_reward_rate:number
 }
@@ -1291,8 +1293,11 @@ td o-- "0..1" account: last_repaid_by
 - `trust_deposit_reclaim_burn_rate` (number) (*mandatory*): percentage of burnt deposit when an account execute a reclaim of capital amount.
 - `trust_deposit_share_value`(number) (*mandatory*): Value of one share of trust deposit, in `denom`. Default an initial value: 1. Increase over time, when yield is produced.
 - `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 20% (0.20)
+- `trust_deposit_max_yield_rate`(number) (*mandatory*): Maximum yearly yield, in percent, that a trst deposit holder can obtain by receiving block rewards.
+- `trust_deposit_block_reward_share`(number) (*mandatory*): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)
 - `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 20% (0.20)
 - `user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating user agent rewards from trust fees. Default value: 20% (0.20)
+
 
 ## Module Requirements
 
@@ -3839,7 +3844,7 @@ an account `account1` wants to create a transaction that requires:
   - `td1.deposit` = `10`
   - `td1.shares` = `10` / `GlobalVariables.trust_deposit_share_value` = `10`
 
-*Second, fee distribution*: let's suppose 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holders. For this specific transaction:
+*Second, fee distribution*: let's suppose that `trust_deposit_block_reward_share` is set to `0.30` so that 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holders. For this specific transaction:
 
 - 30% * 5 = 1.5 `denom` will be sent to `TrustDeposit` module, which will increase the `GlobalVariables.trust_deposit_share_value`:
 
@@ -3864,7 +3869,7 @@ Another account `account2` wants to create a transaction that requires:
   - `td2.deposit` = `20`
   - `td2.shares` = `20` / `GlobalVariables.trust_deposit_share_value` = `20` / `1.15` ~=  `17.39...`
 
-*Second, fee distribution*: let's suppose 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holders. For this specific transaction:
+*Second, fee distribution*: let's suppose `trust_deposit_block_reward_share` is set to `0.30` so that 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holders. For this specific transaction:
 
 - 30% * 10 = 3 `denom` will be sent to `TrustDeposit` module, which will increase the `GlobalVariables.trust_deposit_share_value`:
 
@@ -3876,40 +3881,16 @@ Another account `account2` wants to create a transaction that requires:
 - `account1` real deposit (based on share) is `account1.share` \* `GlobalVariables.trust_deposit_share_value` ~= `12.595...`, available withdrawable yield is `account1.share` \* `GlobalVariables.trust_deposit_share_value` - `account1.deposit` ~= `2.595...`
 - `account2` real deposit (based on share) is `account2.share` \* `GlobalVariables.trust_deposit_share_value` ~= `21.90...`, available withdrawable yield is `account2.share` \* `GlobalVariables.trust_deposit_share_value` - `account2.deposit` ~= `1.90...`
 
-#### Trust deposit distribution example
+#### Trust Deposit Yield
 
-*This section is non-normative.*
+The following global parameters are used to tune the Trust Deposit yield generation, in case the VPR is implemented as a ledger:
 
-In order to produce yield for trust deposits hodlers, collected block rewards and inflation could be distributed to:
+- `trust_deposit_max_yield_rate`(number) (*mandatory*): Maximum yearly yield, in percent, that a trust deposit holder can obtain by receiving block rewards.
+- `trust_deposit_block_reward_share`(number) (*mandatory*): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)
 
-- a community pool;
-- trust deposit hodlers;
-- network validators.
+Each time there is a block reward to be distributed, `trust_deposit_block_reward_share` percent MUST be directed to trust deposit holders, based on their trust deposit share.
 
-```plantuml
-@startuml
-title Distribution Flow
-
-start
-
-:Block rewards (fees + inflation) collected;
-:Send to FeeCollector module account;
-
-partition "Distribution Module" {
-  :Split rewards;
-  split
-    :Send % to Community Pool;
-  split again
-    :Send % to rewards allocated to trust deposit owners;
-  split again
-    :Remaining rewards allocated to network validators;
-  end split
-}
-
-
-stop
-@enduml
-```
+Implementers MUST make sure, for each processed block reward, that the yearly effective yield is lower or equal than `trust_deposit_max_yield_rate`.
 
 #### [MOD-TD-MSG-1] Adjust Trust Deposit
 
@@ -4447,6 +4428,9 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `trust_deposit_reclaim_burn_rate` (number) (*mandatory*): 0.60.
 - `trust_deposit_share_value`(number) (*mandatory*): 1.
 - `trust_deposit_rate`(number) (*mandatory*): 0.20.
+- `trust_deposit_max_yield_rate`(number) (*mandatory*): 0.20
+- `trust_deposit_block_reward_share`(number) (*mandatory*): 0.20
+
 - `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.10.
 - `user_agent_reward_rate`(number) (*mandatory*): 0.10.
 
