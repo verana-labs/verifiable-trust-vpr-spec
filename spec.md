@@ -2666,7 +2666,7 @@ This method can be called:
 An [[ref: account]] that would like to extend the effective_until timestamp of a permission MUST call this method by specifying:
 
 - `id` (uint64) (*mandatory*): id of the permission;
-- `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Permission` is effective.
+- `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Permission` will be effective.
 
 ##### [MOD-PERM-MSG-8-2] Extend Permission precondition checks
 
@@ -2679,8 +2679,9 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm` MUST be a [[ref: valid permission]]
-- `effective_until` MUST be greater than `applicant_perm.effective_until` else MUST abort.
-
+- if `applicant_perm.effective_until` is NULL: `effective_until` MUST be greater than now().
+- else `effective_until` MUST be greater than `applicant_perm.effective_until`
+- else MUST abort.
 
 ###### [MOD-PERM-MSG-8-2-2] Extend Permission advanced checks
 
