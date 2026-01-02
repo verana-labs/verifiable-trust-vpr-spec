@@ -953,7 +953,8 @@ entity "TrustRegistry" as tr {
   +aka: string
   +int: active_version
   +language: string
-  
+  +pricing_asset: string
+  +allow_pricing_asset_schema_override: boolean
 }
 
 entity "GovernanceFrameworkVersion" as gfv {
@@ -1014,7 +1015,6 @@ entity "Permission" as csp {
   +repaid_deposit: number
   revoked: timestamp
   country: string
-  stat: number
   +vp_exp: timestamp
   +vp_last_state_change: timestamp
   +vp_validator_deposit: number
@@ -1022,6 +1022,8 @@ entity "Permission" as csp {
   +vp_current_deposit: number
   +vp_summary_digest_sri: digest_sri
   +vp_term_requested: timestamp
+  +issuance_fee_exemption: number
+  +verification_fee_exemption: number
 }
 
 enum "ValidationState" as valstate {
@@ -1029,6 +1031,12 @@ enum "ValidationState" as valstate {
   VALIDATED
   TERMINATION_REQUESTED
   TERMINATED
+}
+
+enum "PricingAssetType" as pricingassettype {
+  TU
+  COIN
+  FIAT
 }
 
 entity "PermissionSession" as csps {
@@ -1095,10 +1103,26 @@ entity "TrustDeposit" as td {
   slash_count: number
 }
 
+entity "ExchangeRate" as xr {
+  *id: uint64
+  +base_asset: string
+  +quote_asset: string
+  +rate: string
+  +rate_scale: uint32
+  +updated_at: timestamp
+  +expires_at: timestamp
+  +source: string
+}
+
+xr o-- pricingassettype: base_asset_type
+xr o-- pricingassettype: quote_asset_type
+
 csp o-- cspt: type
 csp o-- cs: schema
 csp o-- "0..1" csp: validator_perm_id
 cs o-- tr: tr_id
+
+cs o-- pricingassettype: pricing_asset_type 
 
 tr "1" --- "1..n" gfv: versions 
 gfv "1" --- "1..n" gfd: documents 
@@ -1138,7 +1162,7 @@ td o-- "0..1" account: last_repaid_by
 - `deposit` (number) (*mandatory*): [[ref: trust deposit]] (in `denom`)
 - `aka` (string) (*optional*): optional additional URI of this trust registry.
 - `language` (string(2)) (*mandatory*): primary language alpha-2 code (ISO 3166) of this trust registry.
-- `active_version` (int): (*mandatory*) active governance framework version.
+- `active_version` (int) (*mandatory*): active governance framework version.
 
 ### GovernanceFrameworkVersion
 
@@ -1180,6 +1204,8 @@ td o-- "0..1" account: last_repaid_by
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder validation process expires and must be renewed.
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain, different from VNA), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in any case, deposits are handled in `denom`. That means deposit amount is converted to `denom` when sending to trust deposits.
+- `pricing_asset` (string) (*optional*): null if `pricing_asset_type` is set to TU, else not null. Examples: COIN: uvna, ufoo, ibc/3A0F9C2E4E2A9B7D6F..., factory/verana1.../ueurv, FIAT: EUR, GBP,...
 
 ### Permission
 
@@ -1201,9 +1227,9 @@ td o-- "0..1" account: last_repaid_by
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Permission` is effective.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective, null if no time limit has been set for this permission.
 - `modified` (timestamp) (*mandatory*): timestamp this Permission has been modified.
-- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (grantee of this perm) for running a validation process for a given validation period, in trust unit. Default to 0.
-- `issuance_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is issued, in trust unit. Default to 0.
-- `verification_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is verified, in trust unit. Default to 0.
+- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (grantee of this perm) for running a validation process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
+- `issuance_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
+- `verification_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in `denom`. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `perm.deposit` value as well. If `perm` is, let's say revoked, then corresponding `perm.deposit` value is freed from `perm.grantee` Trust Deposit.
 - `slashed_deposit` (number) (*mandatory*): part of the deposit that has been slashed.
 - `repaid_deposit` (number) (*mandatory*): part of the slashed deposit that has been repaid.
@@ -1219,6 +1245,8 @@ td o-- "0..1" account: last_repaid_by
 - `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
 - `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `vp_term_requested` (timestamp) (*optional*): set when [[ref: controller]] requests the termination of this entry.
+- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 ### PermissionSession
 
@@ -1256,6 +1284,22 @@ td o-- "0..1" account: last_repaid_by
 - `last_repaid` (timestamp) (*optional*): last time this trust deposit has been slashed.
 - `slash_count` (number) (*optional*): number of times this account has been slashed.
 - `last_repaid_by` (account) (*optional*): [[ref: account]] that repaid the last slash.
+
+### ExchangeRate
+
+Represents an on-chain exchange rate between two assets.
+
+`ExchangeRate`:
+
+- `base_asset_type` (PricingAssetType, mandatory): Type of the base asset.
+- `base_asset` (string, mandatory if `base_asset_type` is COIN or FIAT, null if `base_asset_type` is TU): Identifier of the base asset.
+- `quote_asset_type` (PricingAssetType, mandatory): Type of the quote asset.
+- `quote_asset` (string, mandatory): Identifier of the quote asset.
+- `rate` (string, mandatory): Fixed-point integer representing the exchange rate from base asset to quote asset.
+- `rate_scale` (uint32, mandatory): Number of decimal digits used to scale rate.
+- `updated_at` (timestamp, mandatory): Timestamp of the last exchange rate update.
+- `expires_at` (timestamp, optional): Timestamp after which the exchange rate is considered invalid.
+- `source` (string, optional): Identifier of the exchange rate provider.
 
 ### GlobalVariables
 
@@ -1297,7 +1341,6 @@ td o-- "0..1" account: last_repaid_by
 - `trust_deposit_block_reward_share`(number) (*mandatory*): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)
 - `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 20% (0.20)
 - `user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating user agent rewards from trust fees. Default value: 20% (0.20)
-
 
 ## Module Requirements
 
@@ -1480,6 +1523,7 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 |                                | Burn Ecosystem Slashed Trust Deposit          |                                           | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit)   |
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |
+| Exchange Rate                  | Update Exchange Rate                   |                                  | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-update-exchange-rate)   |
 | Mixed Modules                               | Get Account Reputation               | /mx/v1/reputation                 | Query  | [[MIXED-QRY-1]](#mixed-qry-1-get-account-reputation)   |
 
 :::note
@@ -1857,6 +1901,8 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `holder_validation_validity_period` (*mandatory*), default to 0 (days).
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*).
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*).
+- `pricing_asset_type` (PricingAssetType) (*mandatory*).
+- `pricing_asset` (string) (*optional*).
 
 ##### [MOD-CS-MSG-1-2] Create New Credential Schema precondition checks
 
@@ -1874,6 +1920,15 @@ If any of these precondition checks fail, method MUST abort.
 - `holder_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*) MUST be a valid PermissionManagementMode.
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*) MUST be a valid PermissionManagementMode.
+- `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain, different from VNA), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in any case, deposits are handled in `denom`. That means deposit amount is converted to `denom` when sending to trust deposits.
+- `pricing_asset` (string) (*optional*): null if `pricing_asset_type` is set to TU, else not null. Examples: COIN: uvna, ufoo, ibc/3A0F9C2E4E2A9B7D6F..., factory/verana1.../ueurv, FIAT: EUR, GBP,...
+
+:::note
+When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
+The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
+FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
+FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.
+:::
 
 ###### [MOD-CS-MSG-1-2-2] Create New Credential Schema fee checks
 
@@ -1909,6 +1964,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.verifier_perm_management_mode`: `verifier_perm_management_mode`
   - `cs.created`: current timestamp
   - `cs.modified`: `cs.created`.
+  - `cs.pricing_asset_type`: `pricing_asset_type`
+  - `cs.pricing_asset`: `pricing_asset`
 
 :::note
 If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM `Permission` so that validation processes can be run.
@@ -2217,7 +2274,11 @@ An Applicant that would like to start a permission validation process MUST execu
 
 - `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
 - `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
-- `country` (string) (*mandatory*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
+- `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
+- `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
+- `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
+- `country` (string) (*optional*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
+- `did` (string) (*optional*): if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
@@ -2231,7 +2292,10 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `type` (PermissionType) (*mandatory*) MUST be a valid PermissionType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
 - `validator_perm_id` (uint64) (*mandatory*): see [MOD-PERM-MSG-1-2-2](#mod-perm-msg-1-2-2-start-permission-vp-permission-checks).
-- `country` (string) (*mandatory*) MUST be a valid alpha-2 code (ISO 3166).
+- `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
+- `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
+- `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
+- `country` (string) (*optional*): Requested country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
 :::note
@@ -2286,6 +2350,8 @@ Load `Permission` entry `validator_perm` of the selected validator.
 Applicant MUST have an available balance in its [[ref: account]], to cover the following fees:
 
 - the required [[ref: estimated transaction fees]];
+
+
 - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
 - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
 
@@ -2311,10 +2377,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.created`: `now`
   - `applicant_perm.modified`: `now`
   - `applicant_perm.deposit`: `validation_trust_deposit_in_denom`.
-  - `applicant_perm.validation_fees`: 0.
-  - `applicant_perm.issuance_fees`: 0.
-  - `applicant_perm.verification_fees`: 0.
+  - `applicant_perm.validation_fees`: `validation_fees`.
+  - `applicant_perm.issuance_fees`: `issuance_fees`.
+  - `applicant_perm.verification_fees`: `verification_fees`.
   - `applicant_perm.validator_perm_id`: `validator_perm_id`.
+  - `applicant_perm.country`: `country`.
   - `applicant_perm.vp_last_state_change`: `now`
   - `applicant_perm.vp_state`: PENDING.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
@@ -2426,8 +2493,10 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `validation_fees` (number) (*optional*): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
 - `issuance_fees` (number) (*optional*): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
 - `verification_fees` (number) (*optional*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
-- `country` (string) (*optional*): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country. Can be set only the first time this method is called (cannot be set for renewals).
+- `country` (string) (*optional*): Agreed country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country. Can be set only the first time this method is called (cannot be set for renewals).
 - `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 ##### [MOD-PERM-MSG-3-2] Set Permission VP to Validated precondition checks
 
@@ -2440,15 +2509,35 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm.vp_state` MUST be equal to PENDING, else abort.
-- `validation_fees` (number) (*optional*): If specified, MUST be zero or a positive number. If `applicant_perm.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_perm.validation_fees`, else abort.
-- `issuance_fees` (number) (*optional*): If specified, MUST be zero or a positive number.  If `applicant_perm.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_perm.issuance_fees` or, else abort.
-- `verification_fees` (number) (*optional*): If specified, MUST be zero or a positive number.  If `applicant_perm.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_perm.verification_fees`, else abort.
+- `validation_fees` (number) (*optional*): If specified, MUST be zero or a positive integer. If `applicant_perm.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_perm.validation_fees`, else abort.
+- `issuance_fees` (number) (*optional*): If specified, MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_perm.issuance_fees` or, else abort.
+- `verification_fees` (number) (*optional*): If specified, MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_perm.verification_fees`, else abort.
 - `country` (string) (*optional*): MUST be a valid alpha-2 code (ISO 3166), or null. If `applicant_perm.effective_from` is not null (we are in renewal) `country` MUST be equal to `applicant_perm.country`, else abort.
 - `vp_summary_digest_sri` (digest_sri) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
+- Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
+- Load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`.
+
+- `issuance_fee_discount` : (number) (*mandatory*):
+  - if `applicant_perm.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_perm.issuance_fee_discount` else MUST abort.
+  - if `cs.issuer_perm_management_mode` is set to GRANTOR:
+    - if `applicant_perm.type` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+    - if `applicant_perm.type` == ISSUER: if `validator_perm.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_perm.issuance_fee_discount` (100% discount) inclusive.
+  - if `cs.issuer_perm_management_mode` is set to ECOSYSTEM:
+    - if `applicant_perm.type` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+  - else MUST abort.
+
+- `verification_fee_discount` : (number) (*mandatory*):
+  - if `applicant_perm.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_perm.verification_fee_discount` else MUST abort.
+  - if `cs.verifier_perm_management_mode` is set to GRANTOR:
+    - if `applicant_perm.type` == VERIFIER_GRANTOR: `verifier_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+    - if `applicant_perm.type` == VERIFIER: if `validator_perm.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_perm.verification_fee_discount` (100% discount) inclusive.
+  - if `cs.verifier_perm_management_mode` is set to ECOSYSTEM:
+    - if `applicant_perm.type` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+  - else MUST abort.
+
 Calculation of `vp_exp`, the validation process expiration timestamp, required to verify provided `effective_until`:
 
-- Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_perm.type` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_perm.type` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_perm.type` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_perm.type` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_perm.type` is HOLDER).
 
 - if `validity_period` is NULL:  `vp_exp` = NULL.
@@ -2522,6 +2611,8 @@ Update `Permission` `applicant_perm`:
   - set `applicant_perm.verification_fees` to `verification_fees`;
   - set `applicant_perm.country` to `country`;
   - set `applicant_perm.effective_from` to `now`.
+  - set `applicant_perm.issuance_fee_discount` to `issuance_fee_discount`.
+  - set `applicant_perm.verification_fee_discount` to `verification_fee_discount`.
 
 Fees and Trust Deposits:
 
@@ -2593,9 +2684,9 @@ An [[ref: account]] that would like to create a `Permission` entry MUST call thi
 - `country` (*optional*).
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
-- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
-- `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in trust unit. Default to 0.
-- `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.
+- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, issuer_perm_management_mode and/or verifier_perm_management_mode must not be OPEN.
+- `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued. Default to 0.
+- `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified. Default to 0.
 
 ##### [MOD-PERM-MSG-7-2] Create Root Permission precondition checks
 
@@ -2610,9 +2701,9 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `effective_from` must be in the future.
 - `effective_until`, if not null, must be greater than `effective_from`
 - `country` if not null, MUST be a valid alpha-2 code (ISO 3166).
-- `validation_fees` (number) (*mandatory*): MUST be >= 0.
-- `issuance_fees` (number) (*mandatory*): MUST be >= 0.
-- `verification_fees` (number) (*mandatory*): MUST be >= 0.
+- `validation_fees` (number) (*mandatory*): MUST be an integer >= 0.
+- `issuance_fees` (number) (*mandatory*): MUST be an integer >= 0.
+- `verification_fees` (number) (*mandatory*): MUST be an integer >= 0.
 
 ###### [MOD-PERM-MSG-7-2-2] Create Root Permission permission checks
 
@@ -3152,8 +3243,8 @@ An [[ref: account]] that would like to create a `Permission` entry MUST call thi
 - `country` (*optional*).
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
-- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in trust unit. Default to 0.
-- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in trust unit. Default to 0.
+- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified. Default to 0.
+- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential. Default to 0.
 
 ##### [MOD-PERM-MSG-14-2] Create Permission precondition checks
 
@@ -4270,6 +4361,93 @@ Return the list of the existing parameters and their values.
   }
 }
 ```
+
+#### [MOD-XR-MSG-1] Update Exchange Rate
+
+The **Update Exchange Rate** method allows an authorized actor to create or update an `ExchangeRate` entry for a given `(base_asset_type, base_asset, quote_asset_type, quote_asset)` pair.
+
+This method is used to store deterministic exchange rates on-chain, which MAY later be consumed by other modules to compute on-chain amounts (e.g. trust deposits) when pricing rules are expressed in a different asset.
+
+##### [MOD-XR-MSG-1] Update Exchange Rate method parameters
+
+- `base_asset_type` (PricingAssetType, *mandatory*)  
+- `base_asset` (string, *mandatory*)  
+- `quote_asset_type` (PricingAssetType, *mandatory*)  
+- `quote_asset` (string, *mandatory*)  
+- `rate` (string, *mandatory*)  
+- `rate_scale` (uint32, *mandatory*)  
+- `expires_at` (timestamp, *optional*)  
+- `source` (string, *optional*)  
+
+##### [MOD-XR-MSG-1] Update Exchange Rate precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-XR-MSG-1] Update Exchange Rate basic checks
+
+If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- **Authorization**
+  - The caller MUST be authorized to update exchange rates (oracle account, governance authority, or module authority as defined by the chain).
+
+- **Asset type validity**
+  - `base_asset_type` MUST be a valid `PricingAssetType` value.
+  - `quote_asset_type` MUST be a valid `PricingAssetType` value.
+
+- **Asset identifier basic validity**
+  - `base_asset` MUST be non-empty.
+  - `quote_asset` MUST be non-empty.
+
+- **Asset type / identifier consistency**
+  - If `base_asset_type = TRUST_UNIT`:
+    - `base_asset` MUST equal `"TU"`.
+  - If `quote_asset_type = TRUST_UNIT`:
+    - `quote_asset` MUST equal `"TU"`.
+
+  - If `base_asset_type = COIN`:
+    - `base_asset` MUST be a valid Cosmos-SDK denom string.
+    - `base_asset` MUST correspond to an asset that exists on-chain (i.e., denom is recognized by the chain and can be held in balances).
+    - If `base_asset` starts with `ibc/`, a denom trace for this denom MUST exist in the IBC transfer module store.
+    - If `base_asset` starts with `factory/`, the denom MUST be a valid tokenfactory denom and the corresponding token MUST exist.
+  - If `quote_asset_type = COIN`:
+    - `quote_asset` MUST be a valid Cosmos-SDK denom string.
+    - `quote_asset` MUST correspond to an asset that exists on-chain.
+    - If `quote_asset` starts with `ibc/`, a denom trace for this denom MUST exist in the IBC transfer module store.
+    - If `quote_asset` starts with `factory/`, the denom MUST be a valid tokenfactory denom and the corresponding token MUST exist.
+
+  - If `base_asset_type = FIAT`:
+    - `base_asset` MUST be a valid ISO-4217 currency code.
+  - If `quote_asset_type = FIAT`:
+    - `quote_asset` MUST be a valid ISO-4217 currency code.
+
+- **Pair validity**
+  - The pair `(base_asset_type, base_asset, quote_asset_type, quote_asset)` MUST NOT be identical on both sides (base and quote MUST NOT represent the same asset).
+  - The pair `(base_asset_type, base_asset, quote_asset_type, quote_asset)` MUST be unique in storage. If an entry exists, it MUST be updated; otherwise, it MUST be created.
+
+- **Rate validity**
+  - `rate` MUST be a base-10 encoded unsigned integer string.
+  - `rate` MUST be strictly greater than `"0"`.
+  - `rate_scale` MUST be within protocol-defined limits (e.g., `rate_scale <= 18`).
+
+- **Expiration validity**
+  - If `expires_at` is provided, it MUST be strictly greater than the current block timestamp.
+  
+###### [MOD-XR-MSG-1] Update Exchange Rate fee checks
+
+Caller MUST have sufficient [[ref: estimated transaction fees]].
+
+##### [MOD-XR-MSG-1] Update Exchange Rate execution of the method
+
+1. Locate or create the corresponding `ExchangeRate`.
+2. Update `rate`, `rate_scale`, `updated_at`, `expires_at`, `source`.
+3. Persist state changes.
+
+##### [MOD-XR-MSG-1] Exchange rate usage and rounding rules
+
+- Conversions use base units only.
+- Integer arithmetic MUST be used.
+- `quote_amount = floor(base_amount × rate / 10^rate_scale)`.
+- Expired rates MUST NOT be used.
 
 ### Mixed Queries
 
