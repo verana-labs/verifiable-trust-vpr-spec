@@ -1022,6 +1022,8 @@ entity "Permission" as csp {
   +vp_current_deposit: number
   +vp_summary_digest_sri: digest_sri
   +vp_term_requested: timestamp
+  +issuance_fee_exemption: number
+  +verification_fee_exemption: number
 }
 
 enum "ValidationState" as valstate {
@@ -1219,6 +1221,8 @@ td o-- "0..1" account: last_repaid_by
 - `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
 - `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `vp_term_requested` (timestamp) (*optional*): set when [[ref: controller]] requests the termination of this entry.
+- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 ### PermissionSession
 
@@ -2217,7 +2221,11 @@ An Applicant that would like to start a permission validation process MUST execu
 
 - `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
 - `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
-- `country` (string) (*mandatory*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
+- `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
+- `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
+- `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
+- `country` (string) (*optional*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
+- `did` (string) (*optional*): if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
@@ -2231,7 +2239,10 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `type` (PermissionType) (*mandatory*) MUST be a valid PermissionType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
 - `validator_perm_id` (uint64) (*mandatory*): see [MOD-PERM-MSG-1-2-2](#mod-perm-msg-1-2-2-start-permission-vp-permission-checks).
-- `country` (string) (*mandatory*) MUST be a valid alpha-2 code (ISO 3166).
+- `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
+- `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
+- `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
+- `country` (string) (*optional*): Requested country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
 :::note
@@ -2286,6 +2297,7 @@ Load `Permission` entry `validator_perm` of the selected validator.
 Applicant MUST have an available balance in its [[ref: account]], to cover the following fees:
 
 - the required [[ref: estimated transaction fees]];
+
 - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
 - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
 
@@ -2311,10 +2323,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.created`: `now`
   - `applicant_perm.modified`: `now`
   - `applicant_perm.deposit`: `validation_trust_deposit_in_denom`.
-  - `applicant_perm.validation_fees`: 0.
-  - `applicant_perm.issuance_fees`: 0.
-  - `applicant_perm.verification_fees`: 0.
+  - `applicant_perm.validation_fees`: `validation_fees`.
+  - `applicant_perm.issuance_fees`: `issuance_fees`.
+  - `applicant_perm.verification_fees`: `verification_fees`.
   - `applicant_perm.validator_perm_id`: `validator_perm_id`.
+  - `applicant_perm.country`: `country`.
   - `applicant_perm.vp_last_state_change`: `now`
   - `applicant_perm.vp_state`: PENDING.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
@@ -2426,8 +2439,10 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `validation_fees` (number) (*optional*): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
 - `issuance_fees` (number) (*optional*): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
 - `verification_fees` (number) (*optional*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
-- `country` (string) (*optional*): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country. Can be set only the first time this method is called (cannot be set for renewals).
+- `country` (string) (*optional*): Agreed country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country. Can be set only the first time this method is called (cannot be set for renewals).
 - `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 ##### [MOD-PERM-MSG-3-2] Set Permission VP to Validated precondition checks
 
@@ -2440,15 +2455,35 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm.vp_state` MUST be equal to PENDING, else abort.
-- `validation_fees` (number) (*optional*): If specified, MUST be zero or a positive number. If `applicant_perm.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_perm.validation_fees`, else abort.
-- `issuance_fees` (number) (*optional*): If specified, MUST be zero or a positive number.  If `applicant_perm.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_perm.issuance_fees` or, else abort.
-- `verification_fees` (number) (*optional*): If specified, MUST be zero or a positive number.  If `applicant_perm.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_perm.verification_fees`, else abort.
+- `validation_fees` (number) (*optional*): If specified, MUST be zero or a positive integer. If `applicant_perm.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_perm.validation_fees`, else abort.
+- `issuance_fees` (number) (*optional*): If specified, MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_perm.issuance_fees` or, else abort.
+- `verification_fees` (number) (*optional*): If specified, MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_perm.verification_fees`, else abort.
 - `country` (string) (*optional*): MUST be a valid alpha-2 code (ISO 3166), or null. If `applicant_perm.effective_from` is not null (we are in renewal) `country` MUST be equal to `applicant_perm.country`, else abort.
 - `vp_summary_digest_sri` (digest_sri) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
+- Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
+- Load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`.
+
+- `issuance_fee_discount` : (number) (*mandatory*):
+  - if `applicant_perm.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_perm.issuance_fee_discount` else MUST abort.
+  - if `cs.issuer_perm_management_mode` is set to GRANTOR:
+    - if `applicant_perm.type` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+    - if `applicant_perm.type` == ISSUER: if `validator_perm.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_perm.issuance_fee_discount` (100% discount) inclusive.
+  - if `cs.issuer_perm_management_mode` is set to ECOSYSTEM:
+    - if `applicant_perm.type` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+  - else MUST abort.
+
+- `verification_fee_discount` : (number) (*mandatory*):
+  - if `applicant_perm.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_perm.verification_fee_discount` else MUST abort.
+  - if `cs.verifier_perm_management_mode` is set to GRANTOR:
+    - if `applicant_perm.type` == VERIFIER_GRANTOR: `verifier_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+    - if `applicant_perm.type` == VERIFIER: if `validator_perm.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_perm.verification_fee_discount` (100% discount) inclusive.
+  - if `cs.verifier_perm_management_mode` is set to ECOSYSTEM:
+    - if `applicant_perm.type` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+  - else MUST abort.
+
 Calculation of `vp_exp`, the validation process expiration timestamp, required to verify provided `effective_until`:
 
-- Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_perm.type` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_perm.type` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_perm.type` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_perm.type` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_perm.type` is HOLDER).
 
 - if `validity_period` is NULL:  `vp_exp` = NULL.
@@ -2522,6 +2557,8 @@ Update `Permission` `applicant_perm`:
   - set `applicant_perm.verification_fees` to `verification_fees`;
   - set `applicant_perm.country` to `country`;
   - set `applicant_perm.effective_from` to `now`.
+  - set `applicant_perm.issuance_fee_discount` to `issuance_fee_discount`.
+  - set `applicant_perm.verification_fee_discount` to `verification_fee_discount`.
 
 Fees and Trust Deposits:
 
@@ -2933,8 +2970,14 @@ Account MUST have sufficient available balance for:
 To calculate the required beneficiary fees, use "Find Beneficiaries" query method below to get the set of beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
 
 - define `beneficiary_fees` = 0
-- if `verifier_perm` is null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.issuance_fees`.
-- if `verifier_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`.
+
+**Credential Issuance**
+
+- if `issuer_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.issuance_fees`. Then use `issuer_perm.issuance_fee_exemption` to adjust fees: `beneficiary_fees` = `beneficiary_fees` * (1 - `issuer_perm.issuance_fee_exemption`)
+
+**Credential Verification**
+
+- if `verifier_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`. Then use `verifier_perm.verification_fee_exemption` to adjust fees: `beneficiary_fees` = `beneficiary_fees` * (1 - `verifier_perm.verification_fee_exemption`)
 
 Total required `trust_fees` to be paid by account executing the method, including Trust Deposit: (`beneficiary_fees` + percent fees for agents) \* trust deposit percent \* trust unit price:
 
@@ -2952,17 +2995,21 @@ If all precondition checks passed, method is executed.
 
 - use "Find Beneficiaries" above to build `found_perm_set`.
 
-- if `verifier_perm` is null:
+**Credential Issuance**
+
+- if `issuer_perm` is NOT null:
   - for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
-    - transfer `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
-    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `issuer_perm.deposit`.
+    - transfer `perm.issuance_fees`  \* (1 - `issuer_perm.issuance_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* (1 - `issuer_perm.issuance_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
+    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* (1 - `issuer_perm.issuance_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `issuer_perm.deposit`.
+
+**Credential Verification**
 
 - else :
   - for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
-    - transfer `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
-    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `verifier_perm.deposit`.
+    - transfer `perm.verification_fees` \* (1 - `verifier_perm.verification_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* (1 - `verifier_perm.verification_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
+    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* (1 - `verifier_perm.verification_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `verifier_perm.deposit`.
 
 If new, create entry `PermissionSession` `session`:
 
