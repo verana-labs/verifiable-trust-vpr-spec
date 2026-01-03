@@ -1022,6 +1022,8 @@ entity "Permission" as csp {
   +vp_current_deposit: number
   +vp_summary_digest_sri: digest_sri
   +vp_term_requested: timestamp
+  +issuance_fee_exemption: number
+  +verification_fee_exemption: number
 }
 
 enum "ValidationState" as valstate {
@@ -1219,6 +1221,8 @@ td o-- "0..1" account: last_repaid_by
 - `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
 - `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `vp_term_requested` (timestamp) (*optional*): set when [[ref: controller]] requests the termination of this entry.
+- `issuance_fee_exemption` (timestamp) (*optional*): set when [[ref: controller]] requests the termination of this entry.
+- `verification_fee_exemption` (timestamp) (*optional*): set when [[ref: controller]] requests the termination of this entry.
 
 ### PermissionSession
 
