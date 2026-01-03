@@ -2221,7 +2221,11 @@ An Applicant that would like to start a permission validation process MUST execu
 
 - `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
 - `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
-- `country` (string) (*mandatory*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
+- `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
+- `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
+- `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
+- `country` (string) (*optional*): a country of residence, alpha-2 code (ISO 3166), where applicant is located.
+- `did` (string) (*optional*): if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
@@ -2235,7 +2239,10 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `type` (PermissionType) (*mandatory*) MUST be a valid PermissionType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
 - `validator_perm_id` (uint64) (*mandatory*): see [MOD-PERM-MSG-1-2-2](#mod-perm-msg-1-2-2-start-permission-vp-permission-checks).
-- `country` (string) (*mandatory*) MUST be a valid alpha-2 code (ISO 3166).
+- `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
+- `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
+- `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
+- `country` (string) (*optional*): Requested country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
 :::note
@@ -2290,6 +2297,7 @@ Load `Permission` entry `validator_perm` of the selected validator.
 Applicant MUST have an available balance in its [[ref: account]], to cover the following fees:
 
 - the required [[ref: estimated transaction fees]];
+
 - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
 - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
 
@@ -2315,10 +2323,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.created`: `now`
   - `applicant_perm.modified`: `now`
   - `applicant_perm.deposit`: `validation_trust_deposit_in_denom`.
-  - `applicant_perm.validation_fees`: 0.
-  - `applicant_perm.issuance_fees`: 0.
-  - `applicant_perm.verification_fees`: 0.
+  - `applicant_perm.validation_fees`: `validation_fees`.
+  - `applicant_perm.issuance_fees`: `issuance_fees`.
+  - `applicant_perm.verification_fees`: `verification_fees`.
   - `applicant_perm.validator_perm_id`: `validator_perm_id`.
+  - `applicant_perm.country`: `country`.
   - `applicant_perm.vp_last_state_change`: `now`
   - `applicant_perm.vp_state`: PENDING.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
