@@ -89,7 +89,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <p>This specification deals with the Verifiable Public Registry (VPR), a decentralized registry of registries, part of the Verifiable Trust concept.</p>
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:trust-registry">trust registry</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
-<div id="note-54" class="notice note"><a class="notice-link" href="#note-54">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-55" class="notice note"><a class="notice-link" href="#note-55">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
 <h3 id="what-is-a-trust-registry"><a class="toc-anchor" href="#what-is-a-trust-registry" >§</a> What is a Trust Registry?</h3>
@@ -518,7 +518,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-55" class="notice note"><a class="notice-link" href="#note-55">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-56" class="notice note"><a class="notice-link" href="#note-56">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
@@ -530,7 +530,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>A designated <a class="term-reference" href="#term:governance-authority">governance authority</a> is responsible for <strong>enforcing these rules</strong> and, when necessary, <strong>applying financial sanctions</strong> to participants who violate the rules.</p>
-<div id="note-56" class="notice note"><a class="notice-link" href="#note-56">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
+<div id="note-57" class="notice note"><a class="notice-link" href="#note-57">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
 <p>While the <strong>VPR governance framework</strong> defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each <strong>ecosystem</strong> must define its own <strong>EGF</strong> to govern roles, permissions, credential policies, and compliance within its specific domain.</p>
 <p>This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.</p>
 </div>
@@ -538,7 +538,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p>For simplicity, the data model is presented using an <strong>object-relational structure</strong>. However, this representation may not be optimal for all implementation scenarios.</p>
 <p>Implementors are responsible for <strong>adapting the data model</strong> to suit their chosen architecture.<br>
 For example, a <strong>key-value store</strong> may be more appropriate for a <strong>ledger-based implementation</strong> than a relational model.</p>
-<img src="https://www.plantuml.com/plantuml/svg/fHZRRjisz5rV8VYfNPiWtOPXy5ECM4c5DNPdEG6sOI1eaRQvIA9AKaxSeV_UGrAIgPjh8oynTSxXkT-OQwcmK4MQUDVrISOueNwAN_pVhwxyPqRKrlDeffZQ-wEbAAHQq0sJIkn7FfQ-4lx_dk__nCZOBrYcVliLljuH_GaqBDleprXGh2Y054ifI4fp3KqvOMlM0MCHRzck0oOqvvAfiPyLwOeAG_c4NIaWVUpZMC5bjAD2CfvfS8ApJO4tr2ND1OlXYB2KLBa8d2Jy6JNGICPRccB4WQTW1FYiE4yephnl1yVSQMo6ivZU2fpIPowU7gqAnakRzQxFJVr-ANKV-q17Ds3gSJbJ7XSfu4j1v7H1VPufHE9-4hO1UYG5gw6WJQtEZQ14dt4I6ISP7M9vkWglpe7_9C_A23LoGSg22hGHE5DSe1rE6C4Al6gFe3pAgM2SkBp0jLgPSw-LiiwKSHhvbYVaPE9I4K2aACKPH5Rd1G8VGuW_0nG8WCLzZRe7J4EfCw-Qn2nIVpH4KUP3dfgCc7yEPl1pjvZCblC5d8ARUVHNj0pktHH_4qt_UEjFufWNPL9ZUmOU3jb1P2Ma9-jUquVeYw8PwO1bWkMs0nKqnwm5fEirjTreBNWwX0F3MDBk08TmhocLxHZhykyWR0pZ_bizXLFQWNfGrfWUZA0x_jIstSH6x5q_xt94N_AsKJa2aT1B5CG0nLjeFhHBKfeEnTUZ6E3ZGWYTcHtp3wZ-Yx98KopsoEreXtD9f7J-2_gb070dngxhmJwQvigqwU4Oz53L9VDOnpZI3Z593CORxvXCXcAPXhCxE3rEFeNJoJAOmdaPBEx3sMGPpcTe4Vpv44HDE7mSgjAEiOcUOijzRcMKiysCDWL08slv07zkvg4kpzjmikmlj8WswirjymKZvnOOBjJswzX_OulrlT_yVVlFlttjfJO3v2iZFuoYXq0tayTW4Tw6vcXXwD1eAXpgwps-_t7-QGeNQtdjiJRHgfPYiP4wULX-d2_2lutleo2AgdY42mDwc3aKZZEdZ4oPWDBdvVu47SgwyNMjgbrixHfmX_PTmbSuUSI2uLL2fTqRx7xoJka53teIKsO9ecvsMvmejpzaFtkABQwzLwrEvGyibKYoh_GuyScZs_0ZU2-FypjZgf_8yOS3_rpDNitfXsk2mwUH9rrMWs5rc3VR9D8SUQ4wUX8zHAfi7sRS98CeGOijjMvpRF003U84inIj2f4X0UKoJ2gtM53jbE88aM4nXDGEt3EQaEDaguJ7Jw3PCnR4IdL82mb1WlKeKnL5YzSpl3_WnN6SxblhFJQrekrpp7OJA_XWQDVhndEw_XtOy4emk17OYTwt4XbCtrfag97P6ffJqPeKlDZLO54DnPVU5-OAIzfzldqfkEe1szneVYFpqBKiV_dPH2SdkkKYhBhj5T9JTX6I5oAcxii8bEKN5vqX2s_6Mb-a0SE4ZWcMqjEhhQRL8myKqB0328IRkgr1ewlBomyZJJps3ykKMUnXHiFRJ1Cf0Oo41bIGhYBDHx1P5JmFdliZu7wX1Nsul8HT09ws8CW-MQNlwPTkXm8YHyfNAf1urJv_SS6D9Z671P93vei6ofXWcZQbNKGv8D5gtyLLgxj6jlnIqewhNVOOILKFHxcOmW0Apsn4cgP6EdRLIAEVBUqg9WtzpHemu1089zpDymHMp4nvzRPOswtNN0sfRraNat6b4mIGzDhXLAinvXhyP_ulP7-_0m00" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/fHZRRjisz5rV8VYfNPSWtOPXy5ECM4s5DNPdEG6sOI1eaRQvIA9AKdRSeV--GrAIgPjh8oynTSxXkT-OMwcmK4MQUBVrISOueNwAN_pVRcxyFIDgwtaqKqmT_D5I558jw8P99GuZ7qjV2Vy_p_T_O6Ji5onJl_u2N--8_WGQbctqPomeLXH0YgKK9AMvXgQSi3NhWB68jspN0HEQSydKsC-AT4M5eNp6hXIGFlPnhE0osb4X6SyqEC7Pfi0RwfBcWiLmH5XAgbm4JXA-Hmqqal6MfXXnu2aO0JuhpXEAC-_RqJ7t6flXBAOV14xfdeld9wk2yT9clUjpKxzVIjt7Fj3H3PXwMiwKnqKA-58GELzGdsSAaRYVX6s07ad1QYXeKwjp9oZHPvn4nab6XrYUhyAhS-1VoRCoGerSaBAW0cq4pXGNQ8SJHh02hzeZA8zoAXWdBYzmhLRcqckbh0jbd4U-vGavcxXK110fId46aTLvWS374EBF00K2OF5Genu0qr3gmgicCOlK7mrHbFcGfoOZvf-36VpSBoQpvNm1f-1k7lqPBOC7DyNVHDFVt_gJEEP5cTJOde67GtOKMGdfoRhNz27wecX6Ec2POBdjG0NDCMi1wNfDRJTQ2vuEuS0mbhGxm37SQqfbEyQw_3i86yEu_rPFuPHse1wKDQO78-YEFxTjDx4H1zVFknpHbxnjL8v09FGI1J50yHQQ3-sIbAP3yVKe1lYu449dPiVy8wh_eYpI58i3SZlQyLmIAPt_Wduf0Do9iUjwi8-ckJ9jUZW6FLHroJpLCOwqGqmIW_76EoQJeLYcuUmUJa-JJ-5qiWocS5u6YuTmDbc6ynbQ17yy1b4J3X_7ghHZRAAdsFAGMndbR3EZJG7Go5e-mf-xUQZByqCuMVONMaGRzUQs-OAHImiC5shxTUo_iSNwez_yVVltFttjfJO3v2iZFuoYnq0tawTW4Nu8pT72qB7HL3ZKrtjy_-FyqnGkrlBQOssYLIt5OYDryhZyE5-4VndVHq4KLV485mRqE7Ce76TE6Pao0QNFo_q9EfHru-jQLRlOsZNW3ktxXAzmyeG5mwk4IhitsFtadT8B7lGafimIHDtijZXHRd_8VlOKMrnxhrgToXzOAf5aN-bfuhD7j-57y46UvdV1L3-JutS7_gMQlPhJTzS4XqyZJxgi1iFgC6-sIQGvya9rz2HwY5JPFiouIGPHWXPRQjtcsE016iG9PYbQ5I930ifbc5HkiQ3QASK98iDY2AaTU60q8QV9LWcFdq6pFHR4IdL82mb1WlKeKnL5YzSUtX_muZXDzwtr7fjQqVOvPhk95NmqjEjrupbT_mviU2KOt0ZiHEzRYGocRoqorCXi3SsfQ4qANkngiAY6uall2tE59Uq-txuKNFM0RMuqlv5vw5gMF_zaefCJtN8HLjts2kafkmWph1llGL2MNrrrXYpGrFeY3HWcT4omb9hq2aX7xw-lzUoDIzTPTT5-onHDe2Lxdjw1DLCz6q5JVVa80ljDWTUWqStrzVkH9XxxnwtBl01WcCCZJXCf0Oo41bIGhiRDrxBPAJnF2L1uv2eERs0GPD-sqlVqaxX30I4cvNCMIBngyR-wuaQJcCEcoQ54H0DbJ33TdT8kefoaQ7NeugeTNoDRVgdzN2wzfqYgmZd9nLGGK7XcTT8qDTAngqOQ_MmFg6BIqD_i2mCEWN32tJnFO1VDb5UlbRNTUX_MaFgMTJ4PLpf104cl7KvP6sDkmN_c7qZszty0" alt="uml diagram">
 <h3 id="trustregistry"><a class="toc-anchor" href="#trustregistry" >§</a> TrustRegistry</h3>
 <p><code>TrustRegistry</code>:</p>
 <ul>
@@ -589,8 +589,8 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>holder_validation_validity_period</code> (number) (<em>mandatory</em>): number of days after which an holder validation process expires and must be renewed.</li>
 <li><code>issuer_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>): defines how permissions are managed for issuers of this <code>CredentialSchema</code>. OPEN means anyone can issue credential of this schema; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the <code>CredentialSchema</code> entry in order to create an ISSUER permission;</li>
 <li><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>): defines how permissions are managed for verifiers of this <code>CredentialSchema</code>. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the <code>CredentialSchema</code> entry in order to create a VERIFIER permission;</li>
-<li><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain, different from VNA), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in any case, deposits are handled in <code>denom</code>. That means deposit amount is converted to <code>denom</code> when sending to trust deposits.</li>
-<li><code>pricing_asset</code> (string) (<em>optional</em>): null if <code>pricing_asset_type</code> is set to TU, else not null. Examples: COIN: uvna, ufoo, ibc/3A0F9C2E4E2A9B7D6F…, factory/verana1…/ueurv, FIAT: EUR, GBP,…</li>
+<li><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in <code>denom</code>.</li>
+<li><code>pricing_asset</code> (string) (<em>mandatory</em>): <code>&quot;tu&quot;</code> if <code>pricing_asset_type</code> is set to TU, else examples: COIN: <code>denom</code> <code>&quot;uvna&quot;</code>, <code>&quot;ufoo&quot;</code>, <code>&quot;ibc/3A0F9C2E4E2A9B7D6F...&quot;</code>, <code>&quot;factory/verana1.../ueurv&quot;</code>, FIAT: <code>&quot;USD&quot;</code>, <code>&quot;GBP&quot;</code>,…</li>
 </ul>
 <h3 id="permission"><a class="toc-anchor" href="#permission" >§</a> Permission</h3>
 <p><code>Permission</code>:</p>
@@ -677,8 +677,9 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>rate</code> (string, mandatory): Fixed-point integer representing the exchange rate from base asset to quote asset.</li>
 <li><code>rate_scale</code> (uint32, mandatory): Number of decimal digits used to scale rate.</li>
 <li><code>updated_at</code> (timestamp, mandatory): Timestamp of the last exchange rate update.</li>
-<li><code>expires_at</code> (timestamp, optional): Timestamp after which the exchange rate is considered invalid.</li>
-<li><code>source</code> (string, optional): Identifier of the exchange rate provider.</li>
+<li><code>expires_at</code> (timestamp, mandatory): Timestamp after which the exchange rate is considered invalid.</li>
+<li><code>state</code> (boolean, mandatory): true means enabled, false means disabled.</li>
+<li><code>update_whitelist</code> (account[], optional): List of accounts that are allowed to update this entry.</li>
 </ul>
 <h3 id="globalvariables"><a class="toc-anchor" href="#globalvariables" >§</a> GlobalVariables</h3>
 <p><code>GlobalVariables</code>:</p>
@@ -832,7 +833,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <div id="warning-16" class="notice warning"><a class="notice-link" href="#warning-16">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-57" class="notice note"><a class="notice-link" href="#note-57">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
+<div id="note-58" class="notice note"><a class="notice-link" href="#note-58">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
 </div>
 <table>
 <thead>
@@ -1217,6 +1218,41 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <td><a href="#mod-xr-msg-1-update-exchange-rate" >[MOD-XR-MSG-1]</a></td>
 </tr>
 <tr>
+<td></td>
+<td>Toggle Exchange Rate State</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-xr-msg-2-toggle-exchange-rate-state" >[MOD-XR-MSG-2]</a></td>
+</tr>
+<tr>
+<td></td>
+<td>Update Exchange Rate Update Whitelist</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-xr-msg-3-update-exchange-rate-update-whitelist" >[MOD-XR-MSG-3]</a></td>
+</tr>
+<tr>
+<td></td>
+<td>Get Trust Deposit</td>
+<td>/xr/v1/get</td>
+<td>Query</td>
+<td><a href="#mod-xr-qry-1-get-exchange-rate" >[MOD-XR-QRY-1]</a></td>
+</tr>
+<tr>
+<td></td>
+<td>List TD Module Parameters</td>
+<td>/xr/v1/list</td>
+<td>Query</td>
+<td><a href="#mod-xr-qry-2-list-exchange-rates" >[MOD-XR-QRY-2]</a></td>
+</tr>
+<tr>
+<td></td>
+<td>List TD Module Parameters</td>
+<td>/xr/v1/list</td>
+<td>Query</td>
+<td><a href="#mod-xr-qry-3-list-module-parameters" >[MOD-XR-QRY-3]</a></td>
+</tr>
+<tr>
 <td>Mixed Modules</td>
 <td>Get Account Reputation</td>
 <td>/mx/v1/reputation</td>
@@ -1225,7 +1261,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 </tr>
 </tbody>
 </table>
-<div id="note-58" class="notice note"><a class="notice-link" href="#note-58">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-59" class="notice note"><a class="notice-link" href="#note-59">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1263,7 +1299,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-59" class="notice note"><a class="notice-link" href="#note-59">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
+<div id="note-60" class="notice note"><a class="notice-link" href="#note-60">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Applicant MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following:</p>
@@ -1271,7 +1307,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.trust_registry_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-60" class="notice note"><a class="notice-link" href="#note-60">NOTE</a><p><code>TrustRegistry</code> trust deposit is not reclaimable.</p>
+<div id="note-61" class="notice note"><a class="notice-link" href="#note-61">NOTE</a><p><code>TrustRegistry</code> trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-tr-msg-1-3-create-new-trust-registry-execution"><a class="toc-anchor" href="#mod-tr-msg-1-3-create-new-trust-registry-execution" >§</a> [MOD-TR-MSG-1-3] Create New Trust Registry execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1627,7 +1663,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>issuer_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>).</li>
 <li><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>).</li>
 <li><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>).</li>
-<li><code>pricing_asset</code> (string) (<em>optional</em>).</li>
+<li><code>pricing_asset</code> (string) (<em>mandatory</em>).</li>
 </ul>
 <h5 id="mod-cs-msg-1-2-create-new-credential-schema-precondition-checks"><a class="toc-anchor" href="#mod-cs-msg-1-2-create-new-credential-schema-precondition-checks" >§</a> [MOD-CS-MSG-1-2] Create New Credential Schema precondition checks</h5>
 <p>If any of these precondition checks fail, method MUST abort.</p>
@@ -1643,10 +1679,10 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>holder_validation_validity_period</code> must be between 0 (never expire) and <code>GlobalVariables.credential_schema_holder_validation_validity_period_max_days</code> days.</li>
 <li><code>issuer_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>) MUST be a valid PermissionManagementMode.</li>
 <li><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>) MUST be a valid PermissionManagementMode.</li>
-<li><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain, different from VNA), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in any case, deposits are handled in <code>denom</code>. That means deposit amount is converted to <code>denom</code> when sending to trust deposits.</li>
-<li><code>pricing_asset</code> (string) (<em>optional</em>): null if <code>pricing_asset_type</code> is set to TU, else not null. Examples: COIN: uvna, ufoo, ibc/3A0F9C2E4E2A9B7D6F…, factory/verana1…/ueurv, FIAT: EUR, GBP,…</li>
+<li><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in <code>denom</code>.</li>
+<li><code>pricing_asset</code> (string) (<em>mandatory</em>): <code>&quot;tu&quot;</code> if <code>pricing_asset_type</code> is set to TU, else examples: COIN: <code>denom</code> <code>&quot;uvna&quot;</code>, <code>&quot;ufoo&quot;</code>, <code>&quot;ibc/3A0F9C2E4E2A9B7D6F...&quot;</code>, <code>&quot;factory/verana1.../ueurv&quot;</code>, FIAT: <code>&quot;EUR&quot;</code>, <code>&quot;GBP&quot;</code>,…</li>
 </ul>
-<div id="note-61" class="notice note"><a class="notice-link" href="#note-61">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
+<div id="note-62" class="notice note"><a class="notice-link" href="#note-62">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
 The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
 FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
 FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.</p>
@@ -1657,7 +1693,7 @@ FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on
 <li>the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>.</li>
 <li>the required <code>trust_deposit_in_denom</code>: <code>GlobalVariables.credential_schema_trust_deposit</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
 </ul>
-<div id="note-62" class="notice note"><a class="notice-link" href="#note-62">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
+<div id="note-63" class="notice note"><a class="notice-link" href="#note-63">NOTE</a><p>Credential Schema trust deposit is not reclaimable.</p>
 </div>
 <h5 id="mod-cs-msg-1-3-create-new-credential-schema-execution"><a class="toc-anchor" href="#mod-cs-msg-1-3-create-new-credential-schema-execution" >§</a> [MOD-CS-MSG-1-3] Create New Credential Schema execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
@@ -1687,7 +1723,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 </ul>
 </li>
 </ul>
-<div id="note-63" class="notice note"><a class="notice-link" href="#note-63">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-64" class="notice note"><a class="notice-link" href="#note-64">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any <a class="term-reference" href="#term:account">account</a> CAN execute this method.</p>
@@ -1900,7 +1936,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-64" class="notice note"><a class="notice-link" href="#note-64">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-65" class="notice note"><a class="notice-link" href="#note-65">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -1937,7 +1973,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li><code>country</code> (string) (<em>optional</em>): Requested country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country (can be modified by validator).</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 </ul>
-<div id="note-65" class="notice note"><a class="notice-link" href="#note-65">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
+<div id="note-66" class="notice note"><a class="notice-link" href="#note-66">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process (for charging fees) is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
@@ -2786,7 +2822,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
 <li><code>amount</code> MUST be lower or equal to <code>applicant_perm.deposit</code> else MUST abort.</li>
 </ul>
-<div id="note-66" class="notice note"><a class="notice-link" href="#note-66">NOTE</a><p>Even if the permission has expired or is revoked, it is still possible to slash it.</p>
+<div id="note-67" class="notice note"><a class="notice-link" href="#note-67">NOTE</a><p>Even if the permission has expired or is revoked, it is still possible to slash it.</p>
 </div>
 <h6 id="mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms"><a class="toc-anchor" href="#mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms" >§</a> [MOD-PERM-MSG-12-2-2] Slash Permission Trust Deposit validator perms</h6>
 <p>Either Option #1, or #2 MUST return true, else abort.</p>
@@ -2885,7 +2921,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 <p>use <a href="#mod-td-msg-1-adjust-trust-deposit" >Adjust Trust Deposit</a> to transfer <code>amount</code> to trust deposit of <code>applicant_perm.grantee</code>.</p>
 <h4 id="mod-perm-msg-14-create-permission"><a class="toc-anchor" href="#mod-perm-msg-14-create-permission" >§</a> [MOD-PERM-MSG-14] Create Permission</h4>
 <p>This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a permission for being issuer or verifier of a given schema.</p>
-<div id="note-67" class="notice note"><a class="notice-link" href="#note-67">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
+<div id="note-68" class="notice note"><a class="notice-link" href="#note-68">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
 </div>
 <h5 id="mod-perm-msg-14-1-create-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-14-1-create-permission-parameters" >§</a> [MOD-PERM-MSG-14-1] Create Permission parameters</h5>
 <p>An <a class="term-reference" href="#term:account">account</a> that would like to create a <code>Permission</code> entry MUST call this method by specifying:</p>
@@ -3054,7 +3090,7 @@ the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of ac
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-68" class="notice note"><a class="notice-link" href="#note-68">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-69" class="notice note"><a class="notice-link" href="#note-69">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -3119,9 +3155,9 @@ However, it may be useful for certain use cases, for example, a <strong>Social B
 That said, the deterrent is economic: why would anyone pay registration fees for a <a class="term-reference" href="#term:did">DID</a> they do not control?</p>
 <p>To protect the intent of the actual <a class="term-reference" href="#term:did">DID</a> controller, registration alone does not trigger indexing.<br>
 Indexers must respect optional <strong>crawler directives</strong> included in the <a class="term-reference" href="#term:did-document">DID Document</a> (e.g., <code>index</code>, <code>noindex</code>), ensuring that <strong>control over indexation remains with the <a class="term-reference" href="#term:did">DID</a> controller</strong>, regardless of who registered the DID in the directory.</p>
-<div id="note-69" class="notice note"><a class="notice-link" href="#note-69">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
+<div id="note-70" class="notice note"><a class="notice-link" href="#note-70">NOTE</a><p>Note that it is possible to register any <a class="term-reference" href="#term:did">DID</a> from any method.</p>
 </div>
-<div id="note-70" class="notice note"><a class="notice-link" href="#note-70">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
+<div id="note-71" class="notice note"><a class="notice-link" href="#note-71">NOTE</a><p>It is not needed to register DIDs that are already present in Trust Registries, Permissions,… as services linked to these DIDs are indexed like if they were registered in the DID Directory.</p>
 </div>
 <h4 id="mod-dd-msg-1-add-a-did"><a class="toc-anchor" href="#mod-dd-msg-1-add-a-did" >§</a> [MOD-DD-MSG-1] Add a DID</h4>
 <p>Add a <a class="term-reference" href="#term:did">DID</a> to the DID Directory, with expiration timestamp set to current timestamp + <em>years</em> years.</p>
@@ -3560,7 +3596,7 @@ Indexers must respect optional <strong>crawler directives</strong> included in t
 <li>update <code>td.share</code> = <code>td.share</code> - <code>claimable_yield</code> / <code>GlobalVariables.trust_deposit_share_value</code></li>
 <li>transfer <code>claimable_yield</code> from <code>TrustDeposit</code> account to <code>account</code>.</li>
 </ul>
-<div id="note-71" class="notice note"><a class="notice-link" href="#note-71">NOTE</a><p>Maybe here the claimed yield should go to the deposit. TBD.</p>
+<div id="note-72" class="notice note"><a class="notice-link" href="#note-72">NOTE</a><p>Maybe here the claimed yield should go to the deposit. TBD.</p>
 </div>
 <h4 id="mod-td-msg-3-reclaim-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-3-reclaim-trust-deposit" >§</a> [MOD-TD-MSG-3] Reclaim Trust Deposit</h4>
 <p>This method is used to reclaim claimable trust deposit value, <code>td.claimable</code>. If trust deposit has been slashed and not repaid, method execution MUST abort.</p>
@@ -3759,18 +3795,22 @@ The decision between this method and specifying the amount directly is left to i
 <li><code>rate</code> (string, <em>mandatory</em>)</li>
 <li><code>rate_scale</code> (uint32, <em>mandatory</em>)</li>
 <li><code>expires_at</code> (timestamp, <em>optional</em>)</li>
-<li><code>source</code> (string, <em>optional</em>)</li>
 </ul>
 <h5 id="mod-xr-msg-1-update-exchange-rate-precondition-checks"><a class="toc-anchor" href="#mod-xr-msg-1-update-exchange-rate-precondition-checks" >§</a> [MOD-XR-MSG-1] Update Exchange Rate precondition checks</h5>
 <p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
 <h6 id="mod-xr-msg-1-update-exchange-rate-basic-checks"><a class="toc-anchor" href="#mod-xr-msg-1-update-exchange-rate-basic-checks" >§</a> [MOD-XR-MSG-1] Update Exchange Rate basic checks</h6>
 <p>If any of the following conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
 <ul>
-<li>
-<p><strong>Authorization</strong></p>
-<ul>
-<li>The caller MUST be authorized to update exchange rates (oracle account, governance authority, or module authority as defined by the chain).</li>
+<li><strong>Authorization</strong></li>
 </ul>
+<p>Only a governance proposal can create a new ExchangeRate.</p>
+<p>For updates, the caller MUST be authorized to <strong>update</strong> exchange rates. Caller can be can be:</p>
+<ul>
+<li>
+<p>a governance proposal</p>
+</li>
+<li>
+<p>an account that is included in the <code>update_whitelist</code> for the corresponding ExchangeRate entry.</p>
 </li>
 <li>
 <p><strong>Asset type validity</strong></p>
@@ -3861,6 +3901,7 @@ The decision between this method and specifying the amount directly is left to i
 <ol>
 <li>Locate or create the corresponding <code>ExchangeRate</code>.</li>
 <li>Update <code>rate</code>, <code>rate_scale</code>, <code>updated_at</code>, <code>expires_at</code>, <code>source</code>.</li>
+<li>if ExchangeRate entry is new (created) set <code>state</code> to disabled.</li>
 <li>Persist state changes.</li>
 </ol>
 <h5 id="mod-xr-msg-1-exchange-rate-usage-and-rounding-rules"><a class="toc-anchor" href="#mod-xr-msg-1-exchange-rate-usage-and-rounding-rules" >§</a> [MOD-XR-MSG-1] Exchange rate usage and rounding rules</h5>
@@ -3870,6 +3911,105 @@ The decision between this method and specifying the amount directly is left to i
 <li><code>quote_amount = floor(base_amount × rate / 10^rate_scale)</code>.</li>
 <li>Expired rates MUST NOT be used.</li>
 </ul>
+<h4 id="mod-xr-msg-2-toggle-exchange-rate-state"><a class="toc-anchor" href="#mod-xr-msg-2-toggle-exchange-rate-state" >§</a> [MOD-XR-MSG-2] Toggle Exchange Rate State</h4>
+<p>The <strong>Toggle Exchange Rate State</strong> method allows an authorized actor to enable or disable an exchange rate.</p>
+<h5 id="mod-xr-msg-2-toggle-exchange-rate-state-method-parameters"><a class="toc-anchor" href="#mod-xr-msg-2-toggle-exchange-rate-state-method-parameters" >§</a> [MOD-XR-MSG-2] Toggle Exchange Rate State method parameters</h5>
+<ul>
+<li><code>id</code> (uint64, <em>mandatory</em>): id of the exchange rate</li>
+<li><code>state</code> (boolean, <em>mandatory</em>): true to set enabled, false to set disabled</li>
+</ul>
+<h5 id="mod-xr-msg-2-toggle-exchange-rate-state-precondition-checks"><a class="toc-anchor" href="#mod-xr-msg-2-toggle-exchange-rate-state-precondition-checks" >§</a> [MOD-XR-MSG-2] Toggle Exchange Rate State precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-xr-msg-2-toggle-exchange-rate-state-basic-checks"><a class="toc-anchor" href="#mod-xr-msg-2-toggle-exchange-rate-state-basic-checks" >§</a> [MOD-XR-MSG-2] Toggle Exchange Rate State basic checks</h6>
+<p>If any of the following conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li><strong>Authorization</strong>
+<ul>
+<li>Only a governance proposal can enable or disable an exchange rate.</li>
+</ul>
+</li>
+<li>ExchangeRate with id <code>id</code> MUST exist.</li>
+</ul>
+<h6 id="mod-xr-msg-2-toggle-exchange-rate-state-fee-checks"><a class="toc-anchor" href="#mod-xr-msg-2-toggle-exchange-rate-state-fee-checks" >§</a> [MOD-XR-MSG-2] Toggle Exchange Rate State fee checks</h6>
+<p>Caller MUST have sufficient <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
+<h5 id="mod-xr-msg-2-toggle-exchange-rate-state-execution-of-the-method"><a class="toc-anchor" href="#mod-xr-msg-2-toggle-exchange-rate-state-execution-of-the-method" >§</a> [MOD-XR-MSG-2] Toggle Exchange Rate State execution of the method</h5>
+<ol>
+<li>Locate and load the corresponding <code>ExchangeRate</code> <code>xr</code>.</li>
+<li>Update <code>state</code>.</li>
+<li>Persist state changes.</li>
+</ol>
+<h4 id="mod-xr-msg-3-update-exchange-rate-update-whitelist"><a class="toc-anchor" href="#mod-xr-msg-3-update-exchange-rate-update-whitelist" >§</a> [MOD-XR-MSG-3] Update Exchange Rate Update Whitelist</h4>
+<p>The <strong>Update Exchange Rate Update Whitelist</strong> method allows an authorized actor to update exchange rate update whitelist.</p>
+<h5 id="mod-xr-msg-3-1-update-exchange-rate-update-whitelist-method-parameters"><a class="toc-anchor" href="#mod-xr-msg-3-1-update-exchange-rate-update-whitelist-method-parameters" >§</a> [MOD-XR-MSG-3-1] Update Exchange Rate Update Whitelist method parameters</h5>
+<ul>
+<li><code>id</code> (uint64, <em>mandatory</em>): id of the exchange rate</li>
+<li><code>update_whitelist</code> (account[], <em>optional</em>): if empty, delete the existing list</li>
+</ul>
+<h5 id="mod-xr-msg-3-2-update-exchange-rate-update-whitelist-precondition-checks"><a class="toc-anchor" href="#mod-xr-msg-3-2-update-exchange-rate-update-whitelist-precondition-checks" >§</a> [MOD-XR-MSG-3-2] Update Exchange Rate Update Whitelist precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-xr-msg-3-2-1-update-exchange-rate-update-whitelist-basic-checks"><a class="toc-anchor" href="#mod-xr-msg-3-2-1-update-exchange-rate-update-whitelist-basic-checks" >§</a> [MOD-XR-MSG-3-2-1] Update Exchange Rate Update Whitelist basic checks</h6>
+<p>If any of the following conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li>The caller MUST be authorized to update the update whitelist (only governance proposal are authorized)</li>
+<li>ExchangeRate with id <code>id</code> MUST exist.</li>
+</ul>
+<h6 id="mod-xr-msg-3-2-2-update-exchange-rate-update-whitelist-fee-checks"><a class="toc-anchor" href="#mod-xr-msg-3-2-2-update-exchange-rate-update-whitelist-fee-checks" >§</a> [MOD-XR-MSG-3-2-2] Update Exchange Rate Update Whitelist fee checks</h6>
+<p>Caller MUST have sufficient <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
+<h5 id="mod-xr-msg-3-update-exchange-rate-update-whitelist-execution-of-the-method"><a class="toc-anchor" href="#mod-xr-msg-3-update-exchange-rate-update-whitelist-execution-of-the-method" >§</a> [MOD-XR-MSG-3] Update Exchange Rate Update Whitelist execution of the method</h5>
+<ol>
+<li>Locate and load the corresponding <code>ExchangeRate</code> <code>xr</code>.</li>
+<li>Update <code>update_whitelist</code>.</li>
+<li>Persist state changes.</li>
+</ol>
+<h4 id="mod-xr-qry-1-get-exchange-rate"><a class="toc-anchor" href="#mod-xr-qry-1-get-exchange-rate" >§</a> [MOD-XR-QRY-1] Get Exchange Rate</h4>
+<p>Any <a class="term-reference" href="#term:account">account</a> CAN run this <a class="term-reference" href="#term:query">query</a>.</p>
+<h5 id="mod-xr-qry-1-1-get-exchange-rate-query-parameters"><a class="toc-anchor" href="#mod-xr-qry-1-1-get-exchange-rate-query-parameters" >§</a> [MOD-XR-QRY-1-1] Get Exchange Rate query parameters</h5>
+<ul>
+<li><code>state</code> (boolean, <em>optional</em>): to force state, enabled or disabled</li>
+<li><code>expire_ts</code> (timestamp, <em>optional</em>): return only if expire_ts is greater than <code>expire_ts</code></li>
+</ul>
+<p>AND:</p>
+<p>(</p>
+<ul>
+<li><code>id</code> (uint64) (<em>mandatory</em>): the id of the exchange rate to get</li>
+</ul>
+<p>OR:</p>
+<ul>
+<li><code>base_asset_type</code> (PricingAssetType, <em>mandatory</em>)</li>
+<li><code>base_asset</code> (string, <em>mandatory</em>)</li>
+<li><code>quote_asset_type</code> (PricingAssetType, <em>mandatory</em>)</li>
+<li><code>quote_asset</code> (string, <em>mandatory</em>)<br>
+)</li>
+</ul>
+<h5 id="mod-xr-qry-1-2-get-exchange-rate-query-checks"><a class="toc-anchor" href="#mod-xr-qry-1-2-get-exchange-rate-query-checks" >§</a> [MOD-XR-QRY-1-2] Get Exchange Rate query checks</h5>
+<p>If any of these checks fail, <a class="term-reference" href="#term:query">query</a> MUST fail.</p>
+<ul>
+<li><code>id</code> (uint64) (<em>mandatory</em>): MUST exist,</li>
+</ul>
+<p>OR</p>
+<p>an ExchangeRate entry with <code>base_asset_type</code>, <code>base_asset</code>, <code>quote_asset_type</code>, <code>quote_asset</code> MUST exist.</p>
+<h5 id="mod-xr-qry-1-3-get-exchange-rate-execution-of-the-query"><a class="toc-anchor" href="#mod-xr-qry-1-3-get-exchange-rate-execution-of-the-query" >§</a> [MOD-XR-QRY-1-3] Get Exchange Rate execution of the query</h5>
+<p>If found, returns ExchangeRate entry, else return not found.</p>
+<h4 id="mod-xr-qry-2-list-exchange-rates"><a class="toc-anchor" href="#mod-xr-qry-2-list-exchange-rates" >§</a> [MOD-XR-QRY-2] List Exchange Rates</h4>
+<p>Any <a class="term-reference" href="#term:account">account</a> CAN run this <a class="term-reference" href="#term:query">query</a>. As this method does not modify data, it does not require a <a class="term-reference" href="#term:transaction">transaction</a>.</p>
+<h5 id="mod-xr-qry-2-1-list-exchange-rates-query-parameters"><a class="toc-anchor" href="#mod-xr-qry-2-1-list-exchange-rates-query-parameters" >§</a> [MOD-XR-QRY-2-1] List Exchange Rates query parameters</h5>
+<ul>
+<li><code>base_asset_type</code> (PricingAssetType, <em>optional</em>)</li>
+<li><code>base_asset</code> (string, <em>optional</em>)</li>
+<li><code>quote_asset_type</code> (PricingAssetType, <em>optional</em>)</li>
+<li><code>quote_asset</code> (string, <em>optional</em>)</li>
+<li><code>state</code> (boolean, <em>optional</em>): to force state, enabled or disabled</li>
+<li><code>expire_ts</code> (timestamp, <em>optional</em>): return only if expire_ts is greater than <code>expire_ts</code></li>
+</ul>
+<h5 id="mod-xr-qry-2-2-list-exchange-rates-query-checks"><a class="toc-anchor" href="#mod-xr-qry-2-2-list-exchange-rates-query-checks" >§</a> [MOD-XR-QRY-2-2] List Exchange Rates query checks</h5>
+<h5 id="mod-xr-qry-2-3-list-exchange-rates-execution-of-the-query"><a class="toc-anchor" href="#mod-xr-qry-2-3-list-exchange-rates-execution-of-the-query" >§</a> [MOD-XR-QRY-2-3] List Exchange Rates execution of the query</h5>
+<p>If found, returns a list of found ExchangeRates, else return an empty list.</p>
+<h4 id="mod-xr-qry-3-list-module-parameters"><a class="toc-anchor" href="#mod-xr-qry-3-list-module-parameters" >§</a> [MOD-XR-QRY-3] List Module Parameters</h4>
+<p>Anyone CAN run this <a class="term-reference" href="#term:query">query</a>.</p>
+<h5 id="mod-xr-qry-3-1-list-module-parameters-parameters"><a class="toc-anchor" href="#mod-xr-qry-3-1-list-module-parameters-parameters" >§</a> [MOD-XR-QRY-3-1] List Module Parameters parameters</h5>
+<h5 id="mod-xr-qry-3-2-list-module-parameters-query-checks"><a class="toc-anchor" href="#mod-xr-qry-3-2-list-module-parameters-query-checks" >§</a> [MOD-XR-QRY-3-2] List Module Parameters query checks</h5>
+<h5 id="mod-xr-qry-3-3-list-module-parameters-execution-of-the-query"><a class="toc-anchor" href="#mod-xr-qry-3-3-list-module-parameters-execution-of-the-query" >§</a> [MOD-XR-QRY-3-3] List Module Parameters execution of the query</h5>
+<p>Return the list of the existing parameters and their values.</p>
 <h3 id="mixed-queries"><a class="toc-anchor" href="#mixed-queries" >§</a> Mixed Queries</h3>
 <p>Queries that are not tied to a specific module.</p>
 <h4 id="mixed-qry-1-get-account-reputation"><a class="toc-anchor" href="#mixed-qry-1-get-account-reputation" >§</a> [MIXED-QRY-1] Get Account Reputation</h4>
@@ -4241,6 +4381,11 @@ The decision between this method and specifying the amount directly is left to i
 <li><a href="#mod-td-qry-1-get-trust-deposit" >[MOD-TD-QRY-1] Get Trust Deposit</a></li>
 <li><a href="#mod-td-qry-2-list-module-parameters" >[MOD-TD-QRY-2] List Module Parameters</a></li>
 <li><a href="#mod-xr-msg-1-update-exchange-rate" >[MOD-XR-MSG-1] Update Exchange Rate</a></li>
+<li><a href="#mod-xr-msg-2-toggle-exchange-rate-state" >[MOD-XR-MSG-2] Toggle Exchange Rate State</a></li>
+<li><a href="#mod-xr-msg-3-update-exchange-rate-update-whitelist" >[MOD-XR-MSG-3] Update Exchange Rate Update Whitelist</a></li>
+<li><a href="#mod-xr-qry-1-get-exchange-rate" >[MOD-XR-QRY-1] Get Exchange Rate</a></li>
+<li><a href="#mod-xr-qry-2-list-exchange-rates" >[MOD-XR-QRY-2] List Exchange Rates</a></li>
+<li><a href="#mod-xr-qry-3-list-module-parameters" >[MOD-XR-QRY-3] List Module Parameters</a></li>
 </ul>
 </li>
 <li><a href="#mixed-queries" >Mixed Queries</a>
