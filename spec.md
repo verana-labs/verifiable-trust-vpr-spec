@@ -2979,9 +2979,9 @@ To calculate the required beneficiary fees, use "Find Beneficiaries" query metho
 
 - if `verifier_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`. Then use `verifier_perm.verification_fee_exemption` to adjust fees: `beneficiary_fees` = `beneficiary_fees` * (1 - `verifier_perm.verification_fee_exemption`)
 
-Total required `trust_fees` to be paid by account executing the method, including Trust Deposit: (`beneficiary_fees` + percent fees for agents) \* trust deposit percent \* trust unit price:
+Total required `trust_fees` to be paid by account executing the method, including Trust Deposit and agent rewards:
 
-`trust_fees` = `beneficiary_fees`  \* (1 + (`GlobalVariables.user_agent_reward_rate` + `GlobalVariables.wallet_user_agent_reward_rate`)) \* (1 + `GlobalVariables.trust_deposit_rate`) * `GlobalVariables.trust_unit_price`
+`trust_fees` = `beneficiary_fees` \* (1 + `GlobalVariables.user_agent_reward_rate` + `GlobalVariables.wallet_user_agent_reward_rate` + `GlobalVariables.trust_deposit_rate`) \* `GlobalVariables.trust_unit_price`
 
 See [Pay per trust fees](#pay-per-trust-fees) above.
 
@@ -3021,7 +3021,7 @@ define `wallet_user_agent_reward` = 0.
   
   - if `wallet_user_agent_reward` > 0:
     - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
-    - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
+    - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
     - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.grantee`.
     - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.grantee`. Increase `wallet_agent_perm.deposit` by the same value.
 
@@ -3046,7 +3046,7 @@ define `wallet_user_agent_reward` = 0.
   
   - if `wallet_user_agent_reward` > 0:
     - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
-    - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
+    - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
     - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.grantee`.
     - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.grantee`. Increase `wallet_agent_perm.deposit` by the same value.
 
