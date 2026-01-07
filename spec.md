@@ -2441,8 +2441,8 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `verification_fees` (number) (*optional*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
 - `country` (string) (*optional*): Agreed country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country. Can be set only the first time this method is called (cannot be set for renewals).
 - `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `issuance_fee_discount`: (number) (*optional*): if not set default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*optional*): if not set default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 ##### [MOD-PERM-MSG-3-2] Set Permission VP to Validated precondition checks
 
@@ -2921,7 +2921,7 @@ An [[ref: account]] that would like to create or update a `PermissionSession` en
 - `issuer_perm_id` (uint64) (*optional*): the id of the perm od the issuer, if we are dealing with the issuance of a credential.
 - `verifier_perm_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the verification of a credential.
 - `agent_perm_id` (uint64) (*mandatory*): the agent that received the request (credential offer for issuance, presentation request for verification).
-- `wallet_agent_perm_id` (uint64) (*mandatory*): the wallet agent where the credential will be or is stored, if different than agent.
+- `wallet_agent_perm_id` (uint64) (*mandatory*): the wallet agent where the credential will be or is stored, if different than agent. Can be the same perm than `agent_perm_id`.
 
 ##### [MOD-PERM-MSG-10-2] Create or Update Permission Session precondition checks
 
@@ -2995,21 +2995,61 @@ If all precondition checks passed, method is executed.
 
 - use "Find Beneficiaries" above to build `found_perm_set`.
 
+define `user_agent_reward` = 0.
+define `wallet_user_agent_reward` = 0.
+
+> Note: All funds sent to accounts, trust deposits, etc are comming exclusively from account executing the method. Explanations below are to illustrate what must receive the target account, not how it should be done. It's up to implementer to decide how to calculate, which transfers are done, etc
+
 **Credential Issuance**
 
 - if `issuer_perm` is NOT null:
   - for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
-    - transfer `perm.issuance_fees`  \* (1 - `issuer_perm.issuance_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* (1 - `issuer_perm.issuance_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
-    - use [MOD-TD-MSG-1] to increase by `perm.issuance_fees` \* (1 - `issuer_perm.issuance_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `issuer_perm.deposit`.
+    - calculate `perm_total_trust_fees` = `perm.issuance_fees`  \* (1 - `issuer_perm.issuance_fee_exemption`) \* `GlobalVariables.trust_unit_price`
+    - calculate `perm_total_trust_fees_to_td` = `perm_total_trust_fees` \* `GlobalVariables.trust_deposit_rate`
+    - calculate `perm_total_trust_fees_to_account` = `perm_total_trust_fees` - `perm_total_trust_fees_to_td`
+    - update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.user_agent_reward_rate`
+    - update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.wallet_user_agent_reward_rate`
+    - transfer `perm_total_trust_fees_to_account` to `perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `issuer_perm.deposit`.
+
+  - if `user_agent_reward` > 0:
+    - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
+    - calculate `perm_total_trust_fees_ua_to_account` = `user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
+    - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.grantee`. Increase `agent_perm.deposit` by the same value.
+  
+  - if `wallet_user_agent_reward` > 0:
+    - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
+    - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
+    - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.grantee`. Increase `wallet_agent_perm.deposit` by the same value.
 
 **Credential Verification**
 
-- else :
+- else (`verifier_perm` is NOT null):
   - for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
-    - transfer `perm.verification_fees` \* (1 - `verifier_perm.verification_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* (1 - `GlobalVariables.trust_deposit_rate`) to `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* (1 - `verifier_perm.verification_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
-    - use [MOD-TD-MSG-1] to increase by `perm.verification_fees` \* (1 - `verifier_perm.verification_fee_exemption`) \* `GlobalVariables.trust_unit_price` \* `GlobalVariables.trust_deposit_rate` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `verifier_perm.deposit`.
+    - calculate `perm_total_trust_fees` = `perm.verification_fees`  \* (1 - `verifier_perm.verification_fee_exemption`) \* `GlobalVariables.trust_unit_price`
+    - calculate `perm_total_trust_fees_to_td` = `perm_total_trust_fees` \* `GlobalVariables.trust_deposit_rate`
+    - calculate `perm_total_trust_fees_to_account` = `perm_total_trust_fees` - `perm_total_trust_fees_to_td`
+    - update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.user_agent_reward_rate`
+    - update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.wallet_user_agent_reward_rate`
+    - transfer `perm_total_trust_fees_to_account` to `perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `verifier_perm.deposit`.
+
+  - if `user_agent_reward` > 0:
+    - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
+    - calculate `perm_total_trust_fees_ua_to_account` = `user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
+    - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.grantee`. Increase `agent_perm.deposit` by the same value.
+  
+  - if `wallet_user_agent_reward` > 0:
+    - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
+    - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
+    - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.grantee`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.grantee`. Increase `wallet_agent_perm.deposit` by the same value.
+
 
 If new, create entry `PermissionSession` `session`:
 
