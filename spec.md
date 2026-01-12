@@ -1022,8 +1022,8 @@ entity "Permission" as csp {
   +vp_current_deposit: number
   +vp_summary_digest_sri: digest_sri
   +vp_term_requested: timestamp
-  +issuance_fee_exemption: number
-  +verification_fee_exemption: number
+  +issuance_fee_discount: number
+  +verification_fee_discount: number
 }
 
 enum "ValidationState" as valstate {
@@ -2973,11 +2973,11 @@ To calculate the required beneficiary fees, use "Find Beneficiaries" query metho
 
 **Credential Issuance**
 
-- if `issuer_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.issuance_fees`. Then use `issuer_perm.issuance_fee_exemption` to adjust fees: `beneficiary_fees` = `beneficiary_fees` * (1 - `issuer_perm.issuance_fee_exemption`)
+- if `issuer_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.issuance_fees`. Then use `issuer_perm.issuance_fee_discount` to adjust fees: `beneficiary_fees` = `beneficiary_fees` * (1 - `issuer_perm.issuance_fee_discount`)
 
 **Credential Verification**
 
-- if `verifier_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`. Then use `verifier_perm.verification_fee_exemption` to adjust fees: `beneficiary_fees` = `beneficiary_fees` * (1 - `verifier_perm.verification_fee_exemption`)
+- if `verifier_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`. Then use `verifier_perm.verification_fee_discount` to adjust fees: `beneficiary_fees` = `beneficiary_fees` * (1 - `verifier_perm.verification_fee_discount`)
 
 Total required `trust_fees` to be paid by account executing the method, including Trust Deposit: (`beneficiary_fees` + percent fees for agents) \* trust deposit percent \* trust unit price:
 
@@ -3004,7 +3004,7 @@ define `wallet_user_agent_reward` = 0.
 
 - if `issuer_perm` is NOT null:
   - for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
-    - calculate `perm_total_trust_fees` = `perm.issuance_fees`  \* (1 - `issuer_perm.issuance_fee_exemption`) \* `GlobalVariables.trust_unit_price`
+    - calculate `perm_total_trust_fees` = `perm.issuance_fees`  \* (1 - `issuer_perm.issuance_fee_discount`) \* `GlobalVariables.trust_unit_price`
     - calculate `perm_total_trust_fees_to_td` = `perm_total_trust_fees` \* `GlobalVariables.trust_deposit_rate`
     - calculate `perm_total_trust_fees_to_account` = `perm_total_trust_fees` - `perm_total_trust_fees_to_td`
     - update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.user_agent_reward_rate`
@@ -3029,7 +3029,7 @@ define `wallet_user_agent_reward` = 0.
 
 - else (`verifier_perm` is NOT null):
   - for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
-    - calculate `perm_total_trust_fees` = `perm.verification_fees`  \* (1 - `verifier_perm.verification_fee_exemption`) \* `GlobalVariables.trust_unit_price`
+    - calculate `perm_total_trust_fees` = `perm.verification_fees`  \* (1 - `verifier_perm.verification_fee_discount`) \* `GlobalVariables.trust_unit_price`
     - calculate `perm_total_trust_fees_to_td` = `perm_total_trust_fees` \* `GlobalVariables.trust_deposit_rate`
     - calculate `perm_total_trust_fees_to_account` = `perm_total_trust_fees` - `perm_total_trust_fees_to_td`
     - update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.user_agent_reward_rate`
