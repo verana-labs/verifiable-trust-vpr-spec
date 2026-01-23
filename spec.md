@@ -1,4 +1,4 @@
-# Verifiable Public Registry v3 Specification
+# Verifiable Public Registry v4 Specification
 
 **Specification Status:** *Preview*
 
@@ -113,11 +113,7 @@ package "Verifiable Public Registry" as vpr {
 
 ```
 
-Additionally, a [[ref: VPR]] provides a [[ref: DID directory]], a simple repository of service identifiers (DIDs).
-
-Any account registered in the VPR can add a [[ref: DID]] to the [[ref: DID directory]].
-
-This directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: verifiable services]], and index them.
+Permission directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: verifiable services]], and index them.
 
 Indexers may expose this data through APIs for querying the indexed services or use it to build a search engine for querying the database of indexed [[ref: verifiable services]].
 
@@ -134,8 +130,8 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: applicant, applicants]]:
 ~ A [[ref: account]] that starts a [[ref: validation process]].
 
-[[def: controller, controllers]]:
-~ An [[ref: account]] which is the controller of a specific resource in an [[ref: VPR]].
+[[def: authority, authorities]]:
+~ An [[ref: group]] which is the owner of a specific resource in an [[ref: VPR]].
 
 [[def: credential schema, credential schemas]]:
 ~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
@@ -149,17 +145,11 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: decentralized identifier communication, DIDComm]]:
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
 
-[[def: decentralized identifier document, DID Document, DID Documents]]:
-~ A DID Document, as specified in [[spec-norm:DID-CORE]].
-
 [[def: decentralized web nodes, DWN, dwn]]:
 ~ Decentralized web nodes, see [DIF spec](https://identity.foundation/decentralized-web-node/spec/)
 
 [[def: denom]]:
 ~ Native token of a [[ref: VPR]], example: VNA.
-
-[[def: DID Directory, DID directory]]:
-~ A repository of DIDs in a VPR.
 
 [[def: ecosystem, ecosystems]]: a network of interacting entities, both technical and human, that work together to establish and maintain digital trust. It encompasses applications, credentials, governance frameworks, and the underlying technical infrastructure, all designed to facilitate trustworthy interactions.
 
@@ -183,6 +173,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: grantor, grantors]]:
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: trust registry]].
+
+[[def: group, groups]]:
+~ A [[ref: verifiable public registry]] group.
 
 [[def: holder, holders]]:
 ~ A role an entity might perform by possessing one or more verifiable credentials and generating verifiable presentations from them. A holder is often, but not always, a [[ref: subject]] of the verifiable credentials they are holding. Holders store their credentials in credential repositories. Example holders include organizations, persons, things.
@@ -218,7 +211,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ Fees required, in [[ref: denom]], to execute a [[ref: transaction]] in an [[ref: VPR]].
 
 [[def: trust deposit, trust deposits]]:
-~ A financial deposit that is used as a trust guarantee. For a given [[ref: controller]], its trust deposit is increased when running validation process (either as an [[ref: applicant]] or as a [[ref: validator]]), or when registering [[ref: DID]] in the DID directory.
+~ A financial deposit that is used as a trust guarantee. For a given [[ref: authority]], its trust deposit is increased when running validation process (either as an [[ref: applicant]] or as a [[ref: validator]]).
 
 [[def: trust fee, trust fees]]:
 ~ Fees paid by a [[ref: participant]] that are distributed to other [[ref: participants]].
@@ -283,7 +276,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 *This section is non-normative.*
 
-In an [[ref: VPR]], any [[ref: account]] can create (and become the [[ref: controller]] of) a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each `TrustRegistry` entry must provide, at a minimum:
+In an [[ref: VPR]], any [[ref: authority]] can create a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each `TrustRegistry` entry must provide, at a minimum:
 
 - an ecosystem controlled resolvable [[ref: DID]];
 - one or more [[ref: ecosystem governance framework]] document(s);
@@ -310,16 +303,16 @@ object "Trust Registry" as tra #3fbdb6 {
 
 *This section is non-normative.*
 
-[[ref: Credential schemas]] are created and managed by trust registry controller ([[ref: ecosystems]]). Each [[ref: Credential schema]] includes, at a minimum:
+[[ref: Credential schemas]] are created and managed by trust registry authority ([[ref: ecosystems]]). Each [[ref: Credential schema]] includes, at a minimum:
 
 - A **JSON Schema** that defines the structure of the corresponding [[ref: verifiable credential]]
 - A **PermissionManagementMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
   - `OPEN`: `ISSUER` permissions can be created by anyone.
-  - `ECOSYSTEM`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the trust registry controller
+  - `ECOSYSTEM`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the trust registry authority
   - `GRANTOR`: `ISSUER` permissions are granted by one or several [[ref: issuer grantor]](s) (trust registry operator(s) responsible for selecting issuers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
 - A **PermissionManagementMode** for **verification policy**, which determines how `VERIFIER` permissions are granted. Modes include:
   - `OPEN`: `VERIFIER` permissions can be created by anyone.
-  - `ECOSYSTEM`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Trust Registry controller
+  - `ECOSYSTEM`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Trust Registry authority
   - `GRANTOR`: `VERIFIER` permissions are granted by one or several [[ref: verifier grantor]](s) (trust registry operator(s) responsible for selecting verifiers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
 - A **Permission tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
 
@@ -481,30 +474,29 @@ vg --> verifier : granted schema permission
 
 ```
 
-### DID Directory Management
+### DID Indexing
 
 *This section is non-normative.*
 
-The [[ref: DID directory]] is a public database of services that can be used by crawlers to index the metadata associated with [[ref: verifiable services]].
+The Permission registry is a can be used by crawlers to index the metadata associated with [[ref: verifiable services]].
 
-Search engines can iterate over the [[ref: DID directory]] and index [[ref: VSs]] by resolving the service identifier (at the moment a [[ref: DID]], that could be extended in the future), verify if service is a [[ref: verifiable service]], and in such a case extracting their verifiable metadata, such as [[ref: linked-vp]] presented credentials.
+Search engines can iterate over the permissions, and index [[ref: VSs]] by resolving the service identifier (at the moment a [[ref: DID]], that could be extended in the future), verify if service is a [[ref: verifiable service]], and in such a case extracting their verifiable metadata, such as [[ref: linked-vp]] presented credentials.
 
-The [[ref: DID directory]] is particularly important for [[ref: verifiable user agents]], such as social browsers, CDN enabled browsers... However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
+The index is particularly important for [[ref: verifiable user agents]], such as social browsers, CDN enabled browsers... However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
 
-Any [[ref: participant]] can register a [[ref: DID]] in the [[ref: DID directory]] by executing a transaction involving [[ref: network fees]] and requiring [[ref: trust deposit]].
 
 ```plantuml
 
 @startuml
 scale max 800 width
-object "DID Directory" as didd
+object "Permission registry" as didd
 object "Crawler" as crawler #3fbdb6
 object "Index" as index #3fbdb6
 object "VS #1" as dts1 #7677ed
 object "VS #2" as dts2 #7677ed
 object "VUA" as browser #00b0f0
 object "User" as user
-didd <|-- crawler : iterate over DID Directory
+didd <|-- crawler : iterate over Permission registry
 crawler --|> dts1 : resolve DID, get linked-vps, index data
 crawler --|> dts2 : resolve DID, get linked-vps, index data
 browser --|> index: query index
@@ -524,7 +516,6 @@ In a [[ref: VPR]], each [[ref: account]] is associated with a [[ref: trust depos
 
 This [[ref: trust deposit]] is automatically funded through transactions involving **trust operations**, such as:
 
-- Creating trust-related objects int the VPR (e.g., ecosystem trust registries, credential schemas, DIDs in the [[ref: DID directory]])
 - Paying trust fees between participants when enforcing ecosystem governance rules for services, credential issuance, or presentation...
 
 The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
@@ -544,16 +535,16 @@ This system ensures that participation in the trust ecosystem is backed by econo
 
 *This section is non-normative.*
 
-Creating the following objects requires both a contribution to the [[ref: trust deposit]] and the payment of applicable [[ref: network fees]]:
-
-- **Trust Registries**: requires `trust_registry_trust_deposit` trust units, plus associated [[ref: network fees]]  
-- **Credential Schemas**: requires `credential_schema_trust_deposit` trust units, plus associated [[ref: network fees]]  
-- **DID Directory entries**: requires `did_directory_trust_deposit` trust units, plus associated [[ref: network fees]]
-
 The following operations **only require payment of network fees** (no trust deposit is involved):
 
+- **Trust Registries**: requires paying only [[ref: network fees]]  
+- **Credential Schemas**: requires paying only [[ref: network fees]]  
+
+
 - Updating the **governance framework documents** of an ecosystem trust registry  
-- Removing a **DID** from the DID Directory
+- Updating a Credential Schema
+- Updating a Trust Registry
+- ...
 
 #### Validation process trust fees
 
@@ -598,8 +589,8 @@ ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
 ApplicantBrowser --> ValidatorVS: I want to proceed with validation.id=...
 ValidatorVS --> ValidatorVS: load validation with id=...\nand verify the associated validation.perm is referring to me
 ApplicantBrowser <-- ValidatorVS: request proof of control\nof validation.applicant account (blind sign)
-ApplicantBrowser --> ValidatorVS: send blind sign proof of account
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof validation entry, I trust you.
+ApplicantBrowser --> ValidatorVS: send blind sign proof of operator account
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are the operator\nof validation entry, I trust you.
 ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
 ApplicantBrowser --> ValidatorVS: send DID
 ValidatorVS --> ValidatorVS: resolve DID and get pub keys
@@ -949,7 +940,6 @@ entity "TrustRegistry" as tr {
   +created: timestamp
   +modified: timestamp
   +archived: timestamp
-  +deposit: number
   +aka: string
   +int: active_version
   +language: string
@@ -976,7 +966,6 @@ entity "CredentialSchema" as cs {
   +created: timestamp
   +modified: timestamp
   +archived: timestamp
-  +deposit: number
   +json_schema: string
   +issuer_grantor_validation_validity_period: number
   +verifier_grantor_validation_validity_period: number
@@ -994,6 +983,19 @@ enum "PermissionManagementMode" as cspm {
 }
 
 entity "(SDK) Account" as account {
+}
+
+entity "Group" as group {
+}
+
+entity "VprAuthorization" as authz {
+   msg_types: msg_type[]
+   spend_limit: number
+}
+
+entity "VprFeeGrant" as feegrant {
+   msg_types: msg_type[]
+   spend_limit: number
 }
 
 entity "Permission" as csp {
@@ -1021,7 +1023,6 @@ entity "Permission" as csp {
   +vp_current_fees: number
   +vp_current_deposit: number
   +vp_summary_digest_sri: digest_sri
-  +vp_term_requested: timestamp
   +issuance_fee_discount: number
   +verification_fee_discount: number
 }
@@ -1055,14 +1056,6 @@ enum "CredentialSchemaAuthz" as csa {
   UNAUTHORIZED
 }
 
-entity "DidDirectory" as did {
-  *did: string
-  +created: timestamp
-  +modified: timestamp
-  +exp: timestamp
-  +deposit: number
-}
-
 
 entity "GlobalVariables" as gv {
   +trust_unit_price: number
@@ -1074,9 +1067,6 @@ entity "GlobalVariables" as gv {
   +credential_schema_verifier_validation_validity_period_max_days: number
   +credential_schema_holder_validation_validity_period_max_days: timestamp
   +credential_schema_trust_deposit: number
-  +validation_term_requested_timeout_days: number
-  +did_directory_trust_deposit: number
-  +did_directory_grace_period_days: number
   +trust_deposit_reclaim_burn_rate: number
   +trust_deposit_share_value: number
   +trust_deposit_rate:number
@@ -1097,6 +1087,13 @@ entity "TrustDeposit" as td {
   slash_count: number
 }
 
+group --o authz: grantor
+account --o authz: grantee
+
+group --o feegrant: grantor
+account --o feegrant: grantee
+csp --o feegrant: perm_id
+
 csp o-- cspt: type
 csp o-- cs: schema
 csp o-- "0..1" csp: validator_perm_id
@@ -1105,23 +1102,17 @@ cs o-- tr: tr_id
 tr "1" --- "1..n" gfv: versions 
 gfv "1" --- "1..n" gfd: documents 
 
-account --o tr: controller
-account --o csp: grantee
-account --o csp: created_by
-account --o csp: extended_by
-csp o-- "0..1" account: revoked_by
-csp o-- "0..1" account: slashed_by
-csp o-- "0..1" account: repaid_by
+group --o tr: authority
+group --o csp: authority
+group --o csps: authority
 
-csps o-- account: controller
+account --o csp: vs_operator
+
+csps o-- account: vs_operator
 csps o-- csp: agent_perm_id
 
-account --o did: controller
-account --o val: applicant
 valstate --o csp: vp_state
-account  --o td: account
-
-td o-- "0..1" account: last_repaid_by
+group  --o td: owner
 
 @enduml
 
@@ -1133,7 +1124,7 @@ td o-- "0..1" account: last_repaid_by
 
 - `id` (uint64) (*mandatory*): the id of the trust registry.
 - `did` (string) (*mandatory*): the did of the ecosystem.
-- `controller` (account) (*mandatory*): [[ref: account]] that controls this entry.
+- `authority` (group) (*mandatory*): [[ref: group]] that controls this entry.
 - `created` (timestamp) (*mandatory*): timestamp this TrustRegistry has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this TrustRegistry has been modified.
 - `archived` (timestamp) (*mandatory*): timestamp this TrustRegistry has been archived.
@@ -1191,15 +1182,12 @@ td o-- "0..1" account: last_repaid_by
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `type` (PermissionType): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER
 - `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]].
-- `grantee` (account) (*mandatory*): [[ref: account]] this permission refers to (account granted to act as `type` for schema `schema_id`).
+- `authority` (group) (*mandatory*): [[ref: group]] that owns this permission.
+- `vs_operator` (account) (*mandatory*): verifiable service agent account. This is the account that will have the right to create or update permission sessions.
 - `created` (timestamp) (*mandatory*): timestamp this `Permission` has been created.
-- `created_by` (account) (*mandatory*): [[ref: account]] that created this permission.
 - `extended` (timestamp) (*mandatory*): timestamp this `Permission` has been extended.
-- `extended_by` (account) (*mandatory*): [[ref: account]] that extended this permission.
 - `slashed` (timestamp) (*mandatory*): timestamp this `Permission` has been slashed.
-- `slashed_by` (account) (*mandatory*): [[ref: account]] that slashed this permission.
 - `repaid` (timestamp) (*mandatory*): timestamp this `Permission` has been repaid.
-- `repaid_by` (account) (*mandatory*): [[ref: account]] that repaid this permission.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Permission` is effective.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective, null if no time limit has been set for this permission.
 - `modified` (timestamp) (*mandatory*): timestamp this Permission has been modified.
@@ -1210,7 +1198,6 @@ td o-- "0..1" account: last_repaid_by
 - `slashed_deposit` (number) (*mandatory*): part of the deposit that has been slashed.
 - `repaid_deposit` (number) (*mandatory*): part of the slashed deposit that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
-- `revoked_by` (account) (*mandatory*): [[ref: account]] that revoked this permission.
 - `country` (string) (*optional*): country, as an alpha-2 code (ISO 3166), this permission refers to. If null, it means permission is not linked to a specific country.
 - `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Permission` tree.
 - `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED, TERMINATION_REQUESTED.
@@ -1220,7 +1207,6 @@ td o-- "0..1" account: last_repaid_by
 - `vp_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon validation process completion, in [[ref: denom]].
 - `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
 - `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `vp_term_requested` (timestamp) (*optional*): set when [[ref: controller]] requests the termination of this entry.
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
@@ -1229,29 +1215,19 @@ td o-- "0..1" account: last_repaid_by
 `PermissionSession`:
 
 - `id` (uuid) (*mandatory*): session uuid.
-- `controller` (account) (*mandatory*): account that controls the entry.
+- `authority` (group) (*mandatory*): authority that controls the entry.
+- `vs_operator` (account) (*mandatory*): vs agent account that controls the entry (agent crypto account).
 - `agent_perm_id` (uint64) (*mandatory*): permission id of the agent.
 - `modified` (timestamp) (*mandatory*): timestamp this PermissionSession has been modified.
 - `created` (timestamp) (*mandatory*): timestamp this PermissionSession has been created.
 - `authz` (uint64 (Permission id), uint64 (Permission id), uint64 (Permission id))[] (mandatory): permission(s) linked to this session (issuer, verifier, wallet_agent).
-
-### DIDDirectory
-
-`DidDirectory`:
-
-- `did` (string) (*mandatory*) (key): the [[ref: DID]]. MUST conform to [[spec-norm:RFC3986]].
-- `controller` (account) (*mandatory*): [[ref: account]] that created the [[ref: DID]].
-- `created` (timestamp) (*mandatory*): timestamp this [[ref: DID]] has been added.
-- `modified` (timestamp) (*mandatory*): timestamp this [[ref: DID]] has been modified.
-- `exp` (timestamp) (*mandatory*): expiration timestamp.
-- `deposit` (number) (*mandatory*): effective [[ref: trust deposit]] for this [[ref: DID]] (in `denom`)
 
 ### TrustDeposit
 
 `TrustDeposit`:
 
 - `share` (number) (*mandatory*): share of the module total deposit.
-- `account` (account) (*mandatory*) (key): the [[ref: account]]
+- `owner` (group) (*mandatory*) (key): the [[ref: group]]
 - `amount` (number) (*mandatory*): amount of deposit in `denom`.
 - `claimable` (number) (*mandatory*): amount of claimable deposit in `denom`.
 - `slashed_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
@@ -1259,7 +1235,6 @@ td o-- "0..1" account: last_repaid_by
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed.
 - `last_repaid` (timestamp) (*optional*): last time this trust deposit has been slashed.
 - `slash_count` (number) (*optional*): number of times this account has been slashed.
-- `last_repaid_by` (account) (*optional*): [[ref: account]] that repaid the last slash.
 
 ### GlobalVariables
 
@@ -1279,22 +1254,9 @@ td o-- "0..1" account: last_repaid_by
 - `credential_schema_verifier_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an verifier validation can be valid for.
 - `credential_schema_holder_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an [[ref: holder]] validation can be valid for.
 
-**Validation:**
-
-- `validation_term_requested_timeout_days` (number) (*mandatory*): after this number of days, validation applicant can confirm termination of a validation if [[ref: validator]] didn't do it.
-
-**Trust Registry:**
-
-- `trust_registry_trust_deposit` (number) (*mandatory*): default trust deposit value for creating a trust registry, in [[ref: trust units]].
-
-**DID Directory:**
-
-- `did_directory_trust_deposit` (number) (*mandatory*): default trust deposit value, in [[ref: trust units]].
-- `did_directory_grace_period_days` (number) (*mandatory*): default grace period, in days.
 
 **Trust Deposit:**
 
-- `trust_deposit_reclaim_burn_rate` (number) (*mandatory*): percentage of burnt deposit when an account execute a reclaim of capital amount.
 - `trust_deposit_share_value`(number) (*mandatory*): Value of one share of trust deposit, in `denom`. Default an initial value: 1. Increase over time, when yield is produced.
 - `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 20% (0.20)
 - `trust_deposit_max_yield_rate`(number) (*mandatory*): Maximum yearly yield, in percent, that a trust deposit holder can obtain by receiving block rewards.
@@ -1327,7 +1289,7 @@ Get a `TrustRegistry`
   {
     "active_version": 0,
     "aka": "string",
-    "controller": "string",
+    "authority": "string",
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
     "did": "string",
@@ -1361,7 +1323,7 @@ Get a `TrustRegistry`
   {
     "active_version": 0,
     "aka": "string",
-    "controller": "string",
+    "authority": "string",
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
     "did": "string",
@@ -1390,7 +1352,7 @@ Get a `TrustRegistry`
   }, {
     "active_version": 0,
     "aka": "string",
-    "controller": "string",
+    "authority": "string",
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
     "did": "string",
@@ -1430,61 +1392,112 @@ A VPR implementation MUST implement all the following requirements.
 The relative REST path is the path suffix. Implementer can set any prefix, like https://example/verana/tr/v1/get.
 :::
 
-| Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      |
-|--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|
-| Trust Registry                 | Create a Trust Registry                 |                                  | Msg    | [[MOD-TR-MSG-1]](#mod-tr-msg-1-create-new-trust-registry)   |
-|                                | Add Governance Framework Document       |                                  | Msg    | [[MOD-TR-MSG-2]](#mod-tr-msg-2-add-governance-framework-document)   |
-|                                | Increase Active Version                 |                                  | Msg    | [[MOD-TR-MSG-3]](#mod-tr-msg-3-increase-active-governance-framework-version)   |
-|                                | Update Trust Registry                   |                                  | Msg    | [[MOD-TR-MSG-4]](#mod-tr-msg-4-update-trust-registry)   |
-|                                | Archive Trust Registry                  |                                  | Msg    | [[MOD-TR-MSG-5]](#mod-tr-msg-5-archive-trust-registry)   |
-|                                | Update TR Module Parameters             |                                 | Msg    | [[MOD-TR-MSG-6]](#mod-tr-msg-6-update-module-parameters)   |
-|                                | Get Trust Registry                      | /tr/v1/get                  | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-1-get-trust-registry)   |
-|                                | List Trust Registries                   | /tr/v1/list                 | Query  | [[MOD-TR-QRY-2]](#mod-tr-qry-2-list-trust-registries)   |
-|                                | List TR Module Parameters               | /tr/v1/params                 | Query  | [[MOD-TR-QRY-3]](#mod-tr-qry-3-list-module-parameters)   |
-| Credential Schema              | Create a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |
-|                                | Update a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |
-|                                | Archive Credential Schema               |                                 | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |
-|                                | Update CS Module Parameters             |                                 | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |
-|                                | List Credential Schemas                 | /cs/v1/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |
-|                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |
-|                                | Render Json Schema                      | /cs/v1/js                   | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |
-|                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-TR-QRY-3]](#mod-cs-qry-4-list-module-parameters)   |
-| Permission                     | Start Permission VP                     |                                 | Msg    | [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp)    |
-|                                | Renew a Permission VP                   |                                 | Msg    | [[MOD-PERM-MSG-2]](#mod-perm-msg-2-renew-permission-vp)    |
-|                                | Set Permission VP to Validated          |                                 | Msg    | [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated)    |
-|                                | Cancel Permission VP Last Request       |                                 | Msg    | [[MOD-PERM-MSG-6]](#mod-perm-msg-6-cancel-permission-vp-last-request)    |
-|                                | Create Root Permission                  |                                 | Msg    | [[MOD-PERM-MSG-7]](#mod-perm-msg-7-create-root-permission)   |
-|                                | Extend Permission                       |                                 | Msg    | [[MOD-PERM-MSG-8]](#mod-perm-msg-8-extend-permission)  |
-|                                | Revoke Permission                       |                                 | Msg    | [[MOD-PERM-MSG-9]](#mod-perm-msg-9-revoke-permission)  |
-|                                | Create or update Permission Session     |                                 | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-create-or-update-permission-session)  |
-|                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |
-|                                | Slash Permission Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-12]](#mod-perm-msg-12-slash-permission-trust-deposit) |
-|                                | Repay Permission Slashed Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-13]](#mod-perm-msg-13-repay-permission-slashed-trust-deposit) |
-|                                | Create Permission                |                                     | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-create-permission) |
-|                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |
-|                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |
-|                                | Find Beneficiaries                      | /perm/v1/beneficiaries       | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-find-beneficiaries)  |
-|                                | Get Permission Session                  | /perm/v1/get_session         | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-5-get-permissionsession) |
-|                                | List Permission Module Parameters     |                                 | Query    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |
-|                                | List Permission Sessions     |                                 | Query    | [[MOD-PERM-QRY-7]](#mod-perm-qry-7-list-permission-sessions)   |
-| DID Directory                  | Add a DID                               |                                  | Msg    | [[MOD-DD-MSG-1]](#mod-dd-msg-1-add-a-did)   |
-|                                | Renew a DID                             |                                  | Msg    | [[MOD-DD-MSG-2]](#mod-dd-msg-2-renew-a-did)   |
-|                                | Remove a DID                            |                                  | Msg    | [[MOD-DD-MSG-3]](#mod-dd-msg-3-remove-a-did)   |
-|                                | Touch a DID                             |                                  | Msg    | [[MOD-DD-MSG-4]](#mod-dd-msg-4-touch-a-did)   |
-|                                | Update TD Module Parameters             |                                  | Msg    | [[MOD-DD-MSG-5]](#mod-dd-msg-5-update-module-parameters)   |
-|                                | List DIDs                               | /dd/v1/list                 | Query  | [[MOD-DD-QRY-1]](#mod-dd-qry-1-list-dids)   |
-|                                | Get a DID                               | /dd/v1/get                  | Query  | [[MOD-DD-QRY-2]](#mod-dd-qry-2-get-a-did)   |
-|                                | List DD Module Parameters               | /dd/v1/params                 | Query  | [[MOD-DD-QRY-3]](#mod-dd-qry-3-list-module-parameters)   |
-| Trust Deposit                  | Adjust Trust Deposit                    |                                  | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-adjust-trust-deposit)   |
-|                                | Reclaim Trust Deposit Yield         |                                  | Msg    | [[MOD-TD-MSG-2]](#mod-td-msg-2-reclaim-trust-deposit-yield)   |
-|                                | Reclaim Trust Deposit                   |                                  | Msg    | [[MOD-TD-MSG-3]](#mod-td-msg-3-reclaim-trust-deposit)   |
-|                                | Update TD Module Parameters             |                               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |
-|                                | Slash Trust Deposit             |                                       | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |
-|                                | Repay Slashed Trust Deposit          |                                       | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)   |
-|                                | Burn Ecosystem Slashed Trust Deposit          |                                           | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit)   |
-|                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |
-|                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |
-| Mixed Modules                               | Get Account Reputation               | /mx/v1/reputation                 | Query  | [[MIXED-QRY-1]](#mixed-qry-1-get-account-reputation)   |
+### Authorization and Fee Grants
+
+#### Delegable Module Messages
+
+Most of VPR messages (Msg) have delegation support that works the following way.
+
+These messages MUST includes two signers:
+
+- `authority` (group): (Signer). The `authority` is the `group` that is the owner of the created/manipulated resource. It is a signer through an authorization that has been granted to an `account`, the `operator`.
+- `operator` (account): (Signer). The `account` that executes the Msg. It is a signer too.
+
+Using two signers provide a way of:
+
+- knowing, in the Msg, the authenticated `authority` AND `operator`.
+- moving funds from the `authority` account AND/OR from the `operator` account.
+
+For executing these messages:
+
+- the operator `account` MUST have an authorization from the `authority` `group` for the given type of Message.
+
+An `account` would not necessarily be delegated authorization for all message types. It's up to the `authority` `group` to decide which `account` can do what.
+
+- Authorizations will be granted to individual `account`s through **group proposals**.
+- Authorizations MUST include an optional `spend_limit` and an optional `expire` date.
+
+
+#### Not Delegable Module Messages
+
+Message that just specify an authority:
+
+- `authority` (group): (Signer). The `authority` is the `group` that is the owner of the manipulated resource.
+
+That means that the message can be executed only through a **group proposal** and is not delegable.
+
+#### Governance Signed Modules Messages
+
+Messages that can be executed only through a **governance proposal**.
+
+#### Fee Grants
+
+An `authority` may want its `operator`s to pay **network fees** with the `authority` funds.
+
+Like authorizations, Fee Grants MUST be granted by **group proposal**, for a specific list of **delegable module messages**, to a selected `operator`.
+
+#### Examples
+
+An authority `authorityABC` wants to authorize operator `accountABC` the execution of the [mod-perm-msg-10-create-or-update-permission-session](#mod-perm-msg-10-create-or-update-permission-session) message. Additionally, authority would like to grant `accountABC` the payment of the fees for the execution of this type of message.
+
+`authorityABC` MUST:
+
+- create an authorization from `authorityABC` to `accountABC` for [mod-perm-msg-10-create-or-update-permission-session](#mod-perm-msg-10-create-or-update-permission-session) message type, with a spend limit `spend_limit`.
+- create a fee grant from `authorityABC` to `accountABC` for [mod-perm-msg-10-create-or-update-permission-session](#mod-perm-msg-10-create-or-update-permission-session) message type, for permission `perm_id`, with a spend limit `fee_spend_limit`.
+
+### Method List
+
+
+| Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      | Signers |
+|--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
+| Trust Registry                 | Create a Trust Registry                 |                                  | Msg    | [[MOD-TR-MSG-1]](#mod-tr-msg-1-create-new-trust-registry)   | authority, operator |
+|                                | Add Governance Framework Document       |                                  | Msg    | [[MOD-TR-MSG-2]](#mod-tr-msg-2-add-governance-framework-document)   |authority, operator |
+|                                | Increase Active Version                 |                                  | Msg    | [[MOD-TR-MSG-3]](#mod-tr-msg-3-increase-active-governance-framework-version)   |authority, operator |
+|                                | Update Trust Registry                   |                                  | Msg    | [[MOD-TR-MSG-4]](#mod-tr-msg-4-update-trust-registry)   |authority, operator |
+|                                | Archive Trust Registry                  |                                  | Msg    | [[MOD-TR-MSG-5]](#mod-tr-msg-5-archive-trust-registry)   |authority, operator |
+|                                | Update TR Module Parameters             |                                 | Msg    | [[MOD-TR-MSG-6]](#mod-tr-msg-6-update-module-parameters)   |governance proposal |
+|                                | Get Trust Registry                      | /tr/v1/get                  | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-1-get-trust-registry)   |N/A |
+|                                | List Trust Registries                   | /tr/v1/list                 | Query  | [[MOD-TR-QRY-2]](#mod-tr-qry-2-list-trust-registries)   |N/A |
+|                                | List TR Module Parameters               | /tr/v1/params                 | Query  | [[MOD-TR-QRY-3]](#mod-tr-qry-3-list-module-parameters)   |N/A |
+| Credential Schema              | Create a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |authority, operator |
+|                                | Update a Credential Schema              |                                 | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |authority, operator |
+|                                | Archive Credential Schema               |                                 | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |authority, operator |
+|                                | Update CS Module Parameters             |                                 | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |governance proposal |
+|                                | List Credential Schemas                 | /cs/v1/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |N/A  |
+|                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |N/A  |
+|                                | Render Json Schema                      | /cs/v1/js                   | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |N/A  |
+|                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-TR-QRY-3]](#mod-cs-qry-4-list-module-parameters)   |N/A  |
+| Permission                     | Start Permission VP                     |                                 | Msg    | [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp)    |authority, operator |
+|                                | Renew a Permission VP                   |                                 | Msg    | [[MOD-PERM-MSG-2]](#mod-perm-msg-2-renew-permission-vp)    |authority, operator |
+|                                | Set Permission VP to Validated          |                                 | Msg    | [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated)    |authority, operator |
+|                                | Cancel Permission VP Last Request       |                                 | Msg    | [[MOD-PERM-MSG-6]](#mod-perm-msg-6-cancel-permission-vp-last-request)    |authority, operator |
+|                                | Create Root Permission                  |                                 | Msg    | [[MOD-PERM-MSG-7]](#mod-perm-msg-7-create-root-permission)   |authority, operator |
+|                                | Extend Permission                       |                                 | Msg    | [[MOD-PERM-MSG-8]](#mod-perm-msg-8-extend-permission)  |authority, operator |
+|                                | Revoke Permission                       |                                 | Msg    | [[MOD-PERM-MSG-9]](#mod-perm-msg-9-revoke-permission)  |authority, operator |
+|                                | Create or update Permission Session     |                                 | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-create-or-update-permission-session)  |authority, operator |
+|                                | Update Permission Module Parameters     |                                 | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |governance proposal |
+|                                | Slash Permission Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-12]](#mod-perm-msg-12-slash-permission-trust-deposit) |authority |
+|                                | Repay Permission Slashed Trust Deposit     |                                     | Msg    | [[MOD-PERM-MSG-13]](#mod-perm-msg-13-repay-permission-slashed-trust-deposit) |authority, operator |
+|                                | Create Permission                |                                     | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-create-permission) |authority, operator  |
+|                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |N/A |
+|                                | Get a Permission                        | /prem/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |N/A |
+|                                | Find Beneficiaries                      | /perm/v1/beneficiaries       | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-find-beneficiaries)  |N/A |
+|                                | Get Permission Session                  | /perm/v1/get_session         | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-5-get-permissionsession) |N/A |
+|                                | List Permission Module Parameters     |                                 | Query    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |N/A |
+|                                | List Permission Sessions     |                                 | Query    | [[MOD-PERM-QRY-7]](#mod-perm-qry-7-list-permission-sessions)   |N/A |
+| Trust Deposit                  | Adjust Trust Deposit                    |                                  | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-adjust-trust-deposit)   | |
+|                                | Reclaim Trust Deposit Yield         |                                  | Msg    | [[MOD-TD-MSG-2]](#mod-td-msg-2-reclaim-trust-deposit-yield)   |authority, operator |
+|                                | Update TD Module Parameters             |                               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |governance proposal |
+|                                | Slash Trust Deposit             |                                       | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |governance proposal |
+|                                | Repay Slashed Trust Deposit          |                                       | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)   |authority, operator |
+|                                | Burn Ecosystem Slashed Trust Deposit          |                                           | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit)   | |
+|                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |N/A |
+|                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |N/A |
+| Delegation  | Grant Fee Allowance         |          | Msg  | [[MOD-DE-MSG-1]](#mod-fg-msg-1-grant-fee-allowance)   |authority, operator|
+|             | Revoke Fee Allowance        |          | Msg  | [[MOD-DE-MSG-2]](#mod-fg-msg-2-revoke-allowance-from-vs-operator)   |authority, operator|
+|             | Grant Authorization         |          | Msg  | [[MOD-DE-MSG-3]](#mod-fg-msg-1-grant-allowance-to-vs-operator)   |authority, operator|
+|             | Revoke Authorization        |          | Msg  | [[MOD-DE-MSG-4]](#mod-fg-msg-2-revoke-allowance-from-vs-operator)   |authority, operator|
+| Mixed Modules                               | Get Account Reputation               | /mx/v1/reputation                 | Query  | [[MIXED-QRY-1]](#mixed-qry-1-get-account-reputation)   |N/A |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -1494,12 +1507,14 @@ Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR /
 
 #### [MOD-TR-MSG-1] Create New Trust Registry
 
-Any [[ref: account]] CAN execute this method.
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-TR-MSG-1-1] Create New Trust Registry parameters
 
-An [[ref: account]] that would like to create a [[ref: trust registry]] MUST call this method by specifying:
+An authorized `operator` that would like to create a [[ref: trust registry]] MUST call this method by specifying:
 
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `did` (string) (*mandatory*): the did of the ecosystem that is creating the trust registry.
 - `aka` (string) (*optional*): optional additional URI of this trust registry.
 - `language` (string(17)) (*mandatory*): primary language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)) of this trust registry.
@@ -1516,6 +1531,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `aka` (string) (*optional*): optional additional URI of this trust registry. MUST be an [[ref: URI]].
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)).
@@ -1528,14 +1545,8 @@ It is not a problem if several trust registries are created with the same ecosys
 
 ###### [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks
 
-Applicant MUST have an available balance in its [[ref: account]], to cover the following:
+fee payer MUST have an available balance to cover the [[ref: estimated transaction fees]].
 
-- the required [[ref: estimated transaction fees]] in its [[ref: account]].
-- the required `trust_deposit_in_denom`: `GlobalVariables.trust_registry_trust_deposit` * `GlobalVariables.trust_unit_price`.
-
-:::note
-`TrustRegistry` trust deposit is not reclaimable.
-:::
 
 ##### [MOD-TR-MSG-1-3] Create New Trust Registry execution
 
@@ -1543,20 +1554,16 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- use [MOD-TD-MSG-1] to increase by `trust_deposit_in_denom`: `GlobalVariables.trust_registry_trust_deposit` * `GlobalVariables.trust_unit_price`
- the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
-
 - create and persist a new `TrustRegistry` entry `tr`:
 
 - `tr.id` : auto-incremented uint64
 - `tr.did`: `did`
-- `tr.controller`: [[ref: account]] running the method
+- `tr.authority`: `authority`
 - `tr.created`: current timestamp
 - `tr.modified`: `tr.created`
 - `tr.aka`: `aka`
 - `tr.language`: `language`
 - `tr.active_version`: 1
-- `tr.deposit`: `trust_deposit_in_denom`
 
 - create and persist a new `GovernanceFrameworkVersion` entry `gfv`:
 
@@ -1577,12 +1584,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-TR-MSG-2] Add Governance Framework Document
 
-Any [[ref: account]] CAN execute this method.
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-TR-MSG-2-1] Add Governance Framework Document parameters
 
 An [[ref: account]] that would like to add a governance framework document MUST call this method by specifying:
 
+- `authority` (group): the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `tr_id` (uint64) (*mandatory*): the id of the trust registry.
 - `doc_language` (string(2)) (*mandatory*): language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)) of the [[ref: EGF]] document, provided by the [[ref: EGA]].
 - `doc_url` (string) (*mandatory*): URL where the document is published.
@@ -1599,7 +1608,9 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry.
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and `authority` executing the method MUST be the `authority` of the `TrustRegistry` entry.
 - `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` where `gfv.tr_id` is equal to `id` and `gfv.version` = `version`, or `version` MUST be exactly equal to the biggest found `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries found for this `gfv.tr_id` equal to `id`. `version` MUST be greater than the `tr.active_version`.
 - `doc_language` (string(2)) (*mandatory*): MUST be a language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
@@ -1607,7 +1618,7 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-TR-MSG-2-2-2] Add Governance Framework Document fee checks
 
-Account MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
 
 ##### [MOD-TR-MSG-2-3] Add Governance Framework Document execution
 
@@ -1634,12 +1645,14 @@ load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or crea
 
 #### [MOD-TR-MSG-3] Increase Active Governance Framework Version
 
-Any [[ref: account]] CAN execute this method.
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-TR-MSG-3-1] Increase Active Governance Framework Version parameters
 
 An [[ref: account]] that would like to add a governance framework document MUST call this method by specifying:
 
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*): the id of the trust registry.
 
 ##### [MOD-TR-MSG-3-2] Increase Active Governance Framework Version precondition checks
@@ -1650,7 +1663,9 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry.
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and `authority` executing the method MUST be the `authority` of the `TrustRegistry` entry.
 - load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort.
 - find `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `tr.language`. If no document is found (and thus no document exist for the default language of this version for this trust registry), transaction MUST abort.
 
@@ -1668,12 +1683,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-TR-MSG-4] Update Trust Registry
 
-Any [[ref: account]] CAN execute this method.
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-TR-MSG-4-1] Update Trust Registry parameters
 
-An [[ref: account]] that would like to update a [[ref: trust registry]] MUST call this method by specifying:
-
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*): the id of the trust registry.
 - `did` (string) (*mandatory*): the did of the trust registry.
 - `aka` (string) (*optional*): optional additional URI of this trust registry. If null, it means replace existing value with null.
@@ -1686,13 +1701,15 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `id` (uint64) (*mandatory*): a `TrustRegistry` entry `tr` with id `id` MUST exist and account executing the method MUST be the controller of the `TrustRegistry` entry `tr`.
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `id` (uint64) (*mandatory*): a `TrustRegistry` entry `tr` with id `id` MUST exist and `authority` executing the method MUST be the `authority` of the `TrustRegistry` entry `tr`.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `aka` (string) (*optional*): optional additional URI of this trust registry. MUST be an [[ref: URI]] or null.
 
 ###### [MOD-TR-MSG-4-2-2] Update Trust Registry fee checks
 
-Applicant MUST have an available balance in its [[ref: account]], to cover the required [[ref: transaction fees]].
+Fee payer must have available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
 
 ##### [MOD-TR-MSG-4-3] Update Trust Registry execution
 
@@ -1708,12 +1725,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-TR-MSG-5] Archive Trust Registry
 
-Any [[ref: account]] CAN execute this method.
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-TR-MSG-5-1] Archive Trust Registry parameters
 
-An [[ref: account]] that would like to archive or unarchive a [[ref: trust registry]] MUST call this method by specifying:
-
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*) id of the trust registry (*mandatory*);
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
 
@@ -1725,14 +1742,16 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- load `TrustRegistry` `tr` from `id`. `tr.controller` MUST be the account executing the method, else MUST abort.
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- load `TrustRegistry` `tr` from `id`. `tr.authority` MUST be the authority executing the method, else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean.
   - If `archive` is true and `tr.archived` is not null, MUST abort as `TrustRegistry` is already archived.
   - If `archive` is false and `tr.archived` is null, MUST abort as `TrustRegistry` is already not archived.
 
 ###### [MOD-TR-MSG-5-2-2] Archive Trust Registry fee checks
 
-Account MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
 
 ##### [MOD-TR-MSG-5-3] Archive Trust Registry execution
 
@@ -1795,13 +1814,11 @@ return found `TrustRegistry` entry (if any), as well as *all its nested* `Govern
 
 #### [MOD-TR-QRY-2] List Trust Registries
 
-This method is used to [[ref: query]] the [[ref: DID Directory]] [[ref: keeper]]. Returned result MUST be ordered by `TrustRegistry.modified` asc.
-
 ##### [MOD-TR-QRY-2-1] List Trust Registries query parameters
 
 The following parameters are optional:
 
-- `controller` (account) (*optional*): if specified, filter by controller.
+- `authority` (group) (*optional*): if specified, filter by authority.
 - `modified_after` (timestamp) (*optional*): if specified, returns only `TrustRegistry` entries with `TrustRegistry.modified` greater than `modified`.
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
@@ -1846,12 +1863,14 @@ Return the list of the existing parameters and their values.
 
 #### [MOD-CS-MSG-1] Create New Credential Schema
 
-Any [[ref: account]] CAN execute this method.
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-CS-MSG-1-1] Create New Credential Schema parameters
 
 An [[ref: account]] that would like to create a [[ref: credential schema]] MUST call this method by specifying:
 
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `tr_id` id of the trust registry (*mandatory*);
 - `json_schema` the [[ref: Json Schema]] of the credential (*mandatory*).
 - `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
@@ -1869,7 +1888,10 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-CS-MSG-1-2-1] Create New Credential Schema basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `tr_id` MUST represent an existing `TrustRegistry` entry `tr` and `tr.controller` MUST be the account executing the method.
+
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `tr_id` MUST represent an existing `TrustRegistry` entry `tr` and `tr.authority` MUST be the `authority` executing the method.
 - `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] must be a valid https URL that terminates with string `/cs/v1/js/VPR_CREDENTIAL_SCHEMA_ID` as specified in [MOD-CS-QRY-3]. VPR_CREDENTIAL_SCHEMA_ID will be replaced during execution by the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
@@ -1881,23 +1903,13 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-CS-MSG-1-2-2] Create New Credential Schema fee checks
 
-Applicant MUST have an available balance in its [[ref: account]], to cover the following fees:
-
-- the required [[ref: estimated transaction fees]] in its [[ref: account]].
-- the required `trust_deposit_in_denom`: `GlobalVariables.credential_schema_trust_deposit` * `GlobalVariables.trust_unit_price`.
-
-:::note
-Credential Schema trust deposit is not reclaimable.
-:::
+Fee payer MUST have an available balance in its [[ref: account]], to cover the required [[ref: estimated transaction fees]].
 
 ##### [MOD-CS-MSG-1-3] Create New Credential Schema execution
 
 If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- use [MOD-TD-MSG-1] to increase by `trust_deposit_in_denom`: `GlobalVariables.trust_registry_trust_deposit` * `GlobalVariables.trust_unit_price`
- the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
 
 - create and persist a new `CredentialSchema` entry `cs`:
 
@@ -1920,12 +1932,14 @@ If needed, depending on configuration mode, Trust Registry controller MAY need t
 
 #### [MOD-CS-MSG-2] Update Credential Schema
 
-Any [[ref: account]] CAN execute this method.
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-CS-MSG-2-1] Update Credential Schema parameters
 
 An [[ref: account]] that would like to update a [[ref: credential schema]] MUST call this method by specifying:
 
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` id of the credential schema (*mandatory*);
 - `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
 - `verifier_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
@@ -1943,8 +1957,10 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
-- load `TrustRegistry` `tr` from `cs.tr_id`. `tr.controller` MUST be the account executing the method, else MUST abort.
+- load `TrustRegistry` `tr` from `cs.tr_id`. `tr.authority` MUST be the `authority` executing the method, else MUST abort.
 - `issuer_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
 - `issuer_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
@@ -1953,7 +1969,7 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-CS-MSG-2-2-2] Update Credential Schema fee checks
 
-Account MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
 
 ##### [MOD-CS-MSG-2-3] Update Credential Schema execution
 
@@ -1972,12 +1988,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-CS-MSG-3] Archive Credential Schema
 
-Any [[ref: account]] CAN execute this method.
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-CS-MSG-3-1] Archive Credential Schema parameters
 
 An [[ref: account]] that would like to archive or unarchive a [[ref: credential schema]] MUST call this method by specifying:
 
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*) id of the credential schema (*mandatory*);
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
 
@@ -1989,15 +2007,17 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
-- load `TrustRegistry` `tr` from `cs.tr_id`. `tr.controller` MUST be the account executing the method, else MUST abort.
+- load `TrustRegistry` `tr` from `cs.tr_id`. `tr.authority` MUST be the `authority` executing the method, else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean. 
   - If `archive` is true and `cs.archived` is not null, MUST abort as Credential Schema is already archived.
   - If `archive` is false and `cs.archived` is null, MUST abort as Credential Schema is already not archived.
 
 ###### [MOD-CS-MSG-3-2-2] Archive Credential Schema fee checks
 
-Account MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
 
 ##### [MOD-CS-MSG-3-3] Archive Credential Schema execution
 
@@ -2178,7 +2198,7 @@ issuer --> holder: granted schema permission
 
 The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process (or by any account: - for `ISSUER` permissions if issuer_perm_management_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_perm_management_mode is equal to `OPEN`).
 
-A Validation Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: controller]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional fees plus transaction fees.
+A Validation Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: authority]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional validation fees plus transaction fees.
 
 Validation is used by [[ref: applicants]] that want to:
 
@@ -2213,12 +2233,15 @@ Some special unexpected situation may arise and must be mitigated. Examples:
 
 #### [MOD-PERM-MSG-1] Start Permission VP
 
-Any [[ref: account]] CAN execute this method.
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-PERM-MSG-1-1] Start Permission VP parameters
 
 An Applicant that would like to start a permission validation process MUST execute this method by specifying:
 
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
+- `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for ISSUER and VERIFIER PermissionType.
 - `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
 - `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
@@ -2237,6 +2260,9 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `vs_operator` (account): **Required** for ISSUER and VERIFIER PermissionType.
 - `type` (PermissionType) (*mandatory*) MUST be a valid PermissionType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
 - `validator_perm_id` (uint64) (*mandatory*): see [MOD-PERM-MSG-1-2-2](#mod-perm-msg-1-2-2-start-permission-vp-permission-checks).
 - `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
@@ -2292,14 +2318,12 @@ At the end, if a [[ ref: valid permission]] `validator_perm` is not found, [[ref
 
 ###### [MOD-PERM-MSG-1-2-3] Start Permission VP fee checks
 
-Load `Permission` entry `validator_perm` of the selected validator.
+- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
 
-Applicant MUST have an available balance in its [[ref: account]], to cover the following fees:
-
-- the required [[ref: estimated transaction fees]];
-
-- the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
-- the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
+- Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following fees:
+  - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
+  - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
 
 ##### [MOD-PERM-MSG-1-3] Start Permission VP execution
 
@@ -2310,7 +2334,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Permission` entry `validator_perm` of the selected validator.
 - calculate `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
 - calculate `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
-- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
+- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
 - define `now`: current timestamp.
@@ -2318,7 +2342,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - create an persist a new permission entry `applicant_perm`:
 
   - `applicant_perm.id`: auto-incremented uint64.
-  - `applicant_perm.grantee`: [[ref: applicant]]'s [[ref: account]].
+  - `applicant_perm.authority`: `authority`.
+  - `applicant_perm.vs_operator`: `vs_operator`.
   - `applicant_perm.type`: `type`.
   - `applicant_perm.created`: `now`
   - `applicant_perm.modified`: `now`
@@ -2333,7 +2358,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
   - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_denom`.
   - `applicant_perm.vp_summary_digest_sri`: null.
-  - `applicant_perm.vp_term_requested`: null.
   - `applicant_perm.vp_validator_deposit`: 0.
 
 #### Connecting to the VS of the Validator
@@ -2342,11 +2366,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 This action must be initiated by the [[ref: applicant]].
 
-During a validation process, if the associated `validator_perm` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]] or [[ref: DWN]].
+During a validation process, if the associated `validator_perm` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
 
 Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by the [[ref: validator]] to complete one or more of the following tasks:
 
-1. **Prove control** over the [[ref: controller]] [[ref: account]] that initiated the validation process (e.g., via blind signature or cryptographic challenge).
+1. **Prove control** over the `vs_operator` [[ref: account]] specifid in the permission (e.g., via blind signature or cryptographic challenge).
 2. **Provide requested information**, such as filling out forms, submitting documents, or other forms of disclosure as required by the validation [[ref: VS]].
 3. If the requested permission includes a [[ref: VS]] DID, the [[ref: applicant]] should prove control over the corresponding [[ref: DID]] to the validator's [[ref: VS]].
 
@@ -2364,6 +2388,8 @@ For audit or governance purposes, the [[ref: validator]] should register a diges
 
 #### [MOD-PERM-MSG-2] Renew Permission VP
 
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
 *This section is non-normative.*
 
 - Requesting a renewal has no effect on permission expiration or issued credentials.
@@ -2373,8 +2399,8 @@ For audit or governance purposes, the [[ref: validator]] should register a diges
 
 ##### [MOD-PERM-MSG-2-1] Renew Permission VP parameters
 
-An [[ref: account]] [[ref: controller]] of a permission entry that would like to renew a validation process for this permission MUST execute this method by specifying:
-
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission for which applicant would like to renew the validation process;
 
 ##### [MOD-PERM-MSG-2-2] Renew Permission VP precondition checks
@@ -2385,22 +2411,23 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64 and a permission entry with the same id MUST exist.
 
 ###### [MOD-PERM-MSG-2-2-2] Renew Permission VP permission checks
 
-- Load `Permission` entry `applicant_perm`. [[ref: account]] running the operation MUST be `applicant_perm.grantee`, else MUST abort. `applicant_perm` MUST be a [[ref: valid permission]].
+- Load `Permission` entry `applicant_perm`. `authority` running the operation MUST be `applicant_perm.authority`, else MUST abort. `applicant_perm` MUST be a [[ref: valid permission]].
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`. It MUST exist, and be a [[ref: valid permission]], else MUST abort.
 
 ###### [MOD-PERM-MSG-2-2-3] Renew Permission VP fee checks
 
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
 
-Applicant MUST have an available balance in its [[ref: account]], to cover the following fees:
-
-- the required [[ref: estimated transaction fees]];
-- the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
-- the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
+- Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
+- `authority` account MUST have  an available balance in its [[ref: account]], to cover:
+  - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
+  - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
 
 ###### [MOD-PERM-MSG-2-3] Renew Permission VP execution
 
@@ -2412,7 +2439,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
 - calculate `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
 - calculate `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
-- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
+- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
 - define `now`: current timestamp.
@@ -2428,12 +2455,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-PERM-MSG-3] Set Permission VP to Validated
 
-Any [[ref: account]] CAN execute this method.
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-PERM-MSG-3-1] Set Permission VP to Validated parameters
 
 An [[ref: account]] that would like to set a validation entry to VALIDATED MUST execute this method by specifying:
 
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the validation process;
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective, null if no time limit should been set for this permission or if we want it to be aligned with the validation process expiration timestamp calculated by this method.
 - `validation_fees` (number) (*optional*): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals).
@@ -2452,6 +2481,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm.vp_state` MUST be equal to PENDING, else abort.
@@ -2499,7 +2530,7 @@ Now, let's verify `effective_until`:
 ###### [MOD-PERM-MSG-3-2-2] Set Permission VP to Validated validator perms
 
 - load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]].
-- [[ref: account]] running the method MUST be `validator_perm.grantee`.
+- `authority` running the method MUST be `validator_perm.authority`.
 
 *This section is non-normative.*
 
@@ -2507,7 +2538,7 @@ If `validator_perm` is not a [[ ref: valid permission]] (expired, revoked, slash
 
 ###### [MOD-PERM-MSG-3-2-3] Set Permission VP to Validated fee checks
 
-Validator MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
 ##### [MOD-PERM-MSG-3-3] Set Permission VP to Validated execution
 
@@ -2562,9 +2593,9 @@ Update `Permission` `applicant_perm`:
 
 Fees and Trust Deposits:
 
-- transfer the full amount `applicant_perm.vp_current_fees` from escrow [[ref: account]] to validator [[ref: account]] `validator_perm.grantee`;
+- transfer the full amount `applicant_perm.vp_current_fees` from escrow [[ref: account]] to validator `authority` [[ref: account]] `validator_perm.authority`;
 - Calculate `validator_trust_deposit` = `applicant_perm.vp_current_fees` * `GlobalVariables.trust_deposit_rate`;
-- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `validator_trust_deposit` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `validator_trust_deposit`.
+- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `validator_trust_deposit` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `validator_trust_deposit`.
 
 #### [MOD-PERM-MSG-4] Void
 
@@ -2572,12 +2603,14 @@ Fees and Trust Deposits:
 
 #### [MOD-PERM-MSG-6] Cancel Permission VP Last Request
 
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
 At any time, [[ref: applicant]] of a permission validation process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and paid [[ref: trust fees]] are refunded. If `vp_exp` is not null, `vp_state` is set back to VALIDATED, else `vp_state` is set to TERMINATED.
 
 ##### [MOD-PERM-MSG-6-1] Cancel Permission VP Last Request parameters
 
-An [[ref: account]] that would like to set cancel a validation entry MUST execute this method by specifying:
-
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Permission` entry;
 
 ##### [MOD-PERM-MSG-6-2] Cancel Permission VP Last Request precondition checks
@@ -2588,6 +2621,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` with this id. It MUST exist.
 - [[ref: account]] running the [[ref: transaction]] MUST be `applicant_perm.grantee`.
@@ -2595,7 +2630,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PERM-MSG-6-2-2] Cancel Permission VP Last Request fee checks
 
-Account executing the method MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
 ##### [MOD-PERM-MSG-6-3] Cancel Permission VP Last Request execution
 
@@ -2619,16 +2654,20 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-PERM-MSG-7] Create Root Permission
 
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
 This method is used by controllers of Trust Registries. When they create a Credential Schema, they need to create (a) permission(s) of type ECOSYSTEM so that other participants can run validation processes (if schema mode is ECOSYSTEM) or self create their permissions (schema mode set to OPEN).
 
 ##### [MOD-PERM-MSG-7-1] Create Root Permission parameters
 
 An [[ref: account]] that would like to create a `Permission` entry MUST call this method by specifying:
 
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
 - `country` (*optional*).
-- `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
+- `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in trust unit. Default to 0.
@@ -2642,6 +2681,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `effective_from` must be in the future.
@@ -2657,12 +2698,12 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 
 - The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
 - The related `TrustRegistry` entry `tr` is loaded from `cs.tr_id`.
-- [[ref: account]] executing the method MUST be the [[ref: controller]] of `tr`.
+- `authority` executing the method MUST be `tr.authority`.
 - else MUST abort.
 
 ###### [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks
 
-Account MUST have the required [[ref: estimated transaction fees]] available.
+Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ##### [MOD-PERM-MSG-7-3] Create Root Permission execution
 
@@ -2679,9 +2720,8 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.modified` to `now`.
 - `perm.type`: ECOSYSTEM.
 - `perm.did`: `did`.
-- `perm.grantee`: `account` executing the method.
+- `perm.authority`: `authority`.
 - `perm.created`: `now`
-- `perm.created_by`: `account` executing the method.
 - `perm.effective_from`: `effective_from`
 - `perm.effective_until`: `effective_until`
 - `perm.country`: `country`
@@ -2692,16 +2732,18 @@ A new entry `Permission` `perm` MUST be created:
 
 #### [MOD-PERM-MSG-8] Extend Permission
 
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
 This method can be called:
 
-- by the grantee (the trust registry controller), if permission is of type ECOSYSTEM.
-- by the grantee, if it is a self-created permission (schema configuration is open)
-- by a validator (if permission is managed by a VP).
+- by `perm.authority`, if permission is of type ECOSYSTEM.
+- by `perm.authority`, if it is a self-created permission (schema configuration is open)
+- by an `authority` of a validator permission (if permission is managed by a VP).
 
 ##### [MOD-PERM-MSG-8-1] Extend Permission parameters
 
-An [[ref: account]] that would like to extend the effective_until timestamp of a permission MUST call this method by specifying:
-
+- `authority` (group): (Signer) the authority that wants to run this Msg.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission;
 - `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Permission` will be effective.
 
@@ -2713,6 +2755,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm` MUST be a [[ref: valid permission]]
@@ -2724,20 +2768,20 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 1. ECOSYSTEM permissions
 
-- if `applicant_perm.validator_perm_id` is null and `applicant_perm.type` is ECOSYSTEM, [[ref: account]] running the method MUST be `applicant_perm.grantee'.
+- if `applicant_perm.validator_perm_id` is null and `applicant_perm.type` is ECOSYSTEM, `authority` running the method MUST be `applicant_perm.authority`.
 
 2. Self-created permissions
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]] of type ECOSYSTEM. [[ref: account]] running the method MUST be `applicant_perm.grantee`.
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]] of type ECOSYSTEM. `authority` running the method MUST be `applicant_perm.authority`.
 
 3. VP managed permissions
 
 - `effective_until` MUST be lower or equal to `applicant_perm.vp_exp` else MUST abort.
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]]. [[ref: account]] running the method MUST be `validator_perm.grantee`.
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]]. `authority` running the method MUST be `validator_perm.authority`.
 
 ###### [MOD-PERM-MSG-8-2-3] Extend Permission fee checks
 
-Account executing the method MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
 ##### [MOD-PERM-MSG-8-3] Extend Permission execution
 
@@ -2755,16 +2799,18 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-PERM-MSG-9] Revoke Permission
 
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
 This method can only be called:
 
-- by an ancestor (a validator in the permission branch until the root permission (GRANTOR, ECOSYSTEM, OPEN schema mode)).
-- by the grantee (OPEN, GRANTOR, ECOSYSTEM schema mode).
-- by the `TrustRegistry` controller (owner of the credential schema).
+- by an ancestor (`authority` of a validator in the permission branch until the root permission (GRANTOR, ECOSYSTEM, OPEN schema mode)).
+- by the grantee `authority` (OPEN, GRANTOR, ECOSYSTEM schema mode).
+- by the `TrustRegistry` `authority` (owner of the credential schema).
 
 ##### [MOD-PERM-MSG-9-1] Revoke Permission parameters
 
-An [[ref: account]] that would like to extend the effective_until timestamp of a permission MUST call this method by specifying:
-
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission;
 
 ##### [MOD-PERM-MSG-9-2] Revoke Permission precondition checks
@@ -2775,6 +2821,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm` MUST be a [[ref: valid permission]]
@@ -2790,7 +2838,7 @@ if `applicant_perm.validator_perm_id` is defined:
 - set `validator_perm` = `applicant_perm`
 - while `validator_perm.validator_perm_id` is defined, 
   - load `validator_perm` from `validator_perm.validator_perm_id`.
-  - if `validator_perm` is a [[ref: valid permission]] and `validator_perm.grantee` is who is running the method, => return true.
+  - if `validator_perm` is a [[ref: valid permission]] and `validator_perm.authority` is who is running the method, => return true.
 - end
 - return false.
 
@@ -2798,10 +2846,10 @@ if `applicant_perm.validator_perm_id` is defined:
 
 - load `CredentialSchema` `cs` from `applicant_perm.schema_id`
 - load `TrustRegistry` `tr` from `cs.tr_id`
-- if [[ref: account]] running the method is `tr.controller`, return true.
+- if [[ref: account]] running the method is `tr.authority`, return true.
 - else return false.
 
-*Option #3*: executed by `applicant_perm.grantee`: return true.
+*Option #3*: executed by `applicant_perm.authority`: return true.
 
 Example:
 
@@ -2874,9 +2922,10 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Permission` entry `applicant_perm` from `id`.
 - set `applicant_perm.revoked` to `now`
 - set `applicant_perm.modified` to `now`
-- set `applicant_perm.revoked_by` to account executing the method.
 
 #### [MOD-PERM-MSG-10] Create or Update Permission Session
+
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 Any credential exchange that requires issuer or verifier to pay fees implies the creation of a `PermissionSession`.
 
@@ -2917,6 +2966,8 @@ See [[ref: VT spec]].
 
 An [[ref: account]] that would like to create or update a `PermissionSession` entry MUST send a Msg by specifying:
 
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uuid) (*mandatory*): id of the `PermissionSession`.
 - `issuer_perm_id` (uint64) (*optional*): the id of the perm od the issuer, if we are dealing with the issuance of a credential.
 - `verifier_perm_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the verification of a credential.
@@ -2926,6 +2977,10 @@ An [[ref: account]] that would like to create or update a `PermissionSession` en
 ##### [MOD-PERM-MSG-10-2] Create or Update Permission Session precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `id` MUST be a valid uuid. If an entry `existing_entry` with `id` already exist, then  `existing_entry.authority` MUST be equal to `authority` AND `existing_entry.vs_operator` MUST be equal to `operator`, else abort.
 
 if `issuer_perm_id` is null AND `verifier_perm_id` is null, MUST abort.
 
@@ -2937,12 +2992,15 @@ if `issuer_perm_id` is no null:
 - Load `issuer_perm` from `issuer_perm_id`.
 - if `issuer_perm.type` is not ISSUER, abort.
 - if `issuer_perm` is not a [[ref: valid permission]], abort.
+- if `issuer_perm.vs_operator` is not equal to `operator`, abort.
+
 
 if `verifier_perm_id` is no null:
 
 - Load `verifier_perm` from `verifier_perm_id`.
 - if `verifier_perm.type` is not VERIFIER, abort.
 - if `verifier_perm` is not a [[ref: valid permission]], abort.
+- if `verifier_perm.vs_operator` is not equal to `operator`, abort.
 
 agent:
 
@@ -2962,10 +3020,9 @@ we might want to check that credential schema of agent and wallet_agent perms is
 
 ###### [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks
 
-Account MUST have sufficient available balance for:
+- Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]];
 
-- the required [[ref: estimated transaction fees]];
-- the required beneficiary fees and its corresponding trust deposit `trust_fees` as explained below:
+- `authority` account MUST have sufficient available balance for the required beneficiary fees and its corresponding trust deposit `trust_fees` as explained below:
 
 To calculate the required beneficiary fees, use "Find Beneficiaries" query method below to get the set of beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
 
@@ -2979,7 +3036,7 @@ To calculate the required beneficiary fees, use "Find Beneficiaries" query metho
 
 - if `verifier_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`. Then use `verifier_perm.verification_fee_discount` to adjust fees: `beneficiary_fees` = `beneficiary_fees` * (1 - `verifier_perm.verification_fee_discount`)
 
-Total required `trust_fees` to be paid by account executing the method, including Trust Deposit and agent rewards:
+Total required `trust_fees` to be paid by `authority` executing the method, including Trust Deposit and agent rewards:
 
 `trust_fees` = `beneficiary_fees` \* (1 + `GlobalVariables.user_agent_reward_rate` + `GlobalVariables.wallet_user_agent_reward_rate` + `GlobalVariables.trust_deposit_rate`) \* `GlobalVariables.trust_unit_price`
 
@@ -2998,7 +3055,7 @@ If all precondition checks passed, method is executed.
 define `user_agent_reward` = 0.
 define `wallet_user_agent_reward` = 0.
 
-> Note: All funds sent to accounts, trust deposits, etc are comming exclusively from account executing the method. Explanations below are to illustrate what must receive the target account, not how it should be done. It's up to implementer to decide how to calculate, which transfers are done, etc
+> Note: All funds sent to accounts, trust deposits, etc are comming exclusively from `authority` account executing the method. Explanations below are to illustrate what must receive the target account, not how it should be done. It's up to implementer to decide how to calculate, which transfers are done, etc
 
 **Credential Issuance**
 
@@ -3009,21 +3066,21 @@ define `wallet_user_agent_reward` = 0.
     - calculate `perm_total_trust_fees_to_account` = `perm_total_trust_fees` - `perm_total_trust_fees_to_td`
     - update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.user_agent_reward_rate`
     - update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.wallet_user_agent_reward_rate`
-    - transfer `perm_total_trust_fees_to_account` to `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `issuer_perm.deposit`.
+    - transfer `perm_total_trust_fees_to_account` to `perm.authority`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `issuer_perm.deposit`.
 
   - if `user_agent_reward` > 0:
     - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
     - calculate `perm_total_trust_fees_ua_to_account` = `user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
-    - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.grantee`. Increase `agent_perm.deposit` by the same value.
+    - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.authority`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.authority`. Increase `agent_perm.deposit` by the same value.
   
   - if `wallet_user_agent_reward` > 0:
     - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
     - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
-    - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.grantee`. Increase `wallet_agent_perm.deposit` by the same value.
+    - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.authority`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.authority`. Increase `wallet_agent_perm.deposit` by the same value.
 
 **Credential Verification**
 
@@ -3034,27 +3091,27 @@ define `wallet_user_agent_reward` = 0.
     - calculate `perm_total_trust_fees_to_account` = `perm_total_trust_fees` - `perm_total_trust_fees_to_td`
     - update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.user_agent_reward_rate`
     - update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.wallet_user_agent_reward_rate`
-    - transfer `perm_total_trust_fees_to_account` to `perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `perm.grantee`. Increase `perm.deposit` by the same value.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `account` executing the method. Add the same amount to `verifier_perm.deposit`.
+    - transfer `perm_total_trust_fees_to_account` to `perm.authority`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `verifier_perm.deposit`.
 
   - if `user_agent_reward` > 0:
     - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
     - calculate `perm_total_trust_fees_ua_to_account` = `user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
-    - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.grantee`. Increase `agent_perm.deposit` by the same value.
+    - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.authority`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.authority`. Increase `agent_perm.deposit` by the same value.
   
   - if `wallet_user_agent_reward` > 0:
     - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
     - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
-    - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.grantee`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.grantee`. Increase `wallet_agent_perm.deposit` by the same value.
-
+    - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.authority`.
+    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.authority`. Increase `wallet_agent_perm.deposit` by the same value.
 
 If new, create entry `PermissionSession` `session`:
 
 - `session.id`: `id`
-- `session.controller`: account running the method
+- `session.authority`: `authority`
+- `session.vs_operator`: `operator`
 - `session.agent_perm_id`: `agent_perm_id`
 - `session.authz[]`: create and put  (`issuer_perm_id`, `verifier_perm_id`, `wallet_agent_perm_id`).
 - `session.modified:` : `now`
@@ -3102,6 +3159,8 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 - update parameter set value = `value` where key = `key`.
 
 #### [MOD-PERM-MSG-12] Slash Permission Trust Deposit
+
+Only the `authority` .
 
 This method can only be called by either:
 
@@ -3223,6 +3282,8 @@ use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `amou
 
 #### [MOD-PERM-MSG-14] Create Permission
 
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
 This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to `OPEN` for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a permission for being issuer or verifier of a given schema.
 
 :::note
@@ -3233,6 +3294,8 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 
 An [[ref: account]] that would like to create a `Permission` entry MUST call this method by specifying:
 
+- `authority` (group): (Signer) the authority owner of this trust registry.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
 - `type` (PermissionType) (*mandatory*): ISSUER or VERIFIER.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
@@ -3612,293 +3675,6 @@ VPR --> ValidatorAccount: Receive trust fees.
 ApplicantBrowser <-- ValidatorVS: notify permission added for your DID.\nDID can now issue credentials of this schema.
 ```
 
-### DID Directory Module
-
-The [[ref: DID Directory]] is a keystore of [[ref: DIDs]].
-
-#### DID Directory Module Overview
-
-*This section is non-normative.*
-
-Registering a [[ref: DID]] in the [[ref: DID Directory]] makes the [[ref: DID]], its associated credentials, and related services (such as [[ref: VSs]]) **publicly discoverable** by crawlers and indexers.
-
-> ⚠️ Registration is **optional** and **not required** for Trust Resolution.  
-However, it may be useful for certain use cases, for example, a **Social Browser** may rely on the [[ref: DID Directory]] to crawl and index all [[ref: DIDs]] that reference Social Channel [[ref: VSs]], enabling users to search and discover them directly through the app.
-
-The [[ref: DID Directory]] is **open to anyone**, meaning:
-
-- There is **no built-in verification** at the [[ref: VPR]] level to confirm that the registering account actually controls the [[ref: DID]].
-- Since the [[ref: VPR]] does not resolve [[ref: DIDs]], it cannot verify ownership or control.
-
-This implies that a [[ref: DID]] could be registered by someone who is not its legitimate controller, an inherent limitation of the model.  
-That said, the deterrent is economic: why would anyone pay registration fees for a [[ref: DID]] they do not control?
-
-To protect the intent of the actual [[ref: DID]] controller, registration alone does not trigger indexing.  
-Indexers must respect optional **crawler directives** included in the [[ref: DID Document]] (e.g., `index`, `noindex`), ensuring that **control over indexation remains with the [[ref: DID]] controller**, regardless of who registered the DID in the directory.
-
-:::note
-Note that it is possible to register any [[ref: DID]] from any method.
-:::
-
-:::note
-It is not needed to register DIDs that are already present in Trust Registries, Permissions,... as services linked to these DIDs are indexed like if they were registered in the DID Directory.
-:::
-
-#### [MOD-DD-MSG-1] Add a DID
-
-Add a [[ref: DID]] to the DID Directory, with expiration timestamp set to current timestamp + *years* years.
-
-Any [[ref: account]] CAN run this method.
-
-##### [MOD-DD-MSG-1-1] Add a DID transaction parameters
-
-- `did` (string) (*mandatory*): the [[ref: DID]].
-- `years` (tiny number) (*optional*): the number of years we want the entry to be valid for, 1-31 years. Default to 1 year.
-
-##### [MOD-DD-MSG-1-2] Add a DID precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-DD-MSG-1-2-1] Add a DID basic checks
-
-- if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-- `did`: the specified [[ref: DID]] format MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]], and MUST NOT already exist in DID directory.
-- `years`: can be null, but if specified, must be between 1 and 31 inclusive.
-
-###### [MOD-DD-MSG-1-2-2] Add a DID fee checks
-
-Applicant MUST have an available balance (not blocked by trust deposit nor staked) in its [[ref: account]], to cover the following fees:
-
-- the required [[ref: estimated transaction fees]];
-- the required `trust_deposit_in_denom`: `GlobalVariables.trust_unit_price` * `did_directory_trust_deposit` * `years`.
-
-##### [MOD-DD-MSG-1-3] Add a DID execution
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- Recalculate `trust_deposit_in_denom`, as specified above.
-- use [MOD-TD-MSG-1] to increase by `trust_deposit_in_denom` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
-
-- Create DidDirectory entry:
-
-  - set `entry.did` to `did`;
-  - set `entry.controller` to `account`;
-  - set `entry.created` to timestamp of day;
-  - set `entry.modified` to timestamp of day;
-  - set `entry.exp` to timestamp of day + `years` years;
-  - set `entry.deposit` to `trust_deposit_in_denom`
-
-#### [MOD-DD-MSG-2] Renew a DID
-
-Renew a [[ref: DID]], by adding *years* years to current expiration timestamp.
-
-This method MUST be run by controller of the [[ref: DID]] entry.
-
-##### [MOD-DD-MSG-2-1] Renew a DID transaction parameters
-
-- `did` (string) (*mandatory*): the [[ref: DID]].
-- `years` (tiny number) (*optional*): the number of years we want to ad to the current expiration timestamp, 1-31 years. Default to 1 year.
-
-##### [MOD-DD-MSG-2-2] Renew a DID precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-DD-MSG-2-2-1] Renew a DID basic checks
-
-if any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
-
-- `did`: the specified [[ref: DID]] format MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]] and MUST exist in DID directory.
-- `years`: can be null, but if specified, must be between 1 and 31 inclusive.
-- [[ref: account]] executing the [[ref: transaction]] MUST be the `controller` of the DID.
-
-###### [MOD-DD-MSG-2-2-2] Renew a DID fee checks
-
-Applicant MUST have an available balance (not blocked by trust deposit nor staked) in its [[ref: account]], to cover the following fees:
-
-- the required [[ref: estimated transaction fees]];
-- the required `trust_deposit_in_denom`: `GlobalVariables.trust_unit_price` * `did_directory_trust_deposit` * `years`.
-
-##### [MOD-DD-MSG-2-3] Renew a DID execution of the transaction
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- Recalculate `trust_deposit_in_denom`, as specified above.
-- Recalculate `removal_gas_fees`, as specified above.
-- use [MOD-TD-MSG-1] to increase by `trust_deposit_in_denom` the [[ref: trust deposit]] of account running the method and transfer the corresponding amount to `TrustDeposit` module.
-
-- Update DidDirectory entry:
-
-  - set `entry.modified` to timestamp of day;
-  - set `entry.exp` to entry.exp` + `years` years;
-  - set `entry.deposit` to `entry.deposit` + `trust_deposit_in_denom`.
-
-#### [MOD-DD-MSG-3] Remove a DID
-
-Remove a [[ref: DID]] and unlock the corresponding [[ref: trust deposit]].
-
-##### [MOD-DD-MSG-3-1] Remove a DID transaction parameters
-
-- `did` (string) (*mandatory*): the [[ref: DID]].
-
-##### [MOD-DD-MSG-3-2] Remove a DID precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-DD-MSG-3-2-1] Remove a DID basic checks
-
-if any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
-
-- `did`: the specified [[ref: DID]] format MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]], and MUST exist in DID directory.
-- if now() < expireTs + `GlobalVariables.did_directory_grace_period_days` ; then [[ref: account]] running the [[ref: transaction]] MUST be equals to `controller`; else parameter [[ref: account]] CAN be any [[ref: account]].
-
-###### [MOD-DD-MSG-3-2-2] Remove a DID fee checks
-
-Account running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
-
-##### [MOD-DD-MSG-3-3] Remove a DID execution of the transaction
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- load `DidDirectory` entry `dd`.
-
-- use [MOD-TD-MSG-1] to decrease by `dd.deposit` the [[ref: trust deposit]] of `dd.controller` account.
-- remove entry from `DidDirectory`.
-
-#### [MOD-DD-MSG-4] Touch a DID
-
-This method is used to update the `modified` of a given entry so that crawlers will know [[ref: DID]] should be immediately reindexed.
-
-##### [MOD-DD-MSG-4-1] touch a DID transaction parameters
-
-- `did` (string) (*mandatory*): the [[ref: DID]].
-
-##### [MOD-DD-MSG-4-2] Touch a DID precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-DD-MSG-4-2-1] Touch a DID basic checks
-
-- if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-- `did`: the specified [[ref: DID]] format MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]], and MUST exist in DID directory.
-
-###### [MOD-DD-MSG-4-2-2] Touch a DID fee checks
-
-Account running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
-
-##### [MOD-DD-MSG-4-3] Touch a DID execution of the transaction
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Transaction execution MUST perform the following tasks, and rollback if any error occurs.
-
-- update `modified` to timestamp of the day for the selected entry.
-
-#### [MOD-DD-MSG-5] Update Module Parameters
-
-Update Module Parameters.
-
-Can only be executed through a governance proposal.
-
-##### [MOD-DD-MSG-5-1] Update Module Parameters parameters
-
-- `params` (KeySet<String, String>): the parameters to update and their values.
-
-##### [MOD-DD-MSG-5-2] Update Module Parameters precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-DD-MSG-5-2-1] Update Module Parameters basic checks
-
-- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
-
-###### [MOD-DD-MSG-5-2-2] Update Module Parameters fee checks
-
-provided transaction fees MUST be sufficient for execution
-
-##### [MOD-DD-MSG-5-3] Update Module Parameters execution
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-for each parameter `param` <`key`, `value`> in `parameters`:
-
-- update parameter set value = `value` where key = `key`.
-
-
-#### [MOD-DD-QRY-1] List DIDs
-
-This method is used to [[ref: query]] the [[ref: DID Directory]] [[ref: keeper]]. Returned data MUST be ordered by `modified` asc.
-
-##### [MOD-DD-QRY-1-1] List DIDs query parameters
-
-The following parameters are optional:
-
-- `account` (account): if specified, returns only [[ref: DIDs]] controlled by `account`.
-- `modified` (timestamp): if specified, returns only [[ref: DIDs]] changed after `modified`.
-- `expired` (boolean): if specified, show expired services, in and over grace period.
-- `over_grace` (boolean): if specified, show expired services, over grace period.
-- `response_max_size` (small number): default to 64. Max 1,024.
-
-##### [MOD-DD-QRY-1-2] List DIDs query checks
-
-If any of these checks fail, [[ref: query]] MUST fail.
-
-- `response_max_size` must be between 1 and 1,024.
-
-##### [MOD-DD-QRY-1-3] List DIDs execution of the query
-
-If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned.
-
-#### [MOD-DD-QRY-2] Get a DID
-
-This method is used to read a [[ref: DID]] from the [[ref: DID Directory]] [[ref: keeper]]. As this method does not modify data, it does not require a [[ref: transaction]].
-
-##### [MOD-DD-QRY-2-1] Get a DID query parameters
-
-- `did` (string) (*mandatory*): the [[ref: DID]].
-
-##### [MOD-DD-QRY-2-2] Get a DID query checks
-
-`did` MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-
-##### [MOD-DD-QRY-2-3] Get a DID execution of the query
-
-If [[ref: DID]] is found, return the corresponding entry, else empty result is returned.
-
-#### [MOD-DD-QRY-3] List Module Parameters
-
-Anyone CAN run this [[ref: query]].
-
-##### [MOD-DD-QRY-3-2] List Module Parameters parameters
-
-##### [MOD-DD-QRY-3-2] List Module Parameters query checks
-
-##### [MOD-DD-QRY-3-3] List Module Parameters execution of the query
-
-Return the list of the existing parameters and their values.
-
-##### [MOD-DD-QRY-3-4] List Module Parameters API result example
-
-```json
-{
-  "params": {
-    "key1": "value1",
-    "key2": "value2",
-    ...
-    ...
-  }
-}
-```
-
 ### Trust deposit module
 
 #### Trust deposit module overview
@@ -4109,51 +3885,7 @@ For the `TrustDeposit` entry `td` linked to `account`:
 Maybe here the claimed yield should go to the deposit. TBD.
 :::
 
-#### [MOD-TD-MSG-3] Reclaim Trust Deposit
-
-This method is used to reclaim claimable trust deposit value, `td.claimable`. If trust deposit has been slashed and not repaid, method execution MUST abort.
-
-Any account MAY call this method.
-
-In order to discourage user from using this method:
-
-- execution of the method will reduce value of `td.deposit` by subtracting `claimed` and set `td.claimable` to `td.claimable` - `claimed`;
-- `GlobalVariables.trust_deposit_reclaim_burn_rate` * `claimed` will be burned from `account`.
-
-##### [MOD-TD-MSG-3-1] Reclaim Trust Deposit method parameters
-
-- `claimed` (number) (*mandatory*): value to reclaim, in [[ref: denom]].
-
-##### [MOD-TD-MSG-3-2] Reclaim Trust Deposit precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-TD-MSG-3-2-1] Reclaim Trust Deposit basic checks
-
-if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
-
-- `claimed` must be > 0.
-- if `td.slashed_deposit` > 0 and `td.slashed_deposit` < `td.repaid_deposit` => deposit has been slashed and not repaid, so MUST abort.
-- `TrustDeposit` entry `td` MUST exist for this `account`, and `td.claimable` MUST be greater or equal to `claimed`.
-- calculate `required_minimum_deposit` = `td.share` * `GlobalVariables.trust_deposit_share_value`. `required_minimum_deposit` MUST be greater or equal to `td.deposit` - `claimed`, else method MUST abort.
-
-###### [MOD-TD-MSG-3-2-2] Reclaim Trust Deposit fee checks
-
-Account running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
-
-##### [MOD-TD-MSG-3-3] Reclaim Trust Deposit execution of the method
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-For the `TrustDeposit` entry `td` linked to `account`:
-
-- set `td.claimable` to `td.claimable` - `claimed`.
-- set `td.deposit` to `td.deposit` - `claimed`.
-- set `td.share` to `td.share` - `claimed` / `GlobalVariables.trust_deposit_share_value`
-- calculate `to_burn` = `GlobalVariables.trust_deposit_reclaim_burn_rate` * `claimed` from account.
-- calculate `to_transfer` = `claimed` - `to_burn`
-- transfer `to_transfer` from `TrustDeposit` account to `account`.
-- burn `to_burn` from `TrustDeposit` module.
+#### [MOD-TD-MSG-3] Void
 
 #### [MOD-TD-MSG-4] Update Module Parameters
 
@@ -4490,7 +4222,6 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 
 **Credential Schema:**
 
-- `credential_schema_trust_deposit` (number) (*mandatory*): 10 [[ref: trust units]].
 - `credential_schema_schema_max_size` (number) (*mandatory*): 8192.
 - `credential_schema_issuer_grantor_validation_validity_period_max_days` (number) (*mandatory*): 3650.
 - `credential_schema_verifier_grantor_validation_validity_period_max_days` (number) (*mandatory*): 3650.
@@ -4498,22 +4229,8 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `credential_schema_verifier_validation_validity_period_max_days` (number) (*mandatory*): 3650.
 - `credential_schema_holder_validation_validity_period_max_days` (number) (*mandatory*): 3650.
 
-**Validation:**
-
-- `validation_term_requested_timeout_days` (number) (*mandatory*): 7.
-
-**Trust Registry:**
-
-- `trust_registry_trust_deposit` (number) (*mandatory*): 10 [[ref: trust units]].
-
-**DID Directory:**
-
-- `did_directory_trust_deposit` (number) (*mandatory*): 5 [[ref: trust units]].
-- `did_directory_grace_period_days` (number) (*mandatory*): 30.
-
 **Trust Deposit:**
 
-- `trust_deposit_reclaim_burn_rate` (number) (*mandatory*): 0.60.
 - `trust_deposit_share_value`(number) (*mandatory*): 1.
 - `trust_deposit_rate`(number) (*mandatory*): 0.20.
 - `trust_deposit_max_yield_rate`(number) (*mandatory*): 0.20
