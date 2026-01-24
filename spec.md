@@ -4090,19 +4090,13 @@ Return the list of the existing parameters and their values.
 
 #### [MOD-DE-MSG-1] Grant Fee Allowance
 
-- Any authorized `operator` CAN execute this method on behalf of an `authority`.
+This method can only be called directly by the following methods:
 
-This method can be called directly by the following methods with no signer check:
-
-- Create Permission
-- Extend Permission
-- Set Permission VP to Validated
 - Grant Authorization
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
 - `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
-- `operator` (account) (*mandatory*): (Signer) the account authorized by the `authority` to run this Msg.
 - `grantee` (account) (*mandatory*): the account that receives the fee grant from `authority`.
 - `msg_types` (Msg[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
 - `expiration` (timestamp) (*optional*): when the grant expires.
@@ -4139,27 +4133,22 @@ Create (or update if it already exist) FeeGrant `feegrant`:
 
 #### [MOD-DE-MSG-2] Revoke Fee Allowance
 
-- Any authorized `operator` CAN execute this method on behalf of an `authority`.
+This method can only be called directly by the following methods:
 
-This method can be called directly by the following methods with no signer check:
-
-- Revoke Permission
-- Slash Permission Trust Deposit
+- Grant Authorization
 - Revoke Authorization
 
 ##### [MOD-DE-MSG-2-1] Revoke Allowance method parameters
 
-- `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
-- `operator` (account) (*mandatory*): (Signer) the account authorized by the `authority` to run this Msg.
-- `grantee` (account) (*mandatory*): the account that receives the fee grant from `authority`.
+- `authority` (group) (*mandatory*): the authority.
+- `grantee` (account) (*mandatory*): the grantee we want to revoke.
 
 ##### [MOD-DE-MSG-2-2] Revoke Fee Allowance basic checks
 
 MUST abort if one of these conditions fails:
 
-- `authority` (group): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- A FeeGrant entry MUST exist for this (`authority`, `grantee`)
+- `authority` (group) (*mandatory*): MUST be specified.
+- `grantee` (account) (*mandatory*): MUST be specified.
 
 ##### [MOD-DE-MSG-2-3] Revoke Fee Allowance fee checks
 
@@ -4167,7 +4156,7 @@ MUST abort if one of these conditions fails:
 
 ##### [MOD-DE-MSG-2-4] Revoke Fee Allowance execution of the method
 
-Delete FeeGrant entry for this (`authority`, `grantee`).
+If FeeGrant entry for this (`authority`, `grantee`) exist, delete it, else do nothing.
 
 #### [MOD-DE-MSG-3] Grant Authorization
 
