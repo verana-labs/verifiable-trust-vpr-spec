@@ -2599,6 +2599,15 @@ Fees and Trust Deposits:
 - Calculate `validator_trust_deposit` = `applicant_perm.vp_current_fees` * `GlobalVariables.trust_deposit_rate`;
 - Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `validator_trust_deposit` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `validator_trust_deposit`.
 
+If `applicant_perm.type` is ISSUER or VERIFIER: Create authorization for `applicant_perm.vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
+
+- call **Grant Authorization()** with the following parameters:
+  - `authority`: `applicant_perm.authority`
+  - `grantee`: `applicant_perm.vs_operator`
+  - `msg_types`: `CreateOrUpdatePermissionSession`
+  - `expiration`: `applicant_perm.effective_until`
+  - `with_feegrant`: true
+
 #### [MOD-PERM-MSG-4] Void
 
 #### [MOD-PERM-MSG-5] Void
@@ -2794,7 +2803,16 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_perm.effective_until` to `effective_until`
 - set `applicant_perm.extended` to `now`
 - set `applicant_perm.modified` to `now`
-- set `applicant_perm.extended_by` to account executing the method.
+
+
+If `applicant_perm.type` is ISSUER or VERIFIER: Update authorization for `applicant_perm.vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
+
+- call **Grant Authorization()** with the following parameters:
+  - `authority`: `applicant_perm.authority`
+  - `grantee`: `applicant_perm.vs_operator`
+  - `msg_types`: `CreateOrUpdatePermissionSession`
+  - `expiration`: `applicant_perm.effective_until`
+  - `with_feegrant`: true
 
 #### [MOD-PERM-MSG-9] Revoke Permission
 
@@ -2921,6 +2939,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Permission` entry `applicant_perm` from `id`.
 - set `applicant_perm.revoked` to `now`
 - set `applicant_perm.modified` to `now`
+
+If `applicant_perm.type` is ISSUER or VERIFIER: Delete authorization for `applicant_perm.vs_operator`:
+
+- call **Revoke Authorization()** with the following parameters:
+  - `authority`: `applicant_perm.authority`
+  - `grantee`: `applicant_perm.vs_operator`
 
 #### [MOD-PERM-MSG-10] Create or Update Permission Session
 
@@ -3234,6 +3258,13 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_perm.authority`.
 
+
+If `applicant_perm.type` is ISSUER or VERIFIER: Delete authorization for `applicant_perm.vs_operator`:
+
+- call **Revoke Authorization()** with the following parameters:
+  - `authority`: `applicant_perm.authority`
+  - `grantee`: `applicant_perm.vs_operator`
+
 #### [MOD-PERM-MSG-13] Repay Permission Slashed Trust Deposit
 
 This method can only be called by the `authority` that want to repay the deposit of a slashed perm they own. This won't make the perm re-usable: it will be needed for the `authority` associated to this permission to request a new permission, as slashed permissions cannot be revived (same happen for revoked, etc...).
@@ -3362,6 +3393,15 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.verification_fees`: `verification_fees` if specified and `type` is ISSUER, else 0.
 - `perm.deposit`: 0
 - `perm.validator_perm_id`: `ecosystem_perm_id`
+
+Create authorization for `vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
+
+- call **Grant Authorization()** with the following parameters:
+  - `authority`: `authority`
+  - `grantee`: `vs_operator`
+  - `msg_types`: `CreateOrUpdatePermissionSession`
+  - `expiration`: `effective_until`
+  - `with_feegrant`: true
 
 #### [MOD-PERM-QRY-1] List Permissions
 
