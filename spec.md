@@ -985,14 +985,20 @@ entity "(SDK) Account" as account {
 entity "Group" as group {
 }
 
-entity "VprAuthorization" as authz {
+entity "Authorization" as authz {
    msg_types: msg_type[]
    spend_limit: number
 }
 
-entity "VprFeeGrant" as feegrant {
+entity "DenomAmount" as da {
+  denom: string
+  amount: number
+}
+
+entity "FeeGrant" as feegrant {
    msg_types: msg_type[]
-   spend_limit: number
+   expiration: timestamp
+   period: duration
 }
 
 entity "Permission" as csp {
@@ -1099,6 +1105,9 @@ csp o-- cspt: type
 csp o-- cs: schema
 csp o-- "0..1" csp: validator_perm_id
 cs o-- tr: tr_id
+
+feegrant "1" --- "1..n" da
+
 
 tr "1" --- "1..n" gfv: versions 
 gfv "1" --- "1..n" gfd: documents 
@@ -4079,6 +4088,181 @@ Return the list of the existing parameters and their values.
 }
 ```
 
+#### [MOD-DE-MSG-1] Grant Fee Allowance
+
+- Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
+This method can be called directly by the following methods with no signer check:
+
+- Create Permission
+- Extend Permission
+- Set Permission VP to Validated
+- Grant Authorization
+
+##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
+
+- `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account) (*mandatory*): (Signer) the account authorized by the `authority` to run this Msg.
+- `grantee` (account) (*mandatory*): the account that receives the fee grant from `authority`.
+- `msg_types` (Msg[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
+- `expiration` (timestamp) (*optional*): when the grant expires.
+- `spend_limit` (DenomAmount[]) (*optional*): maximum spendable
+- `period` (duration) (*optional*): can be combined with `spend_limit`
+
+##### [MOD-DE-MSG-1-2] Grant Fee Allowance basic checks
+
+if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**.
+- `expiration` (timestamp): if specified, MUST be in the future
+- `spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
+- `period` (duration): if specified MUST be a valid period.
+
+##### [MOD-DE-MSG-1-3] Grant Fee Allowance fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+
+##### [MOD-DE-MSG-1-4] Grant Fee Allowance execution of the method
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+Create (or update if it already exist) FeeGrant `feegrant`:
+
+- set `feegrant.grantor` to `grantor`
+- set `feegrant.grantee` to `grantee`
+- set `feegrant.msg_types` to `msg_types`
+- set `feegrant.expiration` to `expiration`
+- set `feegrant.spend_limit` to `spend_limit`
+- set `feegrant.period` to `period``
+
+#### [MOD-DE-MSG-2] Revoke Fee Allowance
+
+- Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
+This method can be called directly by the following methods with no signer check:
+
+- Revoke Permission
+- Slash Permission Trust Deposit
+- Revoke Authorization
+
+##### [MOD-DE-MSG-2-1] Revoke Allowance method parameters
+
+- `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account) (*mandatory*): (Signer) the account authorized by the `authority` to run this Msg.
+- `grantee` (account) (*mandatory*): the account that receives the fee grant from `authority`.
+
+##### [MOD-DE-MSG-2-2] Revoke Fee Allowance basic checks
+
+MUST abort if one of these conditions fails:
+
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- A FeeGrant entry MUST exist for this (`authority`, `grantee`)
+
+##### [MOD-DE-MSG-2-3] Revoke Fee Allowance fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+
+##### [MOD-DE-MSG-2-4] Revoke Fee Allowance execution of the method
+
+Delete FeeGrant entry for this (`authority`, `grantee`).
+
+#### [MOD-DE-MSG-3] Grant Authorization
+
+- Any authorized `operator` CAN execute this method on behalf of an `authority`.
+- `authority` CAN execute this method alone through a group proposal
+
+This method can be called directly by the following methods with no signer check:
+
+- Create Permission
+- Extend Permission
+- Set Permission VP to Validated
+
+##### [MOD-DE-MSG-3-1] Grant Authorization method parameters
+
+- `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account) (*optional*): (Signer) the account authorized by the `authority` to run this Msg.
+- `grantee` (account) (*mandatory*): the account that receives the authorization from `authority`.
+- `msg_types` (Msg[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
+- `expiration` (timestamp) (*optional*): when the authorization (and its optional feegrant) expires.
+- `authz_spend_limit` (DenomAmount[]) (*optional*): maximum spendable
+- `authz_spend_limit_period` (duration) (*optional*): can be combined with `spend_limit`
+- `with_feegrant` (boolean) (*mandatory*): means this authorization grants feegrant, too
+- `feegrant_spend_limit` (DenomAmount[]) (*optional*): maximum spendable
+- `feegrant_spend_limit_period` (duration) (*optional*): can be combined with `feegrant_spend_limit`
+
+##### [MOD-DE-MSG-3-2] Grant Authorization basic checks
+
+if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**.
+- `expiration` (timestamp): if specified, MUST be in the future
+- `authz_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
+- `authz_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `authz_spend_limit` is not set.
+- `feegrant_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts. Ignored if `with_feegrant` is false.
+- `feegrant_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `feegrant_spend_limit` is not set or if `with_feegrant` is false.
+
+##### [MOD-DE-MSG-3-3] Grant Authorization fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+
+##### [MOD-DE-MSG-3-4] Grant Authorization execution of the method
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+Create (or update if it already exist) Authorization `authz`:
+
+- set `authz.grantor` to `authority`
+- set `authz.grantee` to `grantee`
+- set `authz.msg_types` to `msg_types`
+- set `authz.expiration` to `expiration`
+- set `authz.spend_limit` to `authz_spend_limit`
+- set `authz.period` to `authz_spend_limit_period`
+
+if `with_feegrant` is false:
+
+- call Revoke Fee Allowance (`authority`, `grantee`).
+
+else if `with_feegrant` is true:
+
+- call Grant Fee Allowance (`authority`, `grantee`, `msg_types`, `expiration`, `feegrant_spend_limit`, `feegrant_spend_limit_period`).
+
+#### [MOD-DE-MSG-4] Revoke Authorization
+
+- Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
+This method can be called directly by the following methods with no signer check:
+
+- Revoke Permission
+- Slash Permission Trust Deposit
+
+##### [MOD-DE-MSG-4-1] Revoke Authorization method parameters
+
+- `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account) (*mandatory*): (Signer) the account authorized by the `authority` to run this Msg.
+- `grantee` (account) (*mandatory*): the account that receives the fee grant from `authority`.
+
+##### [MOD-DE-MSG-4-2] Revoke Authorization basic checks
+
+MUST abort if one of these conditions fails:
+
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- An Authorization entry MUST exist for this (`authority`, `grantee`)
+
+##### [MOD-DE-MSG-4-3] Revoke Authorization fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+
+##### [MOD-DE-MSG-4-4] Revoke Authorization execution of the method
+
+- Delete Authorization entry for this (`authority`, `grantee`).
+- call Revoke Fee Allowance (`authority`, `grantee`).
+
 #### [MOD-DI-MSG-1] Store Digest
 
 - Any authorized `operator` CAN execute this method on behalf of an `authority`.
@@ -4086,8 +4270,8 @@ Return the list of the existing parameters and their values.
 
 ##### [MOD-DI-MSG-1-1] Store Digest method parameters
 
-- `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
+- `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account) (*mandatory*): (Signer) the account authorized by the `authority` to run this Msg.
 - `digest_sri` (string) (*mandatory*): digest_sri to store.
 
 ##### [MOD-DI-MSG-1-2] Store Digest precondition checks
@@ -4116,15 +4300,6 @@ Create Digest `digest`:
 
 - set `digest.digest_sri` to digest_sri
 - set `digest.created` to now.
-
-
-
-
-
-
-
-
-
 
 ## Initial Data Requirements
 
