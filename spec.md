@@ -973,6 +973,25 @@ entity "CredentialSchema" as cs {
   +verifier_perm_management_mode: PermissionManagementMode
 }
 
+enum "SchemaAuthorizationPolicyRole" as sapr {
+  ISSUER
+  VERIFIER
+}
+
+
+entity "SchemaAuthorizationPolicy" as sap {
+  *id: uint64
+  +created: timestamp
+  +version: integer
+  +role: sapr
+  +url: string
+  +digest_sri: string
+  +revoked: boolean
+  +effective_from: timestamp
+  effective_until: timestamp
+}
+
+
 enum "PermissionManagementMode" as cspm {
   OPEN
   GRANTOR
@@ -1100,6 +1119,8 @@ csp o-- cs: schema_id
 csp o-- "0..1" csp: validator_perm_id
 cs o-- tr: tr_id
 
+cs o-- "0..n" sap: policies
+
 csps --- "1..n" cspsr : session_records
 
 cspsr  o-- "0..1" csp: issuer_perm_id
@@ -1182,6 +1203,21 @@ group  --o td: authority
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder validation process expires and must be renewed.
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+
+## SchemaAuthorizationPolicy
+
+`SchemaAuthorizationPolicy`:
+
+- `id` (uint64) (*mandatory*): unique identifier of this authorization policy.
+- `schema_id` (uint64) (*mandatory*): id of the `CredentialSchema` this policy applies to.
+- `created` (timestamp) (*mandatory*): timestamp when this policy entry was created.
+- `version` (integer) (*mandatory*): version number of this policy for the given `(schema_id, role)`.
+- `role` (SchemaAuthorizationPolicyRole) (*mandatory*): role this policy applies to (`ISSUER` or `VERIFIER`).
+- `url` (string) (*mandatory*): URL where the policy document is published.
+- `digest_sri` (string) (*mandatory*): SRI hash of the policy document, used to guarantee integrity and immutability.
+- `effective_from` (timestamp) (*mandatory*): timestamp from which this policy version is in force.
+- `effective_until` (timestamp) (*optional*): timestamp until which this policy version is in force, if time-limited.
+- `revoked` (boolean) (*mandatory*): indicates whether this policy version has been revoked and must no longer be used.
 
 ### Permission
 
@@ -2117,6 +2153,146 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
+
+#### [MOD-CS-MSG-5] Create Schema Authorization Policy
+
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
+This message creates a **draft** `SchemaAuthorizationPolicy` for a given `(schema_id, role)`, or overwrites the existing draft policy if one already exists.  
+A draft policy is defined as a policy with `effective_from == null` and MUST NOT be revoked.
+
+Accordingly, if a credential schema defines one or more active policies for the ISSUER or VERIFIER role, the corresponding authority that grants the ISSUER or VERIFIER role for this schema (ISSUER_GRANTOR, VERIFIER_GRANTOR, or ECOSYSTEM, depending on how schema issuer and verifier modes have been configured) MUST issue an IAC or VAC credential to the candidate upon successful completion of the validation process. Refer to the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec) for more information.
+
+##### [MOD-CS-MSG-5-1] Create Schema Authorization Policy parameters
+
+- `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
+- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
+- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
+- `url` (string): URL where the policy document is published (*mandatory*).
+- `digest_sri` (string): SRI digest of the policy document (*mandatory*).
+
+##### [MOD-CS-MSG-5-2] Create Schema Authorization Policy precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CS-MSG-5-2-1] Create Schema Authorization Policy basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `authority`.
+- `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
+- `url` MUST be a non-empty valid URI.
+- `digest_sri` MUST be non-empty.
+- there MUST NOT exist more than one policy for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
+
+###### [MOD-CS-MSG-5-2-2] Create Schema Authorization Policy fee checks
+
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
+
+##### [MOD-CS-MSG-5-3] Create Schema Authorization Policy execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs:
+
+- if a draft policy exists for `(schema_id, role)`:
+  - update the existing policy by setting:
+    - `url = url`
+    - `digest_sri = digest_sri`
+- otherwise, create and persist a new `SchemaAuthorizationPolicy` entry `sap`:
+  - `sap.id`: auto-incremented uint64
+  - `sap.schema_id`: `schema_id`
+  - `sap.role`: `role`
+  - `sap.version`: max existing version for `(schema_id, role)` + 1, or `1` if none exist
+  - `sap.url`: `url`
+  - `sap.digest_sri`: `digest_sri`
+  - `sap.created`: current timestamp
+  - `sap.effective_from`: `null`
+  - `sap.effective_until`: `null`
+  - `sap.revoked`: `false`
+
+#### [MOD-CS-MSG-6] Increase Active Schema Authorization Policy Version
+
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
+This message activates the current draft `SchemaAuthorizationPolicy` for the given `(schema_id, role)` and deactivates any previously active version. Deactivation does not constitute revocation; credentials issued under earlier policies MAY continue to be considered valid.
+
+##### [MOD-CS-MSG-6-1] Increase Active Schema Authorization Policy Version parameters
+
+- `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
+- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
+- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
+
+##### [MOD-CS-MSG-6-2] Increase Active Schema Authorization Policy Version precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CS-MSG-6-2-1] Basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `authority`.
+- exactly one draft policy MUST exist for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
+- the draft policy MUST have non-empty `url` and `digest_sri`.
+
+###### [MOD-CS-MSG-6-2-2] Fee checks
+
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
+
+##### [MOD-CS-MSG-6-3] Increase Active Schema Authorization Policy Version execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks atomically in a [[ref: transaction]]:
+
+- let `draft` be the unique policy with `effective_from == null` and `revoked == false`.
+- let `prev_active` be the active policy for `(schema_id, role)`, if any.
+- set `draft.effective_from = now`.
+- if `prev_active` exists:
+  - set `prev_active.effective_until = now`.
+
+#### [MOD-CS-MSG-7] Revoke Schema Authorization Policy
+
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
+This message revokes a previously enabled `SchemaAuthorizationPolicy` version. Revoked means previously issued credential that refer to this policy are automatically considered revoked.
+
+##### [MOD-CS-MSG-7-1] Revoke Schema Authorization Policy parameters
+
+- `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
+- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
+- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
+- `version` (integer): policy version to revoke (*mandatory*).
+
+##### [MOD-CS-MSG-7-2] Revoke Schema Authorization Policy precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CS-MSG-7-2-1] Basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- a policy MUST exist for `(schema_id, role, version)`.
+- the targeted policy MUST have `effective_from != null` (a policy that has never been enabled MUST NOT be revoked).
+- the targeted policy MUST NOT already be revoked.
+
+###### [MOD-CS-MSG-7-2-2] Fee checks
+
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
+
+##### [MOD-CS-MSG-7-3] Revoke Schema Authorization Policy execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following task in a [[ref: transaction]]:
+
+- set `revoked = true` on the targeted `SchemaAuthorizationPolicy` entry.
 
 #### [MOD-CS-QRY-1] List Credential Schemas
 
