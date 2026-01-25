@@ -302,7 +302,7 @@ object "Trust Registry" as tra #3fbdb6 {
 
 [[ref: Credential schemas]] are created and managed by trust registry authority ([[ref: ecosystems]]). Each [[ref: Credential schema]] includes, at a minimum:
 
-- A **JSON Schema** that defines the structure of the corresponding [[ref: verifiable credential]]
+- A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]]
 - A **PermissionManagementMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
   - `OPEN`: `ISSUER` permissions can be created by anyone.
   - `ECOSYSTEM`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the trust registry authority
@@ -1492,7 +1492,6 @@ An authority `authorityABC` wants to authorize operator `accountABC` the executi
 |                                | Find Beneficiaries                      | /perm/v1/beneficiaries       | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-find-beneficiaries)  |N/A |
 |                                | Get Permission Session                  | /perm/v1/session/get         | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-5-get-permissionsession) |N/A |
 |                                | List Permission Module Parameters     |  /perm/v1/params         | Query    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |N/A |
-|                                | List Permission Sessions     |    /perm/v1/session/list           | Query    | [[MOD-PERM-QRY-7]](#mod-perm-qry-7-list-permission-sessions)   |N/A |
 | Trust Deposit                  | Adjust Trust Deposit                    |   N/A (Tx)                       | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-adjust-trust-deposit)   | module call |
 |                                | Reclaim Trust Deposit Yield         |     N/A (Tx)           | Msg    | [[MOD-TD-MSG-2]](#mod-td-msg-2-reclaim-trust-deposit-yield)   |authority + operator |
 |                                | Update TD Module Parameters             |      N/A (Tx)               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |governance proposal |
@@ -1503,9 +1502,9 @@ An authority `authorityABC` wants to authorize operator `accountABC` the executi
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |N/A |
 | Delegation  | Grant Fee Allowance         |   N/A (Tx)  | Msg  | [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)   |module call|
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
-|             | Grant Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-authorization)   |authority , authority + operator, module call|
-|             | Revoke Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-authorization)   |authority, authority + operator, module call|
-| Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |authority + operator, module call|
+|             | Grant Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-authorization)   |authority (group proposal) OR authority + operator OR module call|
+|             | Revoke Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-authorization)   |authority (group proposal) OR authority + operator OR module call|
+| Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |authority + operator OR module call|
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -1653,8 +1652,6 @@ load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or crea
 Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
 ##### [MOD-TR-MSG-3-1] Increase Active Governance Framework Version parameters
-
-An [[ref: account]] that would like to add a governance framework document MUST call this method by specifying:
 
 - `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
@@ -2629,8 +2626,9 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` with this id. It MUST exist.
-- [[ref: account]] running the [[ref: transaction]] MUST be `applicant_perm.authority`.
+- `authority` running the [[ref: transaction]] MUST be `applicant_perm.authority`.
 - `applicant_perm.vp_state` MUST be PENDING.
+- if `applicant_perm.deposit` has been slashed and not repaid, MUST abort
 
 ###### [MOD-PERM-MSG-6-2-2] Cancel Permission VP Last Request fee checks
 
@@ -2856,7 +2854,7 @@ if `applicant_perm.validator_perm_id` is defined:
 
 - load `CredentialSchema` `cs` from `applicant_perm.schema_id`
 - load `TrustRegistry` `tr` from `cs.tr_id`
-- if [[ref: account]] running the method is `tr.authority`, return true.
+- if `authority` running the method is `tr.authority`, return true.
 - else return false.
 
 *Option #3*: executed by `applicant_perm.authority`: return true.
@@ -3010,6 +3008,7 @@ if `issuer_perm_id` is no null:
 - if `issuer_perm.type` is not ISSUER, abort.
 - if `issuer_perm` is not a [[ref: valid permission]], abort.
 - if `issuer_perm.vs_operator` is not equal to `operator`, abort.
+- if `issuer_perm.authority` is not equal to `authority`, abort.
 - if `digest_sri` is not present or `digest_sri` is not a valid digest SRI, abort.
 
 if `verifier_perm_id` is no null:
@@ -3018,6 +3017,8 @@ if `verifier_perm_id` is no null:
 - if `verifier_perm.type` is not VERIFIER, abort.
 - if `verifier_perm` is not a [[ref: valid permission]], abort.
 - if `verifier_perm.vs_operator` is not equal to `operator`, abort.
+- if `verifier_perm.authority` is not equal to `authority`, abort.
+
 
 agent:
 
@@ -3228,7 +3229,7 @@ if `applicant_perm.validator_perm_id` is defined:
 
 - load `CredentialSchema` `cs` from `applicant_perm.schema_id`
 - load `TrustRegistry` `tr` from `cs.tr_id`
-- if [[ref: account]] running the method is `tr.authority`, return true.
+- if `authority` running the method is `tr.authority`, return true.
 - else return false.
 
 ###### [MOD-PERM-MSG-12-2-3] Slash Permission Trust Deposit fee checks
@@ -3612,24 +3613,6 @@ Return the list of the existing parameters and their values.
 }
 ```
 
-#### [MOD-PERM-QRY-7] List Permission Sessions
-
-Anyone CAN execute this method.
-
-##### [MOD-PERM-QRY-7-1] List Permission Sessions parameters
-
-- `modified_after` (timestamp) (*optional*): show permissions modified after this timestamp.
-- `response_max_size` (small number) (*optional*): default to 64. Min 1, max 1,024.
-
-##### [MOD-PERM-QRY-7-2] List Permission Sessions checks
-
-- `modified_after` (timestamp) (*mandatory*): show permissions modified after this timestamp.
-- `response_max_size` (small number) (*optional*): Must be min 1, max 1,024.
-
-##### [MOD-PERM-QRY-7-3] List Permission Sessions execution
-
-return a list of found entries, or an empty list if nothing found, ordered by `modified` asc.
-
 #### Validation Examples
 
 ##### Getting a Credential from an Authorized Issuer
@@ -3851,7 +3834,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `td.repaid_deposit` to 0.
   - set `td.slash_count` to 0.
 
-- else if `slashed_deposit` > 0 and `repaid_deposit` < `slashed_deposit` => deposit has been slashed and not repaid, so MUST abort.
+- else if `td.slashed_deposit` > 0 and `td.repaid_deposit` < `td.slashed_deposit` => deposit has been slashed and not repaid, so MUST abort.
 
 - else if `augend` > 0:
   
@@ -3907,7 +3890,7 @@ If `claimable_yield` is positive, it can be claimed.
 
 Fee payer running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-TD-MSG-2-3] Reclaim Trust Deposit Yield Value execution of the method
+##### [MOD-TD-MSG-2-3] Reclaim Trust Deposit Yield execution of the method
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
@@ -4069,7 +4052,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 ###### [MOD-TD-MSG-7-2-2] Burn Ecosystem Slashed Trust Deposit fee checks
 
-Account running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]] else [[ref: transaction]] MUST abort.
+Fee payer running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]] else [[ref: transaction]] MUST abort.
 
 ##### [MOD-TD-MSG-7-3] Burn Ecosystem Slashed Trust Deposit execution of the method
 
@@ -4134,7 +4117,7 @@ This method can only be called directly by the following methods:
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
-- `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
+- `authority` (group) (*mandatory*): the authority that grants the fees.
 - `grantee` (account) (*mandatory*): the account that receives the fee grant from `authority`.
 - `msg_types` (Msg[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
 - `expiration` (timestamp) (*optional*): when the grant expires.
@@ -4145,8 +4128,6 @@ This method can only be called directly by the following methods:
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `authority` (group): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
 - `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
@@ -4162,7 +4143,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 Create (or update if it already exist) FeeGrant `feegrant`:
 
-- set `feegrant.grantor` to `grantor`
+- set `feegrant.grantor` to `authority`
 - set `feegrant.grantee` to `grantee`
 - set `feegrant.msg_types` to `msg_types`
 - set `feegrant.expiration` to `expiration`
