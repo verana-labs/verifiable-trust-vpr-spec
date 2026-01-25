@@ -10,7 +10,6 @@ It provides:
 - **Credential Schema Management**: Defining credential types, their governance, and permissions (who can issue/verify them).
 - **Validation Process**: Transparent procedures to authorize issuers, verifiers, and grantors.
 - **Tokenized Trust Model**: A mechanism using tokens to reward trustworthy participants, ensure accountability, and prevent misuse.
-- **DID Directory**: A public listing of DIDs to help discovery and indexing of trusted services.
 
 Its goal is to support open, transparent governance of trust ecosystems and enable global, decentralized identity management.
 
