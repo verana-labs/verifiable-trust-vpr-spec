@@ -89,7 +89,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <p>This specification deals with the Verifiable Public Registry (VPR), a decentralized registry of registries, part of the Verifiable Trust concept.</p>
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:trust-registry">trust registry</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
-<div id="note-543" class="notice note"><a class="notice-link" href="#note-543">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-181" class="notice note"><a class="notice-link" href="#note-181">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
 <h3 id="what-is-a-trust-registry"><a class="toc-anchor" href="#what-is-a-trust-registry" >§</a> What is a Trust Registry?</h3>
@@ -520,7 +520,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-544" class="notice note"><a class="notice-link" href="#note-544">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-182" class="notice note"><a class="notice-link" href="#note-182">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
@@ -532,7 +532,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>A designated <a class="term-reference" href="#term:governance-authority">governance authority</a> is responsible for <strong>enforcing these rules</strong> and, when necessary, <strong>applying financial sanctions</strong> to participants who violate the rules.</p>
-<div id="note-545" class="notice note"><a class="notice-link" href="#note-545">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
+<div id="note-183" class="notice note"><a class="notice-link" href="#note-183">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
 <p>While the <strong>VPR governance framework</strong> defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each <strong>ecosystem</strong> must define its own <strong>EGF</strong> to govern roles, permissions, credential policies, and compliance within its specific domain.</p>
 <p>This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.</p>
 </div>
@@ -540,7 +540,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p>For simplicity, the data model is presented using an <strong>object-relational structure</strong>. However, this representation may not be optimal for all implementation scenarios.</p>
 <p>Implementors are responsible for <strong>adapting the data model</strong> to suit their chosen architecture.<br>
 For example, a <strong>key-value store</strong> may be more appropriate for a <strong>ledger-based implementation</strong> than a relational model.</p>
-<img src="https://www.plantuml.com/plantuml/svg/fLZTRo8t47_dhx1ukckQA2TLLSLJq44ur0jSMOBKLfLbTWTmir-olIIakl-zOtjtyUwQ17HFU6T-dc-Fnzn9nOGgahXtLwzao68W2NiXlztUacSUgLsl1wdYwa3wIr58jO0jbqeS-eH9eWJvhqV8JpmQa8AdwjTVyEigqf-8uUbMVuO2c08aAPu0QafoJKsoY6zuXyn4kEFxBlc9kI9HrO2mK26Ixa58dgMQ7BDqMx0jED3UzwFzamonAKj3k1SiWUTCFAtiPkFCThFtUUCtlzGw88Y3BOXtz8ooi4YGNogApbVayUcg4B7x6V4jugaKlAQYDRKvdmL4UitY8Dn1memDeJpVXCjIzQ_CKYgDfaRAf2n0qArWgSe4tREOHqnX2EqIBQKv29wXkBH8rXXH6sMj-T9jfQuBTPm7tsLnT3QuD0GP2KrOYcdKHK0ne9ZFRqX508fug5aFo6aOTU5MKuL5Glgd46NoyyIaV_vjFCEVoM8uMyuNk1f_dWT_1ilnWrlF7uBHxn_9C0opegnWPjSemorxaHMvBN2zQZA7XTfbWh-Qa5aPI7arLf14Rgawv207zVBlVpH3vf16DEO9LtLO7Q4ZIBDacDHcHSp8YpJPgJrc43u1zm0JNLbczmR0bDaxDi5BpeLnerduf4f_L5Ysg-YOZYe1dkFt8tqJNXI6gaEMCPEx3bL0pdYB29iDs8Qw4JfwVXx6aSVjLdWy2XX2sQv_tGSx35lVeNzN17acdOmV_Q0UbdN6mn6mpvxQlkDlO_S-fvZGjaSvHNtOKH4CDDnX2uOkfFGRkvB7AkI7XH3wo7PyFxBy6sMH94mSgDlNZ-jsN14cmqQ1U-BR1TMTObMdBz3kclf4ruplfaYnHuocimckLiElqz5mEHxXUZbUF4ndm-LqFgEByH-Fuw19nmzl_GVGE0RkDLJmwDAwDqraG3xOC_GpQVv-n1FhjWiJGzifpDBgzboVVYiypNM9RQ5onOgR1i7ZMBVIrNWnlP-QfQNHOvkjUDJNUGdvClywmesrllODhflfQwdMjhpXu_BBV37zowGW60T1bPRfmf0UPmx27GucSRPcyOe9pjOnIDk-xHnqfVIyXqUUAveB7e9RO9Odoc6GsazFEOUrwULCKFtWZ4abVuMtmMTF3KPUn0xoRNaN31HdIdntrhZKiX-MzEw4uiXf7B6kg9DfRJ2m3CAOyOIk2v5IlFmybL91vOu9q0OLRu2CY5DCRVo1Gnoz3Ll7MVY4bZqp4Lcj3hIG622SYb9L8LgodbaS0zR-cxZlhQVHoAgsBoCxubl5HqUxeJIHqsVFePs-xKvUTlQ-yjtsXkExyGsQTcu5ExnTNsTLSosFIgyQ-jei07TJDKNvzxMuk5MFGasE6NdnAZ2ixFhQz5Oq7LkjGy9URMgq9lLlRsu-zJLuG8vNSoKCtpiQf0GA4aPwFUxrSTUr5l3fvWRlfOXXUyI7ROkChqEKQrzzalJqOx63qCDV-T13Y1CKhPRP2LWT7BenzWH3kfn64AsBacRed7RIHChwLyAQx9fhrPboheDSN_L7oRaTV4fph0DHmvexd3ND7mVszty0" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/jLZVRo8t47xVlyBYwTg8A2TLLSLJq44eweLSWOjKLIVBMG_WPdUzihr9I7N_UyVsidXPau1EVS8xytb-UVRpBDVQC6MgF4kkcvLEMGOaPo_ajwihyYousIG954QOBUajLQND7DP26xNj4QQ9KUJVX92V1H-GIXJcrr_mwOBRHyI8OcqVKmNC08gCo04zvQMLvfABbUY8cKetugahVcIXIPOQ1D4dK5h8Oa3GjHLdh5XNR0q1DFc-ZtyYSKF1YXHk5ClXMQh7Us_19RDUFSMoYOSVkeOrg7VyZ6HQvQYl7V7J7KLokgXK5ZvoiKOyrKeqKeoc2UUJ0cxNB5ka6yYPYo7LfuTmtb7zesL1jVCK1Ycqha3HjMA5aOe-iKnmPh24VecHqXAKa6YkgF87hAYlilLyxhRQrva-JeDlPCPF1jU1e2AdEIlm66qJK2medkSNb280JTmsgblKj88wSwlhmYedlME8-l3Bt1t_tPVn37ycy-5iUJV7rVZJtUAlnN9y6_RpXyNeZv_8C4rbLNSmyskq4RQzabNf6zoksifXPJPIYLTNCcy39Qyk2kmmlQPcMu8UaDtoxszE0o-bK6vJkyt8nQxQlFBwqDi82faFyoPUpfmZRiL1KpA7Q0uiC703CB4jvtQl05p__K_1xezgTpYHL_D7E1LU31Iy8zOPqvkEL479n84GLYlmZBjIje1n7PPIP8SqkNzDi8hwyDsm7DbH-DvFuxiub58B4uhgF6X4vPE9Q1GyoSSkgPSKZx0hH0T8hmOhJjCDyZ5q8NMYI56HC52VLahPzxUJx5uLtwYhF6TgIoCaVr14XEYqrT2HOdP13MNSDsUriAcwPiIqNDwk8v4iHjFP15Vtmy_JqN0v7k5wEPxVJcV3vVHkHkVZFx-E5sqvFaIRVG6jdW_leqhmyvhyBGTpIANYZPlen1Bn5BA9Axqd4hVq9kBNxY7zBf4UTixznkbYyNLioVP-F9_UJDtIo-YUY7Sw6kDcGdw_-pp2ZU4rFyda0ylkcHBi8GFjYTXFD1V6JcxuWWf3IoLI23iaRSQ3-jRU_U0KIBLuVGTyyhtkx76srM_RE-FAFz7YkzF0kP7ziALtPuWJxVXZZV16Iq7rXYcmBYeu3i9x2GR7b3QShO2Clmrxo6JwI1KyCyMzrm1QQKmP9n5akXfnOEkPPHbWbxw9-txmEJBohltNY1-hlUDzejtwf1aJkNrB0jdnM-Je9UAlXTWjwZInczIXQOU0_S3Kxqi_5Gr8tVp9Rj0wL064ctO3IdpVWTPkjJE6xFST9s60I5612DciVd5u8-rTNLv-x5dyWEolEZUSEfG36OMsb1KaZj3xTkF7oykYLpClMlQSZBMnfAmzK96EZt1mzc74KEqf-JYkxYpVL3jiqenrFSJrwoqOAxVVBILEJ3GJkJ297rJV0IK9VWit69yqVb2w66t6cYJs-xA3i3DX_Ms8aE1CRJ6P7vhDDf2xX8ueTAXfzO0lbwOIixT7Lv-GBLGDQwiRhNVNBbmp5EmjbtuygiFn2V1MDDTOA_TVW__z3m00" alt="uml diagram">
 <h3 id="trustregistry"><a class="toc-anchor" href="#trustregistry" >§</a> TrustRegistry</h3>
 <p><code>TrustRegistry</code>:</p>
 <ul>
@@ -550,9 +550,8 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this TrustRegistry has been created.</li>
 <li><code>modified</code> (timestamp) (<em>mandatory</em>): timestamp this TrustRegistry has been modified.</li>
 <li><code>archived</code> (timestamp) (<em>mandatory</em>): timestamp this TrustRegistry has been archived.</li>
-<li><code>deposit</code> (number) (<em>mandatory</em>): <a class="term-reference" href="#term:trust-deposit">trust deposit</a> (in <code>denom</code>)</li>
 <li><code>aka</code> (string) (<em>optional</em>): optional additional URI of this trust registry.</li>
-<li><code>language</code> (string(2)) (<em>mandatory</em>): primary language alpha-2 code (ISO 3166) of this trust registry.</li>
+<li><code>language</code> (string) (<em>mandatory</em>): primary language tag (<a path-0="www.ietf.org"path-1="rfc"path-2="rfc1766.txt"href="https://www.ietf.org/rfc/rfc1766.txt" >rfc1766</a>) of this trust registry.</li>
 <li><code>active_version</code> (int): (<em>mandatory</em>) active governance framework version.</li>
 </ul>
 <h3 id="governanceframeworkversion"><a class="toc-anchor" href="#governanceframeworkversion" >§</a> GovernanceFrameworkVersion</h3>
@@ -569,7 +568,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>id</code> (uint64) (<em>mandatory</em>): the id of the schema.</li>
 <li><code>gfv_id</code> (uint64) (<em>mandatory</em>): the id of the <code>GovernanceFrameworkVersion</code> entry.</li>
 <li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this GovernanceFrameworkDocument has been created.</li>
-<li><code>language</code> (string(2)) (<em>mandatory</em>): primary language alpha-2 code (ISO 3166) of this trust registry.</li>
+<li><code>language</code> (string) (<em>mandatory</em>): primary language tag (<a path-0="www.ietf.org"path-1="rfc"path-2="rfc1766.txt"href="https://www.ietf.org/rfc/rfc1766.txt" >rfc1766</a>) of this trust registry.</li>
 <li><code>url</code> (string) (<em>mandatory</em>): URL where the document is published.</li>
 <li><code>digest_sri</code> (string) (<em>mandatory</em>): digest_sri of the document.</li>
 </ul>
@@ -582,7 +581,6 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this CredentialSchema has been created.</li>
 <li><code>modified</code> (timestamp) (<em>mandatory</em>): timestamp this CredentialSchema has been modified.</li>
 <li><code>archived</code> (timestamp) (<em>mandatory</em>): timestamp this CredentialSchema has been archived.</li>
-<li><code>deposit</code> (number) (<em>mandatory</em>): <a class="term-reference" href="#term:trust-deposit">trust deposit</a> (in <code>denom</code>)</li>
 <li><code>json_schema</code> (string) (<em>mandatory</em>): Json Schema used for issuing credentials based on this schema.</li>
 <li><code>issuer_grantor_validation_validity_period</code> (number) (<em>mandatory</em>): number of days after which an issuer grantor validation process expires and must be renewed.</li>
 <li><code>verifier_grantor_validation_validity_period</code> (number) (<em>mandatory</em>): number of days after which a verifier grantor validation process expires and must be renewed.</li>
@@ -622,7 +620,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>vp_validator_deposit</code>: number (<em>optional</em>): accumulated validator trust deposit, in <a class="term-reference" href="#term:denom">denom</a>.</li>
 <li><code>vp_current_fees</code> (number) (<em>mandatory</em>): current action escrowed fees that will be paid to <a class="term-reference" href="#term:validator">validator</a> upon validation process completion, in <a class="term-reference" href="#term:denom">denom</a>.</li>
 <li><code>vp_current_deposit</code> (number) (<em>mandatory</em>): current action trust deposit, in <a class="term-reference" href="#term:denom">denom</a>.</li>
-<li><code>vp_summary_digest_sri</code> (digest_sri) (<em>optional</em>): an optional digest_sri, set by <a class="term-reference" href="#term:validator">validator</a>, of a summary of the information, proofs… provided by the <a class="term-reference" href="#term:applicant">applicant</a>.</li>
+<li><code>vp_summary_digest_sri</code> (string) (<em>optional</em>): an optional digest SRI, set by <a class="term-reference" href="#term:validator">validator</a>, of a summary of the information, proofs… provided by the <a class="term-reference" href="#term:applicant">applicant</a>.</li>
 <li><code>issuance_fee_discount</code>: (number) (<em>mandatory</em>): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.</li>
 <li><code>verification_fee_discount</code>: (number) (<em>mandatory</em>): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.</li>
 </ul>
@@ -631,24 +629,56 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <ul>
 <li><code>id</code> (uuid) (<em>mandatory</em>): session uuid.</li>
 <li><code>authority</code> (group) (<em>mandatory</em>): authority that controls the entry.</li>
-<li><code>vs_operator</code> (account) (<em>mandatory</em>): vs agent account that controls the entry (agent crypto account).</li>
+<li><code>vs_operator</code> (account) (<em>mandatory</em>): verifiable service agent account that controls the entry (agent crypto account).</li>
 <li><code>agent_perm_id</code> (uint64) (<em>mandatory</em>): permission id of the agent.</li>
-<li><code>modified</code> (timestamp) (<em>mandatory</em>): timestamp this PermissionSession has been modified.</li>
 <li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this PermissionSession has been created.</li>
-<li><code>authz</code> (uint64 (Permission id), uint64 (Permission id), uint64 (Permission id))[] (mandatory): permission(s) linked to this session (issuer, verifier, wallet_agent).</li>
+<li><code>modified</code> (timestamp) (<em>mandatory</em>): timestamp this PermissionSession has been modified.</li>
+<li><code>session_records</code> (PermissionSessionRecord[]) (<em>mandatory</em>): session records, for this session.</li>
+</ul>
+<h3 id="permissionsessionrecord"><a class="toc-anchor" href="#permissionsessionrecord" >§</a> PermissionSessionRecord</h3>
+<p><code>PermissionSessionRecord</code>:</p>
+<ul>
+<li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this record has been created.</li>
+<li><code>issuer_perm_id</code> (uint64) (<em>optional</em>): related issuer <code>Permission</code> id (if applicable).</li>
+<li><code>verifier_perm_id</code> (uint64) (<em>optional</em>): related verifier <code>Permission</code> id (if applicable).</li>
+<li><code>wallet_agent_perm_id</code> (uint64) (<em>optional</em>): related wallet agent <code>Permission</code> id (if applicable).</li>
 </ul>
 <h3 id="trustdeposit"><a class="toc-anchor" href="#trustdeposit" >§</a> TrustDeposit</h3>
 <p><code>TrustDeposit</code>:</p>
 <ul>
 <li><code>share</code> (number) (<em>mandatory</em>): share of the module total deposit.</li>
-<li><code>owner</code> (group) (<em>mandatory</em>) (key): the <a class="term-reference" href="#term:group">group</a></li>
-<li><code>amount</code> (number) (<em>mandatory</em>): amount of deposit in <code>denom</code>.</li>
+<li><code>authority</code> (group) (<em>mandatory</em>) (key): the <a class="term-reference" href="#term:group">group</a></li>
+<li><code>deposit</code> (number) (<em>mandatory</em>): amount of deposit in <code>denom</code>.</li>
 <li><code>claimable</code> (number) (<em>mandatory</em>): amount of claimable deposit in <code>denom</code>.</li>
 <li><code>slashed_deposit</code> (number) (<em>optional</em>): amount of slashed deposit in <code>denom</code>.</li>
 <li><code>repaid_deposit</code> (number) (<em>optional</em>): amount of slashed deposit in <code>denom</code>.</li>
 <li><code>last_slashed</code> (timestamp) (<em>optional</em>): last time this trust deposit has been slashed.</li>
 <li><code>last_repaid</code> (timestamp) (<em>optional</em>): last time this trust deposit has been slashed.</li>
 <li><code>slash_count</code> (number) (<em>optional</em>): number of times this account has been slashed.</li>
+</ul>
+<h3 id="denomamount"><a class="toc-anchor" href="#denomamount" >§</a> DenomAmount</h3>
+<ul>
+<li><code>denom</code> (string) (<em>mandatory</em>): token denomination.</li>
+<li><code>amount</code> (number) (<em>mandatory</em>): amount expressed in the given denomination.</li>
+</ul>
+<h3 id="authorization"><a class="toc-anchor" href="#authorization" >§</a> Authorization</h3>
+<ul>
+<li><code>grantor</code> (group) (<em>mandatory</em>): the authority group granting the authorization.</li>
+<li><code>grantee</code> (account) (<em>mandatory</em>): the operator account receiving the authorization.</li>
+<li><code>msg_types</code> (msg_type[]) (<em>mandatory</em>): list of module message types this authorization applies to.</li>
+<li><code>spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum amount of funds that the grantee is allowed to spend
+as a direct consequence of executing authorized messages.</li>
+<li><code>expiration</code> (timestamp) (<em>optional</em>): timestamp after which the authorization is no longer valid.</li>
+<li><code>period</code> (duration) (<em>optional</em>): reset period for spend_limit.</li>
+</ul>
+<h3 id="feegrant"><a class="toc-anchor" href="#feegrant" >§</a> FeeGrant</h3>
+<ul>
+<li><code>grantor</code> (group) (<em>mandatory</em>): the authority group providing the funds for transaction fees.</li>
+<li><code>grantee</code> (account) (<em>mandatory</em>): the operator account allowed to pay fees using the grantor’s funds.</li>
+<li><code>msg_types</code> (msg_type[]) (<em>mandatory</em>): list of module message types for which this fee grant applies.</li>
+<li><code>spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be paid using this fee grant.</li>
+<li><code>expiration</code> (timestamp) (<em>optional</em>): timestamp after which the fee grant is no longer valid.</li>
+<li><code>period</code> (duration) (<em>optional</em>): reset period for spend_limit.</li>
 </ul>
 <h3 id="globalvariables"><a class="toc-anchor" href="#globalvariables" >§</a> GlobalVariables</h3>
 <p><code>GlobalVariables</code>:</p>
@@ -785,50 +815,73 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-226" class="notice warning"><a class="notice-link" href="#warning-226">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-76" class="notice warning"><a class="notice-link" href="#warning-76">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-546" class="notice note"><a class="notice-link" href="#note-546">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
+<div id="note-184" class="notice note"><a class="notice-link" href="#note-184">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
 </div>
 <h3 id="authorization-and-fee-grants"><a class="toc-anchor" href="#authorization-and-fee-grants" >§</a> Authorization and Fee Grants</h3>
 <h4 id="delegable-module-messages"><a class="toc-anchor" href="#delegable-module-messages" >§</a> Delegable Module Messages</h4>
-<p>Most of VPR messages (Msg) have delegation support that works the following way.</p>
-<p>These messages MUST includes two signers:</p>
+<p>Most VPR module messages (Msg) <strong>support delegation</strong> and follow the pattern described below.</p>
+<p>Delegable messages are defined as messages that can be executed by an <code>operator</code> account on behalf of an <code>authority</code> group, provided that the appropriate authorization has been granted.</p>
+<p>Such messages conceptually involve <strong>two roles</strong>:</p>
 <ul>
-<li><code>authority</code> (group): (Signer). The <code>authority</code> is the <code>group</code> that is the owner of the created/manipulated resource. It is a signer through an authorization that has been granted to an <code>account</code>, the <code>operator</code>.</li>
-<li><code>operator</code> (account): (Signer). The <code>account</code> that executes the Msg. It is a signer too.</li>
+<li>
+<p><code>authority</code> (group):<br>
+The <code>group</code> that owns the created or manipulated resource.<br>
+The authority is represented in the Msg through an authorization granted to an <code>operator</code> account.</p>
+</li>
+<li>
+<p><code>operator</code> (account):<br>
+The <code>account</code> that executes the Msg on behalf of the <code>authority</code>.<br>
+The operator MUST be explicitly authorized for the given message type.</p>
+</li>
 </ul>
-<p>Using two signers provide a way of:</p>
+<p>When a delegable message is executed <strong>directly by an operator account</strong>, both roles are authenticated and enforced by the authorization system.</p>
+<p>Using this model makes it possible to:</p>
 <ul>
-<li>knowing, in the Msg, the authenticated <code>authority</code> AND <code>operator</code>.</li>
-<li>moving funds from the <code>authority</code> account AND/OR from the <code>operator</code> account.</li>
+<li>identify, within the Msg, both the authenticated <code>authority</code> and the executing <code>operator</code>,</li>
+<li>allow network fees to be paid either by the <code>operator</code> account or by the <code>authority</code> account via a fee grant.</li>
 </ul>
-<p>For executing these messages:</p>
+<p>For the execution of delegable messages:</p>
 <ul>
-<li>the operator <code>account</code> MUST have an authorization from the <code>authority</code> <code>group</code> for the given type of Message.</li>
+<li>the <code>operator</code> account MUST have a valid authorization from the <code>authority</code> group for the specific message type being executed.</li>
 </ul>
-<p>An <code>account</code> would not necessarily be delegated authorization for all message types. It’s up to the <code>authority</code> <code>group</code> to decide which <code>account</code> can do what.</p>
+<p>An <code>authority</code> group is not required to delegate all message types to the same <code>operator</code>.<br>
+It is entirely up to the <code>authority</code> group to decide <strong>which accounts may execute which messages</strong>.</p>
 <ul>
-<li>Authorizations will be granted to individual <code>account</code>s through <strong>group proposals</strong>.</li>
-<li>Authorizations MUST include an optional <code>spend_limit</code> and an optional <code>expire</code> date.</li>
+<li>Authorizations MUST be granted to individual <code>account</code>s through <strong>group proposals</strong>.</li>
+<li>Authorizations MAY include an optional <code>spend_limit</code> and an optional <code>expiration</code> date.</li>
 </ul>
 <h4 id="not-delegable-module-messages"><a class="toc-anchor" href="#not-delegable-module-messages" >§</a> Not Delegable Module Messages</h4>
-<p>Message that just specify an authority:</p>
+<p>Some module messages specify only an <code>authority</code>:</p>
 <ul>
-<li><code>authority</code> (group): (Signer). The <code>authority</code> is the <code>group</code> that is the owner of the manipulated resource.</li>
+<li><code>authority</code> (group):<br>
+The <code>group</code> that owns the manipulated resource.</li>
 </ul>
-<p>That means that the message can be executed only through a <strong>group proposal</strong> and is not delegable.</p>
-<h4 id="governance-signed-modules-messages"><a class="toc-anchor" href="#governance-signed-modules-messages" >§</a> Governance Signed Modules Messages</h4>
-<p>Messages that can be executed only through a <strong>governance proposal</strong>.</p>
+<p>Such messages <strong>cannot be delegated</strong> and MUST be executed exclusively through a <strong>group proposal</strong>.</p>
+<h4 id="governance-signed-module-messages"><a class="toc-anchor" href="#governance-signed-module-messages" >§</a> Governance-Signed Module Messages</h4>
+<p>Some module messages can be executed <strong>only through a governance proposal</strong>.</p>
+<p>These messages do not support delegation and are not executable by accounts, whether directly or via group authorization.</p>
 <h4 id="fee-grants"><a class="toc-anchor" href="#fee-grants" >§</a> Fee Grants</h4>
-<p>An <code>authority</code> may want its <code>operator</code>s to pay <strong>network fees</strong> with the <code>authority</code> funds.</p>
-<p>Like authorizations, Fee Grants MUST be granted by <strong>group proposal</strong>, for a specific list of <strong>delegable module messages</strong>, to a selected <code>operator</code>.</p>
-<h4 id="examples"><a class="toc-anchor" href="#examples" >§</a> Examples</h4>
-<p>An authority <code>authorityABC</code> wants to authorize operator <code>accountABC</code> the execution of the <a href="#mod-perm-msg-10-create-or-update-permission-session" >mod-perm-msg-10-create-or-update-permission-session</a> message. Additionally, authority would like to grant <code>accountABC</code> the payment of the fees for the execution of this type of message.</p>
-<p><code>authorityABC</code> MUST:</p>
+<p>An <code>authority</code> group MAY allow its <code>operator</code>s to pay <strong>network transaction fees</strong> using the <code>authority</code>’s funds.</p>
+<p>Fee grants are <strong>not created directly</strong>.<br>
+They are created, updated, and revoked <strong>exclusively by Authorization module messages</strong>.<br>
+When an authorization is created or updated, it MAY optionally include an associated fee grant.</p>
+<h4 id="example"><a class="toc-anchor" href="#example" >§</a> Example</h4>
+<p>An authority group <code>authorityABC</code> wants to authorize an operator account <code>accountABC</code> to execute the<br>
+<a href="#mod-perm-msg-10-create-or-update-permission-session" ><code>mod-perm-msg-10-create-or-update-permission-session</code></a> message.</p>
+<p>Additionally, the authority wants <code>accountABC</code> to pay the transaction fees for this message using the authority’s funds.</p>
+<p>To achieve this, <code>authorityABC</code> MUST:</p>
 <ul>
-<li>create an authorization from <code>authorityABC</code> to <code>accountABC</code> for <a href="#mod-perm-msg-10-create-or-update-permission-session" >mod-perm-msg-10-create-or-update-permission-session</a> message type, with a spend limit <code>spend_limit</code>.</li>
-<li>create a fee grant from <code>authorityABC</code> to <code>accountABC</code> for <a href="#mod-perm-msg-10-create-or-update-permission-session" >mod-perm-msg-10-create-or-update-permission-session</a> message type, for permission <code>perm_id</code>, with a spend limit <code>fee_spend_limit</code>.</li>
+<li>create an <strong>authorization</strong> from <code>authorityABC</code> to <code>accountABC</code> for the<br>
+<a href="#mod-perm-msg-10-create-or-update-permission-session" ><code>mod-perm-msg-10-create-or-update-permission-session</code></a> message type,<br>
+optionally enabling an associated fee grant.</li>
+</ul>
+<p>As a result, <code>accountABC</code> is authorized to:</p>
+<ul>
+<li>execute the specified message type on behalf of <code>authorityABC</code>, including any state changes and fund movements that are a direct consequence of that message, and</li>
+<li>pay the network transaction fees for that message using the funds of <code>authorityABC</code>, via the associated fee grant.</li>
 </ul>
 <h3 id="method-list"><a class="toc-anchor" href="#method-list" >§</a> Method List</h3>
 <table>
@@ -1221,7 +1274,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 </tr>
 </tbody>
 </table>
-<div id="note-547" class="notice note"><a class="notice-link" href="#note-547">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-185" class="notice note"><a class="notice-link" href="#note-185">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1267,7 +1320,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-548" class="notice note"><a class="notice-link" href="#note-548">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
+<div id="note-186" class="notice note"><a class="notice-link" href="#note-186">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Fee payer MUST have an available balance to cover the <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -1696,7 +1749,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 </ul>
 </li>
 </ul>
-<div id="note-549" class="notice note"><a class="notice-link" href="#note-549">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-187" class="notice note"><a class="notice-link" href="#note-187">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
@@ -1924,7 +1977,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-550" class="notice note"><a class="notice-link" href="#note-550">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-188" class="notice note"><a class="notice-link" href="#note-188">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -1965,7 +2018,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>verification_fees</code> (number) (<em>optional</em>): Requested verification_fees for this permission (can be modified by validator).</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 </ul>
-<div id="note-551" class="notice note"><a class="notice-link" href="#note-551">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process is REQUIRED or not.</p>
+<div id="note-189" class="notice note"><a class="notice-link" href="#note-189">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
@@ -2213,7 +2266,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>validation_fees</code> (number) (<em>mandatory</em>): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.</li>
 <li><code>issuance_fees</code> (number) (<em>mandatory</em>): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.</li>
 <li><code>verification_fees</code> (number) (<em>mandatory</em>): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.</li>
-<li><code>vp_summary_digest_sri</code> (digest_sri) (<em>optional</em>): an optional digest_sri, set by <a class="term-reference" href="#term:validator">validator</a>, of a summary of the information, proofs… provided by the <a class="term-reference" href="#term:applicant">applicant</a>.</li>
+<li><code>vp_summary_digest_sri</code> (string) (<em>optional</em>): an optional digest SRI, set by <a class="term-reference" href="#term:validator">validator</a>, of a summary of the information, proofs… provided by the <a class="term-reference" href="#term:applicant">applicant</a>.</li>
 <li><code>issuance_fee_discount</code>: (number) (<em>mandatory</em>): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.</li>
 <li><code>verification_fee_discount</code>: (number) (<em>mandatory</em>): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.</li>
 </ul>
@@ -2247,7 +2300,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <p><code>verification_fees</code> (number) (<em>mandatory</em>): MUST be zero or a positive integer.  If <code>applicant_perm.effective_from</code> is not null (we are in renewal) <code>verification_fees</code> MUST be equal to <code>applicant_perm.verification_fees</code>, else abort.</p>
 </li>
 <li>
-<p><code>vp_summary_digest_sri</code> (digest_sri) (<em>optional</em>): MUST be null if <code>validation.type</code> is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
+<p><code>vp_summary_digest_sri</code> (string) (<em>optional</em>): MUST be null if <code>validation.type</code> is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 <li>
 <p>Load <code>CredentialSchema</code> <code>cs</code> from <code>applicant_perm.schema_id</code>.</p>
@@ -2769,7 +2822,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li>if <code>wallet_agent_perm.type</code> is not ISSUER, abort.</li>
 <li>if <code>wallet_agent_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, abort.</li>
 </ul>
-<div id="warning-227" class="notice warning"><a class="notice-link" href="#warning-227">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
+<div id="warning-77" class="notice warning"><a class="notice-link" href="#warning-77">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
 </div>
 <h6 id="mod-perm-msg-10-3-create-or-update-permission-session-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-10-3-create-or-update-permission-session-fee-checks" >§</a> [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks</h6>
 <ul>
@@ -2889,23 +2942,29 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 </ul>
 </li>
 </ul>
+<p>Create a <code>PermissionSessionRecord</code> <code>cspsr</code>:</p>
+<ul>
+<li><code>cspsr.created</code>: <code>now</code></li>
+<li><code>cspsr.issuer_perm_id</code>: <code>issuer_perm_id</code></li>
+<li><code>cspsr.verifier_perm_id</code>: <code>verifier_perm_id</code></li>
+<li><code>cspsr.wallet_agent_perm_id</code>: <code>wallet_agent_perm_id</code></li>
+</ul>
 <p>If new, create entry <code>PermissionSession</code> <code>session</code>:</p>
 <ul>
 <li><code>session.id</code>: <code>id</code></li>
 <li><code>session.authority</code>: <code>authority</code></li>
 <li><code>session.vs_operator</code>: <code>operator</code></li>
 <li><code>session.agent_perm_id</code>: <code>agent_perm_id</code></li>
-<li><code>session.authz[]</code>: create and put  (<code>issuer_perm_id</code>, <code>verifier_perm_id</code>, <code>wallet_agent_perm_id</code>).</li>
 <li><code>session.modified:</code> : <code>now</code></li>
 <li><code>session.created:</code> : <code>now</code></li>
 </ul>
 <p>Else update:</p>
 <ul>
-<li>add (<code>issuer_perm_id</code>, <code>verifier_perm_id</code>, <code>wallet_agent_perm_id</code>) to <code>session.authz[]</code></li>
 <li><code>session.modified:</code> : <code>now</code></li>
 </ul>
+<p>then, add the <code>cspsr</code> to <code>session.session_records</code></p>
 <p>if current transaction if for issuance of a credential, persist the digest SRI by calling <a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1]</a>.</p>
-<div id="warning-228" class="notice warning"><a class="notice-link" href="#warning-228">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
+<div id="warning-78" class="notice warning"><a class="notice-link" href="#warning-78">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
 </div>
 <h4 id="mod-perm-msg-11-update-permission-module-parameters"><a class="toc-anchor" href="#mod-perm-msg-11-update-permission-module-parameters" >§</a> [MOD-PERM-MSG-11] Update Permission Module Parameters</h4>
 <p>Update Permission Module Parameters.</p>
@@ -2953,7 +3012,7 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
 <li><code>amount</code> MUST be lower or equal to <code>applicant_perm.deposit</code> else MUST abort.</li>
 </ul>
-<div id="note-552" class="notice note"><a class="notice-link" href="#note-552">NOTE</a><p>Even if the permission has expired or is revoked, it is still possible to slash it.</p>
+<div id="note-190" class="notice note"><a class="notice-link" href="#note-190">NOTE</a><p>Even if the permission has expired or is revoked, it is still possible to slash it.</p>
 </div>
 <h6 id="mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms"><a class="toc-anchor" href="#mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms" >§</a> [MOD-PERM-MSG-12-2-2] Slash Permission Trust Deposit validator perms</h6>
 <p>Either Option #1, or #2 MUST return true, else abort.</p>
@@ -3053,7 +3112,7 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <h4 id="mod-perm-msg-14-self-create-permission"><a class="toc-anchor" href="#mod-perm-msg-14-self-create-permission" >§</a> [MOD-PERM-MSG-14] Self Create Permission</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
 <p>This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a permission for being issuer or verifier of a given schema.</p>
-<div id="note-553" class="notice note"><a class="notice-link" href="#note-553">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
+<div id="note-191" class="notice note"><a class="notice-link" href="#note-191">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
 </div>
 <h5 id="mod-perm-msg-14-1-create-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-14-1-create-permission-parameters" >§</a> [MOD-PERM-MSG-14-1] Create Permission parameters</h5>
 <ul>
@@ -3235,7 +3294,7 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-554" class="notice note"><a class="notice-link" href="#note-554">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-192" class="notice note"><a class="notice-link" href="#note-192">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -3613,14 +3672,14 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 </ul>
 <h4 id="mod-td-msg-7-burn-ecosystem-slashed-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >§</a> [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit</h4>
 <p>Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.</p>
-<div id="warning-229" class="notice warning"><a class="notice-link" href="#warning-229">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
+<div id="warning-79" class="notice warning"><a class="notice-link" href="#warning-79">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
 </div>
 <h5 id="mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters</h5>
 <ul>
 <li><code>authority</code> (group) (<em>mandatory</em>): authority of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to burn.</li>
 <li><code>amount</code> (number) (<em>mandatory</em>): value to burn, in <a class="term-reference" href="#term:denom">denom</a>.</li>
 </ul>
-<div id="warning-230" class="notice warning"><a class="notice-link" href="#warning-230">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
+<div id="warning-80" class="notice warning"><a class="notice-link" href="#warning-80">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
 The decision between this method and specifying the amount directly is left to implementers.</p>
 </div>
 <h5 id="mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks</h5>
@@ -3984,7 +4043,11 @@ The decision between this method and specifying the amount directly is left to i
 <li><a href="#credentialschema" >CredentialSchema</a></li>
 <li><a href="#permission" >Permission</a></li>
 <li><a href="#permissionsession" >PermissionSession</a></li>
+<li><a href="#permissionsessionrecord" >PermissionSessionRecord</a></li>
 <li><a href="#trustdeposit" >TrustDeposit</a></li>
+<li><a href="#denomamount" >DenomAmount</a></li>
+<li><a href="#authorization" >Authorization</a></li>
+<li><a href="#feegrant" >FeeGrant</a></li>
 <li><a href="#globalvariables" >GlobalVariables</a></li>
 </ul>
 </li>
@@ -3994,9 +4057,9 @@ The decision between this method and specifying the amount directly is left to i
 <ul>
 <li><a href="#delegable-module-messages" >Delegable Module Messages</a></li>
 <li><a href="#not-delegable-module-messages" >Not Delegable Module Messages</a></li>
-<li><a href="#governance-signed-modules-messages" >Governance Signed Modules Messages</a></li>
+<li><a href="#governance-signed-module-messages" >Governance-Signed Module Messages</a></li>
 <li><a href="#fee-grants" >Fee Grants</a></li>
-<li><a href="#examples" >Examples</a></li>
+<li><a href="#example" >Example</a></li>
 </ul>
 </li>
 <li><a href="#method-list" >Method List</a></li>

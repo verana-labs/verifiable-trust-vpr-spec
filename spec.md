@@ -938,7 +938,7 @@ entity "TrustRegistry" as tr {
   +modified: timestamp
   +archived: timestamp
   +aka: string
-  +int: active_version
+  +active_version: int
   +language: string
   
 }
@@ -986,8 +986,9 @@ entity "Group" as group {
 }
 
 entity "Authorization" as authz {
-   msg_types: msg_type[]
-   spend_limit: number
+   +msg_types: msg_type[]
+   +expiration: timestamp
+   +period: duration
 }
 
 entity "DenomAmount" as da {
@@ -996,9 +997,9 @@ entity "DenomAmount" as da {
 }
 
 entity "FeeGrant" as feegrant {
-   msg_types: msg_type[]
-   expiration: timestamp
-   period: duration
+   +msg_types: msg_type[]
+   +expiration: timestamp
+   +period: duration
 }
 
 entity "Permission" as csp {
@@ -1018,13 +1019,12 @@ entity "Permission" as csp {
   +slashed_deposit: number
   +repaid_deposit: number
   revoked: timestamp
-  stat: number
   +vp_exp: timestamp
   +vp_last_state_change: timestamp
   +vp_validator_deposit: number
   +vp_current_fees: number
   +vp_current_deposit: number
-  +vp_summary_digest_sri: digest_sri
+  +vp_summary_digest_sri: string
   +issuance_fee_discount: number
   +verification_fee_discount: number
 }
@@ -1040,12 +1040,15 @@ entity "PermissionSession" as csps {
   *id: uuid
   +created: timestamp
   +modified: timestamp
-  authz: (uint64, uint64, uint64)[]
+}
+
+entity "PermissionSessionRecord" as cspsr {
+  *id: uint64
+  +created: timestamp
 }
 
 entity "Digest" as digest {
   *digest_sri: string
-  +created: timestamp
 }
 
 enum "PermissionType" as cspt {
@@ -1057,24 +1060,16 @@ enum "PermissionType" as cspt {
   HOLDER
 }
 
-enum "CredentialSchemaAuthz" as csa {
-  AUTHORIZED
-  SESSION_REQUIRED
-  UNAUTHORIZED
-}
-
 
 entity "GlobalVariables" as gv {
   +trust_unit_price: number
-  +trust_registry_trust_deposit: number
   +credential_schema_schema_max_size: number
   +credential_schema_issuer_grantor_validation_validity_period_max_days: number
   +credential_schema_verifier_grantor_validation_validity_period_max_days: number
   +credential_schema_issuer_validation_validity_period_max_days: number
   +credential_schema_verifier_validation_validity_period_max_days: number
-  +credential_schema_holder_validation_validity_period_max_days: timestamp
+  +credential_schema_holder_validation_validity_period_max_days: number
   +credential_schema_trust_deposit: number
-  +trust_deposit_reclaim_burn_rate: number
   +trust_deposit_share_value: number
   +trust_deposit_rate:number
   +trust_deposit_max_yield_rate:number
@@ -1099,14 +1094,20 @@ account --o authz: grantee
 
 group --o feegrant: grantor
 account --o feegrant: grantee
-csp --o feegrant: perm_id
 
 csp o-- cspt: type
-csp o-- cs: schema
+csp o-- cs: schema_id
 csp o-- "0..1" csp: validator_perm_id
 cs o-- tr: tr_id
 
-feegrant "1" --- "1..n" da
+csps --- "1..n" cspsr : session_records
+
+cspsr  o-- "0..1" csp: issuer_perm_id
+cspsr  o-- "0..1" csp: verifier_perm_id
+cspsr  o-- "0..1" csp: wallet_agent_perm_id
+
+feegrant "1" --- "0..n" da: spend_limit
+authz "1" --- "0..n" da: spend_limit
 
 
 tr "1" --- "1..n" gfv: versions 
@@ -1138,9 +1139,8 @@ group  --o td: authority
 - `created` (timestamp) (*mandatory*): timestamp this TrustRegistry has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this TrustRegistry has been modified.
 - `archived` (timestamp) (*mandatory*): timestamp this TrustRegistry has been archived.
-- `deposit` (number) (*mandatory*): [[ref: trust deposit]] (in `denom`)
 - `aka` (string) (*optional*): optional additional URI of this trust registry.
-- `language` (string(2)) (*mandatory*): primary language alpha-2 code (ISO 3166) of this trust registry.
+- `language` (string) (*mandatory*): primary language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)) of this trust registry.
 - `active_version` (int): (*mandatory*) active governance framework version.
 
 ### GovernanceFrameworkVersion
@@ -1159,7 +1159,7 @@ group  --o td: authority
 - `id` (uint64) (*mandatory*): the id of the schema.
 - `gfv_id` (uint64) (*mandatory*): the id of the `GovernanceFrameworkVersion` entry.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkDocument has been created.
-- `language` (string(2)) (*mandatory*): primary language alpha-2 code (ISO 3166) of this trust registry.
+- `language` (string) (*mandatory*): primary language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)) of this trust registry.
 - `url` (string) (*mandatory*): URL where the document is published.
 - `digest_sri` (string) (*mandatory*): digest_sri of the document.
 
@@ -1174,7 +1174,6 @@ group  --o td: authority
 - `created` (timestamp) (*mandatory*): timestamp this CredentialSchema has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this CredentialSchema has been modified.
 - `archived` (timestamp) (*mandatory*): timestamp this CredentialSchema has been archived.
-- `deposit` (number) (*mandatory*): [[ref: trust deposit]] (in `denom`)
 - `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
 - `issuer_grantor_validation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor validation process expires and must be renewed.
 - `verifier_grantor_validation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor validation process expires and must be renewed.
@@ -1215,7 +1214,7 @@ group  --o td: authority
 - `vp_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
 - `vp_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon validation process completion, in [[ref: denom]].
 - `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
-- `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `vp_summary_digest_sri` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
@@ -1225,25 +1224,58 @@ group  --o td: authority
 
 - `id` (uuid) (*mandatory*): session uuid.
 - `authority` (group) (*mandatory*): authority that controls the entry.
-- `vs_operator` (account) (*mandatory*): vs agent account that controls the entry (agent crypto account).
+- `vs_operator` (account) (*mandatory*): verifiable service agent account that controls the entry (agent crypto account).
 - `agent_perm_id` (uint64) (*mandatory*): permission id of the agent.
-- `modified` (timestamp) (*mandatory*): timestamp this PermissionSession has been modified.
 - `created` (timestamp) (*mandatory*): timestamp this PermissionSession has been created.
-- `authz` (uint64 (Permission id), uint64 (Permission id), uint64 (Permission id))[] (mandatory): permission(s) linked to this session (issuer, verifier, wallet_agent).
+- `modified` (timestamp) (*mandatory*): timestamp this PermissionSession has been modified.
+- `session_records` (PermissionSessionRecord[]) (*mandatory*): session records, for this session.
+
+### PermissionSessionRecord
+
+`PermissionSessionRecord`:
+
+- `created` (timestamp) (*mandatory*): timestamp this record has been created.
+- `issuer_perm_id` (uint64) (*optional*): related issuer `Permission` id (if applicable).
+- `verifier_perm_id` (uint64) (*optional*): related verifier `Permission` id (if applicable).
+- `wallet_agent_perm_id` (uint64) (*optional*): related wallet agent `Permission` id (if applicable).
 
 ### TrustDeposit
 
 `TrustDeposit`:
 
 - `share` (number) (*mandatory*): share of the module total deposit.
-- `owner` (group) (*mandatory*) (key): the [[ref: group]]
-- `amount` (number) (*mandatory*): amount of deposit in `denom`.
+- `authority` (group) (*mandatory*) (key): the [[ref: group]]
+- `deposit` (number) (*mandatory*): amount of deposit in `denom`.
 - `claimable` (number) (*mandatory*): amount of claimable deposit in `denom`.
 - `slashed_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
 - `repaid_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed.
 - `last_repaid` (timestamp) (*optional*): last time this trust deposit has been slashed.
 - `slash_count` (number) (*optional*): number of times this account has been slashed.
+
+### DenomAmount
+
+- `denom` (string) (*mandatory*): token denomination.
+- `amount` (number) (*mandatory*): amount expressed in the given denomination.
+
+### Authorization
+
+- `grantor` (group) (*mandatory*): the authority group granting the authorization.
+- `grantee` (account) (*mandatory*): the operator account receiving the authorization.
+- `msg_types` (msg_type[]) (*mandatory*): list of module message types this authorization applies to.
+- `spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the grantee is allowed to spend
+  as a direct consequence of executing authorized messages.
+- `expiration` (timestamp) (*optional*): timestamp after which the authorization is no longer valid.
+- `period` (duration) (*optional*): reset period for spend_limit.
+
+### FeeGrant
+
+- `grantor` (group) (*mandatory*): the authority group providing the funds for transaction fees.
+- `grantee` (account) (*mandatory*): the operator account allowed to pay fees using the grantor’s funds.
+- `msg_types` (msg_type[]) (*mandatory*): list of module message types for which this fee grant applies.
+- `spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be paid using this fee grant.
+- `expiration` (timestamp) (*optional*): timestamp after which the fee grant is no longer valid.
+- `period` (duration) (*optional*): reset period for spend_limit.
 
 ### GlobalVariables
 
@@ -1263,7 +1295,6 @@ group  --o td: authority
 - `credential_schema_verifier_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an verifier validation can be valid for.
 - `credential_schema_holder_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an [[ref: holder]] validation can be valid for.
 
-
 **Trust Deposit:**
 
 - `trust_deposit_share_value`(number) (*mandatory*): Value of one share of trust deposit, in `denom`. Default an initial value: 1. Increase over time, when yield is produced.
@@ -1272,7 +1303,6 @@ group  --o td: authority
 - `trust_deposit_block_reward_share`(number) (*mandatory*): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)
 - `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 20% (0.20)
 - `user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating user agent rewards from trust fees. Default value: 20% (0.20)
-
 
 ## Module Requirements
 
@@ -1405,54 +1435,77 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 
 #### Delegable Module Messages
 
-Most of VPR messages (Msg) have delegation support that works the following way.
+Most VPR module messages (Msg) **support delegation** and follow the pattern described below.
 
-These messages MUST includes two signers:
+Delegable messages are defined as messages that can be executed by an `operator` account on behalf of an `authority` group, provided that the appropriate authorization has been granted.
 
-- `authority` (group): (Signer). The `authority` is the `group` that is the owner of the created/manipulated resource. It is a signer through an authorization that has been granted to an `account`, the `operator`.
-- `operator` (account): (Signer). The `account` that executes the Msg. It is a signer too.
+Such messages conceptually involve **two roles**:
 
-Using two signers provide a way of:
+- `authority` (group):  
+  The `group` that owns the created or manipulated resource.  
+  The authority is represented in the Msg through an authorization granted to an `operator` account.
 
-- knowing, in the Msg, the authenticated `authority` AND `operator`.
-- moving funds from the `authority` account AND/OR from the `operator` account.
+- `operator` (account):  
+  The `account` that executes the Msg on behalf of the `authority`.  
+  The operator MUST be explicitly authorized for the given message type.
 
-For executing these messages:
+When a delegable message is executed **directly by an operator account**, both roles are authenticated and enforced by the authorization system.
 
-- the operator `account` MUST have an authorization from the `authority` `group` for the given type of Message.
+Using this model makes it possible to:
 
-An `account` would not necessarily be delegated authorization for all message types. It's up to the `authority` `group` to decide which `account` can do what.
+- identify, within the Msg, both the authenticated `authority` and the executing `operator`,
+- allow network fees to be paid either by the `operator` account or by the `authority` account via a fee grant.
 
-- Authorizations will be granted to individual `account`s through **group proposals**.
-- Authorizations MUST include an optional `spend_limit` and an optional `expire` date.
+For the execution of delegable messages:
 
+- the `operator` account MUST have a valid authorization from the `authority` group for the specific message type being executed.
+
+An `authority` group is not required to delegate all message types to the same `operator`.  
+It is entirely up to the `authority` group to decide **which accounts may execute which messages**.
+
+- Authorizations MUST be granted to individual `account`s through **group proposals**.
+- Authorizations MAY include an optional `spend_limit` and an optional `expiration` date.
 
 #### Not Delegable Module Messages
 
-Message that just specify an authority:
+Some module messages specify only an `authority`:
 
-- `authority` (group): (Signer). The `authority` is the `group` that is the owner of the manipulated resource.
+- `authority` (group):  
+  The `group` that owns the manipulated resource.
 
-That means that the message can be executed only through a **group proposal** and is not delegable.
+Such messages **cannot be delegated** and MUST be executed exclusively through a **group proposal**.
 
-#### Governance Signed Modules Messages
+#### Governance-Signed Module Messages
 
-Messages that can be executed only through a **governance proposal**.
+Some module messages can be executed **only through a governance proposal**.
+
+These messages do not support delegation and are not executable by accounts, whether directly or via group authorization.
 
 #### Fee Grants
 
-An `authority` may want its `operator`s to pay **network fees** with the `authority` funds.
+An `authority` group MAY allow its `operator`s to pay **network transaction fees** using the `authority`’s funds.
 
-Like authorizations, Fee Grants MUST be granted by **group proposal**, for a specific list of **delegable module messages**, to a selected `operator`.
+Fee grants are **not created directly**.  
+They are created, updated, and revoked **exclusively by Authorization module messages**.  
+When an authorization is created or updated, it MAY optionally include an associated fee grant.
 
-#### Examples
+#### Example
 
-An authority `authorityABC` wants to authorize operator `accountABC` the execution of the [mod-perm-msg-10-create-or-update-permission-session](#mod-perm-msg-10-create-or-update-permission-session) message. Additionally, authority would like to grant `accountABC` the payment of the fees for the execution of this type of message.
+An authority group `authorityABC` wants to authorize an operator account `accountABC` to execute the  
+[`mod-perm-msg-10-create-or-update-permission-session`](#mod-perm-msg-10-create-or-update-permission-session) message.
 
-`authorityABC` MUST:
+Additionally, the authority wants `accountABC` to pay the transaction fees for this message using the authority’s funds.
 
-- create an authorization from `authorityABC` to `accountABC` for [mod-perm-msg-10-create-or-update-permission-session](#mod-perm-msg-10-create-or-update-permission-session) message type, with a spend limit `spend_limit`.
-- create a fee grant from `authorityABC` to `accountABC` for [mod-perm-msg-10-create-or-update-permission-session](#mod-perm-msg-10-create-or-update-permission-session) message type, for permission `perm_id`, with a spend limit `fee_spend_limit`.
+To achieve this, `authorityABC` MUST:
+
+- create an **authorization** from `authorityABC` to `accountABC` for the  
+  [`mod-perm-msg-10-create-or-update-permission-session`](#mod-perm-msg-10-create-or-update-permission-session) message type,  
+  optionally enabling an associated fee grant.
+
+As a result, `accountABC` is authorized to:
+
+- execute the specified message type on behalf of `authorityABC`, including any state changes and fund movements that are a direct consequence of that message, and
+- pay the network transaction fees for that message using the funds of `authorityABC`, via the associated fee grant.
 
 ### Method List
 
@@ -2465,7 +2518,7 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `validation_fees` (number) (*mandatory*): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `verification_fees` (number) (*mandatory*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
-- `vp_summary_digest_sri` (digest_sri) (*optional*): an optional digest_sri, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `vp_summary_digest_sri` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
@@ -2485,7 +2538,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_perm.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_perm.validation_fees`, else abort.
 - `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_perm.issuance_fees` or, else abort.
 - `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_perm.verification_fees`, else abort.
-- `vp_summary_digest_sri` (digest_sri) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
+- `vp_summary_digest_sri` (string) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
 - Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
 - Load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`.
@@ -3125,20 +3178,28 @@ define `wallet_user_agent_reward` = 0.
     - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.authority`.
     - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.authority`. Increase `wallet_agent_perm.deposit` by the same value.
 
+
+Create a `PermissionSessionRecord` `cspsr`:
+
+- `cspsr.created`: `now`
+- `cspsr.issuer_perm_id`: `issuer_perm_id`
+- `cspsr.verifier_perm_id`: `verifier_perm_id`
+- `cspsr.wallet_agent_perm_id`: `wallet_agent_perm_id`
+
 If new, create entry `PermissionSession` `session`:
 
 - `session.id`: `id`
 - `session.authority`: `authority`
 - `session.vs_operator`: `operator`
 - `session.agent_perm_id`: `agent_perm_id`
-- `session.authz[]`: create and put  (`issuer_perm_id`, `verifier_perm_id`, `wallet_agent_perm_id`).
 - `session.modified:` : `now`
 - `session.created:` : `now`
 
 Else update:
 
-- add (`issuer_perm_id`, `verifier_perm_id`, `wallet_agent_perm_id`) to `session.authz[]`
 - `session.modified:` : `now`
+
+then, add the `cspsr` to `session.session_records`
 
 if current transaction if for issuance of a credential, persist the digest SRI by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest).
 
