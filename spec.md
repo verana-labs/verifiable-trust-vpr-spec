@@ -1204,7 +1204,7 @@ group  --o td: authority
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
 
-## SchemaAuthorizationPolicy
+### SchemaAuthorizationPolicy
 
 `SchemaAuthorizationPolicy`:
 
@@ -1560,10 +1560,15 @@ As a result, `accountABC` is authorized to:
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |authority + operator |
 |                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |authority + operator |
 |                                | Update CS Module Parameters             |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |governance proposal |
+|                  | Create Schema Authorization Policy                  | N/A (Tx)               | Msg  | [[MOD-CS-MSG-5]](#mod-cs-msg-5-create-schema-authorization-policy) | authority + operator |
+|                  | Increase Active Schema Authorization Policy Version | N/A (Tx)               | Msg  | [[MOD-CS-MSG-6]](#mod-cs-msg-6-increase-active-schema-authorization-policy-version) | authority + operator |
+|                  | Revoke Schema Authorization Policy                  | N/A (Tx)               | Msg  | [[MOD-CS-MSG-7]](#mod-cs-msg-7-revoke-schema-authorization-policy) | authority + operator |
 |                                | List Credential Schemas                 | /cs/v1/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |N/A  |
 |                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |N/A  |
 |                                | Render Json Schema                      | /cs/v1/js/{id}               | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |N/A  |
 |                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-CS-QRY-4]](#mod-cs-qry-4-list-module-parameters)   |N/A  |
+|                  | Get Schema Authorization Policy                         | /cs/v1/sap/get         | Query | [[MOD-CS-QRY-5]](#mod-cs-qry-5-get-schema-authorization-policy) | N/A |
+|                  | List Schema Authorization Policies                      | /cs/v1/sap/list        | Query | [[MOD-CS-QRY-6]](#mod-cs-qry-6-list-schema-authorization-policies) | N/A |
 | Permission                     | Start Permission VP                     |     N/A (Tx)                       | Msg    | [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp)    |authority + operator |
 |                                | Renew a Permission VP                   |       N/A (Tx)                     | Msg    | [[MOD-PERM-MSG-2]](#mod-perm-msg-2-renew-permission-vp)    |authority + operator |
 |                                | Set Permission VP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated)    |authority + operator |
@@ -2370,6 +2375,76 @@ Return the list of the existing parameters and their values.
   }
 }
 ```
+
+#### [MOD-CS-QRY-5] Get Schema Authorization Policy
+
+This query returns a single `SchemaAuthorizationPolicy` identified by its unique `id`.
+
+##### [MOD-CS-QRY-5-1] Get Schema Authorization Policy parameters
+
+- `id` (uint64): unique identifier of the `SchemaAuthorizationPolicy` (*mandatory*).
+
+##### [MOD-CS-QRY-5-2] Get Schema Authorization Policy precondition checks
+
+If any of these precondition checks fail, query MUST abort.
+
+- `id` MUST be provided.
+- a `SchemaAuthorizationPolicy` entry with the given `id` MUST exist.
+
+##### [MOD-CS-QRY-5-3] Get Schema Authorization Policy execution
+
+If all precondition checks pass, the query MUST return the corresponding
+`SchemaAuthorizationPolicy` entry:
+
+- `id`
+- `schema_id`
+- `role`
+- `version`
+- `url`
+- `digest_sri`
+- `created`
+- `effective_from`
+- `effective_until`
+- `revoked`
+
+
+#### [MOD-CS-QRY-6] List Schema Authorization Policies
+
+This query returns the list of `SchemaAuthorizationPolicy` entries associated
+with a given `(schema_id, role)` pair.
+
+##### [MOD-CS-QRY-6-1] List Schema Authorization Policies parameters
+
+- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
+- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
+
+##### [MOD-CS-QRY-6-2] List Schema Authorization Policies precondition checks
+
+If any of these precondition checks fail, query MUST abort.
+
+- `schema_id` MUST be provided.
+- `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
+- `schema_id` MUST reference an existing `CredentialSchema` entry.
+
+##### [MOD-CS-QRY-6-3] List Schema Authorization Policies execution
+
+If all precondition checks pass, the query MUST return the list of
+`SchemaAuthorizationPolicy` entries matching `(schema_id, role)`.
+
+Returned entries MUST include at least the following fields:
+
+- `id`
+- `schema_id`
+- `role`
+- `version`
+- `url`
+- `digest_sri`
+- `created`
+- `effective_from`
+- `effective_until`
+- `revoked`
+
+Entries MUST be ordered by ascending `version`.
 
 ### Permission Module
 
