@@ -1068,6 +1068,7 @@ entity "PermissionSessionRecord" as cspsr {
 
 entity "Digest" as digest {
   *digest_sri: string
+  +created: timestamp
 }
 
 enum "PermissionType" as cspt {
@@ -1293,6 +1294,11 @@ group  --o td: authority
 
 - `denom` (string) (*mandatory*): token denomination.
 - `amount` (number) (*mandatory*): amount expressed in the given denomination.
+
+### Digest
+
+- `digest_sri` (string) (*mandatory*): digestSRI to store.
+- `created` (timestamp) (*mandatory*): block execution date of when it was persisted.
 
 ### Authorization
 
@@ -3291,7 +3297,7 @@ An [[ref: account]] that would like to create or update a `PermissionSession` en
 - `verifier_perm_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
 - `agent_perm_id` (uint64) (*mandatory*): the agent credential issuer permission id (extracted from the agent credential that agent has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification).
 - `wallet_agent_perm_id` (uint64) (*mandatory*): the wallet credential issuer permission id of the agent where the credential will be or is stored. Can be the same perm than `agent_perm_id` if agent and wallet_agent are the same agent.
-- `digest_sri` (string) (*optional*): digest_sri of an issued credential. **Mandatory** if we are dealing with the issuance of a credential.
+- `digest_sri` (string) (*optional*): digestSRI derived from an issued or verified credential.
 
 ##### [MOD-PERM-MSG-10-2] Create or Update Permission Session precondition checks
 
@@ -3313,7 +3319,7 @@ if `issuer_perm_id` is no null:
 - if `issuer_perm` is not a [[ref: valid permission]], abort.
 - if `issuer_perm.vs_operator` is not equal to `operator`, abort.
 - if `issuer_perm.authority` is not equal to `authority`, abort.
-- if `digest_sri` is not present or `digest_sri` is not a valid digest SRI, abort.
+- if `digest_sri` is present but not a valid digest SRI, abort.
 
 if `verifier_perm_id` is no null:
 
@@ -3322,6 +3328,7 @@ if `verifier_perm_id` is no null:
 - if `verifier_perm` is not a [[ref: valid permission]], abort.
 - if `verifier_perm.vs_operator` is not equal to `operator`, abort.
 - if `verifier_perm.authority` is not equal to `authority`, abort.
+- if `digest_sri` is present but not a valid digest SRI, abort.
 
 
 agent:
@@ -4605,7 +4612,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- if `digest_sri` is not present or `digest_sri` is not a valid digest SRI, abort.
+- if `digest_sri` is not present or `digest_sri` is not a valid digestSRI, abort.
 
 ###### [MOD-DI-MSG-1-2-2] Store Digest fee checks
 
