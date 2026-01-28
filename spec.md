@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Specification Status:** *Draft1*
+**Specification Status:** *Draft2*
 
 **Latest Draft:** [verana-labs/verifiable-trust-vpr-spec](https://github.com/verana-labs/verifiable-trust-vpr-spec)
 
@@ -973,6 +973,25 @@ entity "CredentialSchema" as cs {
   +verifier_perm_management_mode: PermissionManagementMode
 }
 
+enum "SchemaAuthorizationPolicyRole" as sapr {
+  ISSUER
+  VERIFIER
+}
+
+
+entity "SchemaAuthorizationPolicy" as sap {
+  *id: uint64
+  +created: timestamp
+  +version: integer
+  +role: sapr
+  +url: string
+  +digest_sri: string
+  +revoked: boolean
+  +effective_from: timestamp
+  effective_until: timestamp
+}
+
+
 enum "PermissionManagementMode" as cspm {
   OPEN
   GRANTOR
@@ -985,21 +1004,18 @@ entity "(SDK) Account" as account {
 entity "Group" as group {
 }
 
-entity "Authorization" as authz {
+entity "OperatorAuthorization" as oauthz {
    +msg_types: msg_type[]
    +expiration: timestamp
    +period: duration
+}
+
+entity "VSOperatorAuthorization" as vsoauthz {
 }
 
 entity "DenomAmount" as da {
   denom: string
   amount: number
-}
-
-entity "FeeGrant" as feegrant {
-   +msg_types: msg_type[]
-   +expiration: timestamp
-   +period: duration
 }
 
 entity "Permission" as csp {
@@ -1027,7 +1043,11 @@ entity "Permission" as csp {
   +vp_summary_digest_sri: string
   +issuance_fee_discount: number
   +verification_fee_discount: number
+  +vs_operator_authz_enabled: boolean
+  +vs_operator_authz_spend_period: duration
+  +vs_operator_authz_with_feegrant: boolean
 }
+
 
 enum "ValidationState" as valstate {
   PENDING
@@ -1049,6 +1069,7 @@ entity "PermissionSessionRecord" as cspsr {
 
 entity "Digest" as digest {
   *digest_sri: string
+  +created: timestamp
 }
 
 enum "PermissionType" as cspt {
@@ -1089,16 +1110,18 @@ entity "TrustDeposit" as td {
   slash_count: number
 }
 
-group --o authz: grantor
-account --o authz: grantee
+group --o oauthz: authority
+account --o oauthz: operator
 
-group --o feegrant: grantor
-account --o feegrant: grantee
+group --o vsoauthz: authority
+account --o vsoauthz: vs_operator
 
 csp o-- cspt: type
 csp o-- cs: schema_id
 csp o-- "0..1" csp: validator_perm_id
 cs o-- tr: tr_id
+
+cs o-- "0..n" sap: policies
 
 csps --- "1..n" cspsr : session_records
 
@@ -1106,8 +1129,13 @@ cspsr  o-- "0..1" csp: issuer_perm_id
 cspsr  o-- "0..1" csp: verifier_perm_id
 cspsr  o-- "0..1" csp: wallet_agent_perm_id
 
-feegrant "1" --- "0..n" da: spend_limit
-authz "1" --- "0..n" da: spend_limit
+oauthz "1" --- "0..n" da: fee_spend_limit
+oauthz "1" --- "0..n" da: spend_limit
+
+csp "1" --- "0..n" da: vs_operator_spend_limit
+csp "1" --- "0..n" da: vs_operator_fee_spend_limit
+
+vsoauthz --- "0..n" csp: permissions 
 
 
 tr "1" --- "1..n" gfv: versions 
@@ -1183,6 +1211,21 @@ group  --o td: authority
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
 
+### SchemaAuthorizationPolicy
+
+`SchemaAuthorizationPolicy`:
+
+- `id` (uint64) (*mandatory*): unique identifier of this authorization policy.
+- `schema_id` (uint64) (*mandatory*): id of the `CredentialSchema` this policy applies to.
+- `created` (timestamp) (*mandatory*): timestamp when this policy entry was created.
+- `version` (integer) (*mandatory*): version number of this policy for the given `(schema_id, role)`.
+- `role` (SchemaAuthorizationPolicyRole) (*mandatory*): role this policy applies to (`ISSUER` or `VERIFIER`).
+- `url` (string) (*mandatory*): URL where the policy document is published.
+- `digest_sri` (string) (*mandatory*): SRI hash of the policy document, used to guarantee integrity and immutability.
+- `effective_from` (timestamp) (*mandatory*): timestamp from which this policy version is in force.
+- `effective_until` (timestamp) (*optional*): timestamp until which this policy version is in force, if time-limited.
+- `revoked` (boolean) (*mandatory*): indicates whether this policy version has been revoked and must no longer be used.
+
 ### Permission
 
 `Permission`:
@@ -1217,6 +1260,12 @@ group  --o td: authority
 - `vp_summary_digest_sri` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `authority` account (trust fees will be paid by authority account)
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
+  as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with `authority` account.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
+- `vs_operator_authz_spend_period`: (period) (*optional*): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
 
 ### PermissionSession
 
@@ -1258,24 +1307,27 @@ group  --o td: authority
 - `denom` (string) (*mandatory*): token denomination.
 - `amount` (number) (*mandatory*): amount expressed in the given denomination.
 
-### Authorization
+### Digest
 
-- `grantor` (group) (*mandatory*): the authority group granting the authorization.
-- `grantee` (account) (*mandatory*): the operator account receiving the authorization.
+- `digest_sri` (string) (*mandatory*): digestSRI to store.
+- `created` (timestamp) (*mandatory*): block execution date of when it was persisted.
+
+### OperatorAuthorization
+
+- `authority` (group) (*mandatory*): the authority group granting the authorization.
+- `operator` (account) (*mandatory*): the operator account receiving the authorization.
 - `msg_types` (msg_type[]) (*mandatory*): list of module message types this authorization applies to.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the grantee is allowed to spend
   as a direct consequence of executing authorized messages.
+- `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be paid using this authorization.
 - `expiration` (timestamp) (*optional*): timestamp after which the authorization is no longer valid.
-- `period` (duration) (*optional*): reset period for spend_limit.
+- `period` (duration) (*optional*): reset period for spend_limit and fee_spend_limit.
 
-### FeeGrant
+### VSOperatorAuthorization
 
-- `grantor` (group) (*mandatory*): the authority group providing the funds for transaction fees.
-- `grantee` (account) (*mandatory*): the operator account allowed to pay fees using the grantor’s funds.
-- `msg_types` (msg_type[]) (*mandatory*): list of module message types for which this fee grant applies.
-- `spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be paid using this fee grant.
-- `expiration` (timestamp) (*optional*): timestamp after which the fee grant is no longer valid.
-- `period` (duration) (*optional*): reset period for spend_limit.
+- `authority` (group) (*mandatory*): the authority group granting the authorization.
+- `vs_operator` (account) (*mandatory*): the operator account receiving the authorization.
+- `permissions[]` (uint64[]) (*mandatory*): permission ids for which we grant this authorization.
 
 ### GlobalVariables
 
@@ -1452,7 +1504,7 @@ Such messages conceptually involve **two roles**:
 When a delegable message is executed **directly by an operator account**, both roles are authenticated and enforced by the authorization system.
 
 Using this model makes it possible to:
-
+vs_operator_authz_spend_limit
 - identify, within the Msg, both the authenticated `authority` and the executing `operator`,
 - allow network fees to be paid either by the `operator` account or by the `authority` account via a fee grant.
 
@@ -1524,10 +1576,15 @@ As a result, `accountABC` is authorized to:
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |authority + operator |
 |                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |authority + operator |
 |                                | Update CS Module Parameters             |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |governance proposal |
+|                  | Create Schema Authorization Policy                  | N/A (Tx)               | Msg  | [[MOD-CS-MSG-5]](#mod-cs-msg-5-create-schema-authorization-policy) | authority + operator |
+|                  | Increase Active Schema Authorization Policy Version | N/A (Tx)               | Msg  | [[MOD-CS-MSG-6]](#mod-cs-msg-6-increase-active-schema-authorization-policy-version) | authority + operator |
+|                  | Revoke Schema Authorization Policy                  | N/A (Tx)               | Msg  | [[MOD-CS-MSG-7]](#mod-cs-msg-7-revoke-schema-authorization-policy) | authority + operator |
 |                                | List Credential Schemas                 | /cs/v1/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |N/A  |
 |                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |N/A  |
 |                                | Render Json Schema                      | /cs/v1/js/{id}               | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |N/A  |
 |                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-CS-QRY-4]](#mod-cs-qry-4-list-module-parameters)   |N/A  |
+|                  | Get Schema Authorization Policy                         | /cs/v1/sap/get         | Query | [[MOD-CS-QRY-5]](#mod-cs-qry-5-get-schema-authorization-policy) | N/A |
+|                  | List Schema Authorization Policies                      | /cs/v1/sap/list        | Query | [[MOD-CS-QRY-6]](#mod-cs-qry-6-list-schema-authorization-policies) | N/A |
 | Permission                     | Start Permission VP                     |     N/A (Tx)                       | Msg    | [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp)    |authority + operator |
 |                                | Renew a Permission VP                   |       N/A (Tx)                     | Msg    | [[MOD-PERM-MSG-2]](#mod-perm-msg-2-renew-permission-vp)    |authority + operator |
 |                                | Set Permission VP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated)    |authority + operator |
@@ -1555,8 +1612,10 @@ As a result, `accountABC` is authorized to:
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |N/A |
 | Delegation  | Grant Fee Allowance         |   N/A (Tx)  | Msg  | [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)   |module call|
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
-|             | Grant Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-authorization)   |authority (group proposal) OR authority + operator OR module call|
-|             | Revoke Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-authorization)   |authority (group proposal) OR authority + operator OR module call|
+|             | Grant Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)   |authority (group proposal) OR authority + operator OR module call|
+|             | Revoke Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization)   |authority (group proposal) OR authority + operator OR module call|
+|             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |authority (group proposal) OR authority + operator OR module call|
+|             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |authority (group proposal) OR authority + operator OR module call|
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |authority + operator OR module call|
 
 :::note
@@ -2118,6 +2177,146 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
 
+#### [MOD-CS-MSG-5] Create Schema Authorization Policy
+
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
+This message creates a **draft** `SchemaAuthorizationPolicy` for a given `(schema_id, role)`, or overwrites the existing draft policy if one already exists.  
+A draft policy is defined as a policy with `effective_from == null` and MUST NOT be revoked.
+
+Accordingly, if a credential schema defines one or more active policies for the ISSUER or VERIFIER role, the corresponding authority that grants the ISSUER or VERIFIER role for this schema (ISSUER_GRANTOR, VERIFIER_GRANTOR, or ECOSYSTEM, depending on how schema issuer and verifier modes have been configured) MUST issue an IAC or VAC credential to the candidate upon successful completion of the validation process. Refer to the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec) for more information.
+
+##### [MOD-CS-MSG-5-1] Create Schema Authorization Policy parameters
+
+- `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
+- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
+- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
+- `url` (string): URL where the policy document is published (*mandatory*).
+- `digest_sri` (string): SRI digest of the policy document (*mandatory*).
+
+##### [MOD-CS-MSG-5-2] Create Schema Authorization Policy precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CS-MSG-5-2-1] Create Schema Authorization Policy basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `authority`.
+- `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
+- `url` MUST be a non-empty valid URI.
+- `digest_sri` MUST be non-empty.
+- there MUST NOT exist more than one policy for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
+
+###### [MOD-CS-MSG-5-2-2] Create Schema Authorization Policy fee checks
+
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
+
+##### [MOD-CS-MSG-5-3] Create Schema Authorization Policy execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs:
+
+- if a draft policy exists for `(schema_id, role)`:
+  - update the existing policy by setting:
+    - `url = url`
+    - `digest_sri = digest_sri`
+- otherwise, create and persist a new `SchemaAuthorizationPolicy` entry `sap`:
+  - `sap.id`: auto-incremented uint64
+  - `sap.schema_id`: `schema_id`
+  - `sap.role`: `role`
+  - `sap.version`: max existing version for `(schema_id, role)` + 1, or `1` if none exist
+  - `sap.url`: `url`
+  - `sap.digest_sri`: `digest_sri`
+  - `sap.created`: current timestamp
+  - `sap.effective_from`: `null`
+  - `sap.effective_until`: `null`
+  - `sap.revoked`: `false`
+
+#### [MOD-CS-MSG-6] Increase Active Schema Authorization Policy Version
+
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
+This message activates the current draft `SchemaAuthorizationPolicy` for the given `(schema_id, role)` and deactivates any previously active version. Deactivation does not constitute revocation; credentials issued under earlier policies MAY continue to be considered valid.
+
+##### [MOD-CS-MSG-6-1] Increase Active Schema Authorization Policy Version parameters
+
+- `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
+- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
+- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
+
+##### [MOD-CS-MSG-6-2] Increase Active Schema Authorization Policy Version precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CS-MSG-6-2-1] Basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `authority`.
+- exactly one draft policy MUST exist for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
+- the draft policy MUST have non-empty `url` and `digest_sri`.
+
+###### [MOD-CS-MSG-6-2-2] Fee checks
+
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
+
+##### [MOD-CS-MSG-6-3] Increase Active Schema Authorization Policy Version execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks atomically in a [[ref: transaction]]:
+
+- let `draft` be the unique policy with `effective_from == null` and `revoked == false`.
+- let `prev_active` be the active policy for `(schema_id, role)`, if any.
+- set `draft.effective_from = now`.
+- if `prev_active` exists:
+  - set `prev_active.effective_until = now`.
+
+#### [MOD-CS-MSG-7] Revoke Schema Authorization Policy
+
+Any authorized `operator` CAN execute this method on behalf of an `authority`.
+
+This message revokes a previously enabled `SchemaAuthorizationPolicy` version. Revoked means previously issued credential that refer to this policy are automatically considered revoked.
+
+##### [MOD-CS-MSG-7-1] Revoke Schema Authorization Policy parameters
+
+- `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
+- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
+- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
+- `version` (integer): policy version to revoke (*mandatory*).
+
+##### [MOD-CS-MSG-7-2] Revoke Schema Authorization Policy precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CS-MSG-7-2-1] Basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- a policy MUST exist for `(schema_id, role, version)`.
+- the targeted policy MUST have `effective_from != null` (a policy that has never been enabled MUST NOT be revoked).
+- the targeted policy MUST NOT already be revoked.
+
+###### [MOD-CS-MSG-7-2-2] Fee checks
+
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
+
+##### [MOD-CS-MSG-7-3] Revoke Schema Authorization Policy execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following task in a [[ref: transaction]]:
+
+- set `revoked = true` on the targeted `SchemaAuthorizationPolicy` entry.
+
 #### [MOD-CS-QRY-1] List Credential Schemas
 
 ##### [MOD-CS-QRY-1-1] List Credential Schemas parameters
@@ -2194,6 +2393,76 @@ Return the list of the existing parameters and their values.
   }
 }
 ```
+
+#### [MOD-CS-QRY-5] Get Schema Authorization Policy
+
+This query returns a single `SchemaAuthorizationPolicy` identified by its unique `id`.
+
+##### [MOD-CS-QRY-5-1] Get Schema Authorization Policy parameters
+
+- `id` (uint64): unique identifier of the `SchemaAuthorizationPolicy` (*mandatory*).
+
+##### [MOD-CS-QRY-5-2] Get Schema Authorization Policy precondition checks
+
+If any of these precondition checks fail, query MUST abort.
+
+- `id` MUST be provided.
+- a `SchemaAuthorizationPolicy` entry with the given `id` MUST exist.
+
+##### [MOD-CS-QRY-5-3] Get Schema Authorization Policy execution
+
+If all precondition checks pass, the query MUST return the corresponding
+`SchemaAuthorizationPolicy` entry:
+
+- `id`
+- `schema_id`
+- `role`
+- `version`
+- `url`
+- `digest_sri`
+- `created`
+- `effective_from`
+- `effective_until`
+- `revoked`
+
+
+#### [MOD-CS-QRY-6] List Schema Authorization Policies
+
+This query returns the list of `SchemaAuthorizationPolicy` entries associated
+with a given `(schema_id, role)` pair.
+
+##### [MOD-CS-QRY-6-1] List Schema Authorization Policies parameters
+
+- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
+- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
+
+##### [MOD-CS-QRY-6-2] List Schema Authorization Policies precondition checks
+
+If any of these precondition checks fail, query MUST abort.
+
+- `schema_id` MUST be provided.
+- `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
+- `schema_id` MUST reference an existing `CredentialSchema` entry.
+
+##### [MOD-CS-QRY-6-3] List Schema Authorization Policies execution
+
+If all precondition checks pass, the query MUST return the list of
+`SchemaAuthorizationPolicy` entries matching `(schema_id, role)`.
+
+Returned entries MUST include at least the following fields:
+
+- `id`
+- `schema_id`
+- `role`
+- `version`
+- `url`
+- `digest_sri`
+- `created`
+- `effective_from`
+- `effective_until`
+- `revoked`
+
+Entries MUST be ordered by ascending `version`.
 
 ### Permission Module
 
@@ -2294,13 +2563,19 @@ An Applicant that would like to start a permission validation process MUST execu
 
 - `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
-- `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for ISSUER and VERIFIER PermissionType.
+- `vs_operator` (account) (*optional*): the account of the Veriable Service we want to authorize to create permission sessions linked to this permission. If not specified, Verifiable Service will not be able to use the payment delegation feature. **Required** to use the payment delegation feature.
 - `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
 - `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
-- `did` (string) (*optional*): if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `did` (string) (*required*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `authority` account (trust fees will be paid by authority account)
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
+  as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with `authority` account.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
+- `vs_operator_authz_spend_period`: (period) (*optional*): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
@@ -2314,13 +2589,18 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- `vs_operator` (account): **Required** for ISSUER and VERIFIER PermissionType.
 - `type` (PermissionType) (*mandatory*) MUST be a valid PermissionType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
 - `validator_perm_id` (uint64) (*mandatory*): see [MOD-PERM-MSG-1-2-2](#mod-perm-msg-1-2-2-start-permission-vp-permission-checks).
 - `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
+  as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
+- `vs_operator_authz_spend_period`: (period) (*optional*): if not null, `vs_operator` MUST NOT be null, else abort. Reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
 
 :::note
 A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the validation process is REQUIRED or not.
@@ -2410,6 +2690,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_denom`.
   - `applicant_perm.vp_summary_digest_sri`: null.
   - `applicant_perm.vp_validator_deposit`: 0.
+  - `applicant_perm.vs_operator_authz_enabled`: `vs_operator_authz_enabled`
+  - `applicant_perm.vs_operator_authz_spend_limit`: `vs_operator_authz_spend_limit`
+  - `applicant_perm.vs_operator_authz_with_feegrant`: `vs_operator_authz_with_feegrant`
+  - `applicant_perm.vs_operator_authz_fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+  - `applicant_perm.vs_operator_authz_spend_period`: `vs_operator_authz_spend_period`
+  
 
 #### Connecting to the VS of the Validator
 
@@ -2644,12 +2930,8 @@ Fees and Trust Deposits:
 
 If `applicant_perm.type` is ISSUER or VERIFIER: Create authorization for `applicant_perm.vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
 
-- call **Grant Authorization()** with the following parameters:
-  - `authority`: `applicant_perm.authority`
-  - `grantee`: `applicant_perm.vs_operator`
-  - `msg_types`: `CreateOrUpdatePermissionSession`
-  - `expiration`: `applicant_perm.effective_until`
-  - `with_feegrant`: true
+- if `applicant_perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`applicant_perm.id`)**.
+
 
 #### [MOD-PERM-MSG-4] Void
 
@@ -2720,7 +3002,7 @@ An [[ref: account]] that would like to create a `Permission` entry MUST call thi
 - `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
-- `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
+- `did` (string) (*mandatory*): [[ref: DID]] of the VS.
 - `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
@@ -2851,12 +3133,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 If `applicant_perm.type` is ISSUER or VERIFIER: Update authorization for `applicant_perm.vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
 
-- call **Grant Authorization()** with the following parameters:
-  - `authority`: `applicant_perm.authority`
-  - `grantee`: `applicant_perm.vs_operator`
-  - `msg_types`: `CreateOrUpdatePermissionSession`
-  - `expiration`: `applicant_perm.effective_until`
-  - `with_feegrant`: true
+- if `applicant_perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`applicant_perm.id`)**.
+
 
 #### [MOD-PERM-MSG-9] Revoke Permission
 
@@ -2986,9 +3264,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 If `applicant_perm.type` is ISSUER or VERIFIER: Delete authorization for `applicant_perm.vs_operator`:
 
-- call **Revoke Authorization()** with the following parameters:
-  - `authority`: `applicant_perm.authority`
-  - `grantee`: `applicant_perm.vs_operator`
+- call **Revoke VS Operator Authorization(`applicant_perm.id`)**.
 
 #### [MOD-PERM-MSG-10] Create or Update Permission Session
 
@@ -3040,7 +3316,7 @@ An [[ref: account]] that would like to create or update a `PermissionSession` en
 - `verifier_perm_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
 - `agent_perm_id` (uint64) (*mandatory*): the agent credential issuer permission id (extracted from the agent credential that agent has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification).
 - `wallet_agent_perm_id` (uint64) (*mandatory*): the wallet credential issuer permission id of the agent where the credential will be or is stored. Can be the same perm than `agent_perm_id` if agent and wallet_agent are the same agent.
-- `digest_sri` (string) (*optional*): digest_sri of an issued credential. **Mandatory** if we are dealing with the issuance of a credential.
+- `digest_sri` (string) (*optional*): digestSRI derived from an issued or verified credential.
 
 ##### [MOD-PERM-MSG-10-2] Create or Update Permission Session precondition checks
 
@@ -3062,7 +3338,7 @@ if `issuer_perm_id` is no null:
 - if `issuer_perm` is not a [[ref: valid permission]], abort.
 - if `issuer_perm.vs_operator` is not equal to `operator`, abort.
 - if `issuer_perm.authority` is not equal to `authority`, abort.
-- if `digest_sri` is not present or `digest_sri` is not a valid digest SRI, abort.
+- if `digest_sri` is present but not a valid digest SRI, abort.
 
 if `verifier_perm_id` is no null:
 
@@ -3071,7 +3347,7 @@ if `verifier_perm_id` is no null:
 - if `verifier_perm` is not a [[ref: valid permission]], abort.
 - if `verifier_perm.vs_operator` is not equal to `operator`, abort.
 - if `verifier_perm.authority` is not equal to `authority`, abort.
-
+- if `digest_sri` is present but not a valid digest SRI, abort.
 
 agent:
 
@@ -3316,9 +3592,7 @@ use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn t
 
 If `applicant_perm.type` is ISSUER or VERIFIER: Delete authorization for `applicant_perm.vs_operator`:
 
-- call **Revoke Authorization()** with the following parameters:
-  - `authority`: `applicant_perm.authority`
-  - `grantee`: `applicant_perm.vs_operator`
+- call **Revoke VS Operator Authorization(`applicant_perm.id`)** with the following parameters:
 
 #### [MOD-PERM-MSG-13] Repay Permission Slashed Trust Deposit
 
@@ -3380,7 +3654,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 
 - `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
-- `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for ISSUER and VERIFIER PermissionType.
+- `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
 - `schema_id` (uint64) (*mandatory*)
 - `type` (PermissionType) (*mandatory*): ISSUER or VERIFIER.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
@@ -3388,6 +3662,12 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in trust unit. Default to 0.
 - `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in trust unit. Default to 0.
+- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `authority` account (trust fees will be paid by authority account)
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
+  as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with `authority` account.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
+- `vs_operator_authz_spend_period`: (period) (*optional*): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
 
 ##### [MOD-PERM-MSG-14-2] Create Permission precondition checks
 
@@ -3399,14 +3679,19 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- `vs_operator` (account) (*mandatory*).
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
 - `type` (PermissionType) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
-- `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `did`, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `effective_from` must be in the future.
 - `effective_until`, if not null, must be greater than `effective_from`
 - `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
 - `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
+- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
+  as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
+- `vs_operator_authz_spend_period`: (period) (*optional*): if not null, `vs_operator` MUST NOT be null, else abort. Reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
 
 ###### [MOD-PERM-MSG-14-2-2] Create Permission permission checks
 
@@ -3448,15 +3733,15 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.verification_fees`: `verification_fees` if specified and `type` is ISSUER, else 0.
 - `perm.deposit`: 0
 - `perm.validator_perm_id`: `ecosystem_perm_id`
-
+- `perm.vs_operator_authz_enabled`: `vs_operator_authz_enabled`
+- `perm.vs_operator_authz_spend_limit`: `vs_operator_authz_spend_limit`
+- `perm.vs_operator_authz_with_feegrant`: `vs_operator_authz_with_feegrant`
+- `perm.vs_operator_authz_fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+- `perm.vs_operator_authz_spend_period`: `vs_operator_authz_spend_period`
+  
 Create authorization for `vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
 
-- call **Grant Authorization()** with the following parameters:
-  - `authority`: `authority`
-  - `grantee`: `vs_operator`
-  - `msg_types`: `CreateOrUpdatePermissionSession`
-  - `expiration`: `effective_until`
-  - `with_feegrant`: true
+- if `perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`perm.id`)**.
 
 #### [MOD-PERM-QRY-1] List Permissions
 
@@ -4174,7 +4459,9 @@ Return the list of the existing parameters and their values.
 
 This method can only be called directly by the following methods:
 
-- Grant Authorization
+- Grant Operator Authorization
+- Grant VS Operator Authorization
+- Revoke VS Operator Authorization
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
@@ -4215,8 +4502,9 @@ Create (or update if it already exist) FeeGrant `feegrant`:
 
 This method can only be called directly by the following methods:
 
-- Grant Authorization
-- Revoke Authorization
+- Grant Operator Authorization
+- Revoke Operator Authorization
+- Revoke VS Operator Authorization
 
 ##### [MOD-DE-MSG-2-1] Revoke Allowance method parameters
 
@@ -4238,18 +4526,12 @@ MUST abort if one of these conditions fails:
 
 If FeeGrant entry for this (`authority`, `grantee`) exist, delete it, else do nothing.
 
-#### [MOD-DE-MSG-3] Grant Authorization
+#### [MOD-DE-MSG-3] Grant Operator Authorization
 
 - Any authorized `operator` CAN execute this method on behalf of an `authority`.
 - `authority` CAN execute this method alone through a group proposal
 
-This method can be called directly by the following methods with no signer check:
-
-- Create Permission
-- Extend Permission
-- Set Permission VP to Validated
-
-##### [MOD-DE-MSG-3-1] Grant Authorization method parameters
+##### [MOD-DE-MSG-3-1] Grant Operator Authorization method parameters
 
 - `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account) (*optional*): (Signer) the account authorized by the `authority` to run this Msg.
@@ -4262,31 +4544,37 @@ This method can be called directly by the following methods with no signer check
 - `feegrant_spend_limit` (DenomAmount[]) (*optional*): maximum spendable
 - `feegrant_spend_limit_period` (duration) (*optional*): can be combined with `feegrant_spend_limit`
 
-##### [MOD-DE-MSG-3-2] Grant Authorization basic checks
+##### [MOD-DE-MSG-3-2] Grant Operator Authorization basic checks
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**.
+- `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `CreateOrUpdatePermissionSession` which is not allowed.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `authz_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `authz_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `authz_spend_limit` is not set.
 - `feegrant_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts. Ignored if `with_feegrant` is false.
 - `feegrant_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `feegrant_spend_limit` is not set or if `with_feegrant` is false.
 
-##### [MOD-DE-MSG-3-3] Grant Authorization fee checks
+- Check if a **VS Operator Authorization** exists for `authority` and `grantee`. If this is the case, MUST abort.
+
+::: warning
+An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for `perm.authority` and `perm.vs_operator`. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
+:::
+
+##### [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
 
-##### [MOD-DE-MSG-3-4] Grant Authorization execution of the method
+##### [MOD-DE-MSG-3-4] Grant Operator Authorization execution of the method
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 Create (or update if it already exist) Authorization `authz`:
 
-- set `authz.grantor` to `authority`
-- set `authz.grantee` to `grantee`
+- set `authz.authority` to `authority`
+- set `authz.operator` to `grantee`
 - set `authz.msg_types` to `msg_types`
 - set `authz.expiration` to `expiration`
 - set `authz.spend_limit` to `authz_spend_limit`
@@ -4298,25 +4586,20 @@ if `with_feegrant` is false:
 
 else if `with_feegrant` is true:
 
-- call Grant Fee Allowance (`authority`, `grantee`, `msg_types`, `expiration`, `feegrant_spend_limit`, `feegrant_spend_limit_period`).
+- grant Fee Allowance (`authority`, `grantee`, `msg_types`, `expiration`, `feegrant_spend_limit`, `feegrant_spend_limit_period`).
 
-#### [MOD-DE-MSG-4] Revoke Authorization
+#### [MOD-DE-MSG-4] Revoke Operator Authorization
 
 - Any authorized `operator` CAN execute this method on behalf of an `authority`.
 - `authority` CAN execute this method alone through a group proposal
 
-This method can be called directly by the following methods with no signer check:
-
-- Revoke Permission
-- Slash Permission Trust Deposit
-
-##### [MOD-DE-MSG-4-1] Revoke Authorization method parameters
+##### [MOD-DE-MSG-4-1] Revoke Operator Authorization method parameters
 
 - `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `authority` to run this Msg.
-- `grantee` (account) (*mandatory*): the account that receives the fee grant from `authority`.
+- `grantee` (account) (*mandatory*): the account that will be revoked its authorization`.
 
-##### [MOD-DE-MSG-4-2] Revoke Authorization basic checks
+##### [MOD-DE-MSG-4-2] Revoke Operator Authorization basic checks
 
 MUST abort if one of these conditions fails:
 
@@ -4324,14 +4607,122 @@ MUST abort if one of these conditions fails:
 - `operator` (account): (Signer) signature must be verified.
 - An Authorization entry MUST exist for this (`authority`, `grantee`)
 
-##### [MOD-DE-MSG-4-3] Revoke Authorization fee checks
+##### [MOD-DE-MSG-4-3] Revoke Operator Authorization fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
 
-##### [MOD-DE-MSG-4-4] Revoke Authorization execution of the method
+##### [MOD-DE-MSG-4-4] Revoke Operator Authorization execution of the method
 
 - Delete Authorization entry for this (`authority`, `grantee`).
-- call Revoke Fee Allowance (`authority`, `grantee`).
+- revoke Fee Allowance (`authority`, `grantee`).
+
+#### [MOD-DE-MSG-5] Grant VS Operator Authorization
+
+This method can only be called directly by the following methods with no signer check:
+
+- Self Create Permission
+- Extend Permission
+- Set Permission VP to Validated
+
+> Note: This methid can only grant authorization for the `CreateOrUpdatePermissionSession` Msg.
+
+##### [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters
+
+- `perm_id` (uint64) (*mandatory*): the permission this authorization is referring to.
+
+##### [MOD-DE-MSG-5-2] Grant VS Operator Authorization basic checks
+
+if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- `perm_id` (uint64) (*mandatory*): Permission MUST exist.
+- load Permission `perm` with `perm_id`. `perm.authority` and `perm.vs_operator` MUST NOT be null.
+- Check if a **Operator Authorization** exists for `perm.authority` and `perm.vs_operator`. If this is the case, MUST abort.
+
+::: warning
+A **VS Operator Authorization** CAN be granted ONLY IF no **Operator Authorization** exists for `perm.authority` and `perm.vs_operator`. **VS Operator Authorization** and **Operator Authorization** are mutually exclusive for a given grantee.
+:::
+
+##### [MOD-DE-MSG-5-3] Grant VS Operator Authorization fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+
+##### [MOD-DE-MSG-5-4] Grant VS Operator Authorization execution of the method
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+Load Permission `perm` with `perm_id`.
+
+Create VSOperatorAuthorization `vs_operator_authz` if it doesn't exist yet:
+
+- set `vs_operator_authz.grantor` to `perm.authority`
+- set `vs_operator_authz.grantee` to `perm.vs_operator`
+
+then, add the perm_id to the list of authorized permissions:
+
+- Add `perm_id` to `vs_operator_authz.permissions`
+
+Then check for feegrant:
+
+- if `perm.vs_operator_authz_with_feegrant` is true:
+  - set `max_expire` = `perm.effective_until`
+  - if `max_expire` == null: call Grant Fee Allowance (`authority`, `grantee`, `CreateOrUpdatePermissionSession`, null, null, null) and EXIT.
+  - else foreach `current_perm_id` of `vs_operator_authz.permissions`
+    - load Permission `current_perm` from `current_perm_id`
+    - if `current_perm.vs_operator_authz_with_feegrant` is true:
+      - if `current_perm.effective_until` == null: call Grant Fee Allowance (`authority`, `grantee`, `CreateOrUpdatePermissionSession`, null, null, null) and EXIT.
+      - else if `current_perm.effective_until` > `max_expire` => set `max_expire` = `current_perm.effective_until`
+  - if `max_expire` > now, call Grant Fee Allowance (`authority`, `grantee`, `CreateOrUpdatePermissionSession`, `max_expire`, null, null).
+
+::: note
+We MUST align to the farthest effective_until for the feegrant, for the permissions that have `current_perm.effective_until` set.
+:::
+
+#### [MOD-DE-MSG-6] Revoke VS Operator Authorization
+
+This method can only be called by the following methods with no signer check:
+
+- Revoke Permission
+- Slash Permission Trust Deposit
+
+##### [MOD-DE-MSG-6-1] Revoke VS Operator Authorization method parameters
+
+- `perm_id` (uint64) (*mandatory*): the permission this authorization is referring to.
+
+##### [MOD-DE-MSG-6-2] Revoke VS Operator Authorization basic checks
+
+MUST abort if one of these conditions fails:
+
+- `perm_id` (uint64) (*mandatory*): Permission MUST exist.
+- load Permission `perm` with `perm_id`. `perm.authority` and `perm.vs_operator` MUST NOT be null.
+
+##### [MOD-DE-MSG-6-3] Revoke VS Operator Authorization fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+
+##### [MOD-DE-MSG-6-4] Revoke VS Operator Authorization execution of the method
+
+- load Permission `perm` with `perm_id`.
+- load VSOperatorAuthorization `vs_operator_authz` with `perm.authority` and `perm.vs_operator`.
+- If `vs_operator_authz` is not null:
+  - remove `perm_id` from `vs_operator_authz.permissions` if present.
+  - if `perm.vs_operator_authz_with_feegrant` is true:
+    - if size(vs_operator_authz.permissions) == 0 => call Revoke Fee Allowance (`perm.authority`, `perm.vs_operator`).
+    - else define `max_expire` = null
+    - foreach `current_perm_id` of `vs_operator_authz.permissions`
+      - load Permission `current_perm` from `current_perm_id`
+      - if `current_perm.vs_operator_authz_with_feegrant` is true:
+        - if `current_perm.effective_until` == null set `max_expire` = null
+        - else if `max_expire` == null set `max_expire` = `current_perm.effective_until`
+        - else `max_expire` = max (`max_expire`, `current_perm.effective_until`)
+    - if `max_expire` > now, call Grant Fee Allowance (`authority`, `grantee`, `CreateOrUpdatePermissionSession`, `max_expire`, null, null).
+
+::: note
+When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.
+:::
+
+::: note
+In the case of VS Operator Authorizations, spending limit are managed by the Permission module.
+:::
 
 #### [MOD-DI-MSG-1] Store Digest
 
@@ -4354,7 +4745,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- if `digest_sri` is not present or `digest_sri` is not a valid digest SRI, abort.
+- if `digest_sri` is not present or `digest_sri` is not a valid digestSRI, abort.
 
 ###### [MOD-DI-MSG-1-2-2] Store Digest fee checks
 
