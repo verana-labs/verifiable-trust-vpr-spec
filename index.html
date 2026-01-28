@@ -48,7 +48,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
       
                     <article id="content">
                       <h1 id="verifiable-public-registry-v4-specification"><a class="toc-anchor" href="#verifiable-public-registry-v4-specification" >§</a> Verifiable Public Registry v4 Specification</h1>
-<p><strong>Specification Status:</strong> <em>Draft1</em></p>
+<p><strong>Specification Status:</strong> <em>Draft2</em></p>
 <p><strong>Latest Draft:</strong> <a path-0="github.com"path-1="verana-labs"path-2="verifiable-trust-vpr-spec"href="https://github.com/verana-labs/verifiable-trust-vpr-spec" >verana-labs/verifiable-trust-vpr-spec</a></p>
 <dl>
 <dt><strong>Editors:</strong></dt>
@@ -89,7 +89,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <p>This specification deals with the Verifiable Public Registry (VPR), a decentralized registry of registries, part of the Verifiable Trust concept.</p>
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:trust-registry">trust registry</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
-<div id="note-1" class="notice note"><a class="notice-link" href="#note-1">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-175" class="notice note"><a class="notice-link" href="#note-175">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
 <h3 id="what-is-a-trust-registry"><a class="toc-anchor" href="#what-is-a-trust-registry" >§</a> What is a Trust Registry?</h3>
@@ -520,7 +520,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-2" class="notice note"><a class="notice-link" href="#note-2">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-176" class="notice note"><a class="notice-link" href="#note-176">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
@@ -532,7 +532,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>A designated <a class="term-reference" href="#term:governance-authority">governance authority</a> is responsible for <strong>enforcing these rules</strong> and, when necessary, <strong>applying financial sanctions</strong> to participants who violate the rules.</p>
-<div id="note-3" class="notice note"><a class="notice-link" href="#note-3">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
+<div id="note-177" class="notice note"><a class="notice-link" href="#note-177">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
 <p>While the <strong>VPR governance framework</strong> defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each <strong>ecosystem</strong> must define its own <strong>EGF</strong> to govern roles, permissions, credential policies, and compliance within its specific domain.</p>
 <p>This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.</p>
 </div>
@@ -540,7 +540,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p>For simplicity, the data model is presented using an <strong>object-relational structure</strong>. However, this representation may not be optimal for all implementation scenarios.</p>
 <p>Implementors are responsible for <strong>adapting the data model</strong> to suit their chosen architecture.<br>
 For example, a <strong>key-value store</strong> may be more appropriate for a <strong>ledger-based implementation</strong> than a relational model.</p>
-<img src="https://www.plantuml.com/plantuml/svg/jLXBR-Cs4BxhLn0-jGsyo095KVWKO-saHZUFsju0HL4GZ3YssKYYG599d6B_UuUa7fGb9JQ2dapDV9mNPuP3NsZ3b2dI9BgeLpfc2P2KlP1Vpy_9i-1c5qMG6M7sPBHMXJPBs0fjr7v4c2P6aNyZGduIV48AaPbVViQlCsu_4IEohVsC5J03I38Y1TIKvfQQIYuseaDcAjw9foxvaOKYMMmGH9z0QI6p2K7LbfomR5kmBGJGw7jZ_vN43HdBOhXKB8LdgHxllGJdp7RprETDl_cXQjY2UaVFJCP5YlnI4JzUKOzFPuLAmaykjeYdMecQYjRKvdnHmEsQ9Qju1obpDiJwU1DEEwf_jCoeTff28uNM1IYwLImpKj4dbWZE38RGBz5IceCI4iLbHVg04VLHjffFtLRgEb77SV2TJFZHuD8GPAGqPHaUeqq2YW75yxn3AW9Gn7NDkaPEowWJjxeiB58oyaSzBSnEAl7g3BsJYOZtIvc0om3DSb-zYzNgsto9Y_lvSd6vm6MOFOE2AY4Vg1caAJHducmvBh7j5dYIZrRuWyJDBBCqs6p0zuIDacbRRyChqASaP7f7RRo68beMIvuwDs_lvZVuSxMStgnlRSZcNsvNVwxMy-km_dzOpNx_aKpZM1PbnJE_HXbXcr2oo7r3iAisinLmBmCfhyuAh4YzfMQVWvwGQldNtuu3BxbGRbCx2EIioavUU7weRGQPJATfRIzdJX6tv23qp27g10y4N09SsH9rkpS0hbx_9sEReweEfoS5Ft87mOk1Z7V8Ec5wrw4go9dWGnbtKZRQ4cdQ2aPH7_OIUwTq6BvNnFsxEEHI2nEIIZze3yixqyEfQwvjRKxn2Bj4L81LQp3YDDxX_GLTIEaejlGUCv0V5qhPVjTnjc7rRzH5cZArf_sz8mmYGdJSIkYUO7P1TOkzhyzgPLrroOXkERzTHcApc2rkhcnddNvTpARh-GpNw_doUd4pNIzkR-Xo_iUt-QfDnu_UP5z1A-V3-xiG_BGaVql14cAfUAscTyBhqHHs4nTwtqZSqeleFv4XKUsclCQcKPba1cwjYaQRzbpnQ5_79kItsw-pW-lkAf4FBBbdIh271BHlptukF3Ds_iMo5ORcIiGGvarS3rdbx5Fzu2nDjNXz1tpqTEJaSRRNRyixON0wKkAxCzMfbdrOqhkJs95o_B7sT9CMW-eTKs1L530CmjiA9aDCQyvUGCBVXZqaCdwa2fwPubvh02qqkepp2VQ_4d4Wwvab2M2MledxVl2ectdL_atd7oTUSUDeDpvnmaHggoIW3TyjWrUBlopwxbR7wRjV7Pfssh8VeyPZwMUb2IcJFwh6hqCMGBYf6blwznrmxLOxUSZnsFKaD11RL4327bSM3g-fe_DFdpwFB7v2cWlGZVWEvK16eInb2HN5RiE-ZqFoXEHszXQWdNQDbY7xisFxPergVHl7mDa-NW8LwHWGlasyZNsezaDa65UcdS-u2XlLa-08SUF65MwVXZaEMJGHgJ2HdstV0KMHKGt6EurlTcUZzLYJo3xXEmWxHfRFRuG41suZpVoSRVO1tJaqmD0XfvKWFboQIlJUdcjvGZPG9QpDhhbUNJjmzHpHICxzH5MQuntWBMikC5Rkxnp_-ny0" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/fLZTRo8t47_dhx1uQXjnoabLLV4KT70fwYMam4MgJYVBiGsusLslR2y9ETt_th6z7rxMcu3oX7VcvvdnUBxCbJP4cI9D1bVrIbEIS9IIP_JdvILw4ipi1WEU6M4EQBXMXJPBlXNQgCCG4OsCGZy62Fqcs1WL8ZD__0vV5yn-0aPaM_j95IU60yc8b8EcDBVKL3An4HqoKNGdzbto8mb54ce0XFTSQI6pCGBLbfoGR5kGBG-WWv-D_TSIDcGae_op8Yb_akhntajmXzbkzh7JnCqFLVCjLs_ecKfQfC0l5R7J5KNET56e9FnaOWjuh9MegM1DRSudnPbTasH5TpmbpWQgJpVXlAlwJyiCQwSfD59eNN25jufaHYgy9ubWn80B_H8inJbNGeAuh4WVmAFUorRpkTjANMVgE0s-amax6LmQ0emKfoI3QxH1WC6XS9ztG0K0YBYfMJV0QHbrvbONXKMAXlwg9uNPIILUdA5tCX7qi9G9Tn6WIUwpTxvQVPqjON4_Myu_ps4PHa-le4h8Et86Q0hC6JjRJWjikuNlvQCL_Y1XCyaiZMystDU4ZP9fMs_3A-1CISZq1xN-wlDecInvwewvk9lTmi_rSdAxNbYNpJujLl-krhERCFz_MKt__XLDA9L5cV74hq56M2QKB79V4EogpLp0nHE8-9RZ7LWI8BquSo0rzHQRGyxr65NBRzyTXp_dGhbTRM-WYofCMU7veThxLR_YlQvL1pkcF9Ff9AsFoeWpZLboS6l48UhS20Gqdgzy7OcezxGK_cnunZfadH2zwr0LpubWVG5qLd3PY6-gn8RRIsgN1jiYEWoV-ZI-Y_5SQc52KdaE767vmqGuTGgrhSqnH4sN20eW2Gru7DCTj2FUXPG7XGeTCGFuj53Abg_EOHjMVACkqfIe0uwNWj290D6q5MGHPyP16iiowh6BSCmpyf0SbPWkIkSGLxYJJb7iap0xQu1hP8tSfW3Trw6oifxs6KSIvtQN451wflFRQrkd9r_cqybwDeNrUhQycTzErlF5BLxE_lawMxNfy17DjHLlfLmu3HI2dPTZhobOSYeLgzL4vyM8fh30k9ltjSKjlOXuGFI9QfVuDPJ9oYJJqmCh6cwAVSN3iVgFq5-BBzEZvdcTo0UIt1CbR3nfN-pzb7bXx3GDLKCOd2j1UHYHj1xPoacg-e7976lnyWRuv5dBoMFae5-NTyOOTgB4DoUqSorxjwGtvxeJvVXhZHIp5WFh7L7SgYXuFmWA21_tCQqv1y4JzZhi8P7q4Il-H1JpMWDeeU78CEr0-IqHHxAUI99mYD9NSJ-FdeXJhzg_4FrJnojk3jhr3qs8I6sM1BJ-rjRRsNolYhLsnucrTuV6z7W-yKFPQ2JBYMkCY1-9p65GpNCXjohuuSvgPEhRs_23ZZ4Os1b8ZaQkF86jKAq24fIxCeTOJHrUVlZmSMZnOzIqOlTsS2W7CWfaAKkeA7ORj02OliSejqEzuDffrs0Ti3ywjg_ReDPNTF2XBUabKA6E0U6ZnziOGxLVEFsuCW9zy5NOGJc93W4rQWx2uCLfcxnlp8b8XNa56QAS9oEOi967-1FWnuOCwlavsEIEcDUDIIDe7aOrelqDR3Txvx0IOl-ew23i15B-oM2bD35ehxs9leRkLFSmTCXfHQo_kwDWzT5KmjhicklLjM-ndcyQoRaVD4jp_05OovehSAdxqyh__Wy0" alt="uml diagram">
 <h3 id="trustregistry"><a class="toc-anchor" href="#trustregistry" >§</a> TrustRegistry</h3>
 <p><code>TrustRegistry</code>:</p>
 <ul>
@@ -637,6 +637,12 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>vp_summary_digest_sri</code> (string) (<em>optional</em>): an optional digest SRI, set by <a class="term-reference" href="#term:validator">validator</a>, of a summary of the information, proofs… provided by the <a class="term-reference" href="#term:applicant">applicant</a>.</li>
 <li><code>issuance_fee_discount</code>: (number) (<em>mandatory</em>): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.</li>
 <li><code>verification_fee_discount</code>: (number) (<em>mandatory</em>): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.</li>
+<li><code>vs_operator_authz_enabled</code>: boolean (<em>mandatory</em>): if set to true, authorize this vs_operator to execute CreateOrUpdatePermissionSession <em>on behalf</em> of <code>authority</code> account (trust fees will be paid by authority account)</li>
+<li><code>vs_operator_authz_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
+as a direct consequence of executing authorized messages.</li>
+<li><code>vs_operator_authz_with_feegrant</code>: boolean (<em>mandatory</em>): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with <code>authority</code> account.</li>
+<li><code>vs_operator_authz_fee_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be spent by vs_operator in the context of this permission.</li>
+<li><code>vs_operator_authz_spend_period</code>: (period) (<em>optional</em>): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.</li>
 </ul>
 <h3 id="permissionsession"><a class="toc-anchor" href="#permissionsession" >§</a> PermissionSession</h3>
 <p><code>PermissionSession</code>:</p>
@@ -680,24 +686,22 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>digest_sri</code> (string) (<em>mandatory</em>): digestSRI to store.</li>
 <li><code>created</code> (timestamp) (<em>mandatory</em>): block execution date of when it was persisted.</li>
 </ul>
-<h3 id="authorization"><a class="toc-anchor" href="#authorization" >§</a> Authorization</h3>
+<h3 id="operatorauthorization"><a class="toc-anchor" href="#operatorauthorization" >§</a> OperatorAuthorization</h3>
 <ul>
-<li><code>grantor</code> (group) (<em>mandatory</em>): the authority group granting the authorization.</li>
-<li><code>grantee</code> (account) (<em>mandatory</em>): the operator account receiving the authorization.</li>
+<li><code>authority</code> (group) (<em>mandatory</em>): the authority group granting the authorization.</li>
+<li><code>operator</code> (account) (<em>mandatory</em>): the operator account receiving the authorization.</li>
 <li><code>msg_types</code> (msg_type[]) (<em>mandatory</em>): list of module message types this authorization applies to.</li>
 <li><code>spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum amount of funds that the grantee is allowed to spend
 as a direct consequence of executing authorized messages.</li>
+<li><code>fee_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be paid using this authorization.</li>
 <li><code>expiration</code> (timestamp) (<em>optional</em>): timestamp after which the authorization is no longer valid.</li>
-<li><code>period</code> (duration) (<em>optional</em>): reset period for spend_limit.</li>
+<li><code>period</code> (duration) (<em>optional</em>): reset period for spend_limit and fee_spend_limit.</li>
 </ul>
-<h3 id="feegrant"><a class="toc-anchor" href="#feegrant" >§</a> FeeGrant</h3>
+<h3 id="vsoperatorauthorization"><a class="toc-anchor" href="#vsoperatorauthorization" >§</a> VSOperatorAuthorization</h3>
 <ul>
-<li><code>grantor</code> (group) (<em>mandatory</em>): the authority group providing the funds for transaction fees.</li>
-<li><code>grantee</code> (account) (<em>mandatory</em>): the operator account allowed to pay fees using the grantor’s funds.</li>
-<li><code>msg_types</code> (msg_type[]) (<em>mandatory</em>): list of module message types for which this fee grant applies.</li>
-<li><code>spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be paid using this fee grant.</li>
-<li><code>expiration</code> (timestamp) (<em>optional</em>): timestamp after which the fee grant is no longer valid.</li>
-<li><code>period</code> (duration) (<em>optional</em>): reset period for spend_limit.</li>
+<li><code>authority</code> (group) (<em>mandatory</em>): the authority group granting the authorization.</li>
+<li><code>vs_operator</code> (account) (<em>mandatory</em>): the operator account receiving the authorization.</li>
+<li><code>permissions[]</code> (uint64[]) (<em>mandatory</em>): permission ids for which we grant this authorization.</li>
 </ul>
 <h3 id="globalvariables"><a class="toc-anchor" href="#globalvariables" >§</a> GlobalVariables</h3>
 <p><code>GlobalVariables</code>:</p>
@@ -834,10 +838,10 @@ as a direct consequence of executing authorized messages.</li>
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-1" class="notice warning"><a class="notice-link" href="#warning-1">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-74" class="notice warning"><a class="notice-link" href="#warning-74">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-4" class="notice note"><a class="notice-link" href="#note-4">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
+<div id="note-178" class="notice note"><a class="notice-link" href="#note-178">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
 </div>
 <h3 id="authorization-and-fee-grants"><a class="toc-anchor" href="#authorization-and-fee-grants" >§</a> Authorization and Fee Grants</h3>
 <h4 id="delegable-module-messages"><a class="toc-anchor" href="#delegable-module-messages" >§</a> Delegable Module Messages</h4>
@@ -857,7 +861,8 @@ The operator MUST be explicitly authorized for the given message type.</p>
 </li>
 </ul>
 <p>When a delegable message is executed <strong>directly by an operator account</strong>, both roles are authenticated and enforced by the authorization system.</p>
-<p>Using this model makes it possible to:</p>
+<p>Using this model makes it possible to:
+vs_operator_authz_spend_limit</p>
 <ul>
 <li>identify, within the Msg, both the authenticated <code>authority</code> and the executing <code>operator</code>,</li>
 <li>allow network fees to be paid either by the <code>operator</code> account or by the <code>authority</code> account via a fee grant.</li>
@@ -1309,18 +1314,34 @@ optionally enabling an associated fee grant.</li>
 </tr>
 <tr>
 <td></td>
-<td>Grant Authorization</td>
+<td>Grant Operator Authorization</td>
 <td>N/A (Tx)</td>
 <td>Msg</td>
-<td><a href="#mod-de-msg-3-grant-authorization" >[MOD-DE-MSG-3]</a></td>
+<td><a href="#mod-de-msg-3-grant-operator-authorization" >[MOD-DE-MSG-3]</a></td>
 <td>authority (group proposal) OR authority + operator OR module call</td>
 </tr>
 <tr>
 <td></td>
-<td>Revoke Authorization</td>
+<td>Revoke Operator Authorization</td>
 <td>N/A (Tx)</td>
 <td>Msg</td>
-<td><a href="#mod-de-msg-4-revoke-authorization" >[MOD-DE-MSG-4]</a></td>
+<td><a href="#mod-de-msg-4-revoke-operator-authorization" >[MOD-DE-MSG-4]</a></td>
+<td>authority (group proposal) OR authority + operator OR module call</td>
+</tr>
+<tr>
+<td></td>
+<td>Grant VS Operator Authorization</td>
+<td>N/A (Tx)</td>
+<td>Msg</td>
+<td><a href="#mod-de-msg-5-grant-vs-operator-authorization" >[MOD-DE-MSG-5]</a></td>
+<td>authority (group proposal) OR authority + operator OR module call</td>
+</tr>
+<tr>
+<td></td>
+<td>Revoke VS Operator Authorization</td>
+<td>N/A (Tx)</td>
+<td>Msg</td>
+<td><a href="#mod-de-msg-6-revoke-vs-operator-authorization" >[MOD-DE-MSG-6]</a></td>
 <td>authority (group proposal) OR authority + operator OR module call</td>
 </tr>
 <tr>
@@ -1333,7 +1354,7 @@ optionally enabling an associated fee grant.</li>
 </tr>
 </tbody>
 </table>
-<div id="note-5" class="notice note"><a class="notice-link" href="#note-5">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-179" class="notice note"><a class="notice-link" href="#note-179">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1379,7 +1400,7 @@ optionally enabling an associated fee grant.</li>
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-6" class="notice note"><a class="notice-link" href="#note-6">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
+<div id="note-180" class="notice note"><a class="notice-link" href="#note-180">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Fee payer MUST have an available balance to cover the <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -1808,7 +1829,7 @@ optionally enabling an associated fee grant.</li>
 </ul>
 </li>
 </ul>
-<div id="note-7" class="notice note"><a class="notice-link" href="#note-7">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-181" class="notice note"><a class="notice-link" href="#note-181">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
@@ -2219,7 +2240,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-8" class="notice note"><a class="notice-link" href="#note-8">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-182" class="notice note"><a class="notice-link" href="#note-182">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -2236,13 +2257,19 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <ul>
 <li><code>authority</code> (group): (Signer) the signing authority on whose behalf this message is executed.</li>
 <li><code>operator</code> (account): (Signer) the account authorized by the <code>authority</code> to run this Msg.</li>
-<li><code>vs_operator</code> (account) (<em>optional</em>): the account we want to authorize to create permission sessions linked to this permission. <strong>Required</strong> for ISSUER and VERIFIER PermissionType.</li>
+<li><code>vs_operator</code> (account) (<em>optional</em>): the account of the Veriable Service we want to authorize to create permission sessions linked to this permission. If not specified, Verifiable Service will not be able to use the payment delegation feature. <strong>Required</strong> to use the payment delegation feature.</li>
 <li><code>type</code> (PermissionType) (<em>mandatory</em>): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;</li>
 <li><code>validator_perm_id</code> (uint64) (<em>mandatory</em>): the <a class="term-reference" href="#term:validator">validator</a> permission (parent permission in the tree), chosen by the applicant.</li>
 <li><code>validation_fees</code> (number) (<em>optional</em>): Requested validation_fees for this permission (can be modified by validator).</li>
 <li><code>issuance_fees</code> (number) (<em>optional</em>): Requested issuance_fees for this permission (can be modified by validator).</li>
 <li><code>verification_fees</code> (number) (<em>optional</em>): Requested verification_fees for this permission (can be modified by validator).</li>
-<li><code>did</code> (string) (<em>optional</em>): if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
+<li><code>did</code> (string) (<em>required</em>): MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
+<li><code>vs_operator_authz_enabled</code>: boolean (<em>mandatory</em>): if set to true authorize this vs_operator to execute CreateOrUpdatePermissionSession <em>on behalf</em> of <code>authority</code> account (trust fees will be paid by authority account)</li>
+<li><code>vs_operator_authz_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
+as a direct consequence of executing authorized messages.</li>
+<li><code>vs_operator_authz_with_feegrant</code>: boolean (<em>mandatory</em>): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with <code>authority</code> account.</li>
+<li><code>vs_operator_authz_fee_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be spent by vs_operator in the context of this permission.</li>
+<li><code>vs_operator_authz_spend_period</code>: (period) (<em>optional</em>): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.</li>
 </ul>
 <p>Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.</p>
 <h5 id="mod-perm-msg-1-2-start-permission-vp-precondition-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-start-permission-vp-precondition-checks" >§</a> [MOD-PERM-MSG-1-2] Start Permission VP precondition checks</h5>
@@ -2252,15 +2279,20 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <ul>
 <li><code>authority</code> (group): (Signer) signature must be verified.</li>
 <li><code>operator</code> (account): (Signer) signature must be verified.</li>
-<li><code>vs_operator</code> (account): <strong>Required</strong> for ISSUER and VERIFIER PermissionType.</li>
 <li><code>type</code> (PermissionType) (<em>mandatory</em>) MUST be a valid PermissionType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.</li>
 <li><code>validator_perm_id</code> (uint64) (<em>mandatory</em>): see <a href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >MOD-PERM-MSG-1-2-2</a>.</li>
 <li><code>validation_fees</code> (number) (<em>optional</em>): Requested validation_fees for this permission (can be modified by validator).</li>
 <li><code>issuance_fees</code> (number) (<em>optional</em>): Requested issuance_fees for this permission (can be modified by validator).</li>
 <li><code>verification_fees</code> (number) (<em>optional</em>): Requested verification_fees for this permission (can be modified by validator).</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
+<li><code>vs_operator_authz_enabled</code>: boolean (<em>mandatory</em>): if set to true, <code>vs_operator</code> MUST NOT be null, else abort.</li>
+<li><code>vs_operator_authz_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
+as a direct consequence of executing authorized messages.</li>
+<li><code>vs_operator_authz_with_feegrant</code>: boolean (<em>mandatory</em>): if set to true, <code>vs_operator</code> MUST NOT be null, else abort.</li>
+<li><code>vs_operator_authz_fee_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be spent by vs_operator in the context of this permission.</li>
+<li><code>vs_operator_authz_spend_period</code>: (period) (<em>optional</em>): if not null, <code>vs_operator</code> MUST NOT be null, else abort. Reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.</li>
 </ul>
-<div id="note-9" class="notice note"><a class="notice-link" href="#note-9">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process is REQUIRED or not.</p>
+<div id="note-183" class="notice note"><a class="notice-link" href="#note-183">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
@@ -2392,6 +2424,11 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li><code>applicant_perm.vp_current_deposit</code> (number): <code>validation_trust_deposit_in_denom</code>.</li>
 <li><code>applicant_perm.vp_summary_digest_sri</code>: null.</li>
 <li><code>applicant_perm.vp_validator_deposit</code>: 0.</li>
+<li><code>applicant_perm.vs_operator_authz_enabled</code>: <code>vs_operator_authz_enabled</code></li>
+<li><code>applicant_perm.vs_operator_authz_spend_limit</code>: <code>vs_operator_authz_spend_limit</code></li>
+<li><code>applicant_perm.vs_operator_authz_with_feegrant</code>: <code>vs_operator_authz_with_feegrant</code></li>
+<li><code>applicant_perm.vs_operator_authz_fee_spend_limit</code>: <code>vs_operator_authz_fee_spend_limit</code></li>
+<li><code>applicant_perm.vs_operator_authz_spend_period</code>: <code>vs_operator_authz_spend_period</code></li>
 </ul>
 </li>
 </ul>
@@ -2694,15 +2731,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 </ul>
 <p>If <code>applicant_perm.type</code> is ISSUER or VERIFIER: Create authorization for <code>applicant_perm.vs_operator</code> so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:</p>
 <ul>
-<li>call <strong>Grant Authorization()</strong> with the following parameters:
-<ul>
-<li><code>authority</code>: <code>applicant_perm.authority</code></li>
-<li><code>grantee</code>: <code>applicant_perm.vs_operator</code></li>
-<li><code>msg_types</code>: <code>CreateOrUpdatePermissionSession</code></li>
-<li><code>expiration</code>: <code>applicant_perm.effective_until</code></li>
-<li><code>with_feegrant</code>: true</li>
-</ul>
-</li>
+<li>if <code>applicant_perm.vs_operator_authz_enabled</code> == true: call <strong>Grant VS Operator Authorization(<code>applicant_perm.id</code>)</strong>.</li>
 </ul>
 <h4 id="mod-perm-msg-4-void"><a class="toc-anchor" href="#mod-perm-msg-4-void" >§</a> [MOD-PERM-MSG-4] Void</h4>
 <h4 id="mod-perm-msg-5-void"><a class="toc-anchor" href="#mod-perm-msg-5-void" >§</a> [MOD-PERM-MSG-5] Void</h4>
@@ -2773,7 +2802,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li><code>authority</code> (group): (Signer) the signing authority on whose behalf this message is executed.</li>
 <li><code>operator</code> (account): (Signer) the account authorized by the <code>authority</code> to run this Msg.</li>
 <li><code>schema_id</code> (uint64) (<em>mandatory</em>)</li>
-<li><code>did</code> (string) (<em>mandatory</em>): <a class="term-reference" href="#term:did">DID</a> of the VS grantee service.</li>
+<li><code>did</code> (string) (<em>mandatory</em>): <a class="term-reference" href="#term:did">DID</a> of the VS.</li>
 <li><code>effective_from</code> (timestamp) (<em>mandatory</em>): timestamp from when (exclusive) this Perm is effective. MUST be in the future.</li>
 <li><code>effective_until</code> (timestamp) (<em>optional</em>): timestamp until when (exclusive) this Perm is effective, null if it doesn’t expire. If not null, MUST be greater than <code>effective_from</code>.</li>
 <li><code>validation_fees</code> (number) (<em>mandatory</em>): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.</li>
@@ -2900,15 +2929,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 </ul>
 <p>If <code>applicant_perm.type</code> is ISSUER or VERIFIER: Update authorization for <code>applicant_perm.vs_operator</code> so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:</p>
 <ul>
-<li>call <strong>Grant Authorization()</strong> with the following parameters:
-<ul>
-<li><code>authority</code>: <code>applicant_perm.authority</code></li>
-<li><code>grantee</code>: <code>applicant_perm.vs_operator</code></li>
-<li><code>msg_types</code>: <code>CreateOrUpdatePermissionSession</code></li>
-<li><code>expiration</code>: <code>applicant_perm.effective_until</code></li>
-<li><code>with_feegrant</code>: true</li>
-</ul>
-</li>
+<li>if <code>applicant_perm.vs_operator_authz_enabled</code> == true: call <strong>Grant VS Operator Authorization(<code>applicant_perm.id</code>)</strong>.</li>
 </ul>
 <h4 id="mod-perm-msg-9-revoke-permission"><a class="toc-anchor" href="#mod-perm-msg-9-revoke-permission" >§</a> [MOD-PERM-MSG-9] Revoke Permission</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
@@ -2988,12 +3009,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 </ul>
 <p>If <code>applicant_perm.type</code> is ISSUER or VERIFIER: Delete authorization for <code>applicant_perm.vs_operator</code>:</p>
 <ul>
-<li>call <strong>Revoke Authorization()</strong> with the following parameters:
-<ul>
-<li><code>authority</code>: <code>applicant_perm.authority</code></li>
-<li><code>grantee</code>: <code>applicant_perm.vs_operator</code></li>
-</ul>
-</li>
+<li>call <strong>Revoke VS Operator Authorization(<code>applicant_perm.id</code>)</strong>.</li>
 </ul>
 <h4 id="mod-perm-msg-10-create-or-update-permission-session"><a class="toc-anchor" href="#mod-perm-msg-10-create-or-update-permission-session" >§</a> [MOD-PERM-MSG-10] Create or Update Permission Session</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
@@ -3065,7 +3081,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li>if <code>wallet_agent_perm.type</code> is not ISSUER, abort.</li>
 <li>if <code>wallet_agent_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, abort.</li>
 </ul>
-<div id="warning-2" class="notice warning"><a class="notice-link" href="#warning-2">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
+<div id="warning-75" class="notice warning"><a class="notice-link" href="#warning-75">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
 </div>
 <h6 id="mod-perm-msg-10-3-create-or-update-permission-session-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-10-3-create-or-update-permission-session-fee-checks" >§</a> [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks</h6>
 <ul>
@@ -3207,7 +3223,7 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 </ul>
 <p>then, add the <code>cspsr</code> to <code>session.session_records</code></p>
 <p>if current transaction if for issuance of a credential, persist the digest SRI by calling <a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1]</a>.</p>
-<div id="warning-3" class="notice warning"><a class="notice-link" href="#warning-3">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
+<div id="warning-76" class="notice warning"><a class="notice-link" href="#warning-76">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
 </div>
 <h4 id="mod-perm-msg-11-update-permission-module-parameters"><a class="toc-anchor" href="#mod-perm-msg-11-update-permission-module-parameters" >§</a> [MOD-PERM-MSG-11] Update Permission Module Parameters</h4>
 <p>Update Permission Module Parameters.</p>
@@ -3255,7 +3271,7 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
 <li><code>amount</code> MUST be lower or equal to <code>applicant_perm.deposit</code> else MUST abort.</li>
 </ul>
-<div id="note-10" class="notice note"><a class="notice-link" href="#note-10">NOTE</a><p>Even if the permission has expired or is revoked, it is still possible to slash it.</p>
+<div id="note-184" class="notice note"><a class="notice-link" href="#note-184">NOTE</a><p>Even if the permission has expired or is revoked, it is still possible to slash it.</p>
 </div>
 <h6 id="mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms"><a class="toc-anchor" href="#mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms" >§</a> [MOD-PERM-MSG-12-2-2] Slash Permission Trust Deposit validator perms</h6>
 <p>Either Option #1, or #2 MUST return true, else abort.</p>
@@ -3307,12 +3323,7 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <p>use <a href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >MOD-TD-MSG-7</a> to burn the slashed <code>amount</code> from the trust deposit of <code>applicant_perm.authority</code>.</p>
 <p>If <code>applicant_perm.type</code> is ISSUER or VERIFIER: Delete authorization for <code>applicant_perm.vs_operator</code>:</p>
 <ul>
-<li>call <strong>Revoke Authorization()</strong> with the following parameters:
-<ul>
-<li><code>authority</code>: <code>applicant_perm.authority</code></li>
-<li><code>grantee</code>: <code>applicant_perm.vs_operator</code></li>
-</ul>
-</li>
+<li>call <strong>Revoke VS Operator Authorization(<code>applicant_perm.id</code>)</strong> with the following parameters:</li>
 </ul>
 <h4 id="mod-perm-msg-13-repay-permission-slashed-trust-deposit"><a class="toc-anchor" href="#mod-perm-msg-13-repay-permission-slashed-trust-deposit" >§</a> [MOD-PERM-MSG-13] Repay Permission Slashed Trust Deposit</h4>
 <p>This method can only be called by the <code>authority</code> that want to repay the deposit of a slashed perm they own. This won’t make the perm re-usable: it will be needed for the <code>authority</code> associated to this permission to request a new permission, as slashed permissions cannot be revived (same happen for revoked, etc…).</p>
@@ -3355,13 +3366,13 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <h4 id="mod-perm-msg-14-self-create-permission"><a class="toc-anchor" href="#mod-perm-msg-14-self-create-permission" >§</a> [MOD-PERM-MSG-14] Self Create Permission</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
 <p>This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a permission for being issuer or verifier of a given schema.</p>
-<div id="note-11" class="notice note"><a class="notice-link" href="#note-11">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
+<div id="note-185" class="notice note"><a class="notice-link" href="#note-185">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
 </div>
 <h5 id="mod-perm-msg-14-1-create-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-14-1-create-permission-parameters" >§</a> [MOD-PERM-MSG-14-1] Create Permission parameters</h5>
 <ul>
 <li><code>authority</code> (group): (Signer) the signing authority on whose behalf this message is executed.</li>
 <li><code>operator</code> (account): (Signer) the account authorized by the <code>authority</code> to run this Msg.</li>
-<li><code>vs_operator</code> (account) (<em>optional</em>): the account we want to authorize to create permission sessions linked to this permission. <strong>Required</strong> for ISSUER and VERIFIER PermissionType.</li>
+<li><code>vs_operator</code> (account) (<em>optional</em>): the account we want to authorize to create permission sessions linked to this permission. <strong>Required</strong> for payment delegation.</li>
 <li><code>schema_id</code> (uint64) (<em>mandatory</em>)</li>
 <li><code>type</code> (PermissionType) (<em>mandatory</em>): ISSUER or VERIFIER.</li>
 <li><code>did</code> (string) (<em>mandatory</em>): <a class="term-reference" href="#term:did">DID</a> of the VS grantee service.</li>
@@ -3369,6 +3380,12 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <li><code>effective_until</code> (timestamp) (<em>optional</em>): timestamp until when (exclusive) this Perm is effective, null if it doesn’t expire. If not null, MUST be greater than <code>effective_from</code>.</li>
 <li><code>verification_fees</code> (number) (<em>optional</em>): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in trust unit. Default to 0.</li>
 <li><code>validation_fees</code> (number) (<em>optional</em>): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in trust unit. Default to 0.</li>
+<li><code>vs_operator_authz_enabled</code>: boolean (<em>mandatory</em>): if set to true authorize this vs_operator to execute CreateOrUpdatePermissionSession <em>on behalf</em> of <code>authority</code> account (trust fees will be paid by authority account)</li>
+<li><code>vs_operator_authz_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
+as a direct consequence of executing authorized messages.</li>
+<li><code>vs_operator_authz_with_feegrant</code>: boolean (<em>mandatory</em>): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with <code>authority</code> account.</li>
+<li><code>vs_operator_authz_fee_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be spent by vs_operator in the context of this permission.</li>
+<li><code>vs_operator_authz_spend_period</code>: (period) (<em>optional</em>): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.</li>
 </ul>
 <h5 id="mod-perm-msg-14-2-create-permission-precondition-checks"><a class="toc-anchor" href="#mod-perm-msg-14-2-create-permission-precondition-checks" >§</a> [MOD-PERM-MSG-14-2] Create Permission precondition checks</h5>
 <p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
@@ -3377,14 +3394,19 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <ul>
 <li><code>authority</code> (group): (Signer) signature must be verified.</li>
 <li><code>operator</code> (account): (Signer) signature must be verified.</li>
-<li><code>vs_operator</code> (account) (<em>mandatory</em>).</li>
 <li><code>schema_id</code> MUST be a valid uint64 and a <a class="term-reference" href="#term:credential-schema">credential schema</a> entry with this id MUST exist.</li>
 <li><code>type</code> (PermissionType) (<em>mandatory</em>): MUST be ISSUER or VERIFIER, else abort.</li>
-<li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
+<li><code>did</code>, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 <li><code>effective_from</code> must be in the future.</li>
 <li><code>effective_until</code>, if not null, must be greater than <code>effective_from</code></li>
 <li><code>verification_fees</code> (number) (<em>optional</em>): If specified, MUST be &gt;= 0 and MUST be a ISSUER permission.</li>
 <li><code>validation_fees</code> (number) (<em>optional</em>): If specified, MUST be &gt;= 0 and MUST be a ISSUER permission.</li>
+<li><code>vs_operator_authz_enabled</code>: boolean (<em>mandatory</em>): if set to true, <code>vs_operator</code> MUST NOT be null, else abort.</li>
+<li><code>vs_operator_authz_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
+as a direct consequence of executing authorized messages.</li>
+<li><code>vs_operator_authz_with_feegrant</code>: boolean (<em>mandatory</em>): if set to true, <code>vs_operator</code> MUST NOT be null, else abort.</li>
+<li><code>vs_operator_authz_fee_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be spent by vs_operator in the context of this permission.</li>
+<li><code>vs_operator_authz_spend_period</code>: (period) (<em>optional</em>): if not null, <code>vs_operator</code> MUST NOT be null, else abort. Reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.</li>
 </ul>
 <h6 id="mod-perm-msg-14-2-2-create-permission-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-14-2-2-create-permission-permission-checks" >§</a> [MOD-PERM-MSG-14-2-2] Create Permission permission checks</h6>
 <p>To execute this method, <a class="term-reference" href="#term:account">account</a> MUST match at least one these rules, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
@@ -3421,18 +3443,15 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <li><code>perm.verification_fees</code>: <code>verification_fees</code> if specified and <code>type</code> is ISSUER, else 0.</li>
 <li><code>perm.deposit</code>: 0</li>
 <li><code>perm.validator_perm_id</code>: <code>ecosystem_perm_id</code></li>
+<li><code>perm.vs_operator_authz_enabled</code>: <code>vs_operator_authz_enabled</code></li>
+<li><code>perm.vs_operator_authz_spend_limit</code>: <code>vs_operator_authz_spend_limit</code></li>
+<li><code>perm.vs_operator_authz_with_feegrant</code>: <code>vs_operator_authz_with_feegrant</code></li>
+<li><code>perm.vs_operator_authz_fee_spend_limit</code>: <code>vs_operator_authz_fee_spend_limit</code></li>
+<li><code>perm.vs_operator_authz_spend_period</code>: <code>vs_operator_authz_spend_period</code></li>
 </ul>
 <p>Create authorization for <code>vs_operator</code> so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:</p>
 <ul>
-<li>call <strong>Grant Authorization()</strong> with the following parameters:
-<ul>
-<li><code>authority</code>: <code>authority</code></li>
-<li><code>grantee</code>: <code>vs_operator</code></li>
-<li><code>msg_types</code>: <code>CreateOrUpdatePermissionSession</code></li>
-<li><code>expiration</code>: <code>effective_until</code></li>
-<li><code>with_feegrant</code>: true</li>
-</ul>
-</li>
+<li>if <code>perm.vs_operator_authz_enabled</code> == true: call <strong>Grant VS Operator Authorization(<code>perm.id</code>)</strong>.</li>
 </ul>
 <h4 id="mod-perm-qry-1-list-permissions"><a class="toc-anchor" href="#mod-perm-qry-1-list-permissions" >§</a> [MOD-PERM-QRY-1] List Permissions</h4>
 <p>Anyone CAN execute this method.</p>
@@ -3537,7 +3556,7 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-12" class="notice note"><a class="notice-link" href="#note-12">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-186" class="notice note"><a class="notice-link" href="#note-186">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -3915,14 +3934,14 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 </ul>
 <h4 id="mod-td-msg-7-burn-ecosystem-slashed-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >§</a> [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit</h4>
 <p>Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.</p>
-<div id="warning-4" class="notice warning"><a class="notice-link" href="#warning-4">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
+<div id="warning-77" class="notice warning"><a class="notice-link" href="#warning-77">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
 </div>
 <h5 id="mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters</h5>
 <ul>
 <li><code>authority</code> (group) (<em>mandatory</em>): authority of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to burn.</li>
 <li><code>amount</code> (number) (<em>mandatory</em>): value to burn, in <a class="term-reference" href="#term:denom">denom</a>.</li>
 </ul>
-<div id="warning-5" class="notice warning"><a class="notice-link" href="#warning-5">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
+<div id="warning-78" class="notice warning"><a class="notice-link" href="#warning-78">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
 The decision between this method and specifying the amount directly is left to implementers.</p>
 </div>
 <h5 id="mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks</h5>
@@ -3978,7 +3997,9 @@ The decision between this method and specifying the amount directly is left to i
 <h4 id="mod-de-msg-1-grant-fee-allowance"><a class="toc-anchor" href="#mod-de-msg-1-grant-fee-allowance" >§</a> [MOD-DE-MSG-1] Grant Fee Allowance</h4>
 <p>This method can only be called directly by the following methods:</p>
 <ul>
-<li>Grant Authorization</li>
+<li>Grant Operator Authorization</li>
+<li>Grant VS Operator Authorization</li>
+<li>Revoke VS Operator Authorization</li>
 </ul>
 <h5 id="mod-de-msg-1-1-grant-fee-allowance-method-parameters"><a class="toc-anchor" href="#mod-de-msg-1-1-grant-fee-allowance-method-parameters" >§</a> [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters</h5>
 <ul>
@@ -4015,8 +4036,9 @@ The decision between this method and specifying the amount directly is left to i
 <h4 id="mod-de-msg-2-revoke-fee-allowance"><a class="toc-anchor" href="#mod-de-msg-2-revoke-fee-allowance" >§</a> [MOD-DE-MSG-2] Revoke Fee Allowance</h4>
 <p>This method can only be called directly by the following methods:</p>
 <ul>
-<li>Grant Authorization</li>
-<li>Revoke Authorization</li>
+<li>Grant Operator Authorization</li>
+<li>Revoke Operator Authorization</li>
+<li>Revoke VS Operator Authorization</li>
 </ul>
 <h5 id="mod-de-msg-2-1-revoke-allowance-method-parameters"><a class="toc-anchor" href="#mod-de-msg-2-1-revoke-allowance-method-parameters" >§</a> [MOD-DE-MSG-2-1] Revoke Allowance method parameters</h5>
 <ul>
@@ -4035,18 +4057,12 @@ The decision between this method and specifying the amount directly is left to i
 </ul>
 <h5 id="mod-de-msg-2-4-revoke-fee-allowance-execution-of-the-method"><a class="toc-anchor" href="#mod-de-msg-2-4-revoke-fee-allowance-execution-of-the-method" >§</a> [MOD-DE-MSG-2-4] Revoke Fee Allowance execution of the method</h5>
 <p>If FeeGrant entry for this (<code>authority</code>, <code>grantee</code>) exist, delete it, else do nothing.</p>
-<h4 id="mod-de-msg-3-grant-authorization"><a class="toc-anchor" href="#mod-de-msg-3-grant-authorization" >§</a> [MOD-DE-MSG-3] Grant Authorization</h4>
+<h4 id="mod-de-msg-3-grant-operator-authorization"><a class="toc-anchor" href="#mod-de-msg-3-grant-operator-authorization" >§</a> [MOD-DE-MSG-3] Grant Operator Authorization</h4>
 <ul>
 <li>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</li>
 <li><code>authority</code> CAN execute this method alone through a group proposal</li>
 </ul>
-<p>This method can be called directly by the following methods with no signer check:</p>
-<ul>
-<li>Create Permission</li>
-<li>Extend Permission</li>
-<li>Set Permission VP to Validated</li>
-</ul>
-<h5 id="mod-de-msg-3-1-grant-authorization-method-parameters"><a class="toc-anchor" href="#mod-de-msg-3-1-grant-authorization-method-parameters" >§</a> [MOD-DE-MSG-3-1] Grant Authorization method parameters</h5>
+<h5 id="mod-de-msg-3-1-grant-operator-authorization-method-parameters"><a class="toc-anchor" href="#mod-de-msg-3-1-grant-operator-authorization-method-parameters" >§</a> [MOD-DE-MSG-3-1] Grant Operator Authorization method parameters</h5>
 <ul>
 <li><code>authority</code> (group) (<em>mandatory</em>): (Signer) the signing authority on whose behalf this message is executed.</li>
 <li><code>operator</code> (account) (<em>optional</em>): (Signer) the account authorized by the <code>authority</code> to run this Msg.</li>
@@ -4059,28 +4075,49 @@ The decision between this method and specifying the amount directly is left to i
 <li><code>feegrant_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum spendable</li>
 <li><code>feegrant_spend_limit_period</code> (duration) (<em>optional</em>): can be combined with <code>feegrant_spend_limit</code></li>
 </ul>
-<h5 id="mod-de-msg-3-2-grant-authorization-basic-checks"><a class="toc-anchor" href="#mod-de-msg-3-2-grant-authorization-basic-checks" >§</a> [MOD-DE-MSG-3-2] Grant Authorization basic checks</h5>
+<h5 id="mod-de-msg-3-2-grant-operator-authorization-basic-checks"><a class="toc-anchor" href="#mod-de-msg-3-2-grant-operator-authorization-basic-checks" >§</a> [MOD-DE-MSG-3-2] Grant Operator Authorization basic checks</h5>
 <p>if any of these conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
 <ul>
-<li><code>authority</code> (group): (Signer) signature must be verified.</li>
-<li><code>operator</code> (account): (Signer) signature must be verified.</li>
-<li><code>msg_types</code> (Msg[]) (<em>mandatory</em>): MUST be a list of <strong>VPR delegable messages only</strong>.</li>
-<li><code>expiration</code> (timestamp): if specified, MUST be in the future</li>
-<li><code>authz_spend_limit</code> (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts</li>
-<li><code>authz_spend_limit_period</code> (duration): if specified MUST be a valid period. Ignored if <code>authz_spend_limit</code> is not set.</li>
-<li><code>feegrant_spend_limit</code> (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts. Ignored if <code>with_feegrant</code> is false.</li>
-<li><code>feegrant_spend_limit_period</code> (duration): if specified MUST be a valid period. Ignored if <code>feegrant_spend_limit</code> is not set or if <code>with_feegrant</code> is false.</li>
+<li>
+<p><code>authority</code> (group): (Signer) signature must be verified.</p>
+</li>
+<li>
+<p><code>operator</code> (account): (Signer) signature must be verified.</p>
+</li>
+<li>
+<p><code>msg_types</code> (Msg[]) (<em>mandatory</em>): MUST be a list of <strong>VPR delegable messages only</strong>, excepted <code>CreateOrUpdatePermissionSession</code> which is not allowed.</p>
+</li>
+<li>
+<p><code>expiration</code> (timestamp): if specified, MUST be in the future</p>
+</li>
+<li>
+<p><code>authz_spend_limit</code> (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts</p>
+</li>
+<li>
+<p><code>authz_spend_limit_period</code> (duration): if specified MUST be a valid period. Ignored if <code>authz_spend_limit</code> is not set.</p>
+</li>
+<li>
+<p><code>feegrant_spend_limit</code> (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts. Ignored if <code>with_feegrant</code> is false.</p>
+</li>
+<li>
+<p><code>feegrant_spend_limit_period</code> (duration): if specified MUST be a valid period. Ignored if <code>feegrant_spend_limit</code> is not set or if <code>with_feegrant</code> is false.</p>
+</li>
+<li>
+<p>Check if a <strong>VS Operator Authorization</strong> exists for <code>authority</code> and <code>grantee</code>. If this is the case, MUST abort.</p>
+</li>
 </ul>
-<h5 id="mod-de-msg-3-3-grant-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-3-3-grant-authorization-fee-checks" >§</a> [MOD-DE-MSG-3-3] Grant Authorization fee checks</h5>
+<div id="warning-79" class="notice warning"><a class="notice-link" href="#warning-79">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+</div>
+<h5 id="mod-de-msg-3-3-grant-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-3-3-grant-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks</h5>
 <ul>
 <li>Fee payer MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>;</li>
 </ul>
-<h5 id="mod-de-msg-3-4-grant-authorization-execution-of-the-method"><a class="toc-anchor" href="#mod-de-msg-3-4-grant-authorization-execution-of-the-method" >§</a> [MOD-DE-MSG-3-4] Grant Authorization execution of the method</h5>
+<h5 id="mod-de-msg-3-4-grant-operator-authorization-execution-of-the-method"><a class="toc-anchor" href="#mod-de-msg-3-4-grant-operator-authorization-execution-of-the-method" >§</a> [MOD-DE-MSG-3-4] Grant Operator Authorization execution of the method</h5>
 <p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
 <p>Create (or update if it already exist) Authorization <code>authz</code>:</p>
 <ul>
-<li>set <code>authz.grantor</code> to <code>authority</code></li>
-<li>set <code>authz.grantee</code> to <code>grantee</code></li>
+<li>set <code>authz.authority</code> to <code>authority</code></li>
+<li>set <code>authz.operator</code> to <code>grantee</code></li>
 <li>set <code>authz.msg_types</code> to <code>msg_types</code></li>
 <li>set <code>authz.expiration</code> to <code>expiration</code></li>
 <li>set <code>authz.spend_limit</code> to <code>authz_spend_limit</code></li>
@@ -4092,40 +4129,150 @@ The decision between this method and specifying the amount directly is left to i
 </ul>
 <p>else if <code>with_feegrant</code> is true:</p>
 <ul>
-<li>call Grant Fee Allowance (<code>authority</code>, <code>grantee</code>, <code>msg_types</code>, <code>expiration</code>, <code>feegrant_spend_limit</code>, <code>feegrant_spend_limit_period</code>).</li>
+<li>grant Fee Allowance (<code>authority</code>, <code>grantee</code>, <code>msg_types</code>, <code>expiration</code>, <code>feegrant_spend_limit</code>, <code>feegrant_spend_limit_period</code>).</li>
 </ul>
-<h4 id="mod-de-msg-4-revoke-authorization"><a class="toc-anchor" href="#mod-de-msg-4-revoke-authorization" >§</a> [MOD-DE-MSG-4] Revoke Authorization</h4>
+<h4 id="mod-de-msg-4-revoke-operator-authorization"><a class="toc-anchor" href="#mod-de-msg-4-revoke-operator-authorization" >§</a> [MOD-DE-MSG-4] Revoke Operator Authorization</h4>
 <ul>
 <li>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</li>
 <li><code>authority</code> CAN execute this method alone through a group proposal</li>
 </ul>
-<p>This method can be called directly by the following methods with no signer check:</p>
-<ul>
-<li>Revoke Permission</li>
-<li>Slash Permission Trust Deposit</li>
-</ul>
-<h5 id="mod-de-msg-4-1-revoke-authorization-method-parameters"><a class="toc-anchor" href="#mod-de-msg-4-1-revoke-authorization-method-parameters" >§</a> [MOD-DE-MSG-4-1] Revoke Authorization method parameters</h5>
+<h5 id="mod-de-msg-4-1-revoke-operator-authorization-method-parameters"><a class="toc-anchor" href="#mod-de-msg-4-1-revoke-operator-authorization-method-parameters" >§</a> [MOD-DE-MSG-4-1] Revoke Operator Authorization method parameters</h5>
 <ul>
 <li><code>authority</code> (group) (<em>mandatory</em>): (Signer) the signing authority on whose behalf this message is executed.</li>
 <li><code>operator</code> (account) (<em>mandatory</em>): (Signer) the account authorized by the <code>authority</code> to run this Msg.</li>
-<li><code>grantee</code> (account) (<em>mandatory</em>): the account that receives the fee grant from <code>authority</code>.</li>
+<li><code>grantee</code> (account) (<em>mandatory</em>): the account that will be revoked its authorization`.</li>
 </ul>
-<h5 id="mod-de-msg-4-2-revoke-authorization-basic-checks"><a class="toc-anchor" href="#mod-de-msg-4-2-revoke-authorization-basic-checks" >§</a> [MOD-DE-MSG-4-2] Revoke Authorization basic checks</h5>
+<h5 id="mod-de-msg-4-2-revoke-operator-authorization-basic-checks"><a class="toc-anchor" href="#mod-de-msg-4-2-revoke-operator-authorization-basic-checks" >§</a> [MOD-DE-MSG-4-2] Revoke Operator Authorization basic checks</h5>
 <p>MUST abort if one of these conditions fails:</p>
 <ul>
 <li><code>authority</code> (group): (Signer) signature must be verified.</li>
 <li><code>operator</code> (account): (Signer) signature must be verified.</li>
 <li>An Authorization entry MUST exist for this (<code>authority</code>, <code>grantee</code>)</li>
 </ul>
-<h5 id="mod-de-msg-4-3-revoke-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-4-3-revoke-authorization-fee-checks" >§</a> [MOD-DE-MSG-4-3] Revoke Authorization fee checks</h5>
+<h5 id="mod-de-msg-4-3-revoke-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-4-3-revoke-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-4-3] Revoke Operator Authorization fee checks</h5>
 <ul>
 <li>Fee payer MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>;</li>
 </ul>
-<h5 id="mod-de-msg-4-4-revoke-authorization-execution-of-the-method"><a class="toc-anchor" href="#mod-de-msg-4-4-revoke-authorization-execution-of-the-method" >§</a> [MOD-DE-MSG-4-4] Revoke Authorization execution of the method</h5>
+<h5 id="mod-de-msg-4-4-revoke-operator-authorization-execution-of-the-method"><a class="toc-anchor" href="#mod-de-msg-4-4-revoke-operator-authorization-execution-of-the-method" >§</a> [MOD-DE-MSG-4-4] Revoke Operator Authorization execution of the method</h5>
 <ul>
 <li>Delete Authorization entry for this (<code>authority</code>, <code>grantee</code>).</li>
-<li>call Revoke Fee Allowance (<code>authority</code>, <code>grantee</code>).</li>
+<li>revoke Fee Allowance (<code>authority</code>, <code>grantee</code>).</li>
 </ul>
+<h4 id="mod-de-msg-5-grant-vs-operator-authorization"><a class="toc-anchor" href="#mod-de-msg-5-grant-vs-operator-authorization" >§</a> [MOD-DE-MSG-5] Grant VS Operator Authorization</h4>
+<p>This method can only be called directly by the following methods with no signer check:</p>
+<ul>
+<li>Self Create Permission</li>
+<li>Extend Permission</li>
+<li>Set Permission VP to Validated</li>
+</ul>
+<blockquote>
+<p>Note: This methid can only grant authorization for the <code>CreateOrUpdatePermissionSession</code> Msg.</p>
+</blockquote>
+<h5 id="mod-de-msg-5-1-grant-vs-operator-authorization-method-parameters"><a class="toc-anchor" href="#mod-de-msg-5-1-grant-vs-operator-authorization-method-parameters" >§</a> [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters</h5>
+<ul>
+<li><code>perm_id</code> (uint64) (<em>mandatory</em>): the permission this authorization is referring to.</li>
+</ul>
+<h5 id="mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks"><a class="toc-anchor" href="#mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks" >§</a> [MOD-DE-MSG-5-2] Grant VS Operator Authorization basic checks</h5>
+<p>if any of these conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li><code>perm_id</code> (uint64) (<em>mandatory</em>): Permission MUST exist.</li>
+<li>load Permission <code>perm</code> with <code>perm_id</code>. <code>perm.authority</code> and <code>perm.vs_operator</code> MUST NOT be null.</li>
+<li>Check if a <strong>Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. If this is the case, MUST abort.</li>
+</ul>
+<div id="warning-80" class="notice warning"><a class="notice-link" href="#warning-80">WARNING</a><p>A <strong>VS Operator Authorization</strong> CAN be granted ONLY IF no <strong>Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+</div>
+<h5 id="mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-5-3] Grant VS Operator Authorization fee checks</h5>
+<ul>
+<li>Fee payer MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>;</li>
+</ul>
+<h5 id="mod-de-msg-5-4-grant-vs-operator-authorization-execution-of-the-method"><a class="toc-anchor" href="#mod-de-msg-5-4-grant-vs-operator-authorization-execution-of-the-method" >§</a> [MOD-DE-MSG-5-4] Grant VS Operator Authorization execution of the method</h5>
+<p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
+<p>Load Permission <code>perm</code> with <code>perm_id</code>.</p>
+<p>Create VSOperatorAuthorization <code>vs_operator_authz</code> if it doesn’t exist yet:</p>
+<ul>
+<li>set <code>vs_operator_authz.grantor</code> to <code>perm.authority</code></li>
+<li>set <code>vs_operator_authz.grantee</code> to <code>perm.vs_operator</code></li>
+</ul>
+<p>then, add the perm_id to the list of authorized permissions:</p>
+<ul>
+<li>Add <code>perm_id</code> to <code>vs_operator_authz.permissions</code></li>
+</ul>
+<p>Then check for feegrant:</p>
+<ul>
+<li>if <code>perm.vs_operator_authz_with_feegrant</code> is true:
+<ul>
+<li>set <code>max_expire</code> = <code>perm.effective_until</code></li>
+<li>if <code>max_expire</code> == null: call Grant Fee Allowance (<code>authority</code>, <code>grantee</code>, <code>CreateOrUpdatePermissionSession</code>, null, null, null) and EXIT.</li>
+<li>else foreach <code>current_perm_id</code> of <code>vs_operator_authz.permissions</code>
+<ul>
+<li>load Permission <code>current_perm</code> from <code>current_perm_id</code></li>
+<li>if <code>current_perm.vs_operator_authz_with_feegrant</code> is true:
+<ul>
+<li>if <code>current_perm.effective_until</code> == null: call Grant Fee Allowance (<code>authority</code>, <code>grantee</code>, <code>CreateOrUpdatePermissionSession</code>, null, null, null) and EXIT.</li>
+<li>else if <code>current_perm.effective_until</code> &gt; <code>max_expire</code> =&gt; set <code>max_expire</code> = <code>current_perm.effective_until</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>if <code>max_expire</code> &gt; now, call Grant Fee Allowance (<code>authority</code>, <code>grantee</code>, <code>CreateOrUpdatePermissionSession</code>, <code>max_expire</code>, null, null).</li>
+</ul>
+</li>
+</ul>
+<div id="note-187" class="notice note"><a class="notice-link" href="#note-187">NOTE</a><p>We MUST align to the farthest effective_until for the feegrant, for the permissions that have <code>current_perm.effective_until</code> set.</p>
+</div>
+<h4 id="mod-de-msg-6-revoke-vs-operator-authorization"><a class="toc-anchor" href="#mod-de-msg-6-revoke-vs-operator-authorization" >§</a> [MOD-DE-MSG-6] Revoke VS Operator Authorization</h4>
+<p>This method can only be called by the following methods with no signer check:</p>
+<ul>
+<li>Revoke Permission</li>
+<li>Slash Permission Trust Deposit</li>
+</ul>
+<h5 id="mod-de-msg-6-1-revoke-vs-operator-authorization-method-parameters"><a class="toc-anchor" href="#mod-de-msg-6-1-revoke-vs-operator-authorization-method-parameters" >§</a> [MOD-DE-MSG-6-1] Revoke VS Operator Authorization method parameters</h5>
+<ul>
+<li><code>perm_id</code> (uint64) (<em>mandatory</em>): the permission this authorization is referring to.</li>
+</ul>
+<h5 id="mod-de-msg-6-2-revoke-vs-operator-authorization-basic-checks"><a class="toc-anchor" href="#mod-de-msg-6-2-revoke-vs-operator-authorization-basic-checks" >§</a> [MOD-DE-MSG-6-2] Revoke VS Operator Authorization basic checks</h5>
+<p>MUST abort if one of these conditions fails:</p>
+<ul>
+<li><code>perm_id</code> (uint64) (<em>mandatory</em>): Permission MUST exist.</li>
+<li>load Permission <code>perm</code> with <code>perm_id</code>. <code>perm.authority</code> and <code>perm.vs_operator</code> MUST NOT be null.</li>
+</ul>
+<h5 id="mod-de-msg-6-3-revoke-vs-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-6-3-revoke-vs-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-6-3] Revoke VS Operator Authorization fee checks</h5>
+<ul>
+<li>Fee payer MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>;</li>
+</ul>
+<h5 id="mod-de-msg-6-4-revoke-vs-operator-authorization-execution-of-the-method"><a class="toc-anchor" href="#mod-de-msg-6-4-revoke-vs-operator-authorization-execution-of-the-method" >§</a> [MOD-DE-MSG-6-4] Revoke VS Operator Authorization execution of the method</h5>
+<ul>
+<li>load Permission <code>perm</code> with <code>perm_id</code>.</li>
+<li>load VSOperatorAuthorization <code>vs_operator_authz</code> with <code>perm.authority</code> and <code>perm.vs_operator</code>.</li>
+<li>If <code>vs_operator_authz</code> is not null:
+<ul>
+<li>remove <code>perm_id</code> from <code>vs_operator_authz.permissions</code> if present.</li>
+<li>if <code>perm.vs_operator_authz_with_feegrant</code> is true:
+<ul>
+<li>if size(vs_operator_authz.permissions) == 0 =&gt; call Revoke Fee Allowance (<code>perm.authority</code>, <code>perm.vs_operator</code>).</li>
+<li>else define <code>max_expire</code> = null</li>
+<li>foreach <code>current_perm_id</code> of <code>vs_operator_authz.permissions</code>
+<ul>
+<li>load Permission <code>current_perm</code> from <code>current_perm_id</code></li>
+<li>if <code>current_perm.vs_operator_authz_with_feegrant</code> is true:
+<ul>
+<li>if <code>current_perm.effective_until</code> == null set <code>max_expire</code> = null</li>
+<li>else if <code>max_expire</code> == null set <code>max_expire</code> = <code>current_perm.effective_until</code></li>
+<li>else <code>max_expire</code> = max (<code>max_expire</code>, <code>current_perm.effective_until</code>)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>if <code>max_expire</code> &gt; now, call Grant Fee Allowance (<code>authority</code>, <code>grantee</code>, <code>CreateOrUpdatePermissionSession</code>, <code>max_expire</code>, null, null).</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div id="note-188" class="notice note"><a class="notice-link" href="#note-188">NOTE</a><p>When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.</p>
+</div>
+<div id="note-189" class="notice note"><a class="notice-link" href="#note-189">NOTE</a><p>In the case of VS Operator Authorizations, spending limit are managed by the Permission module.</p>
+</div>
 <h4 id="mod-di-msg-1-store-digest"><a class="toc-anchor" href="#mod-di-msg-1-store-digest" >§</a> [MOD-DI-MSG-1] Store Digest</h4>
 <ul>
 <li>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</li>
@@ -4291,8 +4438,8 @@ The decision between this method and specifying the amount directly is left to i
 <li><a href="#trustdeposit" >TrustDeposit</a></li>
 <li><a href="#denomamount" >DenomAmount</a></li>
 <li><a href="#digest" >Digest</a></li>
-<li><a href="#authorization" >Authorization</a></li>
-<li><a href="#feegrant" >FeeGrant</a></li>
+<li><a href="#operatorauthorization" >OperatorAuthorization</a></li>
+<li><a href="#vsoperatorauthorization" >VSOperatorAuthorization</a></li>
 <li><a href="#globalvariables" >GlobalVariables</a></li>
 </ul>
 </li>
@@ -4379,8 +4526,10 @@ The decision between this method and specifying the amount directly is left to i
 <li><a href="#mod-td-qry-2-list-module-parameters" >[MOD-TD-QRY-2] List Module Parameters</a></li>
 <li><a href="#mod-de-msg-1-grant-fee-allowance" >[MOD-DE-MSG-1] Grant Fee Allowance</a></li>
 <li><a href="#mod-de-msg-2-revoke-fee-allowance" >[MOD-DE-MSG-2] Revoke Fee Allowance</a></li>
-<li><a href="#mod-de-msg-3-grant-authorization" >[MOD-DE-MSG-3] Grant Authorization</a></li>
-<li><a href="#mod-de-msg-4-revoke-authorization" >[MOD-DE-MSG-4] Revoke Authorization</a></li>
+<li><a href="#mod-de-msg-3-grant-operator-authorization" >[MOD-DE-MSG-3] Grant Operator Authorization</a></li>
+<li><a href="#mod-de-msg-4-revoke-operator-authorization" >[MOD-DE-MSG-4] Revoke Operator Authorization</a></li>
+<li><a href="#mod-de-msg-5-grant-vs-operator-authorization" >[MOD-DE-MSG-5] Grant VS Operator Authorization</a></li>
+<li><a href="#mod-de-msg-6-revoke-vs-operator-authorization" >[MOD-DE-MSG-6] Revoke VS Operator Authorization</a></li>
 <li><a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1] Store Digest</a></li>
 </ul>
 </li>
