@@ -1,8 +1,10 @@
 # Verifiable Public Registry v4 Specification
 
-**Specification Status:** *Draft2*
+**Specification Status:** *v4-Draft2*
 
-**Latest Draft:** [verana-labs/verifiable-trust-vpr-spec](https://github.com/verana-labs/verifiable-trust-vpr-spec)
+**Current - spec v4:** [verana-labs/verifiable-trust-vpr-spec](https://github.com/verana-labs/verifiable-trust-vpr-spec)
+
+**Archive - spec v3:** [verana-labs/verifiable-trust-vpr-spec](https://github.com/verana-labs/verifiable-trust-vpr-spec/index-v3.html)
 
 **Editors:**
 
