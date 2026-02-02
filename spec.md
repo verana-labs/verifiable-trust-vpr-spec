@@ -2656,6 +2656,16 @@ At the end, if a [[ ref: valid permission]] `validator_perm` is not found, [[ref
   - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
   - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
 
+###### [MOD-PERM-MSG-1-2-4] Start Permission VP overlap checks
+
+We want to make sure that 2 validation processes cannot be active at the same time in the same context. This does not prevent an `authority` from running different VP with differents validators for the same `schema_id`, `type`.
+
+Find all permission `perms[]` for `schema_id`, `type`, `validator_perm_id`, `authority` with vp_state = VALIDATED or PENDING.
+
+if size of `perms[]` > 0, it means there is already an existing validation process in this context, so MUST abort.
+
+> note: this check was not present in v3.
+
 ##### [MOD-PERM-MSG-1-3] Start Permission VP execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
@@ -2872,6 +2882,20 @@ If `validator_perm` is not a [[ ref: valid permission]] (expired, revoked, slash
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
+###### [MOD-PERM-MSG-3-2-4] Set Permission VP to Validated overlap checks
+
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. That should not occur in this method, but better do the check anyway.
+
+Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
+
+for each `Permission` entry `p` from `perms[]`:
+
+- if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
+- if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+
+> note: this check was not present in v3.
+
 ##### [MOD-PERM-MSG-3-3] Set Permission VP to Validated execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
@@ -3040,6 +3064,22 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
+###### [MOD-PERM-MSG-7-2-4] Create Root Permission overlap checks
+
+We want to make sure that 2 permissions cannot be active at the same time. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-extend-permission) to set or adjust the `effective_until` value.
+
+Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `authority`.
+
+> Note: unlike overlap checks from other methods, here we do not need to check for `validator_perm_id`, as for ECOSYSTEM type permissions it is NULL.
+
+for each `Permission` entry `p` from `perms[]`:
+
+- if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
+- if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+
+> note: this check was not present in v3.
+
 ##### [MOD-PERM-MSG-7-3] Create Root Permission execution
 
 If all precondition checks passed, method is executed.
@@ -3117,6 +3157,20 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 ###### [MOD-PERM-MSG-8-2-3] Extend Permission fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+
+###### [MOD-PERM-MSG-8-2-4] Extend Permission overlap checks
+
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-extend-permission) to set or adjust the `effective_until` value.
+
+Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
+
+for each `Permission` entry `p` from `perms[]`:
+
+- if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
+- if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+
+> note: this check was not present in v3.
 
 ##### [MOD-PERM-MSG-8-3] Extend Permission execution
 
@@ -3651,7 +3705,7 @@ This simple permission creation method can be used to self-create an ISSUER (res
 Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.
 :::
 
-##### [MOD-PERM-MSG-14-1] Create Permission parameters
+##### [MOD-PERM-MSG-14-1] Self Create Permission parameters
 
 - `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
@@ -3670,11 +3724,11 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
 - `vs_operator_authz_spend_period`: (period) (*optional*): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
 
-##### [MOD-PERM-MSG-14-2] Create Permission precondition checks
+##### [MOD-PERM-MSG-14-2] Self Create Permission precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-14-2-1] Create Permission basic checks
+###### [MOD-PERM-MSG-14-2-1] Self Create Permission basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3694,7 +3748,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
 - `vs_operator_authz_spend_period`: (period) (*optional*): if not null, `vs_operator` MUST NOT be null, else abort. Reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
 
-###### [MOD-PERM-MSG-14-2-2] Create Permission permission checks
+###### [MOD-PERM-MSG-14-2-2] Self Create Permission permission checks
 
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
@@ -3704,9 +3758,23 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 - if `type` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
 - if `type` is equal to VERIFIER and `verification_fees` is specified and different than 0, MUST abort.
 
-###### [MOD-PERM-MSG-14-2-3] Create Permission fee checks
+###### [MOD-PERM-MSG-14-2-3] Self Create Permission fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] available.
+
+###### [MOD-PERM-MSG-14-2-4] Self Create Permission overlap checks
+
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-extend-permission) to set or adjust the `effective_until` value.
+
+Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
+
+for each `Permission` entry `p` from `perms[]`:
+
+- if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
+- if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+
+> note: this check was not present in v3.
 
 ##### [MOD-PERM-MSG-14-3] Create Permission execution
 
