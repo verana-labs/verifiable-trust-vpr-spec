@@ -3094,9 +3094,10 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm` MUST be a [[ref: valid permission]]
-- if `applicant_perm.effective_until` is NULL: `effective_until` MUST be greater than now().
-- else `effective_until` MUST be greater than `applicant_perm.effective_until`
+- `applicant_perm.effective_until` MUST be greater than now().
 - else MUST abort.
+
+> Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null,  which was not the case in spec v3.
 
 ###### [MOD-PERM-MSG-8-2-2] Extend Permission advanced checks
 
