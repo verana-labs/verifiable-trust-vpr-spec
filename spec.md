@@ -1148,6 +1148,8 @@ xr o-- pricingassettype: quote_asset_type
 
 xr --- "1..n" account: update_whitelist
 
+cs o-- pricingassettype: pricing_asset_type 
+
 group --o oauthz: authority
 account --o oauthz: operator
 
