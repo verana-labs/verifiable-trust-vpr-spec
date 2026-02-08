@@ -978,7 +978,7 @@ entity "CredentialSchema" as cs {
   +holder_validation_validity_period: number
   +issuer_perm_management_mode: PermissionManagementMode
   +verifier_perm_management_mode: PermissionManagementMode
-  +denom: denom
+  +pricing_asset: string
 }
 
 enum "SchemaAuthorizationPolicyRole" as sapr {
