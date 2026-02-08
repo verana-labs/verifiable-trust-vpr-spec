@@ -220,7 +220,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ Fees paid by a [[ref: participant]] that are distributed to network validators and trust deposit holders.
 
 [[def: trust unit, trust units, TU, TUs]]:
-~ A fake denom that is not usable as a tokem (cannot be transferred, or used for paying in transactions). Trust unit is used to define fees in Permissions. Fees defined in trust units are automatically converted to [[ref: native denom]] when a transaction is executed, using an exchange rate `TU/[[ref: native denom]]`. Trust unit is used to compensate [[ref: native denom]] fluctuation.
+~ A fake denom that is not usable as a token (cannot be transferred, or used for paying in transactions). Trust unit is used to define fees in Permissions. Fees defined in trust units are automatically converted to [[ref: native denom]] when a transaction is executed, using an exchange rate `TU/[[ref: native denom]]`. Trust unit is used to compensate [[ref: native denom]] fluctuation.
 
 [[def:trust registry, trust registries]]
 ~ An approved list of [[ref: issuers]] and [[ref: verifiers]] that are authorized to issue/verify certain credentials in an ecosystem.
@@ -1653,8 +1653,12 @@ As a result, `accountABC` is authorized to:
 |             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |module call|
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |authority + operator OR module call|
-| Exchange Rate  | Set Exchange Rate  |   N/A (Tx)  | Msg  | [[MOD-EX-MSG-1]](#mod-ex-msg-1-set-exchange-rate)   |module call|
-|           | Get Exchange Rate  | /ex/v1/get                 | Query  | [[MOD-EX-QRY-1]](#mod-ex-msg-1-get-exchange-rate)   |N/A  |
+| Exchange Rate                  | Update Exchange Rate                   |                                  | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-update-exchange-rate)   |
+|                   | Toggle Exchange Rate State                  |                                  | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-toggle-exchange-rate-state)   |
+|                   | Update Exchange Rate Update Whitelist                  |                                  | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-update-exchange-rate-update-whitelist)   |
+|                                | Get Trust Deposit                       | /xr/v1/get                  | Query  | [[MOD-XR-QRY-1]](#mod-xr-qry-1-get-exchange-rate)   |N/A |
+|                                | List TD Module Parameters               | /xr/v1/list                 | Query  | [[MOD-XR-QRY-2]](#mod-xr-qry-2-list-exchange-rates)   |N/A |
+|                                | List TD Module Parameters               | /xr/v1/list                 | Query  | [[MOD-XR-QRY-3]](#mod-xr-qry-3-list-module-parameters)   |N/A |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -4894,7 +4898,7 @@ Create Digest `digest`:
 - set `digest.digest_sri` to digest_sri
 - set `digest.created` to now.
 
-#### [MOD-XR-MSG-1] Update Exchange Rate
+ #### [MOD-XR-MSG-1] Update Exchange Rate
 
 The **Update Exchange Rate** method allows an authorized actor to create or update an `ExchangeRate` entry for a given `(base_asset_type, base_asset, quote_asset_type, quote_asset)` pair.
 
