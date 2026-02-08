@@ -2061,7 +2061,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.verifier_perm_management_mode`: `verifier_perm_management_mode`
   - `cs.created`: current timestamp
   - `cs.modified`: `cs.created`.
-  - `cs.denom`: `denom`.
+  - `cs.pricing_asset_type`: `pricing_asset_type`
+  - `cs.pricing_asset`: `pricing_asset`
 
 :::note
 If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM `Permission` so that validation processes can be run.
