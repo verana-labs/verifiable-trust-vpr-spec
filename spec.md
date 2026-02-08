@@ -946,7 +946,8 @@ entity "TrustRegistry" as tr {
   +aka: string
   +active_version: int
   +language: string
-  
+  +pricing_asset: string
+  +allow_pricing_asset_schema_override: boolean
 }
 
 entity "GovernanceFrameworkVersion" as gfv {
