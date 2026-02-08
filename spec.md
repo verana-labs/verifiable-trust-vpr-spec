@@ -1039,12 +1039,18 @@ entity "PermissionSession" as csps {
   authz: (uint64, uint64, uint64)[]
 }
 
-entity "ExchangeRate" as ex {
-  base: string
-  quote: string
-  modified: timestamp
-  expire: timestamp
+entity "ExchangeRate" as xr {
+  *id: uint64
+  +base_asset: string
+  +quote_asset: string
+  +rate: string
+  +rate_scale: uint32
+  +updated_at: timestamp
+  +expires_at: timestamp
+  +state: boolean
 }
+
+
 
 entity "Permission" as csp {
   *id: uint64
@@ -1136,6 +1142,11 @@ entity "TrustDeposit" as td {
   last_repaid: timestamp
   slash_count: number
 }
+
+xr o-- pricingassettype: base_asset_type
+xr o-- pricingassettype: quote_asset_type
+
+xr --- "1..n" account: update_whitelist
 
 group --o oauthz: authority
 account --o oauthz: operator
