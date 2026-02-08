@@ -145,8 +145,11 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: decentralized identifier communication, DIDComm]]:
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
 
-[[def: denom]]:
-~ Native token of a [[ref: VPR]], example: VNA.
+[[def: denom, denoms]]:
+~ Token that has been configured and is recognized in a [[ref: VPR]], example: uvna, USDC.  
+
+[[def: native denom]]:
+~ Native token of a [[ref: VPR]], example: uvna.
 
 [[def: ecosystem, ecosystems]]: a network of interacting entities, both technical and human, that work together to establish and maintain digital trust. It encompasses applications, credentials, governance frameworks, and the underlying technical infrastructure, all designed to facilitate trustworthy interactions.
 
@@ -216,8 +219,8 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: network fee, network fees]]:
 ~ Fees paid by a [[ref: participant]] that are distributed to network validators and trust deposit holders.
 
-[[def: trust unit, trust units]]:
-~ Price, in [[ref: denom]], of one unit of trust.
+[[def: trust unit, trust units, TU, TUs]]:
+~ A fake denom that is not usable as a tokem (cannot be transferred, or used for paying in transactions). Trust unit is used to define fees in Permissions. Fees defined in trust units are automatically converted to [[ref: native denom]] when a transaction is executed, using an exchange rate `TU/[[ref: native denom]]`. Trust unit is used to compensate [[ref: native denom]] fluctuation.
 
 [[def:trust registry, trust registries]]
 ~ An approved list of [[ref: issuers]] and [[ref: verifiers]] that are authorized to issue/verify certain credentials in an ecosystem.
@@ -225,8 +228,11 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: URI, URIs]]
 ~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
 
-[[def: valid permission, valid permissions]]:
+[[def: active permission, active permissions]]:
 ~ A credential schema permission of a given type, which effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
+
+[[def: future permission, future permissions]]:
+~ A credential schema permission of a given type, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.
 
 [[def: validation process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
@@ -971,6 +977,7 @@ entity "CredentialSchema" as cs {
   +holder_validation_validity_period: number
   +issuer_perm_management_mode: PermissionManagementMode
   +verifier_perm_management_mode: PermissionManagementMode
+  +denom: denom
 }
 
 enum "SchemaAuthorizationPolicyRole" as sapr {
@@ -1018,12 +1025,19 @@ entity "DenomAmount" as da {
   amount: number
 }
 
+entity "ExchangeRate" as ex {
+  base: string
+  quote: string
+  modified: timestamp
+  expire: timestamp
+}
+
 entity "Permission" as csp {
   *id: uint64
   did: string
   +created: timestamp
   +modified: timestamp
-  +extended: timestamp
+  +adjusted: timestamp
   +slashed: timestamp
   +repaid: timestamp
   effective_from: timestamp
@@ -1083,7 +1097,6 @@ enum "PermissionType" as cspt {
 
 
 entity "GlobalVariables" as gv {
-  +trust_unit_price: number
   +credential_schema_schema_max_size: number
   +credential_schema_issuer_grantor_validation_validity_period_max_days: number
   +credential_schema_verifier_grantor_validation_validity_period_max_days: number
@@ -1210,6 +1223,7 @@ group  --o td: authority
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder validation process expires and must be renewed.
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `denom` (denom): `denom` used for payments for all business models linked to this credential schema.
 
 ### SchemaAuthorizationPolicy
 
@@ -1237,18 +1251,18 @@ group  --o td: authority
 - `authority` (group) (*mandatory*): [[ref: group]] that owns this permission.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account. This is the account that will have the right to create or update permission sessions.
 - `created` (timestamp) (*mandatory*): timestamp this `Permission` has been created.
-- `extended` (timestamp) (*mandatory*): timestamp this `Permission` has been extended.
+- `adjusted` (timestamp) (*mandatory*): timestamp this `Permission` has been adjusted.
 - `slashed` (timestamp) (*mandatory*): timestamp this `Permission` has been slashed.
 - `repaid` (timestamp) (*mandatory*): timestamp this `Permission` has been repaid.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Permission` is effective.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective, null if no time limit has been set for this permission.
 - `modified` (timestamp) (*mandatory*): timestamp this Permission has been modified.
-- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (grantee of this perm) for running a validation process for a given validation period, in trust unit. Default to 0.
-- `issuance_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is issued, in trust unit. Default to 0.
-- `verification_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is verified, in trust unit. Default to 0.
-- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in `denom`. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `perm.deposit` value as well. If `perm` is, let's say revoked, then corresponding `perm.deposit` value is freed from `perm.grantee` Trust Deposit.
-- `slashed_deposit` (number) (*mandatory*): part of the deposit that has been slashed.
-- `repaid_deposit` (number) (*mandatory*): part of the slashed deposit that has been repaid.
+- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (grantee of this perm) for running a validation process for a given validation period, in [[ ref:denom ]] defined in credential schema. Default to 0.
+- `issuance_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is issued, in [[ ref:denom ]] defined in credential schema. Default to 0.
+- `verification_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is verified, in [[ ref:denom ]] defined in credential schema. Default to 0.
+- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in [[ ref: native denom ]]. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `perm.deposit` value as well. If `perm` is, let's say revoked, then corresponding `perm.deposit` value is freed from `perm.grantee` Trust Deposit.
+- `slashed_deposit` (number) (*mandatory*): part of the deposit in [[ ref: native denom ]] that has been slashed.
+- `repaid_deposit` (number) (*mandatory*): part of the slashed deposit in [[ ref: native denom ]] that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Permission` tree.
 - `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED, TERMINATION_REQUESTED.
@@ -1261,8 +1275,7 @@ group  --o td: authority
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `authority` account (trust fees will be paid by authority account)
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
-  as a direct consequence of executing authorized messages.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
 - `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with `authority` account.
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
 - `vs_operator_authz_spend_period`: (period) (*optional*): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
@@ -1304,7 +1317,7 @@ group  --o td: authority
 
 ### DenomAmount
 
-- `denom` (string) (*mandatory*): token denomination.
+- `denom` (string) (*mandatory*): token denomination, as explain in [[ref: denom]].
 - `amount` (number) (*mandatory*): amount expressed in the given denomination.
 
 ### Digest
@@ -1333,13 +1346,8 @@ group  --o td: authority
 
 `GlobalVariables`:
 
-**Trust Unit:**
-
-- `trust_unit_price` (number) (*mandatory*): [[ref: trust unit]] price, in [[ref: denom]].
-
 **Credential Schema:**
 
-- `credential_schema_trust_deposit` (number) (*mandatory*): default trust deposit value for creating a credential schema, in [[ref: trust units]].
 - `credential_schema_schema_max_size` (number) (*mandatory*): maximum size of the `schema` string attribute for a `CredentialSchema`.
 - `credential_schema_issuer_grantor_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer grantor validation can be valid for.
 - `credential_schema_verifier_grantor_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an verifier grantor validation can be valid for.
@@ -1349,7 +1357,7 @@ group  --o td: authority
 
 **Trust Deposit:**
 
-- `trust_deposit_share_value`(number) (*mandatory*): Value of one share of trust deposit, in `denom`. Default an initial value: 1. Increase over time, when yield is produced.
+- `trust_deposit_share_value`(number) (*mandatory*): Value of one share of trust deposit, in [[ref: native denom]]. Default an initial value: 1. Increase over time, when yield is produced.
 - `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 20% (0.20)
 - `trust_deposit_max_yield_rate`(number) (*mandatory*): Maximum yearly yield, in percent, that a trust deposit holder can obtain by receiving block rewards.
 - `trust_deposit_block_reward_share`(number) (*mandatory*): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)
@@ -1590,7 +1598,7 @@ As a result, `accountABC` is authorized to:
 |                                | Set Permission VP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated)    |authority + operator |
 |                                | Cancel Permission VP Last Request       |         N/A (Tx)                    | Msg    | [[MOD-PERM-MSG-6]](#mod-perm-msg-6-cancel-permission-vp-last-request)    |authority + operator |
 |                                | Create Root Permission                  |         N/A (Tx)                | Msg    | [[MOD-PERM-MSG-7]](#mod-perm-msg-7-create-root-permission)   |authority + operator |
-|                                | Extend Permission                       |         N/A (Tx)            | Msg    | [[MOD-PERM-MSG-8]](#mod-perm-msg-8-extend-permission)  |authority + operator |
+|                                | Adjust Permission                       |         N/A (Tx)            | Msg    | [[MOD-PERM-MSG-8]](#mod-perm-msg-8-adjust-permission)  |authority + operator |
 |                                | Revoke Permission                       |          N/A (Tx)              | Msg    | [[MOD-PERM-MSG-9]](#mod-perm-msg-9-revoke-permission)  |authority + operator |
 |                                | Create or update Permission Session     |           N/A (Tx)              | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-create-or-update-permission-session)  |authority + operator |
 |                                | Update Permission Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |governance proposal |
@@ -1617,6 +1625,8 @@ As a result, `accountABC` is authorized to:
 |             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |module call|
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |authority + operator OR module call|
+| Exchange Rate  | Set Exchange Rate  |   N/A (Tx)  | Msg  | [[MOD-EX-MSG-1]](#mod-ex-msg-1-set-exchange-rate)   |module call|
+|           | Get Exchange Rate  | /ex/v1/get                 | Query  | [[MOD-EX-QRY-1]](#mod-ex-msg-1-get-exchange-rate)   |N/A  |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -1994,6 +2004,9 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `holder_validation_validity_period` (*mandatory*), default to 0 (days).
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*).
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*).
+- `denom` (string) (*mandatory*). The [[ref: denom]] that will be used for payments for business models linked to this credential schema. Can be, as of spec v4:
+  - the [[ref: native denom]]
+  - "TU"
 
 ##### [MOD-CS-MSG-1-2] Create New Credential Schema precondition checks
 
@@ -2014,6 +2027,7 @@ If any of these precondition checks fail, method MUST abort.
 - `holder_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*) MUST be a valid PermissionManagementMode.
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*) MUST be a valid PermissionManagementMode.
+- `denom` (denom) (*mandatory*): MUST be a valid denom, active in the VPR.
 
 ###### [MOD-CS-MSG-1-2-2] Create New Credential Schema fee checks
 
@@ -2039,6 +2053,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.verifier_perm_management_mode`: `verifier_perm_management_mode`
   - `cs.created`: current timestamp
   - `cs.modified`: `cs.created`.
+  - `cs.denom`: `denom`.
 
 :::note
 If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM `Permission` so that validation processes can be run.
@@ -2608,7 +2623,7 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 ###### [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks
 
-- Load `Permission` entry `validator_perm` from `validator_perm_id`. It MUST be a [[ref: valid permission]] else transaction MUST abort.
+- Load `Permission` entry `validator_perm` from `validator_perm_id`. It MUST be a [[ref: active permission]] else transaction MUST abort.
 - Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`. It MUST exist.
 
 - if `type` (PermissionType) is equal to ISSUER:
@@ -2645,14 +2660,17 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
   
   - else abort.
 
-At the end, if a [[ ref: valid permission]] `validator_perm` is not found, [[ref: transaction]] MUST abort.
+At the end, if a [[ ref: active permission]] `validator_perm` is not found, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PERM-MSG-1-2-3] Start Permission VP fee checks
 
 - Load `Permission` entry `validator_perm` from `validator_perm_id`.
 
 - Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
-- `authority` MUST have an available balance in its [[ref: account]], to cover the following fees:
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following fees.
+
+If `cs.
+
   - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
   - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
 
@@ -2763,8 +2781,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PERM-MSG-2-2-2] Renew Permission VP permission checks
 
-- Load `Permission` entry `applicant_perm`. `authority` running the operation MUST be `applicant_perm.authority`, else MUST abort. `applicant_perm` MUST be a [[ref: valid permission]].
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`. It MUST exist, and be a [[ref: valid permission]], else MUST abort.
+- Load `Permission` entry `applicant_perm`. `authority` running the operation MUST be `applicant_perm.authority`, else MUST abort. `applicant_perm` MUST be a [[ref: active permission]].
+- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`. It MUST exist, and be a [[ref: active permission]], else MUST abort.
 
 ###### [MOD-PERM-MSG-2-2-3] Renew Permission VP fee checks
 
@@ -2873,10 +2891,10 @@ Now, let's verify `effective_until`:
 
 ###### [MOD-PERM-MSG-3-2-2] Set Permission VP to Validated validator perms
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]].
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]].
 - `authority` running the method MUST be `validator_perm.authority`.
 
-If `validator_perm` is not a [[ ref: valid permission]] (expired, revoked, slashed...) then applicant MUST start a new validation process.
+If `validator_perm` is not a [[ ref: active permission]] (expired, revoked, slashed...) then applicant MUST start a new validation process.
 
 ###### [MOD-PERM-MSG-3-2-3] Set Permission VP to Validated fee checks
 
@@ -2886,7 +2904,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 
 We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. That should not occur in this method, but better do the check anyway.
 
-Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
+Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
 
 for each `Permission` entry `p` from `perms[]`:
 
@@ -3029,9 +3047,9 @@ An [[ref: account]] that would like to create a `Permission` entry MUST call thi
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS.
 - `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
-- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
-- `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in trust unit. Default to 0.
-- `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.
+- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
+- `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.
+- `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
 
 ##### [MOD-PERM-MSG-7-2] Create Root Permission precondition checks
 
@@ -3066,9 +3084,9 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PERM-MSG-7-2-4] Create Root Permission overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-extend-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-adjust-permission) to set or adjust the `effective_until` value.
 
-Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `authority`.
+Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `authority`.
 
 > Note: unlike overlap checks from other methods, here we do not need to check for `validator_perm_id`, as for ECOSYSTEM type permissions it is NULL.
 
@@ -3104,7 +3122,7 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.verification_fees`: `verification_fees`
 - `perm.deposit`: 0
 
-#### [MOD-PERM-MSG-8] Extend Permission
+#### [MOD-PERM-MSG-8] Adjust Permission
 
 Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
@@ -3114,18 +3132,18 @@ This method can be called:
 - by `perm.authority`, if it is a self-created permission (schema configuration is open)
 - by an `authority` of a validator permission (if permission is managed by a VP).
 
-##### [MOD-PERM-MSG-8-1] Extend Permission parameters
+##### [MOD-PERM-MSG-8-1] Adjust Permission parameters
 
 - `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission;
 - `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Permission` will be effective.
 
-##### [MOD-PERM-MSG-8-2] Extend Permission precondition checks
+##### [MOD-PERM-MSG-8-2] Adjust Permission precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-8-2-1] Extend Permission basic checks
+###### [MOD-PERM-MSG-8-2-1] Adjust Permission basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3133,13 +3151,13 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `applicant_perm` MUST be a [[ref: valid permission]]
+- `applicant_perm` MUST be a [[ref: active permission]]
 - `applicant_perm.effective_until` MUST be greater than now().
 - else MUST abort.
 
 > Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null,  which was not the case in spec v3.
 
-###### [MOD-PERM-MSG-8-2-2] Extend Permission advanced checks
+###### [MOD-PERM-MSG-8-2-2] Adjust Permission advanced checks
 
 1. ECOSYSTEM permissions
 
@@ -3147,22 +3165,22 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 2. Self-created permissions
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]] of type ECOSYSTEM. `authority` running the method MUST be `applicant_perm.authority`.
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]] of type ECOSYSTEM. `authority` running the method MUST be `applicant_perm.authority`.
 
 3. VP managed permissions
 
 - `effective_until` MUST be lower or equal to `applicant_perm.vp_exp` else MUST abort.
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]]. `authority` running the method MUST be `validator_perm.authority`.
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]]. `authority` running the method MUST be `validator_perm.authority`.
 
-###### [MOD-PERM-MSG-8-2-3] Extend Permission fee checks
+###### [MOD-PERM-MSG-8-2-3] Adjust Permission fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-8-2-4] Extend Permission overlap checks
+###### [MOD-PERM-MSG-8-2-4] Adjust Permission overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-extend-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-adjust-permission) to set or adjust the `effective_until` value.
 
-Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
+Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
 
 for each `Permission` entry `p` from `perms[]`:
 
@@ -3172,7 +3190,7 @@ for each `Permission` entry `p` from `perms[]`:
 
 > note: this check was not present in v3.
 
-##### [MOD-PERM-MSG-8-3] Extend Permission execution
+##### [MOD-PERM-MSG-8-3] Adjust Permission execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -3182,7 +3200,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Permission` entry `applicant_perm` from `id`.
 - set `applicant_perm.effective_until` to `effective_until`
-- set `applicant_perm.extended` to `now`
+- set `applicant_perm.adjusted` to `now`
 - set `applicant_perm.modified` to `now`
 
 
@@ -3219,7 +3237,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `applicant_perm` MUST be a [[ref: valid permission]]
+- `applicant_perm` MUST be a [[ref: active permission]]
 
 ###### [MOD-PERM-MSG-9-2-2] Revoke Permission advanced checks
 
@@ -3232,7 +3250,7 @@ if `applicant_perm.validator_perm_id` is defined:
 - set `validator_perm` = `applicant_perm`
 - while `validator_perm.validator_perm_id` is defined, 
   - load `validator_perm` from `validator_perm.validator_perm_id`.
-  - if `validator_perm` is a [[ref: valid permission]] and `validator_perm.authority` is who is running the method, => return true.
+  - if `validator_perm` is a [[ref: active permission]] and `validator_perm.authority` is who is running the method, => return true.
 - end
 - return false.
 
@@ -3249,9 +3267,9 @@ Example:
 
 In the following permission tree, "Verifier E" permission can be revoked:
 
-- by "Verifier E", if the corresponding permission is a [[ref: valid permission]];
-- by "Verifier Grantor D", if the corresponding permission is a [[ref: valid permission]];
-- by "Ecosystem A", if the corresponding root permission is a [[ref: valid permission]];
+- by "Verifier E", if the corresponding permission is a [[ref: active permission]];
+- by "Verifier Grantor D", if the corresponding permission is a [[ref: active permission]];
+- by "Ecosystem A", if the corresponding root permission is a [[ref: active permission]];
 - by the `TrustRegistry` object controller, obtained by resolving perm => credential schema => trust registry.
 
 ```plantuml
@@ -3390,7 +3408,7 @@ if `issuer_perm_id` is no null:
 
 - Load `issuer_perm` from `issuer_perm_id`.
 - if `issuer_perm.type` is not ISSUER, abort.
-- if `issuer_perm` is not a [[ref: valid permission]], abort.
+- if `issuer_perm` is not a [[ref: active permission]], abort.
 - if `issuer_perm.vs_operator` is not equal to `operator`, abort.
 - if `issuer_perm.authority` is not equal to `authority`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
@@ -3399,7 +3417,7 @@ if `verifier_perm_id` is no null:
 
 - Load `verifier_perm` from `verifier_perm_id`.
 - if `verifier_perm.type` is not VERIFIER, abort.
-- if `verifier_perm` is not a [[ref: valid permission]], abort.
+- if `verifier_perm` is not a [[ref: active permission]], abort.
 - if `verifier_perm.vs_operator` is not equal to `operator`, abort.
 - if `verifier_perm.authority` is not equal to `authority`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
@@ -3408,13 +3426,13 @@ agent:
 
 - Load `agent_perm` from `agent_perm_id`.
 - if `agent_perm.type` is not ISSUER, abort.
-- if `agent_perm` is not a [[ref: valid permission]], abort.
+- if `agent_perm` is not a [[ref: active permission]], abort.
 
 wallet_agent:
 
 - Load `wallet_agent_perm` from `wallet_agent_perm_id`.
 - if `wallet_agent_perm.type` is not ISSUER, abort.
-- if `wallet_agent_perm` is not a [[ref: valid permission]], abort.
+- if `wallet_agent_perm` is not a [[ref: active permission]], abort.
 
 :::warning
 we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.
@@ -3613,7 +3631,7 @@ if `applicant_perm.validator_perm_id` is defined:
 - set `validator_perm` = `applicant_perm`
 - while `validator_perm.validator_perm_id` is defined, 
   - load `validator_perm` from `validator_perm.validator_perm_id`.
-  - if `validator_perm` is a [[ref: valid permission]] and `validator_perm.authority` is who is running the method, => return true.
+  - if `validator_perm` is a [[ref: active permission]] and `validator_perm.authority` is who is running the method, => return true.
 - end
 - return false.
 
@@ -3707,16 +3725,17 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 
 ##### [MOD-PERM-MSG-14-1] Self Create Permission parameters
 
-- `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
-- `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
-- `schema_id` (uint64) (*mandatory*)
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `type` (PermissionType) (*mandatory*): ISSUER or VERIFIER.
+- `validator_perm_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]] of the Credential Schema defined by `schema_id`
+- `schema_id` (uint64) (*mandatory*)
+- `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
-- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in trust unit. Default to 0.
-- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in trust unit. Default to 0.
+- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
+- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in the denom specified in the credential schema. Default to 0.
 - `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `authority` account (trust fees will be paid by authority account)
 - `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
   as a direct consequence of executing authorized messages.
@@ -3732,13 +3751,21 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
+Load `Permission` `validator_perm` from `validator_perm_id`.
+
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
 - `type` (PermissionType) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
+- `validator_perm_id` (uint64) (*mandatory*): `validator_perm` MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]] of the Credential Schema defined by `schema_id`
+- `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist and MUST be the same than `validator_perm.schema_id`
+- `vs_operator` (account) (*optional*): no check required.
 - `did`, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `effective_from` must be in the future.
-- `effective_until`, if not null, must be greater than `effective_from`
+- `effective_from` MUST be in the future AND
+  - MUST be greater or equal to `validator_perm.effective_from` AND
+  - if `validator_perm.effective_until` is not null, MUST be lower than `validator_perm.effective_until`
+- `effective_until`:
+  - if null, `validator_perm.effective_until` MUST be NULL
+  - else if not null, must be greater than `effective_from` AND if `validator_perm.effective_until` is not null, MUST be lower or equal to `validator_perm.effective_until`
 - `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
 - `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
 - `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
@@ -3764,9 +3791,9 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PERM-MSG-14-2-4] Self Create Permission overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-extend-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-adjust-permission) to set or adjust the `effective_until` value.
 
-Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
+Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
 
 for each `Permission` entry `p` from `perms[]`:
 
@@ -3783,11 +3810,11 @@ If all precondition checks passed, method is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-- load the root permission of the schema (the one of type `ECOSYSTEM`) to `ecosystem_perm_id`.
 
 A new entry `Permission` `perm` MUST be created:
 
 - `perm.id`: auto-incremented uint64.
+- `perm.validator_perm_id`: `validator_perm_id`
 - `perm.schema_id`: `schema_id`.
 - `perm.modified` to `now`.
 - `perm.type`: `type`.
@@ -3801,7 +3828,6 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.issuance_fees`: 0
 - `perm.verification_fees`: `verification_fees` if specified and `type` is ISSUER, else 0.
 - `perm.deposit`: 0
-- `perm.validator_perm_id`: `ecosystem_perm_id`
 - `perm.vs_operator_authz_enabled`: `vs_operator_authz_enabled`
 - `perm.vs_operator_authz_spend_limit`: `vs_operator_authz_spend_limit`
 - `perm.vs_operator_authz_with_feegrant`: `vs_operator_authz_with_feegrant`
@@ -3832,7 +3858,7 @@ Generic query used for (at least):
 - `did` (string) (*optional*): the did the permission refers to.
 - `perm_id` (number) (*optional*): limit to permissions where the `validator_perm_id` is `perm_id`.
 - `type` (PermissionType) (*optional*): if we want to limit to a specific permission type.
-- `only_valid` (boolean) (*optional*): if set to true, only return valid permissions.
+- `only_valid` (boolean) (*optional*): if set to true, only return active permissions.
 - `only_slashed` (boolean) (*optional*): if set to true, only return slashed permissions.
 - `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed permissions.
 - `modified_after` (timestamp) (*optional*): limit to permissions modified after (or equal to) `modified_after`.
@@ -3959,8 +3985,8 @@ v --> vg
 ##### [MOD-PERM-QRY-4-2] Find Beneficiaries checks
 
 - if `issuer_perm_id` and `verifier_perm_id` are unset then MUST abort.
-- if `issuer_perm_id` is specified, load `issuer_perm` from `issuer_perm_id`, Permission MUST exist and MUST be a [[ref: valid permission]].
-- if `verifier_perm_id` is specified, load `verifier_perm` from `verifier_perm_id`, Permission MUST exist and MUST be a [[ref: valid permission]].
+- if `issuer_perm_id` is specified, load `issuer_perm` from `issuer_perm_id`, Permission MUST exist and MUST be a [[ref: active permission]].
+- if `verifier_perm_id` is specified, load `verifier_perm` from `verifier_perm_id`, Permission MUST exist and MUST be a [[ref: active permission]].
 
 ##### [MOD-PERM-QRY-4-3] Find Beneficiaries execution
 
@@ -4690,7 +4716,7 @@ MUST abort if one of these conditions fails:
 This method can only be called directly by the following methods with no signer check:
 
 - Self Create Permission
-- Extend Permission
+- Adjust Permission
 - Set Permission VP to Validated
 
 > Note: This methid can only grant authorization for the `CreateOrUpdatePermissionSession` Msg.
