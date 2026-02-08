@@ -1026,6 +1026,19 @@ entity "DenomAmount" as da {
   amount: number
 }
 
+enum "PricingAssetType" as pricingassettype {
+  TU
+  COIN
+  FIAT
+}
+
+entity "PermissionSession" as csps {
+  *id: uuid
+  +created: timestamp
+  +modified: timestamp
+  authz: (uint64, uint64, uint64)[]
+}
+
 entity "ExchangeRate" as ex {
   base: string
   quote: string
