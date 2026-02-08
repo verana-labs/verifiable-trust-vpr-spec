@@ -2004,9 +2004,15 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `holder_validation_validity_period` (*mandatory*), default to 0 (days).
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*).
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*).
-- `denom` (string) (*mandatory*). The [[ref: denom]] that will be used for payments for business models linked to this credential schema. Can be, as of spec v4:
-  - the [[ref: native denom]]
-  - "TU"
+- `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
+- `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"EUR"`, `"GBP"`,...
+
+:::note
+When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
+The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
+FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
+FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.
+:::
 
 ##### [MOD-CS-MSG-1-2] Create New Credential Schema precondition checks
 
