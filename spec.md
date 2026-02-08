@@ -1045,11 +1045,14 @@ entity "ExchangeRate" as xr {
   +quote_asset: string
   +rate: string
   +rate_scale: uint32
-  +updated_at: timestamp
-  +expires_at: timestamp
+  +updated: timestamp
+  +expires: timestamp
+  +validity_duration: duration
   +state: boolean
 }
 
+entity "ExchangeRateAuthorization" as xrauthz {
+}
 
 
 entity "Permission" as csp {
@@ -1142,6 +1145,9 @@ entity "TrustDeposit" as td {
   last_repaid: timestamp
   slash_count: number
 }
+
+xrauthz o-- xr
+xrauthz o-- account: operator
 
 xr o-- pricingassettype: base_asset_type
 xr o-- pricingassettype: quote_asset_type
@@ -1369,6 +1375,23 @@ group  --o td: authority
 - `authority` (group) (*mandatory*): the authority group granting the authorization.
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization.
 - `permissions[]` (uint64[]) (*mandatory*): permission ids for which we grant this authorization.
+
+### ExchangeRate
+
+Represents an on-chain exchange rate between two assets.
+
+`ExchangeRate`:
+
+- `base_asset_type` (PricingAssetType, mandatory): Type of the base asset.
+- `base_asset` (string, mandatory if `base_asset_type` is COIN or FIAT, null if `base_asset_type` is TU): Identifier of the base asset.
+- `quote_asset_type` (PricingAssetType, mandatory): Type of the quote asset.
+- `quote_asset` (string, mandatory): Identifier of the quote asset.
+- `rate` (string, mandatory): Fixed-point integer representing the exchange rate from base asset to quote asset.
+- `rate_scale` (uint32, mandatory): Number of decimal digits used to scale rate.
+- `validity_duration` (duration, mandatory): when updated, set `expires` to block time plus `validity_duration`.
+- `updated` (timestamp, mandatory): Timestamp of the last exchange rate update.
+- `expires` (timestamp, mandatory): Timestamp after which the exchange rate is considered invalid.
+- `state` (boolean, mandatory): true means enabled, false means disabled.
 
 ### GlobalVariables
 
@@ -1652,13 +1675,14 @@ As a result, `accountABC` is authorized to:
 |             | Revoke Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization)   |authority (group proposal) OR authority + operator OR module call|
 |             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |module call|
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
+|             | Grant Exchange Rate Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-7]](#mod-de-msg-7-grant-exchange-rate-authorization)   |governance proposal|
+|             | Revoke Exchange Rate Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-8]](#mod-de-msg-8-revoke-exchange-rate-authorization)   |governance proposal|
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |authority + operator OR module call|
-| Exchange Rate                  | Update Exchange Rate                   |                                  | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-update-exchange-rate)   |
-|                   | Toggle Exchange Rate State                  |                                  | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-toggle-exchange-rate-state)   |
-|                   | Update Exchange Rate Update Whitelist                  |                                  | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-update-exchange-rate-update-whitelist)   |
-|                                | Get Trust Deposit                       | /xr/v1/get                  | Query  | [[MOD-XR-QRY-1]](#mod-xr-qry-1-get-exchange-rate)   |N/A |
-|                                | List TD Module Parameters               | /xr/v1/list                 | Query  | [[MOD-XR-QRY-2]](#mod-xr-qry-2-list-exchange-rates)   |N/A |
-|                                | List TD Module Parameters               | /xr/v1/list                 | Query  | [[MOD-XR-QRY-3]](#mod-xr-qry-3-list-module-parameters)   |N/A |
+| Exchange Rate     | Create Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
+|                   | Update Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
+|                   | Toggle Exchange Rate State        |                                  | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-toggle-exchange-rate-state)   |governance proposal|
+|                   | Get Exchange Rate                 | /xr/v1/get                  | Query  | [[MOD-XR-QRY-1]](#mod-xr-qry-1-get-exchange-rate)   |N/A |
+|                   | List Exchange Rates               | /xr/v1/list                 | Query  | [[MOD-XR-QRY-2]](#mod-xr-qry-2-list-exchange-rates)   |N/A |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -4898,13 +4922,14 @@ Create Digest `digest`:
 - set `digest.digest_sri` to digest_sri
 - set `digest.created` to now.
 
- #### [MOD-XR-MSG-1] Update Exchange Rate
 
-The **Update Exchange Rate** method allows an authorized actor to create or update an `ExchangeRate` entry for a given `(base_asset_type, base_asset, quote_asset_type, quote_asset)` pair.
+#### [MOD-XR-MSG-1] Create Exchange Rate
 
-This method is used to store deterministic exchange rates on-chain, which MAY later be consumed by other modules to compute on-chain amounts (e.g. trust deposits) when pricing rules are expressed in a different asset.
+The **Create Exchange Rate** method allows creating an `ExchangeRate` entry for a given `(base_asset_type, base_asset, quote_asset_type, quote_asset)` pair.
 
-##### [MOD-XR-MSG-1] Update Exchange Rate method parameters
+- Only a governance proposal CAN execute this method.
+
+##### [MOD-XR-MSG-1] Create Exchange Rate method parameters
 
 - `base_asset_type` (PricingAssetType, *mandatory*)  
 - `base_asset` (string, *mandatory*)  
@@ -4912,24 +4937,15 @@ This method is used to store deterministic exchange rates on-chain, which MAY la
 - `quote_asset` (string, *mandatory*)  
 - `rate` (string, *mandatory*)  
 - `rate_scale` (uint32, *mandatory*)  
-- `expires_at` (timestamp, *optional*)
+- `validity_duration` (duration, *mandatory*)
 
-##### [MOD-XR-MSG-1] Update Exchange Rate precondition checks
+##### [MOD-XR-MSG-1] Create Exchange Rate precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-XR-MSG-1] Update Exchange Rate basic checks
+###### [MOD-XR-MSG-1] Create Exchange Rate basic checks
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
-
-- **Authorization**
-
-Only a governance proposal can create a new ExchangeRate.
-
-For updates, the caller MUST be authorized to **update** exchange rates. Caller can be can be:
-
-- a governance proposal
-- an account that is included in the `update_whitelist` for the corresponding ExchangeRate entry.
 
 - **Asset type validity**
   - `base_asset_type` MUST be a valid `PricingAssetType` value.
@@ -4938,7 +4954,7 @@ For updates, the caller MUST be authorized to **update** exchange rates. Caller 
 - **Asset identifier basic validity**
   - `base_asset` MUST be non-empty.
   - `quote_asset` MUST be non-empty.
-
+  
 - **Asset type / identifier consistency**
   - If `base_asset_type = TRUST_UNIT`:
     - `base_asset` MUST equal `"TU"`.
@@ -4963,94 +4979,104 @@ For updates, the caller MUST be authorized to **update** exchange rates. Caller 
 
 - **Pair validity**
   - The pair `(base_asset_type, base_asset, quote_asset_type, quote_asset)` MUST NOT be identical on both sides (base and quote MUST NOT represent the same asset).
-  - The pair `(base_asset_type, base_asset, quote_asset_type, quote_asset)` MUST be unique in storage. If an entry exists, it MUST be updated; otherwise, it MUST be created.
+  - The pair `(base_asset_type, base_asset, quote_asset_type, quote_asset)` MUST be unique in storage. If an entry already exists, execution MUST abort.
 
 - **Rate validity**
   - `rate` MUST be a base-10 encoded unsigned integer string.
   - `rate` MUST be strictly greater than `"0"`.
   - `rate_scale` MUST be within protocol-defined limits (e.g., `rate_scale <= 18`).
 
-- **Expiration validity**
-  - If `expires_at` is provided, it MUST be strictly greater than the current block timestamp.
+- **validity_duration**
+  - `validity_duration` MUST be greater or equal to `1 minute`.
   
-###### [MOD-XR-MSG-1] Update Exchange Rate fee checks
+###### [MOD-XR-MSG-1] Create Exchange Rate fee checks
 
-Caller MUST have sufficient [[ref: estimated transaction fees]].
+Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 
-##### [MOD-XR-MSG-1] Update Exchange Rate execution of the method
+##### [MOD-XR-MSG-1] Create Exchange Rate execution of the method
 
-1. Locate or create the corresponding `ExchangeRate`.
-2. Update `rate`, `rate_scale`, `updated_at`, `expires_at`, `source`.
-3. if ExchangeRate entry is new (created) set `state` to disabled.
-4. Persist state changes.
+Create `ExchangeRate` entry `xr`:
 
-##### [MOD-XR-MSG-1] Exchange rate usage and rounding rules
+- `xr.id` = auto generated id
+- `xr.base_asset_type` = `base_asset_type`
+- `xr.base_asset` = `base_asset`
+- `xr.quote_asset_type` = `quote_asset_type`
+- `xr.quote_asset` = `quote_asset`
+- `xr.rate` = `rate`
+- `xr.rate_scale` = `rate_scale`
+- `xr.validity_duration` = `validity_duration`
+- `xr.expires` = block timestamp + `validity_duration`
+- `xr.state` = false
+- `xr.updated` = block timestamp
 
-- Conversions use base units only.
-- Integer arithmetic MUST be used.
-- `quote_amount = floor(base_amount × rate / 10^rate_scale)`.
-- Expired rates MUST NOT be used.
+#### [MOD-XR-MSG-2] Update Exchange Rate
 
-#### [MOD-XR-MSG-2] Toggle Exchange Rate State
+Only an authorized operator that has an ExchangeRateAuthorization can execute this method.
+
+##### [MOD-XR-MSG-2] Update Exchange Rate method parameters
+
+- `id` (uint64, *mandatory*)
+- `rate` (string, *mandatory*)  
+
+##### [MOD-XR-MSG-2] Update Exchange Rate precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-XR-MSG-2] Update Exchange Rate basic checks
+
+If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- **Authorization**
+
+Only an authorized operator that has an ExchangeRateAuthorization can execute this method.
+
+- `id` (uint64, *mandatory*) must refer to an existing `ExchangeRate` entry `xr` with `xr.active` = true
+- `rate` MUST be strictly greater than `"0"`.
+  
+###### [MOD-XR-MSG-2] Update Exchange Rate fee checks
+
+Fee payer MUST have sufficient [[ref: estimated transaction fees]].
+
+##### [MOD-XR-MSG-2] Update Exchange Rate execution of the method
+
+Load `ExchangeRate` `xr`.
+
+- `xr.rate` = `rate`
+- `xr.expires` = block time + `validity_duration`
+- `xr.updated` = block time
+
+#### [MOD-XR-MSG-3] Toggle Exchange Rate State
 
 The **Toggle Exchange Rate State** method allows an authorized actor to enable or disable an exchange rate.
 
-##### [MOD-XR-MSG-2] Toggle Exchange Rate State method parameters
+##### [MOD-XR-MSG-3] Toggle Exchange Rate State method parameters
 
 - `id` (uint64, *mandatory*): id of the exchange rate
 - `state` (boolean, *mandatory*): true to set enabled, false to set disabled
 
-##### [MOD-XR-MSG-2] Toggle Exchange Rate State precondition checks
+##### [MOD-XR-MSG-3] Toggle Exchange Rate State precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-XR-MSG-2] Toggle Exchange Rate State basic checks
+###### [MOD-XR-MSG-3] Toggle Exchange Rate State basic checks
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - **Authorization**
   - Only a governance proposal can enable or disable an exchange rate.
+
 - ExchangeRate with id `id` MUST exist.
   
-###### [MOD-XR-MSG-2] Toggle Exchange Rate State fee checks
+###### [MOD-XR-MSG-3] Toggle Exchange Rate State fee checks
 
-Caller MUST have sufficient [[ref: estimated transaction fees]].
+Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 
-##### [MOD-XR-MSG-2] Toggle Exchange Rate State execution of the method
+##### [MOD-XR-MSG-3] Toggle Exchange Rate State execution of the method
 
-1. Locate and load the corresponding `ExchangeRate` `xr`.
-2. Update `state`.
-3. Persist state changes.
+Load `ExchangeRate` `xr`.
 
-#### [MOD-XR-MSG-3] Update Exchange Rate Update Whitelist
-
-The **Update Exchange Rate Update Whitelist** method allows an authorized actor to update exchange rate update whitelist.
-
-##### [MOD-XR-MSG-3-1] Update Exchange Rate Update Whitelist method parameters
-
-- `id` (uint64, *mandatory*): id of the exchange rate
-- `update_whitelist` (account[], *optional*): if empty, delete the existing list
-
-##### [MOD-XR-MSG-3-2] Update Exchange Rate Update Whitelist precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-XR-MSG-3-2-1] Update Exchange Rate Update Whitelist basic checks
-
-If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
-
-- The caller MUST be authorized to update the update whitelist (only governance proposal are authorized)
-- ExchangeRate with id `id` MUST exist.
-  
-###### [MOD-XR-MSG-3-2-2] Update Exchange Rate Update Whitelist fee checks
-
-Caller MUST have sufficient [[ref: estimated transaction fees]].
-
-##### [MOD-XR-MSG-3] Update Exchange Rate Update Whitelist execution of the method
-
-1. Locate and load the corresponding `ExchangeRate` `xr`.
-2. Update `update_whitelist`.
-3. Persist state changes.
+- set `xr.state` to !`xr.state`.
+- set `xr.updated` to block time
 
 #### [MOD-XR-QRY-1] Get Exchange Rate
 
@@ -5100,26 +5126,75 @@ Any [[ref: account]] CAN run this [[ref: query]]. As this method does not modify
 - `quote_asset_type` (PricingAssetType, *optional*)  
 - `quote_asset` (string, *optional*)  
 - `state` (boolean, *optional*): to force state, enabled or disabled
-- `expire_ts` (timestamp, *optional*): return only if expire_ts is greater than `expire_ts`
+- `expire` (timestamp, *optional*): return only if expire is greater than `expire`
 
 ##### [MOD-XR-QRY-2-2] List Exchange Rates query checks
-
 
 ##### [MOD-XR-QRY-2-3] List Exchange Rates execution of the query
 
 If found, returns a list of found ExchangeRates, else return an empty list.
 
-#### [MOD-XR-QRY-3] List Module Parameters
+#### [MOD-XR-QRY-3] Get Price
 
-Anyone CAN run this [[ref: query]].
+Anyone CAN run this [[ref: query]], throgh module call or using the API.
 
-##### [MOD-XR-QRY-3-1] List Module Parameters parameters
+##### [MOD-XR-QRY-3] Get Price Example
 
-##### [MOD-XR-QRY-3-2] List Module Parameters query checks
+base_asset_type  = TRUST_UNIT
+base_asset       = "TU"
+quote_asset_type = COIN
+quote_asset      = "uvna"
+rate             = R
+rate_scale       = S
 
-##### [MOD-XR-QRY-3-3] List Module Parameters execution of the query
+If a valid `ExchangeRate` entry exists with:
 
-Return the list of the existing parameters and their values.
+- `base_asset_type = TRUST_UNIT`
+- `base_asset = "TU"`
+- `quote_asset_type = COIN`
+- `quote_asset = "uvna"`
+
+then the price of **`amount` Trust Unit expressed in uvna** MUST be computed using the following formula:
+
+```code
+price_uvna = floor(amount * rate / 10^rate_scale)
+```
+
+Where:
+
+- `rate` and `rate_scale` are the values stored in the corresponding `ExchangeRate` entry.
+- `price_uvna` is expressed in **micro-denominated VNA units (`uvna`)**.
+- Rounding MUST always be performed **downwards**.
+
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail.
+
+##### [MOD-XR-QRY-3-1] Convert Amount parameters
+
+- `base_asset_type` (PricingAssetType, *optional*)  
+- `base_asset` (string, *optional*)  
+- `quote_asset_type` (PricingAssetType, *optional*)  
+- `quote_asset` (string, *optional*)
+- `amount` (number, *mandatory*)
+
+##### [MOD-XR-QRY-3-2] Convert Amount query checks
+
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned
+
+##### [MOD-XR-QRY-3-3] Convert Amount execution of the query
+
+
+`price` = floor(amount * rate / 10^rate_scale)
+
+::: warning
+
+- Conversions use base units only.
+- Integer arithmetic MUST be used.
+- `quote_amount = floor(base_amount × rate / 10^rate_scale)`.
+- Expired rates MUST NOT be used.
+
+:::
+
+Return `price`.
 
 ## Initial Data Requirements
 
