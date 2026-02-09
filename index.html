@@ -89,7 +89,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <p>This specification deals with the Verifiable Public Registry (VPR), a decentralized registry of registries, part of the Verifiable Trust concept.</p>
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:trust-registry">trust registry</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
-<div id="note-223" class="notice note"><a class="notice-link" href="#note-223">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-127" class="notice note"><a class="notice-link" href="#note-127">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
 <h3 id="what-is-a-trust-registry"><a class="toc-anchor" href="#what-is-a-trust-registry" >§</a> What is a Trust Registry?</h3>
@@ -140,8 +140,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <dd>A decentralized identifier, as specified in [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</dd>
 <dt><span id="term:didcomm"><span id="term:decentralized-identifier-communication">decentralized identifier communication</span></span>:</dt>
 <dd><a path-0="identity.foundation"path-1="didcomm-messaging"path-2="spec"path-3=""href="https://identity.foundation/didcomm-messaging/spec/" >DIDComm</a> uses <a class="term-reference" href="#term:dids">DIDs</a> to establish confidential, ongoing connections.</dd>
-<dt><span id="term:denom">denom</span>:</dt>
-<dd>Native token of a <a class="term-reference" href="#term:vpr">VPR</a>, example: VNA.</dd>
+<dt><span id="term:denoms"><span id="term:denom">denom</span></span>:</dt>
+<dd>Token that has been configured and is recognized in a <a class="term-reference" href="#term:vpr">VPR</a>, example: uvna, USDC.</dd>
+<dt><span id="term:native-denom">native denom</span>:</dt>
+<dd>Native token of a <a class="term-reference" href="#term:vpr">VPR</a>, example: uvna.</dd>
 </dl>
 <p><span id="term:ecosystems"><span id="term:ecosystem">ecosystem</span></span>: a network of interacting entities, both technical and human, that work together to establish and maintain digital trust. It encompasses applications, credentials, governance frameworks, and the underlying technical infrastructure, all designed to facilitate trustworthy interactions.</p>
 <dl>
@@ -189,14 +191,16 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <dd>Fees paid by a <a class="term-reference" href="#term:participant">participant</a> that are distributed to other <a class="term-reference" href="#term:participants">participants</a>.</dd>
 <dt><span id="term:network-fees"><span id="term:network-fee">network fee</span></span>:</dt>
 <dd>Fees paid by a <a class="term-reference" href="#term:participant">participant</a> that are distributed to network validators and trust deposit holders.</dd>
-<dt><span id="term:trust-units"><span id="term:trust-unit">trust unit</span></span>:</dt>
-<dd>Price, in <a class="term-reference" href="#term:denom">denom</a>, of one unit of trust.</dd>
+<dt><span id="term:tus"><span id="term:tu"><span id="term:trust-units"><span id="term:trust-unit">trust unit</span></span></span></span>:</dt>
+<dd>A fake denom that is not usable as a token (cannot be transferred, or used for paying in transactions). Trust unit is used to define fees in Permissions. Fees defined in trust units are automatically converted to <a class="term-reference" href="#term:native-denom">native denom</a> when a transaction is executed, using an exchange rate <code>TU/[[ref: native denom]]</code>. Trust unit is used to compensate <a class="term-reference" href="#term:native-denom">native denom</a> fluctuation.</dd>
 <dt><span id="term:trust-registries"><span id="term:trust-registry">trust registry</span></span></dt>
 <dd>An approved list of <a class="term-reference" href="#term:issuers">issuers</a> and <a class="term-reference" href="#term:verifiers">verifiers</a> that are authorized to issue/verify certain credentials in an ecosystem.</dd>
 <dt><span id="term:uris"><span id="term:uri">URI</span></span></dt>
 <dd>An Universal Resource Identifier, as specified in <a path-0="datatracker.ietf.org"path-1="doc"path-2="html"path-3="rfc3986"href="https://datatracker.ietf.org/doc/html/rfc3986" >rfc3986</a>.</dd>
-<dt><span id="term:valid-permissions"><span id="term:valid-permission">valid permission</span></span>:</dt>
+<dt><span id="term:active-permissions"><span id="term:active-permission">active permission</span></span>:</dt>
 <dd>A credential schema permission of a given type, which effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.</dd>
+<dt><span id="term:future-permissions"><span id="term:future-permission">future permission</span></span>:</dt>
+<dd>A credential schema permission of a given type, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.</dd>
 <dt><span id="term:validation-process">validation process</span>:</dt>
 <dd>A process run by <a class="term-reference" href="#term:applicants">applicants</a> that want to, for a specific <a class="term-reference" href="#term:credential-schema">credential schema</a>, be a <a class="term-reference" href="#term:issuer">issuer</a>, be a <a class="term-reference" href="#term:verifier">verifier</a>, or simply hold a verifiable credential linked to the <a class="term-reference" href="#term:credential-schema">credential schema</a>.</dd>
 <dt><span id="term:validator">validator</span>:</dt>
@@ -520,7 +524,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-224" class="notice note"><a class="notice-link" href="#note-224">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-128" class="notice note"><a class="notice-link" href="#note-128">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
@@ -532,7 +536,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>A designated <a class="term-reference" href="#term:governance-authority">governance authority</a> is responsible for <strong>enforcing these rules</strong> and, when necessary, <strong>applying financial sanctions</strong> to participants who violate the rules.</p>
-<div id="note-225" class="notice note"><a class="notice-link" href="#note-225">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
+<div id="note-129" class="notice note"><a class="notice-link" href="#note-129">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
 <p>While the <strong>VPR governance framework</strong> defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each <strong>ecosystem</strong> must define its own <strong>EGF</strong> to govern roles, permissions, credential policies, and compliance within its specific domain.</p>
 <p>This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.</p>
 </div>
@@ -540,7 +544,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p>For simplicity, the data model is presented using an <strong>object-relational structure</strong>. However, this representation may not be optimal for all implementation scenarios.</p>
 <p>Implementors are responsible for <strong>adapting the data model</strong> to suit their chosen architecture.<br>
 For example, a <strong>key-value store</strong> may be more appropriate for a <strong>ledger-based implementation</strong> than a relational model.</p>
-<img src="https://www.plantuml.com/plantuml/svg/fLZTRo8t47_dhx1uQXjnoabLLV4KT70fwYMam4MgJYVBiGsusLslR2y9ETt_th6z7rxMcu3oX7VcvvdnUBxCbJP4cI9D1bVrIbEIS9IIP_JdvILw4ipi1WEU6M4EQBXMXJPBlXNQgCCG4OsCGZy62Fqcs1WL8ZD__0vV5yn-0aPaM_j95IU60yc8b8EcDBVKL3An4HqoKNGdzbto8mb54ce0XFTSQI6pCGBLbfoGR5kGBG-WWv-D_TSIDcGae_op8Yb_akhntajmXzbkzh7JnCqFLVCjLs_ecKfQfC0l5R7J5KNET56e9FnaOWjuh9MegM1DRSudnPbTasH5TpmbpWQgJpVXlAlwJyiCQwSfD59eNN25jufaHYgy9ubWn80B_H8inJbNGeAuh4WVmAFUorRpkTjANMVgE0s-amax6LmQ0emKfoI3QxH1WC6XS9ztG0K0YBYfMJV0QHbrvbONXKMAXlwg9uNPIILUdA5tCX7qi9G9Tn6WIUwpTxvQVPqjON4_Myu_ps4PHa-le4h8Et86Q0hC6JjRJWjikuNlvQCL_Y1XCyaiZMystDU4ZP9fMs_3A-1CISZq1xN-wlDecInvwewvk9lTmi_rSdAxNbYNpJujLl-krhERCFz_MKt__XLDA9L5cV74hq56M2QKB79V4EogpLp0nHE8-9RZ7LWI8BquSo0rzHQRGyxr65NBRzyTXp_dGhbTRM-WYofCMU7veThxLR_YlQvL1pkcF9Ff9AsFoeWpZLboS6l48UhS20Gqdgzy7OcezxGK_cnunZfadH2zwr0LpubWVG5qLd3PY6-gn8RRIsgN1jiYEWoV-ZI-Y_5SQc52KdaE767vmqGuTGgrhSqnH4sN20eW2Gru7DCTj2FUXPG7XGeTCGFuj53Abg_EOHjMVACkqfIe0uwNWj290D6q5MGHPyP16iiowh6BSCmpyf0SbPWkIkSGLxYJJb7iap0xQu1hP8tSfW3Trw6oifxs6KSIvtQN451wflFRQrkd9r_cqybwDeNrUhQycTzErlF5BLxE_lawMxNfy17DjHLlfLmu3HI2dPTZhobOSYeLgzL4vyM8fh30k9ltjSKjlOXuGFI9QfVuDPJ9oYJJqmCh6cwAVSN3iVgFq5-BBzEZvdcTo0UIt1CbR3nfN-pzb7bXx3GDLKCOd2j1UHYHj1xPoacg-e7976lnyWRuv5dBoMFae5-NTyOOTgB4DoUqSorxjwGtvxeJvVXhZHIp5WFh7L7SgYXuFmWA21_tCQqv1y4JzZhi8P7q4Il-H1JpMWDeeU78CEr0-IqHHxAUI99mYD9NSJ-FdeXJhzg_4FrJnojk3jhr3qs8I6sM1BJ-rjRRsNolYhLsnucrTuV6z7W-yKFPQ2JBYMkCY1-9p65GpNCXjohuuSvgPEhRs_23ZZ4Os1b8ZaQkF86jKAq24fIxCeTOJHrUVlZmSMZnOzIqOlTsS2W7CWfaAKkeA7ORj02OliSejqEzuDffrs0Ti3ywjg_ReDPNTF2XBUabKA6E0U6ZnziOGxLVEFsuCW9zy5NOGJc93W4rQWx2uCLfcxnlp8b8XNa56QAS9oEOi967-1FWnuOCwlavsEIEcDUDIIDe7aOrelqDR3Txvx0IOl-ew23i15B-oM2bD35ehxs9leRkLFSmTCXfHQo_kwDWzT5KmjhicklLjM-ndcyQoRaVD4jp_05OovehSAdxqyh__Wy0" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/jLXBR-Cs4BxhLmW-xRPDa6sBel0fHknDZMxYr7O254L1C29jSoE9AadPSOhzxnsIUf0MbTW8Uh6bcO_pud1cg4kfi51bbaQNpPDCS4hZ33_7lrvSn3j6r2QAQAwOsiU3fIYbcjCraqhi1p6MiHBnlr4SVyV8C2vPhdxv6Tw-9_eLC2nVwzT4KAmea1JBA6ZA2atDE64hrY5ZaMpOjaj-mgv8d2W0eIqLal5y68DgJKvnlYxnchhGGh047X6MaYfFHfho7VBOI2ORcc74GR1W1EGySfvId4VVsYXSQswEyuH-5ZYZEowU7gmT9YJhrJOKat0GN0Veceetz8nvKcR0hnIHunM58bEAr7qbR0ru90Lhg61DOywLe4G_utHXWcHiIEJn9fosuLybpwljS8raKfPKeBN0kU82RN7A25OGGli8bgA22iP1N5vcZn1H6sMj-THbbQuJTHm7t_2K70sk3056XZASmpRg940GKDZFEw0204JSDAmRu7X6dRuqV6nCUfPPFB0vC2hLXWlsOZouuobBzdCuBoOr92viSPWk5lUJEJmyJERJprDuTDEgLr0jv1s72MW2p1aQMuxBUBs4RlcJ5bwVVQ3HrOhQahCIFFFrjhmIV4fTfdLKnwilrDKfAZBZvknkSWj_r_FHxNAcGpQvcYt-N2mdDsvX-B0O__un7YK9BwjIWEqpo73hX-1bOIk5VlAPCyW834V12xm1Smoa5sCEd5cvHcfVK3cCwyU__ZOS-bmmOLRvqO3CgVANb9RlgdrOz2lUoaQris9CSvwDiiPLWerfH9ETNSC6qHoQ9a_lR1gFT1OlmNeZeyfjazhQ9IDnUGy_LxEfte3Fqz7IDQBTlGMLJQM7RNFBNyd8gSNF-3kCFzZC_Y7s_pz2g1qZ9i_91geudODue_yvs7mViQJTPlTFoLM035j13z-HcG6io9z-DCUc806NJ0RepF0FOLt6wkrt4W7OW5FXjkgwrqsEP-7aHc1VwWq9HEHTqmZv2YDFXonJB3STgg05PgIlE9nKEEf0sjQmeZhCVZ_GSq67OUjz4bv5QC4bKowfyWC5MDQP0ASfZxwr1O9yw1910HHOlUd8RcyNKZaARJbW1l2JKWZTiphEjgpmGbbc6HQGYS4oxmOH83Bn2aWWc66GHBogQCXaAA8vVamFsaSN9GkQ4zGfbK7iZgcDDi1CBzxPgOhSGvCg2rKN1uYg2Riv4D1MnjFRQzs3Hr-cuz5oCjOLRpA_cTwEbjFPBPfF_hYVB7mwlFplDV0r1NEQS44QDS5g5z3aDW-pyxPlc4Sh8fmGVQByzjqq4J19zSmtDGsrZRpceL1lZ-FVPb_61uFHTSeVSVg01TFv96qZjrSBRMerYzStbkeFBcv8iXVgfcWNVFGGRUGHl9UlopjXlZvIufkZzwcMlLlIcmFxaNAKlaE72fR7G7A31TKgIjeFCjsxZwdDsJEQajTXZobFdf2WEoo8rUf0ImakmxGA9RP27CZQmIKQhisluxuTV44OMzNs0uAzmrh5hQFT-2GfPfa-2GwjlttrTY_RZqBjst12BToWKN8uNzOJ2JyxW-d4Uwt6yM5S5tADDfp3oHEgUJEkcUcw7-XCS1QfeMS07NmwFzV5k5PgfpMqsp15KoPL5C4jFIpJ__XXHk4eihU5ipDUNGM6Pao5SKpje_gYuN9R9zkLzIpVjxRbE-rE6reOItLjXKtGNhOagDLLSI0DTN1nVlvfeF73k9qZp6tNe0n82P0bDA6cw6KGChWMGWpqRPDHQRHBDwAswO1QsuuWENG_ge0YxXZWNjEjZI6KVoVlnrL7ovwg6XjLLwG1eCvQHmWUndf2iLD5oZAcNa6wA1F90CQTGbpy4V13GwBcOkSiCYuMJLULa7UH4grekmFhrTO4h8BeJsiTX1wVgizYqijUlUrjzhLqexg78LsEbx5sxmwILVh7tMKtNAlEtyLcE6ib5tPAhion3X3Fcai8gVbOQ___0m00" alt="uml diagram">
 <h3 id="trustregistry"><a class="toc-anchor" href="#trustregistry" >§</a> TrustRegistry</h3>
 <p><code>TrustRegistry</code>:</p>
 <ul>
@@ -589,6 +593,8 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>holder_validation_validity_period</code> (number) (<em>mandatory</em>): number of days after which an holder validation process expires and must be renewed.</li>
 <li><code>issuer_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>): defines how permissions are managed for issuers of this <code>CredentialSchema</code>. OPEN means anyone can issue credential of this schema; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the <code>CredentialSchema</code> entry in order to create an ISSUER permission;</li>
 <li><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>): defines how permissions are managed for verifiers of this <code>CredentialSchema</code>. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the <code>CredentialSchema</code> entry in order to create a VERIFIER permission;</li>
+<li><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>): used asset for paying business fees. Can be TU (<a class="term-reference" href="#term:trust-unit">trust unit</a>),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in <code>denom</code>.</li>
+<li><code>pricing_asset</code> (string) (<em>mandatory</em>): <code>&quot;tu&quot;</code> if <code>pricing_asset_type</code> is set to TU, else examples: COIN: <code>denom</code> <code>&quot;uvna&quot;</code>, <code>&quot;ufoo&quot;</code>, <code>&quot;ibc/3A0F9C2E4E2A9B7D6F...&quot;</code>, <code>&quot;factory/verana1.../ueurv&quot;</code>, FIAT: <code>&quot;USD&quot;</code>, <code>&quot;GBP&quot;</code>,…</li>
 </ul>
 <h3 id="schemaauthorizationpolicy"><a class="toc-anchor" href="#schemaauthorizationpolicy" >§</a> SchemaAuthorizationPolicy</h3>
 <p><code>SchemaAuthorizationPolicy</code>:</p>
@@ -614,18 +620,18 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>authority</code> (group) (<em>mandatory</em>): <a class="term-reference" href="#term:group">group</a> that owns this permission.</li>
 <li><code>vs_operator</code> (account) (<em>mandatory</em>): verifiable service agent account. This is the account that will have the right to create or update permission sessions.</li>
 <li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this <code>Permission</code> has been created.</li>
-<li><code>extended</code> (timestamp) (<em>mandatory</em>): timestamp this <code>Permission</code> has been extended.</li>
+<li><code>adjusted</code> (timestamp) (<em>mandatory</em>): timestamp this <code>Permission</code> has been adjusted.</li>
 <li><code>slashed</code> (timestamp) (<em>mandatory</em>): timestamp this <code>Permission</code> has been slashed.</li>
 <li><code>repaid</code> (timestamp) (<em>mandatory</em>): timestamp this <code>Permission</code> has been repaid.</li>
 <li><code>effective_from</code> (timestamp) (<em>optional</em>): timestamp from which (inclusive) this <code>Permission</code> is effective.</li>
 <li><code>effective_until</code> (timestamp) (<em>optional</em>): timestamp until when (exclusive) this <code>Permission</code> is effective, null if no time limit has been set for this permission.</li>
 <li><code>modified</code> (timestamp) (<em>mandatory</em>): timestamp this Permission has been modified.</li>
-<li><code>validation_fees</code> (number) (<em>mandatory</em>): price to pay by an applicant to a validator (grantee of this perm) for running a validation process for a given validation period, in trust unit. Default to 0.</li>
-<li><code>issuance_fees</code> (number) (<em>mandatory</em>): fees requested by grantee of this perm when a credential is issued, in trust unit. Default to 0.</li>
-<li><code>verification_fees</code> (number) (<em>mandatory</em>): fees requested by grantee of this perm when a credential is verified, in trust unit. Default to 0.</li>
-<li><code>deposit</code> (number) (<em>mandatory</em>): accumulated <em>grantee</em> deposit in the context of the <em>use</em> of this permission (including the validation process), in <code>denom</code>. Usually, it is incremented when for example, for a ISSUER type <code>Permission</code> <code>perm</code>, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this <code>perm.deposit</code> value as well. If <code>perm</code> is, let’s say revoked, then corresponding <code>perm.deposit</code> value is freed from <code>perm.grantee</code> Trust Deposit.</li>
-<li><code>slashed_deposit</code> (number) (<em>mandatory</em>): part of the deposit that has been slashed.</li>
-<li><code>repaid_deposit</code> (number) (<em>mandatory</em>): part of the slashed deposit that has been repaid.</li>
+<li><code>validation_fees</code> (number) (<em>mandatory</em>): price to pay by an applicant to a validator (<code>authority</code> grantee of this perm) for running a validation process for a given validation period. Must be an integer. Default to 0. Considered unit depends on <code>pricing_asset_type</code> and <code>pricing_asset</code> configuration of related schema.</li>
+<li><code>issuance_fees</code> (number) (<em>mandatory</em>): fees requested by grantee <code>authority</code> of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on <code>pricing_asset_type</code> and <code>pricing_asset</code> configuration of related schema.</li>
+<li><code>verification_fees</code> (number) (<em>mandatory</em>): fees requested by grantee <code>authority</code> of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on <code>pricing_asset_type</code> and <code>pricing_asset</code> configuration of related schema.</li>
+<li><code>deposit</code> (number) (<em>mandatory</em>): accumulated <em>grantee</em> deposit in the context of the <em>use</em> of this permission (including the validation process), in <a class="term-reference" href="#term:native-denom">native denom</a>. Usually, it is incremented when for example, for a ISSUER type <code>Permission</code> <code>perm</code>, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this <code>perm.deposit</code> value as well. If <code>perm</code> is, let’s say revoked, then corresponding <code>perm.deposit</code> value is freed from <code>perm.grantee</code> Trust Deposit.</li>
+<li><code>slashed_deposit</code> (number) (<em>mandatory</em>): part of the deposit in <a class="term-reference" href="#term:native-denom">native denom</a> that has been slashed.</li>
+<li><code>repaid_deposit</code> (number) (<em>mandatory</em>): part of the slashed deposit in <a class="term-reference" href="#term:native-denom">native denom</a> that has been repaid.</li>
 <li><code>revoked</code> (timestamp) (<em>optional</em>): manual revocation timestamp of this Perm.</li>
 <li><code>validator_perm_id</code> (uint64) (<em>optional</em>): permission of the validator assigned to the validation process of this permission, ie <em>parent node</em> in the <code>Permission</code> tree.</li>
 <li><code>vp_state</code> (enum) (<em>mandatory</em>): one of PENDING, VALIDATED, TERMINATED, TERMINATION_REQUESTED.</li>
@@ -638,8 +644,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>issuance_fee_discount</code>: (number) (<em>mandatory</em>): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.</li>
 <li><code>verification_fee_discount</code>: (number) (<em>mandatory</em>): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.</li>
 <li><code>vs_operator_authz_enabled</code>: boolean (<em>mandatory</em>): if set to true, authorize this vs_operator to execute CreateOrUpdatePermissionSession <em>on behalf</em> of <code>authority</code> account (trust fees will be paid by authority account)</li>
-<li><code>vs_operator_authz_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
-as a direct consequence of executing authorized messages.</li>
+<li><code>vs_operator_authz_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.</li>
 <li><code>vs_operator_authz_with_feegrant</code>: boolean (<em>mandatory</em>): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with <code>authority</code> account.</li>
 <li><code>vs_operator_authz_fee_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be spent by vs_operator in the context of this permission.</li>
 <li><code>vs_operator_authz_spend_period</code>: (period) (<em>optional</em>): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.</li>
@@ -678,7 +683,7 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 <h3 id="denomamount"><a class="toc-anchor" href="#denomamount" >§</a> DenomAmount</h3>
 <ul>
-<li><code>denom</code> (string) (<em>mandatory</em>): token denomination.</li>
+<li><code>denom</code> (string) (<em>mandatory</em>): token denomination, as explain in <a class="term-reference" href="#term:denom">denom</a>.</li>
 <li><code>amount</code> (number) (<em>mandatory</em>): amount expressed in the given denomination.</li>
 </ul>
 <h3 id="digest"><a class="toc-anchor" href="#digest" >§</a> Digest</h3>
@@ -703,15 +708,25 @@ as a direct consequence of executing authorized messages.</li>
 <li><code>vs_operator</code> (account) (<em>mandatory</em>): the operator account receiving the authorization.</li>
 <li><code>permissions[]</code> (uint64[]) (<em>mandatory</em>): permission ids for which we grant this authorization.</li>
 </ul>
+<h3 id="exchangerate"><a class="toc-anchor" href="#exchangerate" >§</a> ExchangeRate</h3>
+<p>Represents an on-chain exchange rate between two assets.</p>
+<p><code>ExchangeRate</code>:</p>
+<ul>
+<li><code>base_asset_type</code> (PricingAssetType, mandatory): Type of the base asset.</li>
+<li><code>base_asset</code> (string, mandatory if <code>base_asset_type</code> is COIN or FIAT, null if <code>base_asset_type</code> is TU): Identifier of the base asset.</li>
+<li><code>quote_asset_type</code> (PricingAssetType, mandatory): Type of the quote asset.</li>
+<li><code>quote_asset</code> (string, mandatory): Identifier of the quote asset.</li>
+<li><code>rate</code> (string, mandatory): Fixed-point integer representing the exchange rate from base asset to quote asset.</li>
+<li><code>rate_scale</code> (uint32, mandatory): Number of decimal digits used to scale rate.</li>
+<li><code>validity_duration</code> (duration, mandatory): when updated, set <code>expires</code> to block time plus <code>validity_duration</code>.</li>
+<li><code>updated</code> (timestamp, mandatory): Timestamp of the last exchange rate update.</li>
+<li><code>expires</code> (timestamp, mandatory): Timestamp after which the exchange rate is considered invalid.</li>
+<li><code>state</code> (boolean, mandatory): true means enabled, false means disabled.</li>
+</ul>
 <h3 id="globalvariables"><a class="toc-anchor" href="#globalvariables" >§</a> GlobalVariables</h3>
 <p><code>GlobalVariables</code>:</p>
-<p><strong>Trust Unit:</strong></p>
-<ul>
-<li><code>trust_unit_price</code> (number) (<em>mandatory</em>): <a class="term-reference" href="#term:trust-unit">trust unit</a> price, in <a class="term-reference" href="#term:denom">denom</a>.</li>
-</ul>
 <p><strong>Credential Schema:</strong></p>
 <ul>
-<li><code>credential_schema_trust_deposit</code> (number) (<em>mandatory</em>): default trust deposit value for creating a credential schema, in <a class="term-reference" href="#term:trust-units">trust units</a>.</li>
 <li><code>credential_schema_schema_max_size</code> (number) (<em>mandatory</em>): maximum size of the <code>schema</code> string attribute for a <code>CredentialSchema</code>.</li>
 <li><code>credential_schema_issuer_grantor_validation_validity_period_max_days</code> (number) (<em>mandatory</em>): maximum number of days an issuer grantor validation can be valid for.</li>
 <li><code>credential_schema_verifier_grantor_validation_validity_period_max_days</code> (number) (<em>mandatory</em>): maximum number of days an verifier grantor validation can be valid for.</li>
@@ -721,7 +736,7 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 <p><strong>Trust Deposit:</strong></p>
 <ul>
-<li><code>trust_deposit_share_value</code>(number) (<em>mandatory</em>): Value of one share of trust deposit, in <code>denom</code>. Default an initial value: 1. Increase over time, when yield is produced.</li>
+<li><code>trust_deposit_share_value</code>(number) (<em>mandatory</em>): Value of one share of trust deposit, in <a class="term-reference" href="#term:native-denom">native denom</a>. Default an initial value: 1. Increase over time, when yield is produced.</li>
 <li><code>trust_deposit_rate</code>(number) (<em>mandatory</em>): Rate used for dynamically calculating trust deposits from trust fees. Default value: 20% (0.20)</li>
 <li><code>trust_deposit_max_yield_rate</code>(number) (<em>mandatory</em>): Maximum yearly yield, in percent, that a trust deposit holder can obtain by receiving block rewards.</li>
 <li><code>trust_deposit_block_reward_share</code>(number) (<em>mandatory</em>): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)</li>
@@ -838,10 +853,10 @@ as a direct consequence of executing authorized messages.</li>
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-93" class="notice warning"><a class="notice-link" href="#warning-93">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-67" class="notice warning"><a class="notice-link" href="#warning-67">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-226" class="notice note"><a class="notice-link" href="#note-226">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
+<div id="note-130" class="notice note"><a class="notice-link" href="#note-130">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
 </div>
 <h3 id="authorization-and-fee-grants"><a class="toc-anchor" href="#authorization-and-fee-grants" >§</a> Authorization and Fee Grants</h3>
 <h4 id="delegable-module-messages"><a class="toc-anchor" href="#delegable-module-messages" >§</a> Delegable Module Messages</h4>
@@ -1138,10 +1153,10 @@ optionally enabling an associated fee grant.</li>
 </tr>
 <tr>
 <td></td>
-<td>Extend Permission</td>
+<td>Adjust Permission</td>
 <td>N/A (Tx)</td>
 <td>Msg</td>
-<td><a href="#mod-perm-msg-8-extend-permission" >[MOD-PERM-MSG-8]</a></td>
+<td><a href="#mod-perm-msg-8-adjust-permission" >[MOD-PERM-MSG-8]</a></td>
 <td>authority + operator</td>
 </tr>
 <tr>
@@ -1345,6 +1360,22 @@ optionally enabling an associated fee grant.</li>
 <td>module call</td>
 </tr>
 <tr>
+<td></td>
+<td>Grant Exchange Rate Authorization</td>
+<td>N/A (Tx)</td>
+<td>Msg</td>
+<td><a href="#mod-de-msg-7-grant-exchange-rate-authorization" >[MOD-DE-MSG-7]</a></td>
+<td>governance proposal</td>
+</tr>
+<tr>
+<td></td>
+<td>Revoke Exchange Rate Authorization</td>
+<td>N/A (Tx)</td>
+<td>Msg</td>
+<td><a href="#mod-de-msg-8-revoke-exchange-rate-authorization" >[MOD-DE-MSG-8]</a></td>
+<td>governance proposal</td>
+</tr>
+<tr>
 <td>Digests</td>
 <td>Store Digest</td>
 <td>N/A (Tx)</td>
@@ -1352,9 +1383,57 @@ optionally enabling an associated fee grant.</li>
 <td><a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1]</a></td>
 <td>authority + operator OR module call</td>
 </tr>
+<tr>
+<td>Exchange Rate</td>
+<td>Create Exchange Rate</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-xr-msg-1-create-exchange-rate" >[MOD-XR-MSG-1]</a></td>
+<td>governance proposal</td>
+</tr>
+<tr>
+<td></td>
+<td>Update Exchange Rate</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-xr-msg-2-update-exchange-rate" >[MOD-XR-MSG-2]</a></td>
+<td>operator</td>
+</tr>
+<tr>
+<td></td>
+<td>Toggle Exchange Rate State</td>
+<td></td>
+<td>Msg</td>
+<td><a href="#mod-xr-msg-3-toggle-exchange-rate-state" >[MOD-XR-MSG-3]</a></td>
+<td>governance proposal</td>
+</tr>
+<tr>
+<td></td>
+<td>Get Exchange Rate</td>
+<td>/xr/v1/get</td>
+<td>Query</td>
+<td><a href="#mod-xr-qry-1-get-exchange-rate" >[MOD-XR-QRY-1]</a></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td></td>
+<td>List Exchange Rates</td>
+<td>/xr/v1/list</td>
+<td>Query</td>
+<td><a href="#mod-xr-qry-2-list-exchange-rates" >[MOD-XR-QRY-2]</a></td>
+<td>N/A</td>
+</tr>
+<tr>
+<td></td>
+<td>Get Price</td>
+<td>/xr/v1/price</td>
+<td>Query</td>
+<td><a href="#mod-xr-qry-3-get-price" >[MOD-XR-QRY-3]</a></td>
+<td>N/A</td>
+</tr>
 </tbody>
 </table>
-<div id="note-227" class="notice note"><a class="notice-link" href="#note-227">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-131" class="notice note"><a class="notice-link" href="#note-131">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1400,7 +1479,7 @@ optionally enabling an associated fee grant.</li>
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-228" class="notice note"><a class="notice-link" href="#note-228">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
+<div id="note-132" class="notice note"><a class="notice-link" href="#note-132">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Fee payer MUST have an available balance to cover the <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -1763,6 +1842,8 @@ optionally enabling an associated fee grant.</li>
 <li><code>holder_validation_validity_period</code> (<em>mandatory</em>), default to 0 (days).</li>
 <li><code>issuer_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>).</li>
 <li><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>).</li>
+<li><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>).</li>
+<li><code>pricing_asset</code> (string) (<em>mandatory</em>).</li>
 </ul>
 <h5 id="mod-cs-msg-1-2-create-new-credential-schema-precondition-checks"><a class="toc-anchor" href="#mod-cs-msg-1-2-create-new-credential-schema-precondition-checks" >§</a> [MOD-CS-MSG-1-2] Create New Credential Schema precondition checks</h5>
 <p>If any of these precondition checks fail, method MUST abort.</p>
@@ -1804,7 +1885,18 @@ optionally enabling an associated fee grant.</li>
 <li>
 <p><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>) MUST be a valid PermissionManagementMode.</p>
 </li>
+<li>
+<p><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in <code>denom</code>.</p>
+</li>
+<li>
+<p><code>pricing_asset</code> (string) (<em>mandatory</em>): <code>&quot;tu&quot;</code> if <code>pricing_asset_type</code> is set to TU, else examples: COIN: <code>denom</code> <code>&quot;uvna&quot;</code>, <code>&quot;ufoo&quot;</code>, <code>&quot;ibc/3A0F9C2E4E2A9B7D6F...&quot;</code>, <code>&quot;factory/verana1.../ueurv&quot;</code>, FIAT: <code>&quot;EUR&quot;</code>, <code>&quot;GBP&quot;</code>,…</p>
+</li>
 </ul>
+<div id="note-133" class="notice note"><a class="notice-link" href="#note-133">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
+The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
+FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
+FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.</p>
+</div>
 <h6 id="mod-cs-msg-1-2-2-create-new-credential-schema-fee-checks"><a class="toc-anchor" href="#mod-cs-msg-1-2-2-create-new-credential-schema-fee-checks" >§</a> [MOD-CS-MSG-1-2-2] Create New Credential Schema fee checks</h6>
 <p>Fee payer MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
 <h5 id="mod-cs-msg-1-3-create-new-credential-schema-execution"><a class="toc-anchor" href="#mod-cs-msg-1-3-create-new-credential-schema-execution" >§</a> [MOD-CS-MSG-1-3] Create New Credential Schema execution</h5>
@@ -1826,10 +1918,12 @@ optionally enabling an associated fee grant.</li>
 <li><code>cs.verifier_perm_management_mode</code>: <code>verifier_perm_management_mode</code></li>
 <li><code>cs.created</code>: current timestamp</li>
 <li><code>cs.modified</code>: <code>cs.created</code>.</li>
+<li><code>cs.pricing_asset_type</code>: <code>pricing_asset_type</code></li>
+<li><code>cs.pricing_asset</code>: <code>pricing_asset</code></li>
 </ul>
 </li>
 </ul>
-<div id="note-229" class="notice note"><a class="notice-link" href="#note-229">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-134" class="notice note"><a class="notice-link" href="#note-134">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
@@ -2240,7 +2334,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-230" class="notice note"><a class="notice-link" href="#note-230">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-135" class="notice note"><a class="notice-link" href="#note-135">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -2292,12 +2386,12 @@ as a direct consequence of executing authorized messages.</li>
 <li><code>vs_operator_authz_fee_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be spent by vs_operator in the context of this permission.</li>
 <li><code>vs_operator_authz_spend_period</code>: (period) (<em>optional</em>): if not null, <code>vs_operator</code> MUST NOT be null, else abort. Reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.</li>
 </ul>
-<div id="note-231" class="notice note"><a class="notice-link" href="#note-231">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process is REQUIRED or not.</p>
+<div id="note-136" class="notice note"><a class="notice-link" href="#note-136">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
 <li>
-<p>Load <code>Permission</code> entry <code>validator_perm</code> from <code>validator_perm_id</code>. It MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a> else transaction MUST abort.</p>
+<p>Load <code>Permission</code> entry <code>validator_perm</code> from <code>validator_perm_id</code>. It MUST be a <a class="term-reference" href="#term:active-permission">active permission</a> else transaction MUST abort.</p>
 </li>
 <li>
 <p>Load <code>CredentialSchema</code> entry <code>cs</code> from <code>validator_perm.schema_id</code>. It MUST exist.</p>
@@ -2364,23 +2458,63 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 </li>
 </ul>
-<p>At the end, if a <a class="term-reference" href="#term:valid-permission">valid permission</a> <code>validator_perm</code> is not found, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<p>At the end, if a <a class="term-reference" href="#term:active-permission">active permission</a> <code>validator_perm</code> is not found, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
 <h6 id="mod-perm-msg-1-2-3-start-permission-vp-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-3-start-permission-vp-fee-checks" >§</a> [MOD-PERM-MSG-1-2-3] Start Permission VP fee checks</h6>
 <ul>
 <li>
 <p>Load <code>Permission</code> entry <code>validator_perm</code> from <code>validator_perm_id</code>.</p>
 </li>
 <li>
-<p>Fee payer MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>;</p>
+<p>Load <code>CredentialSchema</code> entry <code>cs</code> from <code>validator_perm.schema_id</code>.</p>
 </li>
 <li>
-<p><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following fees:</p>
+<p>Fee payer MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>;</p>
+</li>
+</ul>
+<blockquote>
+<p>If a conversion is needed below, use <a href="#mod-xr-qry-3-get-price" >Get Price</a> to convert amounts to <a class="term-reference" href="#term:native-denom">native denom</a>:</p>
+</blockquote>
 <ul>
-<li>the required <code>validation_fees_in_denom</code>: <code>validator_perm.validation_fees</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
-<li>the required <code>validation_trust_deposit_in_denom</code>: <code>validation_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code>.</li>
+<li>For trust fees:</li>
+</ul>
+<p>if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to <code>(COIN, [[ref: native denom]])</code>:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following trust fees.
+<ul>
+<li>the required <code>validation_fees_in_denom</code> = <code>validator_perm.validation_fees</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+<li>the required <code>validation_trust_deposit_in_native_denom</code>: <code>validation_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
 </ul>
 </li>
 </ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to <code>(TU, null)</code>:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following trust fees.
+<ul>
+<li>the required <code>validation_fees_in_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>validator_perm.validation_fees</code>) in <a class="term-reference" href="#term:native-denom">native denom</a>;</li>
+<li>the required <code>validation_trust_deposit_in_native_denom</code>: <code>validation_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+</ul>
+</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to an arbitrary coin <code>(COIN, [[ref: denom]])</code>:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following trust fees.
+<ul>
+<li>the required <code>validation_fees_in_denom</code> = <code>validator_perm.validation_fees</code> in specified (cs.pricing_asset_type, cs.pricing_asset)</li>
+<li>the required <code>validation_trust_deposit_in_native_denom</code>: getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>validation_fees_in_denom</code>) * <code>GlobalVariables.trust_deposit_rate</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+</ul>
+</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to an arbitrary coin <code>(FIAT, [[ref: denom]])</code>:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following trust fees.
+<ul>
+<li>the required <code>validation_fees_in_denom</code> = 0 in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+<li>the required <code>validation_trust_deposit_in_native_denom</code>: getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>validator_perm.validation_fees</code>) * <code>GlobalVariables.trust_deposit_rate</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+</ul>
+</li>
+</ul>
+<div id="note-137" class="notice note"><a class="notice-link" href="#note-137">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
+</div>
 <h6 id="mod-perm-msg-1-2-4-start-permission-vp-overlap-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-4-start-permission-vp-overlap-checks" >§</a> [MOD-PERM-MSG-1-2-4] Start Permission VP overlap checks</h6>
 <p>We want to make sure that 2 validation processes cannot be active at the same time in the same context. This does not prevent an <code>authority</code> from running different VP with differents validators for the same <code>schema_id</code>, <code>type</code>.</p>
 <p>Find all permission <code>perms[]</code> for <code>schema_id</code>, <code>type</code>, <code>validator_perm_id</code>, <code>authority</code> with vp_state = VALIDATED or PENDING.</p>
@@ -2396,13 +2530,10 @@ as a direct consequence of executing authorized messages.</li>
 <p>Load <code>Permission</code> entry <code>validator_perm</code> of the selected validator.</p>
 </li>
 <li>
-<p>calculate <code>validation_fees_in_denom</code>: <code>validator_perm.validation_fees</code> * <code>GlobalVariables.trust_unit_price</code>.</p>
+<p>calculate <code>validation_fees_in_denom</code> and <code>validation_trust_deposit_in_native_denom</code> as explained above in fee checks.</p>
 </li>
 <li>
-<p>calculate <code>validation_trust_deposit_in_denom</code>: <code>validation_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code>.</p>
-</li>
-<li>
-<p>use [MOD-TD-MSG-1] to increase by <code>validation_trust_deposit_in_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> running the method and transfer the corresponding amount to <code>TrustDeposit</code> module.</p>
+<p>use [MOD-TD-MSG-1] to increase by <code>validation_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> running the method and transfer the corresponding amount to <code>TrustDeposit</code> module.</p>
 </li>
 <li>
 <p>send <code>validation_fees_in_denom</code> to validation escrow <a class="term-reference" href="#term:account">account</a>, if greater than 0.</p>
@@ -2428,7 +2559,7 @@ as a direct consequence of executing authorized messages.</li>
 <li><code>applicant_perm.vp_last_state_change</code>: <code>now</code></li>
 <li><code>applicant_perm.vp_state</code>: PENDING.</li>
 <li><code>applicant_perm.vp_current_fees</code> (number): <code>validation_fees_in_denom</code>.</li>
-<li><code>applicant_perm.vp_current_deposit</code> (number): <code>validation_trust_deposit_in_denom</code>.</li>
+<li><code>applicant_perm.vp_current_deposit</code> (number): <code>validation_trust_deposit_in_native_denom</code>.</li>
 <li><code>applicant_perm.vp_summary_digest_sri</code>: null.</li>
 <li><code>applicant_perm.vp_validator_deposit</code>: 0.</li>
 <li><code>applicant_perm.vs_operator_authz_enabled</code>: <code>vs_operator_authz_enabled</code></li>
@@ -2484,8 +2615,8 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 <h6 id="mod-perm-msg-2-2-2-renew-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-2-2-2-renew-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-2-2-2] Renew Permission VP permission checks</h6>
 <ul>
-<li>Load <code>Permission</code> entry <code>applicant_perm</code>. <code>authority</code> running the operation MUST be <code>applicant_perm.authority</code>, else MUST abort. <code>applicant_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a>.</li>
-<li>Load <code>Permission</code> entry <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. It MUST exist, and be a <a class="term-reference" href="#term:valid-permission">valid permission</a>, else MUST abort.</li>
+<li>Load <code>Permission</code> entry <code>applicant_perm</code>. <code>authority</code> running the operation MUST be <code>applicant_perm.authority</code>, else MUST abort. <code>applicant_perm</code> MUST be a <a class="term-reference" href="#term:active-permission">active permission</a>.</li>
+<li>Load <code>Permission</code> entry <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. It MUST exist, and be a <a class="term-reference" href="#term:active-permission">active permission</a>, else MUST abort.</li>
 </ul>
 <h6 id="mod-perm-msg-2-2-3-renew-permission-vp-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-2-2-3-renew-permission-vp-fee-checks" >§</a> [MOD-PERM-MSG-2-2-3] Renew Permission VP fee checks</h6>
 <ul>
@@ -2495,14 +2626,51 @@ as a direct consequence of executing authorized messages.</li>
 <li>
 <p>Fee payer MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>;</p>
 </li>
-<li>
-<p><code>authority</code> account MUST have  an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover:</p>
+</ul>
+<blockquote>
+<p>If a conversion is needed below, use <a href="#mod-xr-qry-3-get-price" >Get Price</a> to convert amounts to <a class="term-reference" href="#term:native-denom">native denom</a>:</p>
+</blockquote>
 <ul>
-<li>the required <code>validation_fees_in_denom</code>: <code>validator_perm.validation_fees</code> * <code>GlobalVariables.trust_unit_price</code>.</li>
-<li>the required <code>validation_trust_deposit_in_denom</code>: <code>validation_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code>.</li>
+<li>For trust fees:</li>
+</ul>
+<p>if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to <code>(COIN, [[ref: native denom]])</code>:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following trust fees.
+<ul>
+<li>the required <code>validation_fees_in_denom</code> = <code>validator_perm.validation_fees</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+<li>the required <code>validation_trust_deposit_in_native_denom</code>: <code>validation_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
 </ul>
 </li>
 </ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to <code>(TU, null)</code>:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following trust fees.
+<ul>
+<li>the required <code>validation_fees_in_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>validator_perm.validation_fees</code>) in <a class="term-reference" href="#term:native-denom">native denom</a>;</li>
+<li>the required <code>validation_trust_deposit_in_native_denom</code>: <code>validation_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+</ul>
+</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to an arbitrary coin <code>(COIN, [[ref: denom]])</code>:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following trust fees.
+<ul>
+<li>the required <code>validation_fees_in_denom</code> = <code>validator_perm.validation_fees</code> in specified (cs.pricing_asset_type, cs.pricing_asset)</li>
+<li>the required <code>validation_trust_deposit_in_native_denom</code>: getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>validation_fees_in_denom</code>) * <code>GlobalVariables.trust_deposit_rate</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+</ul>
+</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to an arbitrary coin <code>(FIAT, [[ref: denom]])</code>:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following trust fees.
+<ul>
+<li>the required <code>validation_fees_in_denom</code> = 0 in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+<li>the required <code>validation_trust_deposit_in_native_denom</code>: getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>validator_perm.validation_fees</code>) * <code>GlobalVariables.trust_deposit_rate</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+</ul>
+</li>
+</ul>
+<div id="note-138" class="notice note"><a class="notice-link" href="#note-138">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
+</div>
 <h6 id="mod-perm-msg-2-3-renew-permission-vp-execution"><a class="toc-anchor" href="#mod-perm-msg-2-3-renew-permission-vp-execution" >§</a> [MOD-PERM-MSG-2-3] Renew Permission VP execution</h6>
 <p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
 <p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
@@ -2514,13 +2682,10 @@ as a direct consequence of executing authorized messages.</li>
 <p>Load <code>Permission</code> entry <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>.</p>
 </li>
 <li>
-<p>calculate <code>validation_fees_in_denom</code>: <code>validator_perm.validation_fees</code> * <code>GlobalVariables.trust_unit_price</code>.</p>
+<p>calculate <code>validation_fees_in_denom</code> and <code>validation_trust_deposit_in_native_denom</code> as explained above in fee checks.</p>
 </li>
 <li>
-<p>calculate <code>validation_trust_deposit_in_denom</code>: <code>validation_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code>.</p>
-</li>
-<li>
-<p>use [MOD-TD-MSG-1] to increase by <code>validation_trust_deposit_in_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> running the method and transfer the corresponding amount to <code>TrustDeposit</code> module.</p>
+<p>use [MOD-TD-MSG-1] to increase by <code>validation_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> running the method and transfer the corresponding amount to <code>TrustDeposit</code> module.</p>
 </li>
 <li>
 <p>send <code>validation_fees_in_denom</code> to validation escrow <a class="term-reference" href="#term:account">account</a>, if greater than 0.</p>
@@ -2533,9 +2698,9 @@ as a direct consequence of executing authorized messages.</li>
 <ul>
 <li><code>applicant_perm.vp_state</code>: PENDING.</li>
 <li><code>applicant_perm.vp_last_state_change</code>: current timestamp.</li>
-<li><code>applicant_perm.deposit</code>: <code>applicant_perm.deposit</code> + <code>validation_trust_deposit_in_denom</code>.</li>
+<li><code>applicant_perm.deposit</code>: <code>applicant_perm.deposit</code> + <code>validation_trust_deposit_in_native_denom</code>.</li>
 <li><code>applicant_perm.vp_current_fees</code> (number): <code>validation_fees_in_denom</code>.</li>
-<li><code>applicant_perm.vp_current_deposit</code> (number): <code>validation_trust_deposit_in_denom</code>.</li>
+<li><code>applicant_perm.vp_current_deposit</code> (number): <code>validation_trust_deposit_in_native_denom</code>.</li>
 <li><code>applicant_perm.modified</code>: <code>now</code></li>
 </ul>
 </li>
@@ -2654,15 +2819,18 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 <h6 id="mod-perm-msg-3-2-2-set-permission-vp-to-validated-validator-perms"><a class="toc-anchor" href="#mod-perm-msg-3-2-2-set-permission-vp-to-validated-validator-perms" >§</a> [MOD-PERM-MSG-3-2-2] Set Permission VP to Validated validator perms</h6>
 <ul>
-<li>load <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. <code>validator_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a>.</li>
+<li>load <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. <code>validator_perm</code> MUST be a <a class="term-reference" href="#term:active-permission">active permission</a>.</li>
 <li><code>authority</code> running the method MUST be <code>validator_perm.authority</code>.</li>
 </ul>
-<p>If <code>validator_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a> (expired, revoked, slashed…) then applicant MUST start a new validation process.</p>
+<p>If <code>validator_perm</code> is not a <a class="term-reference" href="#term:active-permission">active permission</a> (expired, revoked, slashed…) then applicant MUST start a new validation process.</p>
 <h6 id="mod-perm-msg-3-2-3-set-permission-vp-to-validated-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-3-2-3-set-permission-vp-to-validated-fee-checks" >§</a> [MOD-PERM-MSG-3-2-3] Set Permission VP to Validated fee checks</h6>
-<p>Fee payer MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li>Fee payer MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</li>
+<li>if <code>applicant_perm.vp_current_fees</code> is not in <a class="term-reference" href="#term:native-denom">native denom</a>, <code>authority</code> account MUST have <code>applicant_perm.vp_current_deposit</code> available in <a class="term-reference" href="#term:native-denom">native denom</a> on its account for paying the trust deposit.</li>
+</ul>
 <h6 id="mod-perm-msg-3-2-4-set-permission-vp-to-validated-overlap-checks"><a class="toc-anchor" href="#mod-perm-msg-3-2-4-set-permission-vp-to-validated-overlap-checks" >§</a> [MOD-PERM-MSG-3-2-4] Set Permission VP to Validated overlap checks</h6>
 <p>We want to make sure that 2 permissions cannot be active at the same time for the same <code>validator_perm_id</code>. That should not occur in this method, but better do the check anyway.</p>
-<p>Find all <a class="term-reference" href="#term:valid-permissions">valid permissions</a> <code>perms[]</code> (not revoked, not slashed, not repaid) for <code>schema_id</code>, <code>type</code>, <code>validator_perm_id</code>, <code>authority</code>.</p>
+<p>Find all <a class="term-reference" href="#term:active-permissions">active permissions</a> <code>perms[]</code> (not revoked, not slashed, not repaid) for <code>schema_id</code>, <code>type</code>, <code>validator_perm_id</code>, <code>authority</code>.</p>
 <p>for each <code>Permission</code> entry <code>p</code> from <code>perms[]</code>:</p>
 <ul>
 <li>if <code>p.effective_until</code> is greater than <code>effective_from</code>, method execution MUST abort.</li>
@@ -2721,6 +2889,14 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 </li>
 </ul>
+<p>Fees and Trust Deposits:</p>
+<ul>
+<li>transfer the full amount <code>applicant_perm.vp_current_fees</code> in the proper <a class="term-reference" href="#term:denom">denom</a> from escrow <a class="term-reference" href="#term:account">account</a> to validator <code>authority</code> <a class="term-reference" href="#term:account">account</a> <code>validator_perm.authority</code>;</li>
+<li>Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by <code>applicant_perm.vp_current_deposit</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> running the method and transfer the corresponding amount to <code>TrustDeposit</code> module. Set <code>applicant_perm.vp_validator_deposit</code> to <code>applicant_perm.vp_validator_deposit</code> + <code>applicant_perm.vp_current_deposit</code>.</li>
+</ul>
+<blockquote>
+<p>Important: if <code>applicant_perm.vp_current_fees</code> is not in <a class="term-reference" href="#term:native-denom">native denom</a>, <code>authority</code> account MUST have <code>applicant_perm.vp_current_deposit</code> available for paying the trust deposit.</p>
+</blockquote>
 <p>Update <code>Permission</code> <code>applicant_perm</code>:</p>
 <ul>
 <li>set <code>applicant_perm.modified</code> to <code>now</code>.</li>
@@ -2741,12 +2917,6 @@ as a direct consequence of executing authorized messages.</li>
 <li>set <code>applicant_perm.verification_fee_discount</code> to <code>verification_fee_discount</code>.</li>
 </ul>
 </li>
-</ul>
-<p>Fees and Trust Deposits:</p>
-<ul>
-<li>transfer the full amount <code>applicant_perm.vp_current_fees</code> from escrow <a class="term-reference" href="#term:account">account</a> to validator <code>authority</code> <a class="term-reference" href="#term:account">account</a> <code>validator_perm.authority</code>;</li>
-<li>Calculate <code>validator_trust_deposit</code> = <code>applicant_perm.vp_current_fees</code> * <code>GlobalVariables.trust_deposit_rate</code>;</li>
-<li>Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by <code>validator_trust_deposit</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> running the method and transfer the corresponding amount to <code>TrustDeposit</code> module. Set <code>applicant_perm.vp_validator_deposit</code> to <code>applicant_perm.vp_validator_deposit</code> + <code>validator_trust_deposit</code>.</li>
 </ul>
 <p>If <code>applicant_perm.type</code> is ISSUER or VERIFIER: Create authorization for <code>applicant_perm.vs_operator</code> so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:</p>
 <ul>
@@ -2800,7 +2970,7 @@ as a direct consequence of executing authorized messages.</li>
 <li>
 <p>if <code>applicant_perm.vp_current_fees</code> &gt; 0:</p>
 <ul>
-<li>transfer <code>applicant_perm.vp_current_fees</code> back from escrow <a class="term-reference" href="#term:account">account</a> to <a class="term-reference" href="#term:applicant">applicant</a> <a class="term-reference" href="#term:account">account</a>, <code>applicant_perm.authority</code>.</li>
+<li>transfer <code>applicant_perm.vp_current_fees</code> in proper <a class="term-reference" href="#term:denom">denom</a> back from escrow <a class="term-reference" href="#term:account">account</a> to <a class="term-reference" href="#term:applicant">applicant</a> <a class="term-reference" href="#term:account">account</a>, <code>applicant_perm.authority</code>.</li>
 <li>set <code>applicant_perm.vp_current_fees</code> to 0;</li>
 </ul>
 </li>
@@ -2824,9 +2994,9 @@ as a direct consequence of executing authorized messages.</li>
 <li><code>did</code> (string) (<em>mandatory</em>): <a class="term-reference" href="#term:did">DID</a> of the VS.</li>
 <li><code>effective_from</code> (timestamp) (<em>mandatory</em>): timestamp from when (exclusive) this Perm is effective. MUST be in the future.</li>
 <li><code>effective_until</code> (timestamp) (<em>optional</em>): timestamp until when (exclusive) this Perm is effective, null if it doesn’t expire. If not null, MUST be greater than <code>effective_from</code>.</li>
-<li><code>validation_fees</code> (number) (<em>mandatory</em>): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.</li>
-<li><code>issuance_fees</code> (number) (<em>mandatory</em>): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in trust unit. Default to 0.</li>
-<li><code>verification_fees</code> (number) (<em>mandatory</em>): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.</li>
+<li><code>validation_fees</code> (number) (<em>mandatory</em>): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.</li>
+<li><code>issuance_fees</code> (number) (<em>mandatory</em>): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.</li>
+<li><code>verification_fees</code> (number) (<em>mandatory</em>): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.</li>
 </ul>
 <h5 id="mod-perm-msg-7-2-create-root-permission-precondition-checks"><a class="toc-anchor" href="#mod-perm-msg-7-2-create-root-permission-precondition-checks" >§</a> [MOD-PERM-MSG-7-2] Create Root Permission precondition checks</h5>
 <p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
@@ -2854,8 +3024,8 @@ as a direct consequence of executing authorized messages.</li>
 <h6 id="mod-perm-msg-7-2-3-create-root-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-7-2-3-create-root-permission-fee-checks" >§</a> [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks</h6>
 <p>Fee payer MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> available.</p>
 <h6 id="mod-perm-msg-7-2-4-create-root-permission-overlap-checks"><a class="toc-anchor" href="#mod-perm-msg-7-2-4-create-root-permission-overlap-checks" >§</a> [MOD-PERM-MSG-7-2-4] Create Root Permission overlap checks</h6>
-<p>We want to make sure that 2 permissions cannot be active at the same time. If <code>authority</code> wishes to create a new permission but existing active one never expires (or expire too far from now), <code>authority</code> MUST use first the <a href="#mod-perm-msg-8-extend-permission" >Extend Perm Msg</a> to set or adjust the <code>effective_until</code> value.</p>
-<p>Find all <a class="term-reference" href="#term:valid-permissions">valid permissions</a> <code>perms[]</code> (not revoked, not slashed, not repaid) for <code>schema_id</code>, ECOSYSTEM,  <code>authority</code>.</p>
+<p>We want to make sure that 2 permissions cannot be active at the same time. If <code>authority</code> wishes to create a new permission but existing active one never expires (or expire too far from now), <code>authority</code> MUST use first the <a href="#mod-perm-msg-8-adjust-permission" >Extend Perm Msg</a> to set or adjust the <code>effective_until</code> value.</p>
+<p>Find all <a class="term-reference" href="#term:active-permissions">active permissions</a> <code>perms[]</code> (not revoked, not slashed, not repaid) for <code>schema_id</code>, ECOSYSTEM,  <code>authority</code>.</p>
 <blockquote>
 <p>Note: unlike overlap checks from other methods, here we do not need to check for <code>validator_perm_id</code>, as for ECOSYSTEM type permissions it is NULL.</p>
 </blockquote>
@@ -2890,7 +3060,7 @@ as a direct consequence of executing authorized messages.</li>
 <li><code>perm.verification_fees</code>: <code>verification_fees</code></li>
 <li><code>perm.deposit</code>: 0</li>
 </ul>
-<h4 id="mod-perm-msg-8-extend-permission"><a class="toc-anchor" href="#mod-perm-msg-8-extend-permission" >§</a> [MOD-PERM-MSG-8] Extend Permission</h4>
+<h4 id="mod-perm-msg-8-adjust-permission"><a class="toc-anchor" href="#mod-perm-msg-8-adjust-permission" >§</a> [MOD-PERM-MSG-8] Adjust Permission</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
 <p>This method can be called:</p>
 <ul>
@@ -2898,30 +3068,30 @@ as a direct consequence of executing authorized messages.</li>
 <li>by <code>perm.authority</code>, if it is a self-created permission (schema configuration is open)</li>
 <li>by an <code>authority</code> of a validator permission (if permission is managed by a VP).</li>
 </ul>
-<h5 id="mod-perm-msg-8-1-extend-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-8-1-extend-permission-parameters" >§</a> [MOD-PERM-MSG-8-1] Extend Permission parameters</h5>
+<h5 id="mod-perm-msg-8-1-adjust-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-8-1-adjust-permission-parameters" >§</a> [MOD-PERM-MSG-8-1] Adjust Permission parameters</h5>
 <ul>
 <li><code>authority</code> (group): (Signer) the signing authority on whose behalf this message is executed.</li>
 <li><code>operator</code> (account): (Signer) the account authorized by the <code>authority</code> to run this Msg.</li>
 <li><code>id</code> (uint64) (<em>mandatory</em>): id of the permission;</li>
 <li><code>effective_until</code> (timestamp) (<em>mandatory</em>): timestamp until when (exclusive) this <code>Permission</code> will be effective.</li>
 </ul>
-<h5 id="mod-perm-msg-8-2-extend-permission-precondition-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-extend-permission-precondition-checks" >§</a> [MOD-PERM-MSG-8-2] Extend Permission precondition checks</h5>
+<h5 id="mod-perm-msg-8-2-adjust-permission-precondition-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-adjust-permission-precondition-checks" >§</a> [MOD-PERM-MSG-8-2] Adjust Permission precondition checks</h5>
 <p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
-<h6 id="mod-perm-msg-8-2-1-extend-permission-basic-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-1-extend-permission-basic-checks" >§</a> [MOD-PERM-MSG-8-2-1] Extend Permission basic checks</h6>
+<h6 id="mod-perm-msg-8-2-1-adjust-permission-basic-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-1-adjust-permission-basic-checks" >§</a> [MOD-PERM-MSG-8-2-1] Adjust Permission basic checks</h6>
 <p>if a mandatory parameter is not present, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
 <ul>
 <li><code>authority</code> (group): (Signer) signature must be verified.</li>
 <li><code>operator</code> (account): (Signer) signature must be verified.</li>
 <li><code>id</code> MUST be a valid uint64.</li>
 <li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
-<li><code>applicant_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a></li>
+<li><code>applicant_perm</code> MUST be a <a class="term-reference" href="#term:active-permission">active permission</a></li>
 <li><code>applicant_perm.effective_until</code> MUST be greater than now().</li>
 <li>else MUST abort.</li>
 </ul>
 <blockquote>
 <p>Note: This method can be used to both Extend or Reduce the <code>effective_until</code>, or set an <code>effective_until</code> if it was null,  which was not the case in spec v3.</p>
 </blockquote>
-<h6 id="mod-perm-msg-8-2-2-extend-permission-advanced-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-2-extend-permission-advanced-checks" >§</a> [MOD-PERM-MSG-8-2-2] Extend Permission advanced checks</h6>
+<h6 id="mod-perm-msg-8-2-2-adjust-permission-advanced-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-2-adjust-permission-advanced-checks" >§</a> [MOD-PERM-MSG-8-2-2] Adjust Permission advanced checks</h6>
 <ol>
 <li>ECOSYSTEM permissions</li>
 </ol>
@@ -2932,20 +3102,20 @@ as a direct consequence of executing authorized messages.</li>
 <li>Self-created permissions</li>
 </ol>
 <ul>
-<li>load <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. <code>validator_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a> of type ECOSYSTEM. <code>authority</code> running the method MUST be <code>applicant_perm.authority</code>.</li>
+<li>load <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. <code>validator_perm</code> MUST be a <a class="term-reference" href="#term:active-permission">active permission</a> of type ECOSYSTEM. <code>authority</code> running the method MUST be <code>applicant_perm.authority</code>.</li>
 </ul>
 <ol start="3">
 <li>VP managed permissions</li>
 </ol>
 <ul>
 <li><code>effective_until</code> MUST be lower or equal to <code>applicant_perm.vp_exp</code> else MUST abort.</li>
-<li>load <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. <code>validator_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a>. <code>authority</code> running the method MUST be <code>validator_perm.authority</code>.</li>
+<li>load <code>validator_perm</code> from <code>applicant_perm.validator_perm_id</code>. <code>validator_perm</code> MUST be a <a class="term-reference" href="#term:active-permission">active permission</a>. <code>authority</code> running the method MUST be <code>validator_perm.authority</code>.</li>
 </ul>
-<h6 id="mod-perm-msg-8-2-3-extend-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-3-extend-permission-fee-checks" >§</a> [MOD-PERM-MSG-8-2-3] Extend Permission fee checks</h6>
+<h6 id="mod-perm-msg-8-2-3-adjust-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-3-adjust-permission-fee-checks" >§</a> [MOD-PERM-MSG-8-2-3] Adjust Permission fee checks</h6>
 <p>Fee payer MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> in its <a class="term-reference" href="#term:account">account</a>, else <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
-<h6 id="mod-perm-msg-8-2-4-extend-permission-overlap-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-4-extend-permission-overlap-checks" >§</a> [MOD-PERM-MSG-8-2-4] Extend Permission overlap checks</h6>
-<p>We want to make sure that 2 permissions cannot be active at the same time for the same <code>validator_perm_id</code>. If <code>authority</code> wishes to create a new permission but existing active one never expires (or expire too far from now), <code>authority</code> MUST use first the <a href="#mod-perm-msg-8-extend-permission" >Extend Perm Msg</a> to set or adjust the <code>effective_until</code> value.</p>
-<p>Find all <a class="term-reference" href="#term:valid-permissions">valid permissions</a> <code>perms[]</code> (not revoked, not slashed, not repaid) for <code>schema_id</code>, <code>type</code>, <code>validator_perm_id</code>, <code>authority</code>.</p>
+<h6 id="mod-perm-msg-8-2-4-adjust-permission-overlap-checks"><a class="toc-anchor" href="#mod-perm-msg-8-2-4-adjust-permission-overlap-checks" >§</a> [MOD-PERM-MSG-8-2-4] Adjust Permission overlap checks</h6>
+<p>We want to make sure that 2 permissions cannot be active at the same time for the same <code>validator_perm_id</code>. If <code>authority</code> wishes to create a new permission but existing active one never expires (or expire too far from now), <code>authority</code> MUST use first the <a href="#mod-perm-msg-8-adjust-permission" >Extend Perm Msg</a> to set or adjust the <code>effective_until</code> value.</p>
+<p>Find all <a class="term-reference" href="#term:active-permissions">active permissions</a> <code>perms[]</code> (not revoked, not slashed, not repaid) for <code>schema_id</code>, <code>type</code>, <code>validator_perm_id</code>, <code>authority</code>.</p>
 <p>for each <code>Permission</code> entry <code>p</code> from <code>perms[]</code>:</p>
 <ul>
 <li>if <code>p.effective_until</code> is greater than <code>effective_from</code>, method execution MUST abort.</li>
@@ -2955,7 +3125,7 @@ as a direct consequence of executing authorized messages.</li>
 <blockquote>
 <p>note: this check was not present in v3.</p>
 </blockquote>
-<h5 id="mod-perm-msg-8-3-extend-permission-execution"><a class="toc-anchor" href="#mod-perm-msg-8-3-extend-permission-execution" >§</a> [MOD-PERM-MSG-8-3] Extend Permission execution</h5>
+<h5 id="mod-perm-msg-8-3-adjust-permission-execution"><a class="toc-anchor" href="#mod-perm-msg-8-3-adjust-permission-execution" >§</a> [MOD-PERM-MSG-8-3] Adjust Permission execution</h5>
 <p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
 <p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
 <ul>
@@ -2969,7 +3139,7 @@ as a direct consequence of executing authorized messages.</li>
 <p>set <code>applicant_perm.effective_until</code> to <code>effective_until</code></p>
 </li>
 <li>
-<p>set <code>applicant_perm.extended</code> to <code>now</code></p>
+<p>set <code>applicant_perm.adjusted</code> to <code>now</code></p>
 </li>
 <li>
 <p>set <code>applicant_perm.modified</code> to <code>now</code></p>
@@ -3002,7 +3172,7 @@ as a direct consequence of executing authorized messages.</li>
 <li><code>operator</code> (account): (Signer) signature must be verified.</li>
 <li><code>id</code> MUST be a valid uint64.</li>
 <li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
-<li><code>applicant_perm</code> MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a></li>
+<li><code>applicant_perm</code> MUST be a <a class="term-reference" href="#term:active-permission">active permission</a></li>
 </ul>
 <h6 id="mod-perm-msg-9-2-2-revoke-permission-advanced-checks"><a class="toc-anchor" href="#mod-perm-msg-9-2-2-revoke-permission-advanced-checks" >§</a> [MOD-PERM-MSG-9-2-2] Revoke Permission advanced checks</h6>
 <p>Either Option #1, #2 or #3 MUST return true, else abort.</p>
@@ -3013,7 +3183,7 @@ as a direct consequence of executing authorized messages.</li>
 <li>while <code>validator_perm.validator_perm_id</code> is defined,
 <ul>
 <li>load <code>validator_perm</code> from <code>validator_perm.validator_perm_id</code>.</li>
-<li>if <code>validator_perm</code> is a <a class="term-reference" href="#term:valid-permission">valid permission</a> and <code>validator_perm.authority</code> is who is running the method, =&gt; return true.</li>
+<li>if <code>validator_perm</code> is a <a class="term-reference" href="#term:active-permission">active permission</a> and <code>validator_perm.authority</code> is who is running the method, =&gt; return true.</li>
 </ul>
 </li>
 <li>end</li>
@@ -3030,9 +3200,9 @@ as a direct consequence of executing authorized messages.</li>
 <p>Example:</p>
 <p>In the following permission tree, “Verifier E” permission can be revoked:</p>
 <ul>
-<li>by “Verifier E”, if the corresponding permission is a <a class="term-reference" href="#term:valid-permission">valid permission</a>;</li>
-<li>by “Verifier Grantor D”, if the corresponding permission is a <a class="term-reference" href="#term:valid-permission">valid permission</a>;</li>
-<li>by “Ecosystem A”, if the corresponding root permission is a <a class="term-reference" href="#term:valid-permission">valid permission</a>;</li>
+<li>by “Verifier E”, if the corresponding permission is a <a class="term-reference" href="#term:active-permission">active permission</a>;</li>
+<li>by “Verifier Grantor D”, if the corresponding permission is a <a class="term-reference" href="#term:active-permission">active permission</a>;</li>
+<li>by “Ecosystem A”, if the corresponding root permission is a <a class="term-reference" href="#term:active-permission">active permission</a>;</li>
 <li>by the <code>TrustRegistry</code> object controller, obtained by resolving perm =&gt; credential schema =&gt; trust registry.</li>
 </ul>
 <img src="https://www.plantuml.com/plantuml/svg/ZPDTJy8m58Rl-ojEu4OlJ9QGCCE50SQ09IfccoHwOxhjCAhxIbicnF3VBUkOak2mD-r9t_C-FJtjK4ZAvIPDoB1PYP0c22dTmgrXm2UBv9e0AMZuGME4ZhsbQQ445iS8Cybe0bwunfJ24_AK2S7o37oEs04g81JmHGYeaGVl64gL7-PY9oIcCAeKaaEtjmgYeA-KK8-YiV9t1Gx0jXRUY-VR3t3bvhcyReGHYmQeJpJ0e_EesjwVO1qXDiXXncacSmxZYitY5gRZUS-s-pPpHu_-mZrBPF7uRvIb4JhecdtJn0Wkyivph3EO9NAsOhzgcbJ0igscfUqwK-T2LMKyQSFP6dCCkuOH62lZ7z3pCBjcdS3cUH8fxrUeM6iTTQVJiM7sMaZpnVsavko9iYH4lQwRcxj3emSG7-v9zK3ev_gJJDHsfTAzQbCU3Sjsmr8RDfVKQbbZ3mcwqbRr4BEe-h1w_WO0" alt="uml diagram">
@@ -3103,7 +3273,7 @@ as a direct consequence of executing authorized messages.</li>
 <ul>
 <li>Load <code>issuer_perm</code> from <code>issuer_perm_id</code>.</li>
 <li>if <code>issuer_perm.type</code> is not ISSUER, abort.</li>
-<li>if <code>issuer_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, abort.</li>
+<li>if <code>issuer_perm</code> is not a <a class="term-reference" href="#term:active-permission">active permission</a>, abort.</li>
 <li>if <code>issuer_perm.vs_operator</code> is not equal to <code>operator</code>, abort.</li>
 <li>if <code>issuer_perm.authority</code> is not equal to <code>authority</code>, abort.</li>
 <li>if <code>digest_sri</code> is present but not a valid digest SRI, abort.</li>
@@ -3112,7 +3282,7 @@ as a direct consequence of executing authorized messages.</li>
 <ul>
 <li>Load <code>verifier_perm</code> from <code>verifier_perm_id</code>.</li>
 <li>if <code>verifier_perm.type</code> is not VERIFIER, abort.</li>
-<li>if <code>verifier_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, abort.</li>
+<li>if <code>verifier_perm</code> is not a <a class="term-reference" href="#term:active-permission">active permission</a>, abort.</li>
 <li>if <code>verifier_perm.vs_operator</code> is not equal to <code>operator</code>, abort.</li>
 <li>if <code>verifier_perm.authority</code> is not equal to <code>authority</code>, abort.</li>
 <li>if <code>digest_sri</code> is present but not a valid digest SRI, abort.</li>
@@ -3121,40 +3291,167 @@ as a direct consequence of executing authorized messages.</li>
 <ul>
 <li>Load <code>agent_perm</code> from <code>agent_perm_id</code>.</li>
 <li>if <code>agent_perm.type</code> is not ISSUER, abort.</li>
-<li>if <code>agent_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, abort.</li>
+<li>if <code>agent_perm</code> is not a <a class="term-reference" href="#term:active-permission">active permission</a>, abort.</li>
 </ul>
 <p>wallet_agent:</p>
 <ul>
 <li>Load <code>wallet_agent_perm</code> from <code>wallet_agent_perm_id</code>.</li>
 <li>if <code>wallet_agent_perm.type</code> is not ISSUER, abort.</li>
-<li>if <code>wallet_agent_perm</code> is not a <a class="term-reference" href="#term:valid-permission">valid permission</a>, abort.</li>
+<li>if <code>wallet_agent_perm</code> is not a <a class="term-reference" href="#term:active-permission">active permission</a>, abort.</li>
 </ul>
-<div id="warning-94" class="notice warning"><a class="notice-link" href="#warning-94">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
+<div id="warning-68" class="notice warning"><a class="notice-link" href="#warning-68">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
 </div>
 <h6 id="mod-perm-msg-10-3-create-or-update-permission-session-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-10-3-create-or-update-permission-session-fee-checks" >§</a> [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks</h6>
 <ul>
+<li>Fee payer MUST have sufficient available balance for the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>;</li>
+</ul>
+<blockquote>
+<p>If a conversion is needed below, use <a href="#mod-xr-qry-3-get-price" >Get Price</a> to convert amounts to <a class="term-reference" href="#term:native-denom">native denom</a>:</p>
+</blockquote>
+<ul>
 <li>
-<p>Fee payer MUST have sufficient available balance for the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>;</p>
+<p>For trust fees (See <a href="#pay-per-trust-fees" >Pay per trust fees</a> above)</p>
 </li>
 <li>
-<p><code>authority</code> account MUST have sufficient available balance for the required beneficiary fees and its corresponding trust deposit <code>trust_fees</code> as explained below:</p>
+<p><code>authority</code> account MUST have sufficient available balance as explained below.</p>
 </li>
 </ul>
-<p>To calculate the required beneficiary fees, use “Find Beneficiaries” query method below to get the set of beneficiary permission <code>found_perm_set</code>. Now that we have the set with all ancestors, we can calculate the required fees:</p>
+<ol>
+<li>To calculate the required beneficiary fees <strong>in asset price defined in credential schema</strong>, use “Find Beneficiaries” query method below to get the set of beneficiary permission <code>found_perm_set</code>. Now that we have the set with all ancestors, we can calculate the required fees:</li>
+</ol>
 <ul>
-<li>define <code>beneficiary_fees</code> = 0</li>
+<li>define <code>beneficiary_fees_in_denom</code> = 0</li>
 </ul>
 <p><strong>Credential Issuance</strong></p>
 <ul>
-<li>if <code>issuer_perm</code> is NOT null: iterate over permissions <code>perm</code> of <code>found_perm_set</code> and set <code>beneficiary_fees</code> = <code>beneficiary_fees</code> + <code>perm.issuance_fees</code>. Then use <code>issuer_perm.issuance_fee_discount</code> to adjust fees: <code>beneficiary_fees</code> = <code>beneficiary_fees</code> * (1 - <code>issuer_perm.issuance_fee_discount</code>)</li>
+<li>if <code>issuer_perm</code> is NOT null: iterate over permissions <code>perm</code> of <code>found_perm_set</code> and set <code>beneficiary_fees_in_denom</code> = <code>beneficiary_fees_in_denom</code> + <code>perm.issuance_fees</code> * (1 - <code>issuer_perm.issuance_fee_discount</code>).</li>
 </ul>
 <p><strong>Credential Verification</strong></p>
 <ul>
-<li>if <code>verifier_perm</code> is NOT null: iterate over permissions <code>perm</code> of <code>found_perm_set</code> and set <code>beneficiary_fees</code> = <code>beneficiary_fees</code> + <code>perm.verification_fees</code>. Then use <code>verifier_perm.verification_fee_discount</code> to adjust fees: <code>beneficiary_fees</code> = <code>beneficiary_fees</code> * (1 - <code>verifier_perm.verification_fee_discount</code>)</li>
+<li>if <code>verifier_perm</code> is NOT null: iterate over permissions <code>perm</code> of <code>found_perm_set</code> and set <code>beneficiary_fees_in_denom</code> = <code>beneficiary_fees_in_denom</code> + <code>perm.verification_fees</code>  * (1 - <code>verifier_perm.verification_fee_discount</code>).</li>
 </ul>
-<p>Total required <code>trust_fees</code> to be paid by <code>authority</code> executing the method, including Trust Deposit and agent rewards:</p>
-<p><code>trust_fees</code> = <code>beneficiary_fees</code> * (1 + <code>GlobalVariables.user_agent_reward_rate</code> + <code>GlobalVariables.wallet_user_agent_reward_rate</code> + <code>GlobalVariables.trust_deposit_rate</code>) * <code>GlobalVariables.trust_unit_price</code></p>
-<p>See <a href="#pay-per-trust-fees" >Pay per trust fees</a> above.</p>
+<ol start="2">
+<li>Now, calculate needed amount in credential schema asset <a class="term-reference" href="#term:denom">denom</a> AND in <a class="term-reference" href="#term:native-denom">native denom</a> for user agent, wallet user agent, and trust deposit.</li>
+</ol>
+<ul>
+<li>define <code>payer_trust_fees_in_denom</code> = <code>beneficiary_fees_in_denom</code></li>
+<li>define <code>payer_trust_deposit_in_native_denom</code> = 0</li>
+<li>define <code>payees_trust_fees_to_account</code> = 0</li>
+<li>define <code>payees_trust_deposit_in_native_denom</code> = 0</li>
+<li>define <code>user_agent_reward_in_native_denom</code> = 0</li>
+<li>define <code>wallet_user_agent_reward_in_native_denom</code> = 0</li>
+</ul>
+<p>if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to <code>(COIN, [[ref: native denom]])</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> is not modified</p>
+</li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code></p>
+</li>
+<li>
+<p><code>payees_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code></p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code></p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following trust fees, <code>payer_trust_fees_in_denom</code> + <code>payer_trust_deposit_in_native_denom</code> + <code>user_agent_reward_in_native_denom</code> + <code>wallet_user_agent_reward_in_native_denom</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to <code>(TU, null)</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code>)</p>
+</li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code></p>
+</li>
+<li>
+<p><code>payees_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code></p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code></p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, to cover the following trust fees, <code>payer_trust_fees_in_denom</code> + <code>payer_trust_deposit_in_native_denom</code> + <code>user_agent_reward_in_native_denom</code> + <code>wallet_user_agent_reward_in_native_denom</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to an arbitrary coin <code>(COIN, [[ref: denom]])</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> is already in the right <a class="term-reference" href="#term:denom">denom</a> and doesn’t need to be modified</p>
+</li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code>)</p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code>)</p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, <code>payer_trust_deposit_in_native_denom</code> + <code>payees_trust_deposit_in_native_denom</code> + <code>user_agent_reward_in_native_denom</code> + <code>wallet_user_agent_reward_in_native_denom</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+<li>AND <code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, <code>payees_trust_fees_to_account</code> in the denom specified as the payment asset in the credential schema.</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to an arbitrary coin <code>(FIAT, [[ref: denom]])</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> is already in the right <a class="term-reference" href="#term:denom">denom</a> and doesn’t need to be modified</p>
+</li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>) =&gt; but considered as 0 because FIAT payment are managed off-chain</p>
+</li>
+<li>
+<p><code>payees_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code>)</p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code>)</p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li><code>authority</code> MUST have an available balance in its <a class="term-reference" href="#term:account">account</a>, <code>payer_trust_deposit_in_native_denom</code> + <code>payees_trust_deposit_in_native_denom</code> + <code>user_agent_reward_in_native_denom</code> + <code>wallet_user_agent_reward_in_native_denom</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
+<li>no need to have anything else, as FIAT payments are managed off chain.</li>
+</ul>
+<div id="warning-69" class="notice warning"><a class="notice-link" href="#warning-69">WARNING</a><ul>
+<li>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></li>
+<li>when paying with COIN != <a class="term-reference" href="#term:native-denom">native denom</a> or with FIAT, trust deposits of payees MUST be paid by payer.</li>
+</ul>
+</div>
 <h5 id="mod-perm-msg-10-4-create-or-update-permission-session-execution"><a class="toc-anchor" href="#mod-perm-msg-10-4-create-or-update-permission-session-execution" >§</a> [MOD-PERM-MSG-10-4] Create or Update Permission Session execution</h5>
 <p>If all precondition checks passed, method is executed.</p>
 <ul>
@@ -3168,28 +3465,184 @@ as a direct consequence of executing authorized messages.</li>
 <p>use “Find Beneficiaries” above to build <code>found_perm_set</code>.</p>
 </li>
 </ul>
+<p>Calculate the following variable using the method above in <strong>fee checks</strong></p>
 <p>define <code>user_agent_reward</code> = 0.
 define <code>wallet_user_agent_reward</code> = 0.</p>
 <blockquote>
-<p>Note: All funds sent to accounts, trust deposits, etc are comming exclusively from <code>authority</code> account executing the method. Explanations below are to illustrate what must receive the target account, not how it should be done. It’s up to implementer to decide how to calculate, which transfers are done, etc</p>
+<p>Note: All funds sent to accounts, trust deposits, etc are coming exclusively from <code>authority</code> account executing the method. Explanations below are to illustrate what must receive the target account, not how it should be done. It’s up to implementer to decide how to calculate, which transfers are done, etc</p>
 </blockquote>
 <p><strong>Credential Issuance</strong></p>
 <ul>
-<li>if <code>issuer_perm</code> is NOT null:
-<ul>
-<li>
+<li>if <code>issuer_perm</code> is NOT null:</li>
+</ul>
 <p>for each <code>Permission</code> <code>perm</code> from <code>found_perm_set</code>, if <code>perm.issuance_fees</code> &gt; 0:</p>
 <ul>
-<li>calculate <code>perm_total_trust_fees</code> = <code>perm.issuance_fees</code>  * (1 - <code>issuer_perm.issuance_fee_discount</code>) * <code>GlobalVariables.trust_unit_price</code></li>
-<li>calculate <code>perm_total_trust_fees_to_td</code> = <code>perm_total_trust_fees</code> * <code>GlobalVariables.trust_deposit_rate</code></li>
-<li>calculate <code>perm_total_trust_fees_to_account</code> = <code>perm_total_trust_fees</code> - <code>perm_total_trust_fees_to_td</code></li>
-<li>update <code>user_agent_reward</code> set <code>user_agent_reward</code> = <code>user_agent_reward</code> + <code>perm_total_trust_fees</code> * <code>GlobalVariables.user_agent_reward_rate</code></li>
-<li>update <code>wallet_user_agent_reward</code> set <code>wallet_user_agent_reward</code> = <code>wallet_user_agent_reward</code> + <code>perm_total_trust_fees</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code></li>
-<li>transfer <code>perm_total_trust_fees_to_account</code> to <code>perm.authority</code>.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm_total_trust_fees_to_td</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.authority</code>. Increase <code>perm.deposit</code> by the same value.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm_total_trust_fees_to_td</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> executing the method. Add the same amount to <code>issuer_perm.deposit</code>.</li>
+<li>define <code>payer_trust_fees_in_denom</code> = <code>perm.issuance_fees</code></li>
+<li>define <code>payer_trust_deposit_in_native_denom</code> = 0</li>
+<li>define <code>payee_trust_fees_to_account</code> = 0</li>
+<li>define <code>payee_trust_deposit_in_native_denom</code> = 0</li>
+<li>define <code>user_agent_reward_in_native_denom</code> = 0</li>
+<li>define <code>wallet_user_agent_reward_in_native_denom</code> = 0</li>
 </ul>
+<p>if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to <code>(COIN, [[ref: native denom]])</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> is not modified</p>
 </li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code></p>
+</li>
+<li>
+<p><code>payee_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payee_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code></p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code></p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li>
+<p>transfer <code>payee_trust_fees_to_account</code> to <code>perm.authority</code>.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payee_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.authority</code>. Increase <code>perm.deposit</code> by the same value.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payer_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> executing the method. Add the same amount to <code>issuer_perm.deposit</code>.</p>
+</li>
+<li>
+<p>update <code>user_agent_reward</code> set <code>user_agent_reward</code> = <code>user_agent_reward</code> + <code>user_agent_reward_in_native_denom</code></p>
+</li>
+<li>
+<p>update <code>wallet_user_agent_reward</code> set <code>wallet_user_agent_reward</code> = <code>wallet_user_agent_reward</code> + <code>wallet_user_agent_reward_in_native_denom</code></p>
+</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to <code>(TU, null)</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code>)</p>
+</li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code></p>
+</li>
+<li>
+<p><code>payees_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code></p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code></p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li>
+<p>transfer <code>payee_trust_fees_to_account</code> to <code>perm.authority</code>.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payee_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.authority</code>. Increase <code>perm.deposit</code> by the same value.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payer_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> executing the method. Add the same amount to <code>issuer_perm.deposit</code>.</p>
+</li>
+<li>
+<p>update <code>user_agent_reward</code> set <code>user_agent_reward</code> = <code>user_agent_reward</code> + <code>user_agent_reward_in_native_denom</code></p>
+</li>
+<li>
+<p>update <code>wallet_user_agent_reward</code> set <code>wallet_user_agent_reward</code> = <code>wallet_user_agent_reward</code> + <code>wallet_user_agent_reward_in_native_denom</code></p>
+</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to an arbitrary coin <code>(COIN, [[ref: denom]])</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> is already in the right <a class="term-reference" href="#term:denom">denom</a> and doesn’t need to be modified</p>
+</li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code>)</p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code>)</p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li>
+<p>transfer <code>payee_trust_fees_to_account</code> to <code>perm.authority</code> in the denom specified as the payment asset in the credential schema.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payee_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.authority</code>. Increase <code>perm.deposit</code> by the same value.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payer_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> executing the method. Add the same amount to <code>issuer_perm.deposit</code>.</p>
+</li>
+<li>
+<p>update <code>user_agent_reward</code> set <code>user_agent_reward</code> = <code>user_agent_reward</code> + <code>user_agent_reward_in_native_denom</code></p>
+</li>
+<li>
+<p>update <code>wallet_user_agent_reward</code> set <code>wallet_user_agent_reward</code> = <code>wallet_user_agent_reward</code> + <code>wallet_user_agent_reward_in_native_denom</code></p>
+</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to an arbitrary coin <code>(FIAT, [[ref: denom]])</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> is already in the right <a class="term-reference" href="#term:denom">denom</a> and doesn’t need to be modified</p>
+</li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>) =&gt; but considered as 0 because FIAT payment are managed off-chain</p>
+</li>
+<li>
+<p><code>payees_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code>)</p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code>)</p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payee_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.authority</code>. Increase <code>perm.deposit</code> by the same value.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payer_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> executing the method. Add the same amount to <code>issuer_perm.deposit</code>.</p>
+</li>
+<li>
+<p>update <code>user_agent_reward</code> set <code>user_agent_reward</code> = <code>user_agent_reward</code> + <code>user_agent_reward_in_native_denom</code></p>
+</li>
+<li>
+<p>update <code>wallet_user_agent_reward</code> set <code>wallet_user_agent_reward</code> = <code>wallet_user_agent_reward</code> + <code>wallet_user_agent_reward_in_native_denom</code></p>
+</li>
+</ul>
+<p>Process Agent Rewards</p>
+<ul>
 <li>
 <p>if <code>user_agent_reward</code> &gt; 0:</p>
 <ul>
@@ -3206,28 +3659,182 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <li>calculate <code>perm_total_trust_fees_wua_to_account</code> = <code>wallet_user_agent_reward</code>  - <code>perm_total_trust_fees_wua_to_td</code></li>
 <li>transfer <code>perm_total_trust_fees_wua_to_account</code> to <code>wallet_agent_perm.authority</code>.</li>
 <li>use [MOD-TD-MSG-1] to increase by <code>perm_total_trust_fees_wua_to_td</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>wallet_agent_perm.authority</code>. Increase <code>wallet_agent_perm.deposit</code> by the same value.</li>
-</ul>
-</li>
 </ul>
 </li>
 </ul>
 <p><strong>Credential Verification</strong></p>
 <ul>
-<li>else (<code>verifier_perm</code> is NOT null):
-<ul>
-<li>
+<li>else (<code>verifier_perm</code> is NOT null):</li>
+</ul>
+<p>Interate over all permissions:</p>
 <p>for each <code>Permission</code> <code>perm</code> from <code>found_perm_set</code>, if <code>perm.verification_fees</code> &gt; 0:</p>
 <ul>
-<li>calculate <code>perm_total_trust_fees</code> = <code>perm.verification_fees</code>  * (1 - <code>verifier_perm.verification_fee_discount</code>) * <code>GlobalVariables.trust_unit_price</code></li>
-<li>calculate <code>perm_total_trust_fees_to_td</code> = <code>perm_total_trust_fees</code> * <code>GlobalVariables.trust_deposit_rate</code></li>
-<li>calculate <code>perm_total_trust_fees_to_account</code> = <code>perm_total_trust_fees</code> - <code>perm_total_trust_fees_to_td</code></li>
-<li>update <code>user_agent_reward</code> set <code>user_agent_reward</code> = <code>user_agent_reward</code> + <code>perm_total_trust_fees</code> * <code>GlobalVariables.user_agent_reward_rate</code></li>
-<li>update <code>wallet_user_agent_reward</code> set <code>wallet_user_agent_reward</code> = <code>wallet_user_agent_reward</code> + <code>perm_total_trust_fees</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code></li>
-<li>transfer <code>perm_total_trust_fees_to_account</code> to <code>perm.authority</code>.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm_total_trust_fees_to_td</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.authority</code>. Increase <code>perm.deposit</code> by the same value.</li>
-<li>use [MOD-TD-MSG-1] to increase by <code>perm_total_trust_fees_to_td</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> executing the method. Add the same amount to <code>verifier_perm.deposit</code>.</li>
+<li>define <code>payer_trust_fees_in_denom</code> = <code>perm.verification_fees</code></li>
+<li>define <code>payer_trust_deposit_in_native_denom</code> = 0</li>
+<li>define <code>payee_trust_fees_to_account</code> = 0</li>
+<li>define <code>payee_trust_deposit_in_native_denom</code> = 0</li>
+<li>define <code>user_agent_reward_in_native_denom</code> = 0</li>
+<li>define <code>wallet_user_agent_reward_in_native_denom</code> = 0</li>
 </ul>
+<p>if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to <code>(COIN, [[ref: native denom]])</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> is not modified</p>
 </li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code></p>
+</li>
+<li>
+<p><code>payee_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payee_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code></p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code></p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li>
+<p>transfer <code>payee_trust_fees_to_account</code> to <code>perm.authority</code>.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payee_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.authority</code>. Increase <code>perm.deposit</code> by the same value.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payer_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> executing the method. Add the same amount to <code>verifier_perm.deposit</code>.</p>
+</li>
+<li>
+<p>update <code>user_agent_reward</code> set <code>user_agent_reward</code> = <code>user_agent_reward</code> + <code>user_agent_reward_in_native_denom</code></p>
+</li>
+<li>
+<p>update <code>wallet_user_agent_reward</code> set <code>wallet_user_agent_reward</code> = <code>wallet_user_agent_reward</code> + <code>wallet_user_agent_reward_in_native_denom</code></p>
+</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to <code>(TU, null)</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code>)</p>
+</li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code></p>
+</li>
+<li>
+<p><code>payees_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code></p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code></p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li>
+<p>transfer <code>payee_trust_fees_to_account</code> to <code>perm.authority</code>.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payee_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.authority</code>. Increase <code>perm.deposit</code> by the same value.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payer_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> executing the method. Add the same amount to <code>verifier_perm.deposit</code>.</p>
+</li>
+<li>
+<p>update <code>user_agent_reward</code> set <code>user_agent_reward</code> = <code>user_agent_reward</code> + <code>user_agent_reward_in_native_denom</code></p>
+</li>
+<li>
+<p>update <code>wallet_user_agent_reward</code> set <code>wallet_user_agent_reward</code> = <code>wallet_user_agent_reward</code> + <code>wallet_user_agent_reward_in_native_denom</code></p>
+</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to an arbitrary coin <code>(COIN, [[ref: denom]])</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> is already in the right <a class="term-reference" href="#term:denom">denom</a> and doesn’t need to be modified</p>
+</li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code>)</p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code>)</p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li>
+<p>transfer <code>payee_trust_fees_to_account</code> to <code>perm.authority</code> in the denom specified as the payment asset in the credential schema.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payee_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.authority</code>. Increase <code>perm.deposit</code> by the same value.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payer_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> executing the method. Add the same amount to <code>verifier_perm.deposit</code>.</p>
+</li>
+<li>
+<p>update <code>user_agent_reward</code> set <code>user_agent_reward</code> = <code>user_agent_reward</code> + <code>user_agent_reward_in_native_denom</code></p>
+</li>
+<li>
+<p>update <code>wallet_user_agent_reward</code> set <code>wallet_user_agent_reward</code> = <code>wallet_user_agent_reward</code> + <code>wallet_user_agent_reward_in_native_denom</code></p>
+</li>
+</ul>
+<p>else if <code>(cs.pricing_asset_type, cs.pricing_asset)</code> is set to an arbitrary coin <code>(FIAT, [[ref: denom]])</code>:</p>
+<p>Calculate:</p>
+<ul>
+<li>
+<p><code>payer_trust_fees_in_denom</code> is already in the right <a class="term-reference" href="#term:denom">denom</a> and doesn’t need to be modified</p>
+</li>
+<li>
+<p><code>payer_trust_deposit_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.trust_deposit_rate</code>)</p>
+</li>
+<li>
+<p><code>payees_trust_fees_to_account</code> = <code>payer_trust_fees_in_denom</code> * (1 - <code>GlobalVariables.trust_deposit_rate</code>) =&gt; but considered as 0 because FIAT payment are managed off-chain</p>
+</li>
+<li>
+<p><code>payees_trust_deposit_in_native_denom</code> = <code>payer_trust_deposit_in_native_denom</code></p>
+</li>
+<li>
+<p><code>user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.user_agent_reward_rate</code>)</p>
+</li>
+<li>
+<p><code>wallet_user_agent_reward_in_native_denom</code> = getPrice(<code>cs.pricing_asset_type</code>, <code>cs.pricing_asset</code>, <code>COIN</code>, <code>[[ref: native denom]]</code>, <code>payer_trust_fees_in_denom</code> * <code>GlobalVariables.wallet_user_agent_reward_rate</code>)</p>
+</li>
+</ul>
+<p>Then:</p>
+<ul>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payee_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>perm.authority</code>. Increase <code>perm.deposit</code> by the same value.</p>
+</li>
+<li>
+<p>use [MOD-TD-MSG-1] to increase by <code>payer_trust_deposit_in_native_denom</code> the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> of <code>authority</code> executing the method. Add the same amount to <code>verifier_perm.deposit</code>.</p>
+</li>
+<li>
+<p>update <code>user_agent_reward</code> set <code>user_agent_reward</code> = <code>user_agent_reward</code> + <code>user_agent_reward_in_native_denom</code></p>
+</li>
+<li>
+<p>update <code>wallet_user_agent_reward</code> set <code>wallet_user_agent_reward</code> = <code>wallet_user_agent_reward</code> + <code>wallet_user_agent_reward_in_native_denom</code></p>
+</li>
+</ul>
+<p>Process Agent Rewards</p>
+<ul>
 <li>
 <p>if <code>user_agent_reward</code> &gt; 0:</p>
 <ul>
@@ -3247,8 +3854,9 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 </ul>
 </li>
 </ul>
-</li>
-</ul>
+<blockquote>
+<p>Now that all transfers have been done, we can create the entries</p>
+</blockquote>
 <p>Create a <code>PermissionSessionRecord</code> <code>cspsr</code>:</p>
 <ul>
 <li><code>cspsr.created</code>: <code>now</code></li>
@@ -3271,7 +3879,7 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 </ul>
 <p>then, add the <code>cspsr</code> to <code>session.session_records</code></p>
 <p>if current transaction if for issuance of a credential, persist the digest SRI by calling <a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1]</a>.</p>
-<div id="warning-95" class="notice warning"><a class="notice-link" href="#warning-95">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
+<div id="warning-70" class="notice warning"><a class="notice-link" href="#warning-70">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
 </div>
 <h4 id="mod-perm-msg-11-update-permission-module-parameters"><a class="toc-anchor" href="#mod-perm-msg-11-update-permission-module-parameters" >§</a> [MOD-PERM-MSG-11] Update Permission Module Parameters</h4>
 <p>Update Permission Module Parameters.</p>
@@ -3319,7 +3927,7 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
 <li><code>amount</code> MUST be lower or equal to <code>applicant_perm.deposit</code> else MUST abort.</li>
 </ul>
-<div id="note-232" class="notice note"><a class="notice-link" href="#note-232">NOTE</a><p>Even if the permission has expired or is revoked, it is still possible to slash it.</p>
+<div id="note-139" class="notice note"><a class="notice-link" href="#note-139">NOTE</a><p>Even if the permission has expired or is revoked, it is still possible to slash it.</p>
 </div>
 <h6 id="mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms"><a class="toc-anchor" href="#mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms" >§</a> [MOD-PERM-MSG-12-2-2] Slash Permission Trust Deposit validator perms</h6>
 <p>Either Option #1, or #2 MUST return true, else abort.</p>
@@ -3330,7 +3938,7 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <li>while <code>validator_perm.validator_perm_id</code> is defined,
 <ul>
 <li>load <code>validator_perm</code> from <code>validator_perm.validator_perm_id</code>.</li>
-<li>if <code>validator_perm</code> is a <a class="term-reference" href="#term:valid-permission">valid permission</a> and <code>validator_perm.authority</code> is who is running the method, =&gt; return true.</li>
+<li>if <code>validator_perm</code> is a <a class="term-reference" href="#term:active-permission">active permission</a> and <code>validator_perm.authority</code> is who is running the method, =&gt; return true.</li>
 </ul>
 </li>
 <li>end</li>
@@ -3414,20 +4022,21 @@ define <code>wallet_user_agent_reward</code> = 0.</p>
 <h4 id="mod-perm-msg-14-self-create-permission"><a class="toc-anchor" href="#mod-perm-msg-14-self-create-permission" >§</a> [MOD-PERM-MSG-14] Self Create Permission</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
 <p>This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a permission for being issuer or verifier of a given schema.</p>
-<div id="note-233" class="notice note"><a class="notice-link" href="#note-233">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
+<div id="note-140" class="notice note"><a class="notice-link" href="#note-140">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
 </div>
 <h5 id="mod-perm-msg-14-1-self-create-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-14-1-self-create-permission-parameters" >§</a> [MOD-PERM-MSG-14-1] Self Create Permission parameters</h5>
 <ul>
-<li><code>authority</code> (group): (Signer) the signing authority on whose behalf this message is executed.</li>
-<li><code>operator</code> (account): (Signer) the account authorized by the <code>authority</code> to run this Msg.</li>
-<li><code>vs_operator</code> (account) (<em>optional</em>): the account we want to authorize to create permission sessions linked to this permission. <strong>Required</strong> for payment delegation.</li>
-<li><code>schema_id</code> (uint64) (<em>mandatory</em>)</li>
+<li><code>authority</code> (group): (Signer) signature must be verified.</li>
+<li><code>operator</code> (account): (Signer) signature must be verified.</li>
 <li><code>type</code> (PermissionType) (<em>mandatory</em>): ISSUER or VERIFIER.</li>
+<li><code>validator_perm_id</code> (uint64) (<em>mandatory</em>): MUST be an ECOSYSTEM <a class="term-reference" href="#term:active-permission">active permission</a> or <a class="term-reference" href="#term:future-permission">future permission</a> of the Credential Schema defined by <code>schema_id</code></li>
+<li><code>schema_id</code> (uint64) (<em>mandatory</em>)</li>
+<li><code>vs_operator</code> (account) (<em>optional</em>): the account we want to authorize to create permission sessions linked to this permission. <strong>Required</strong> for payment delegation.</li>
 <li><code>did</code> (string) (<em>mandatory</em>): <a class="term-reference" href="#term:did">DID</a> of the VS grantee service.</li>
 <li><code>effective_from</code> (timestamp) (<em>optional</em>): timestamp from when (exclusive) this Perm is effective. MUST be in the future.</li>
 <li><code>effective_until</code> (timestamp) (<em>optional</em>): timestamp until when (exclusive) this Perm is effective, null if it doesn’t expire. If not null, MUST be greater than <code>effective_from</code>.</li>
-<li><code>verification_fees</code> (number) (<em>optional</em>): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in trust unit. Default to 0.</li>
-<li><code>validation_fees</code> (number) (<em>optional</em>): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in trust unit. Default to 0.</li>
+<li><code>verification_fees</code> (number) (<em>optional</em>): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.</li>
+<li><code>validation_fees</code> (number) (<em>optional</em>): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in the denom specified in the credential schema. Default to 0.</li>
 <li><code>vs_operator_authz_enabled</code>: boolean (<em>mandatory</em>): if set to true authorize this vs_operator to execute CreateOrUpdatePermissionSession <em>on behalf</em> of <code>authority</code> account (trust fees will be paid by authority account)</li>
 <li><code>vs_operator_authz_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
 as a direct consequence of executing authorized messages.</li>
@@ -3439,14 +4048,27 @@ as a direct consequence of executing authorized messages.</li>
 <p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
 <h6 id="mod-perm-msg-14-2-1-self-create-permission-basic-checks"><a class="toc-anchor" href="#mod-perm-msg-14-2-1-self-create-permission-basic-checks" >§</a> [MOD-PERM-MSG-14-2-1] Self Create Permission basic checks</h6>
 <p>if a mandatory parameter is not present, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<p>Load <code>Permission</code> <code>validator_perm</code> from <code>validator_perm_id</code>.</p>
 <ul>
 <li><code>authority</code> (group): (Signer) signature must be verified.</li>
 <li><code>operator</code> (account): (Signer) signature must be verified.</li>
-<li><code>schema_id</code> MUST be a valid uint64 and a <a class="term-reference" href="#term:credential-schema">credential schema</a> entry with this id MUST exist.</li>
 <li><code>type</code> (PermissionType) (<em>mandatory</em>): MUST be ISSUER or VERIFIER, else abort.</li>
+<li><code>validator_perm_id</code> (uint64) (<em>mandatory</em>): <code>validator_perm</code> MUST be an ECOSYSTEM <a class="term-reference" href="#term:active-permission">active permission</a> or <a class="term-reference" href="#term:future-permission">future permission</a> of the Credential Schema defined by <code>schema_id</code></li>
+<li><code>schema_id</code> MUST be a valid uint64 and a <a class="term-reference" href="#term:credential-schema">credential schema</a> entry with this id MUST exist and MUST be the same than <code>validator_perm.schema_id</code></li>
+<li><code>vs_operator</code> (account) (<em>optional</em>): no check required.</li>
 <li><code>did</code>, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
-<li><code>effective_from</code> must be in the future.</li>
-<li><code>effective_until</code>, if not null, must be greater than <code>effective_from</code></li>
+<li><code>effective_from</code> MUST be in the future AND
+<ul>
+<li>MUST be greater or equal to <code>validator_perm.effective_from</code> AND</li>
+<li>if <code>validator_perm.effective_until</code> is not null, MUST be lower than <code>validator_perm.effective_until</code></li>
+</ul>
+</li>
+<li><code>effective_until</code>:
+<ul>
+<li>if null, <code>validator_perm.effective_until</code> MUST be NULL</li>
+<li>else if not null, must be greater than <code>effective_from</code> AND if <code>validator_perm.effective_until</code> is not null, MUST be lower or equal to <code>validator_perm.effective_until</code></li>
+</ul>
+</li>
 <li><code>verification_fees</code> (number) (<em>optional</em>): If specified, MUST be &gt;= 0 and MUST be a ISSUER permission.</li>
 <li><code>validation_fees</code> (number) (<em>optional</em>): If specified, MUST be &gt;= 0 and MUST be a ISSUER permission.</li>
 <li><code>vs_operator_authz_enabled</code>: boolean (<em>mandatory</em>): if set to true, <code>vs_operator</code> MUST NOT be null, else abort.</li>
@@ -3468,8 +4090,8 @@ as a direct consequence of executing authorized messages.</li>
 <h6 id="mod-perm-msg-14-2-3-self-create-permission-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-14-2-3-self-create-permission-fee-checks" >§</a> [MOD-PERM-MSG-14-2-3] Self Create Permission fee checks</h6>
 <p>Fee payer MUST have the required <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a> available.</p>
 <h6 id="mod-perm-msg-14-2-4-self-create-permission-overlap-checks"><a class="toc-anchor" href="#mod-perm-msg-14-2-4-self-create-permission-overlap-checks" >§</a> [MOD-PERM-MSG-14-2-4] Self Create Permission overlap checks</h6>
-<p>We want to make sure that 2 permissions cannot be active at the same time for the same <code>validator_perm_id</code>. If <code>authority</code> wishes to create a new permission but existing active one never expires (or expire too far from now), <code>authority</code> MUST use first the <a href="#mod-perm-msg-8-extend-permission" >Extend Perm Msg</a> to set or adjust the <code>effective_until</code> value.</p>
-<p>Find all <a class="term-reference" href="#term:valid-permissions">valid permissions</a> <code>perms[]</code> (not revoked, not slashed, not repaid) for <code>schema_id</code>, <code>type</code>, <code>validator_perm_id</code>, <code>authority</code>.</p>
+<p>We want to make sure that 2 permissions cannot be active at the same time for the same <code>validator_perm_id</code>. If <code>authority</code> wishes to create a new permission but existing active one never expires (or expire too far from now), <code>authority</code> MUST use first the <a href="#mod-perm-msg-8-adjust-permission" >Extend Perm Msg</a> to set or adjust the <code>effective_until</code> value.</p>
+<p>Find all <a class="term-reference" href="#term:active-permissions">active permissions</a> <code>perms[]</code> (not revoked, not slashed, not repaid) for <code>schema_id</code>, <code>type</code>, <code>validator_perm_id</code>, <code>authority</code>.</p>
 <p>for each <code>Permission</code> entry <code>p</code> from <code>perms[]</code>:</p>
 <ul>
 <li>if <code>p.effective_until</code> is greater than <code>effective_from</code>, method execution MUST abort.</li>
@@ -3484,11 +4106,11 @@ as a direct consequence of executing authorized messages.</li>
 <p>Method execution MUST perform the following tasks in a <a class="term-reference" href="#term:transaction">transaction</a>, and rollback if any error occurs.</p>
 <ul>
 <li>define <code>now</code>: current timestamp.</li>
-<li>load the root permission of the schema (the one of type <code>ECOSYSTEM</code>) to <code>ecosystem_perm_id</code>.</li>
 </ul>
 <p>A new entry <code>Permission</code> <code>perm</code> MUST be created:</p>
 <ul>
 <li><code>perm.id</code>: auto-incremented uint64.</li>
+<li><code>perm.validator_perm_id</code>: <code>validator_perm_id</code></li>
 <li><code>perm.schema_id</code>: <code>schema_id</code>.</li>
 <li><code>perm.modified</code> to <code>now</code>.</li>
 <li><code>perm.type</code>: <code>type</code>.</li>
@@ -3502,7 +4124,6 @@ as a direct consequence of executing authorized messages.</li>
 <li><code>perm.issuance_fees</code>: 0</li>
 <li><code>perm.verification_fees</code>: <code>verification_fees</code> if specified and <code>type</code> is ISSUER, else 0.</li>
 <li><code>perm.deposit</code>: 0</li>
-<li><code>perm.validator_perm_id</code>: <code>ecosystem_perm_id</code></li>
 <li><code>perm.vs_operator_authz_enabled</code>: <code>vs_operator_authz_enabled</code></li>
 <li><code>perm.vs_operator_authz_spend_limit</code>: <code>vs_operator_authz_spend_limit</code></li>
 <li><code>perm.vs_operator_authz_with_feegrant</code>: <code>vs_operator_authz_with_feegrant</code></li>
@@ -3531,7 +4152,7 @@ as a direct consequence of executing authorized messages.</li>
 <li><code>did</code> (string) (<em>optional</em>): the did the permission refers to.</li>
 <li><code>perm_id</code> (number) (<em>optional</em>): limit to permissions where the <code>validator_perm_id</code> is <code>perm_id</code>.</li>
 <li><code>type</code> (PermissionType) (<em>optional</em>): if we want to limit to a specific permission type.</li>
-<li><code>only_valid</code> (boolean) (<em>optional</em>): if set to true, only return valid permissions.</li>
+<li><code>only_valid</code> (boolean) (<em>optional</em>): if set to true, only return active permissions.</li>
 <li><code>only_slashed</code> (boolean) (<em>optional</em>): if set to true, only return slashed permissions.</li>
 <li><code>only_repaid</code> (boolean) (<em>optional</em>): if set to true, only return repaid slashed permissions.</li>
 <li><code>modified_after</code> (timestamp) (<em>optional</em>): limit to permissions modified after (or equal to) <code>modified_after</code>.</li>
@@ -3578,8 +4199,8 @@ as a direct consequence of executing authorized messages.</li>
 <h5 id="mod-perm-qry-4-2-find-beneficiaries-checks"><a class="toc-anchor" href="#mod-perm-qry-4-2-find-beneficiaries-checks" >§</a> [MOD-PERM-QRY-4-2] Find Beneficiaries checks</h5>
 <ul>
 <li>if <code>issuer_perm_id</code> and <code>verifier_perm_id</code> are unset then MUST abort.</li>
-<li>if <code>issuer_perm_id</code> is specified, load <code>issuer_perm</code> from <code>issuer_perm_id</code>, Permission MUST exist and MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a>.</li>
-<li>if <code>verifier_perm_id</code> is specified, load <code>verifier_perm</code> from <code>verifier_perm_id</code>, Permission MUST exist and MUST be a <a class="term-reference" href="#term:valid-permission">valid permission</a>.</li>
+<li>if <code>issuer_perm_id</code> is specified, load <code>issuer_perm</code> from <code>issuer_perm_id</code>, Permission MUST exist and MUST be a <a class="term-reference" href="#term:active-permission">active permission</a>.</li>
+<li>if <code>verifier_perm_id</code> is specified, load <code>verifier_perm</code> from <code>verifier_perm_id</code>, Permission MUST exist and MUST be a <a class="term-reference" href="#term:active-permission">active permission</a>.</li>
 </ul>
 <h5 id="mod-perm-qry-4-3-find-beneficiaries-execution"><a class="toc-anchor" href="#mod-perm-qry-4-3-find-beneficiaries-execution" >§</a> [MOD-PERM-QRY-4-3] Find Beneficiaries execution</h5>
 <p>Example: Let’s build the set. Revoked and slashed permissions will not be added to the set. Expired permissions, if not revoked/slashed, will be considered.</p>
@@ -3616,7 +4237,7 @@ as a direct consequence of executing authorized messages.</li>
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-234" class="notice note"><a class="notice-link" href="#note-234">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-141" class="notice note"><a class="notice-link" href="#note-141">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -3994,14 +4615,14 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 <h4 id="mod-td-msg-7-burn-ecosystem-slashed-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >§</a> [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit</h4>
 <p>Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.</p>
-<div id="warning-96" class="notice warning"><a class="notice-link" href="#warning-96">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
+<div id="warning-71" class="notice warning"><a class="notice-link" href="#warning-71">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
 </div>
 <h5 id="mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters</h5>
 <ul>
 <li><code>authority</code> (group) (<em>mandatory</em>): authority of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to burn.</li>
 <li><code>amount</code> (number) (<em>mandatory</em>): value to burn, in <a class="term-reference" href="#term:denom">denom</a>.</li>
 </ul>
-<div id="warning-97" class="notice warning"><a class="notice-link" href="#warning-97">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
+<div id="warning-72" class="notice warning"><a class="notice-link" href="#warning-72">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
 The decision between this method and specifying the amount directly is left to implementers.</p>
 </div>
 <h5 id="mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks</h5>
@@ -4166,7 +4787,7 @@ The decision between this method and specifying the amount directly is left to i
 <p>Check if a <strong>VS Operator Authorization</strong> exists for <code>authority</code> and <code>grantee</code>. If this is the case, MUST abort.</p>
 </li>
 </ul>
-<div id="warning-98" class="notice warning"><a class="notice-link" href="#warning-98">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+<div id="warning-73" class="notice warning"><a class="notice-link" href="#warning-73">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
 </div>
 <h5 id="mod-de-msg-3-3-grant-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-3-3-grant-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks</h5>
 <ul>
@@ -4222,7 +4843,7 @@ The decision between this method and specifying the amount directly is left to i
 <p>This method can only be called directly by the following methods with no signer check:</p>
 <ul>
 <li>Self Create Permission</li>
-<li>Extend Permission</li>
+<li>Adjust Permission</li>
 <li>Set Permission VP to Validated</li>
 </ul>
 <blockquote>
@@ -4239,7 +4860,7 @@ The decision between this method and specifying the amount directly is left to i
 <li>load Permission <code>perm</code> with <code>perm_id</code>. <code>perm.authority</code> and <code>perm.vs_operator</code> MUST NOT be null.</li>
 <li>Check if a <strong>Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. If this is the case, MUST abort.</li>
 </ul>
-<div id="warning-99" class="notice warning"><a class="notice-link" href="#warning-99">WARNING</a><p>A <strong>VS Operator Authorization</strong> CAN be granted ONLY IF no <strong>Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+<div id="warning-74" class="notice warning"><a class="notice-link" href="#warning-74">WARNING</a><p>A <strong>VS Operator Authorization</strong> CAN be granted ONLY IF no <strong>Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
 </div>
 <h5 id="mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-5-3] Grant VS Operator Authorization fee checks</h5>
 <ul>
@@ -4278,7 +4899,7 @@ The decision between this method and specifying the amount directly is left to i
 </ul>
 </li>
 </ul>
-<div id="note-235" class="notice note"><a class="notice-link" href="#note-235">NOTE</a><p>We MUST align to the farthest effective_until for the feegrant, for the permissions that have <code>current_perm.effective_until</code> set.</p>
+<div id="note-142" class="notice note"><a class="notice-link" href="#note-142">NOTE</a><p>We MUST align to the farthest effective_until for the feegrant, for the permissions that have <code>current_perm.effective_until</code> set.</p>
 </div>
 <h4 id="mod-de-msg-6-revoke-vs-operator-authorization"><a class="toc-anchor" href="#mod-de-msg-6-revoke-vs-operator-authorization" >§</a> [MOD-DE-MSG-6] Revoke VS Operator Authorization</h4>
 <p>This method can only be called by the following methods with no signer check:</p>
@@ -4329,9 +4950,9 @@ The decision between this method and specifying the amount directly is left to i
 </ul>
 </li>
 </ul>
-<div id="note-236" class="notice note"><a class="notice-link" href="#note-236">NOTE</a><p>When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.</p>
+<div id="note-143" class="notice note"><a class="notice-link" href="#note-143">NOTE</a><p>When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.</p>
 </div>
-<div id="note-237" class="notice note"><a class="notice-link" href="#note-237">NOTE</a><p>In the case of VS Operator Authorizations, spending limit are managed by the Permission module.</p>
+<div id="note-144" class="notice note"><a class="notice-link" href="#note-144">NOTE</a><p>In the case of VS Operator Authorizations, spending limit are managed by the Permission module.</p>
 </div>
 <h4 id="mod-di-msg-1-store-digest"><a class="toc-anchor" href="#mod-di-msg-1-store-digest" >§</a> [MOD-DI-MSG-1] Store Digest</h4>
 <ul>
@@ -4367,14 +4988,284 @@ The decision between this method and specifying the amount directly is left to i
 <li>set <code>digest.digest_sri</code> to digest_sri</li>
 <li>set <code>digest.created</code> to now.</li>
 </ul>
+<h4 id="mod-xr-msg-1-create-exchange-rate"><a class="toc-anchor" href="#mod-xr-msg-1-create-exchange-rate" >§</a> [MOD-XR-MSG-1] Create Exchange Rate</h4>
+<p>The <strong>Create Exchange Rate</strong> method allows creating an <code>ExchangeRate</code> entry for a given <code>(base_asset_type, base_asset, quote_asset_type, quote_asset)</code> pair.</p>
+<ul>
+<li>Only a governance proposal CAN execute this method.</li>
+</ul>
+<h5 id="mod-xr-msg-1-create-exchange-rate-method-parameters"><a class="toc-anchor" href="#mod-xr-msg-1-create-exchange-rate-method-parameters" >§</a> [MOD-XR-MSG-1] Create Exchange Rate method parameters</h5>
+<ul>
+<li><code>base_asset_type</code> (PricingAssetType, <em>mandatory</em>)</li>
+<li><code>base_asset</code> (string, <em>mandatory</em>)</li>
+<li><code>quote_asset_type</code> (PricingAssetType, <em>mandatory</em>)</li>
+<li><code>quote_asset</code> (string, <em>mandatory</em>)</li>
+<li><code>rate</code> (string, <em>mandatory</em>)</li>
+<li><code>rate_scale</code> (uint32, <em>mandatory</em>)</li>
+<li><code>validity_duration</code> (duration, <em>mandatory</em>)</li>
+</ul>
+<h5 id="mod-xr-msg-1-create-exchange-rate-precondition-checks"><a class="toc-anchor" href="#mod-xr-msg-1-create-exchange-rate-precondition-checks" >§</a> [MOD-XR-MSG-1] Create Exchange Rate precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-xr-msg-1-create-exchange-rate-basic-checks"><a class="toc-anchor" href="#mod-xr-msg-1-create-exchange-rate-basic-checks" >§</a> [MOD-XR-MSG-1] Create Exchange Rate basic checks</h6>
+<p>If any of the following conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li>
+<p><strong>Asset type validity</strong></p>
+<ul>
+<li><code>base_asset_type</code> MUST be a valid <code>PricingAssetType</code> value.</li>
+<li><code>quote_asset_type</code> MUST be a valid <code>PricingAssetType</code> value.</li>
+</ul>
+</li>
+<li>
+<p><strong>Asset identifier basic validity</strong></p>
+<ul>
+<li><code>base_asset</code> MUST be non-empty.</li>
+<li><code>quote_asset</code> MUST be non-empty.</li>
+</ul>
+</li>
+<li>
+<p><strong>Asset type / identifier consistency</strong></p>
+<ul>
+<li>
+<p>If <code>base_asset_type = TRUST_UNIT</code>:</p>
+<ul>
+<li><code>base_asset</code> MUST equal <code>&quot;TU&quot;</code>.</li>
+</ul>
+</li>
+<li>
+<p>If <code>quote_asset_type = TRUST_UNIT</code>:</p>
+<ul>
+<li><code>quote_asset</code> MUST equal <code>&quot;TU&quot;</code>.</li>
+</ul>
+</li>
+<li>
+<p>If <code>base_asset_type = COIN</code>:</p>
+<ul>
+<li><code>base_asset</code> MUST be a valid Cosmos-SDK denom string.</li>
+<li><code>base_asset</code> MUST correspond to an asset that exists on-chain (i.e., denom is recognized by the chain and can be held in balances).</li>
+<li>If <code>base_asset</code> starts with <code>ibc/</code>, a denom trace for this denom MUST exist in the IBC transfer module store.</li>
+<li>If <code>base_asset</code> starts with <code>factory/</code>, the denom MUST be a valid tokenfactory denom and the corresponding token MUST exist.</li>
+</ul>
+</li>
+<li>
+<p>If <code>quote_asset_type = COIN</code>:</p>
+<ul>
+<li><code>quote_asset</code> MUST be a valid Cosmos-SDK denom string.</li>
+<li><code>quote_asset</code> MUST correspond to an asset that exists on-chain.</li>
+<li>If <code>quote_asset</code> starts with <code>ibc/</code>, a denom trace for this denom MUST exist in the IBC transfer module store.</li>
+<li>If <code>quote_asset</code> starts with <code>factory/</code>, the denom MUST be a valid tokenfactory denom and the corresponding token MUST exist.</li>
+</ul>
+</li>
+<li>
+<p>If <code>base_asset_type = FIAT</code>:</p>
+<ul>
+<li><code>base_asset</code> MUST be a valid ISO-4217 currency code.</li>
+</ul>
+</li>
+<li>
+<p>If <code>quote_asset_type = FIAT</code>:</p>
+<ul>
+<li><code>quote_asset</code> MUST be a valid ISO-4217 currency code.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Pair validity</strong></p>
+<ul>
+<li>The pair <code>(base_asset_type, base_asset, quote_asset_type, quote_asset)</code> MUST NOT be identical on both sides (base and quote MUST NOT represent the same asset).</li>
+<li>The pair <code>(base_asset_type, base_asset, quote_asset_type, quote_asset)</code> MUST be unique in storage. If an entry already exists, execution MUST abort.</li>
+</ul>
+</li>
+<li>
+<p><strong>Rate validity</strong></p>
+<ul>
+<li><code>rate</code> MUST be a base-10 encoded unsigned integer string.</li>
+<li><code>rate</code> MUST be strictly greater than <code>&quot;0&quot;</code>.</li>
+<li><code>rate_scale</code> MUST be within protocol-defined limits (e.g., <code>rate_scale &lt;= 18</code>).</li>
+</ul>
+</li>
+<li>
+<p><strong>validity_duration</strong></p>
+<ul>
+<li><code>validity_duration</code> MUST be greater or equal to <code>1 minute</code>.</li>
+</ul>
+</li>
+</ul>
+<h6 id="mod-xr-msg-1-create-exchange-rate-fee-checks"><a class="toc-anchor" href="#mod-xr-msg-1-create-exchange-rate-fee-checks" >§</a> [MOD-XR-MSG-1] Create Exchange Rate fee checks</h6>
+<p>Fee payer MUST have sufficient <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
+<h5 id="mod-xr-msg-1-create-exchange-rate-execution-of-the-method"><a class="toc-anchor" href="#mod-xr-msg-1-create-exchange-rate-execution-of-the-method" >§</a> [MOD-XR-MSG-1] Create Exchange Rate execution of the method</h5>
+<p>Create <code>ExchangeRate</code> entry <code>xr</code>:</p>
+<ul>
+<li><code>xr.id</code> = auto generated id</li>
+<li><code>xr.base_asset_type</code> = <code>base_asset_type</code></li>
+<li><code>xr.base_asset</code> = <code>base_asset</code></li>
+<li><code>xr.quote_asset_type</code> = <code>quote_asset_type</code></li>
+<li><code>xr.quote_asset</code> = <code>quote_asset</code></li>
+<li><code>xr.rate</code> = <code>rate</code></li>
+<li><code>xr.rate_scale</code> = <code>rate_scale</code></li>
+<li><code>xr.validity_duration</code> = <code>validity_duration</code></li>
+<li><code>xr.expires</code> = block timestamp + <code>validity_duration</code></li>
+<li><code>xr.state</code> = false</li>
+<li><code>xr.updated</code> = block timestamp</li>
+</ul>
+<h4 id="mod-xr-msg-2-update-exchange-rate"><a class="toc-anchor" href="#mod-xr-msg-2-update-exchange-rate" >§</a> [MOD-XR-MSG-2] Update Exchange Rate</h4>
+<p>Only an authorized operator that has an ExchangeRateAuthorization can execute this method.</p>
+<h5 id="mod-xr-msg-2-update-exchange-rate-method-parameters"><a class="toc-anchor" href="#mod-xr-msg-2-update-exchange-rate-method-parameters" >§</a> [MOD-XR-MSG-2] Update Exchange Rate method parameters</h5>
+<ul>
+<li><code>id</code> (uint64, <em>mandatory</em>)</li>
+<li><code>rate</code> (string, <em>mandatory</em>)</li>
+</ul>
+<h5 id="mod-xr-msg-2-update-exchange-rate-precondition-checks"><a class="toc-anchor" href="#mod-xr-msg-2-update-exchange-rate-precondition-checks" >§</a> [MOD-XR-MSG-2] Update Exchange Rate precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-xr-msg-2-update-exchange-rate-basic-checks"><a class="toc-anchor" href="#mod-xr-msg-2-update-exchange-rate-basic-checks" >§</a> [MOD-XR-MSG-2] Update Exchange Rate basic checks</h6>
+<p>If any of the following conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li><strong>Authorization</strong></li>
+</ul>
+<p>Only an authorized operator that has an ExchangeRateAuthorization can execute this method.</p>
+<ul>
+<li><code>id</code> (uint64, <em>mandatory</em>) must refer to an existing <code>ExchangeRate</code> entry <code>xr</code> with <code>xr.active</code> = true</li>
+<li><code>rate</code> MUST be strictly greater than <code>&quot;0&quot;</code>.</li>
+</ul>
+<h6 id="mod-xr-msg-2-update-exchange-rate-fee-checks"><a class="toc-anchor" href="#mod-xr-msg-2-update-exchange-rate-fee-checks" >§</a> [MOD-XR-MSG-2] Update Exchange Rate fee checks</h6>
+<p>Fee payer MUST have sufficient <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
+<h5 id="mod-xr-msg-2-update-exchange-rate-execution-of-the-method"><a class="toc-anchor" href="#mod-xr-msg-2-update-exchange-rate-execution-of-the-method" >§</a> [MOD-XR-MSG-2] Update Exchange Rate execution of the method</h5>
+<p>Load <code>ExchangeRate</code> <code>xr</code>.</p>
+<ul>
+<li><code>xr.rate</code> = <code>rate</code></li>
+<li><code>xr.expires</code> = block time + <code>validity_duration</code></li>
+<li><code>xr.updated</code> = block time</li>
+</ul>
+<h4 id="mod-xr-msg-3-toggle-exchange-rate-state"><a class="toc-anchor" href="#mod-xr-msg-3-toggle-exchange-rate-state" >§</a> [MOD-XR-MSG-3] Toggle Exchange Rate State</h4>
+<p>The <strong>Toggle Exchange Rate State</strong> method allows an authorized actor to enable or disable an exchange rate.</p>
+<h5 id="mod-xr-msg-3-toggle-exchange-rate-state-method-parameters"><a class="toc-anchor" href="#mod-xr-msg-3-toggle-exchange-rate-state-method-parameters" >§</a> [MOD-XR-MSG-3] Toggle Exchange Rate State method parameters</h5>
+<ul>
+<li><code>id</code> (uint64, <em>mandatory</em>): id of the exchange rate</li>
+<li><code>state</code> (boolean, <em>mandatory</em>): true to set enabled, false to set disabled</li>
+</ul>
+<h5 id="mod-xr-msg-3-toggle-exchange-rate-state-precondition-checks"><a class="toc-anchor" href="#mod-xr-msg-3-toggle-exchange-rate-state-precondition-checks" >§</a> [MOD-XR-MSG-3] Toggle Exchange Rate State precondition checks</h5>
+<p>If any of these precondition checks fail, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<h6 id="mod-xr-msg-3-toggle-exchange-rate-state-basic-checks"><a class="toc-anchor" href="#mod-xr-msg-3-toggle-exchange-rate-state-basic-checks" >§</a> [MOD-XR-MSG-3] Toggle Exchange Rate State basic checks</h6>
+<p>If any of the following conditions is not satisfied, <a class="term-reference" href="#term:transaction">transaction</a> MUST abort.</p>
+<ul>
+<li>
+<p><strong>Authorization</strong></p>
+<ul>
+<li>Only a governance proposal can enable or disable an exchange rate.</li>
+</ul>
+</li>
+<li>
+<p>ExchangeRate with id <code>id</code> MUST exist.</p>
+</li>
+</ul>
+<h6 id="mod-xr-msg-3-toggle-exchange-rate-state-fee-checks"><a class="toc-anchor" href="#mod-xr-msg-3-toggle-exchange-rate-state-fee-checks" >§</a> [MOD-XR-MSG-3] Toggle Exchange Rate State fee checks</h6>
+<p>Fee payer MUST have sufficient <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
+<h5 id="mod-xr-msg-3-toggle-exchange-rate-state-execution-of-the-method"><a class="toc-anchor" href="#mod-xr-msg-3-toggle-exchange-rate-state-execution-of-the-method" >§</a> [MOD-XR-MSG-3] Toggle Exchange Rate State execution of the method</h5>
+<p>Load <code>ExchangeRate</code> <code>xr</code>.</p>
+<ul>
+<li>set <code>xr.state</code> to !<code>xr.state</code>.</li>
+<li>set <code>xr.updated</code> to block time</li>
+</ul>
+<h4 id="mod-xr-qry-1-get-exchange-rate"><a class="toc-anchor" href="#mod-xr-qry-1-get-exchange-rate" >§</a> [MOD-XR-QRY-1] Get Exchange Rate</h4>
+<p>Any <a class="term-reference" href="#term:account">account</a> CAN run this <a class="term-reference" href="#term:query">query</a>.</p>
+<h5 id="mod-xr-qry-1-1-get-exchange-rate-query-parameters"><a class="toc-anchor" href="#mod-xr-qry-1-1-get-exchange-rate-query-parameters" >§</a> [MOD-XR-QRY-1-1] Get Exchange Rate query parameters</h5>
+<ul>
+<li><code>state</code> (boolean, <em>optional</em>): to force state, enabled or disabled</li>
+<li><code>expire_ts</code> (timestamp, <em>optional</em>): return only if expire_ts is greater than <code>expire_ts</code></li>
+</ul>
+<p>AND:</p>
+<p>(</p>
+<ul>
+<li><code>id</code> (uint64) (<em>mandatory</em>): the id of the exchange rate to get</li>
+</ul>
+<p>OR:</p>
+<ul>
+<li><code>base_asset_type</code> (PricingAssetType, <em>mandatory</em>)</li>
+<li><code>base_asset</code> (string, <em>mandatory</em>)</li>
+<li><code>quote_asset_type</code> (PricingAssetType, <em>mandatory</em>)</li>
+<li><code>quote_asset</code> (string, <em>mandatory</em>)<br>
+)</li>
+</ul>
+<h5 id="mod-xr-qry-1-2-get-exchange-rate-query-checks"><a class="toc-anchor" href="#mod-xr-qry-1-2-get-exchange-rate-query-checks" >§</a> [MOD-XR-QRY-1-2] Get Exchange Rate query checks</h5>
+<p>If any of these checks fail, <a class="term-reference" href="#term:query">query</a> MUST fail.</p>
+<ul>
+<li><code>id</code> (uint64) (<em>mandatory</em>): MUST exist,</li>
+</ul>
+<p>OR</p>
+<p>an ExchangeRate entry with <code>base_asset_type</code>, <code>base_asset</code>, <code>quote_asset_type</code>, <code>quote_asset</code> MUST exist.</p>
+<h5 id="mod-xr-qry-1-3-get-exchange-rate-execution-of-the-query"><a class="toc-anchor" href="#mod-xr-qry-1-3-get-exchange-rate-execution-of-the-query" >§</a> [MOD-XR-QRY-1-3] Get Exchange Rate execution of the query</h5>
+<p>If found, returns ExchangeRate entry, else return not found.</p>
+<h4 id="mod-xr-qry-2-list-exchange-rates"><a class="toc-anchor" href="#mod-xr-qry-2-list-exchange-rates" >§</a> [MOD-XR-QRY-2] List Exchange Rates</h4>
+<p>Any <a class="term-reference" href="#term:account">account</a> CAN run this <a class="term-reference" href="#term:query">query</a>. As this method does not modify data, it does not require a <a class="term-reference" href="#term:transaction">transaction</a>.</p>
+<h5 id="mod-xr-qry-2-1-list-exchange-rates-query-parameters"><a class="toc-anchor" href="#mod-xr-qry-2-1-list-exchange-rates-query-parameters" >§</a> [MOD-XR-QRY-2-1] List Exchange Rates query parameters</h5>
+<ul>
+<li><code>base_asset_type</code> (PricingAssetType, <em>optional</em>)</li>
+<li><code>base_asset</code> (string, <em>optional</em>)</li>
+<li><code>quote_asset_type</code> (PricingAssetType, <em>optional</em>)</li>
+<li><code>quote_asset</code> (string, <em>optional</em>)</li>
+<li><code>state</code> (boolean, <em>optional</em>): to force state, enabled or disabled</li>
+<li><code>expire</code> (timestamp, <em>optional</em>): return only if expire is greater than <code>expire</code></li>
+</ul>
+<h5 id="mod-xr-qry-2-2-list-exchange-rates-query-checks"><a class="toc-anchor" href="#mod-xr-qry-2-2-list-exchange-rates-query-checks" >§</a> [MOD-XR-QRY-2-2] List Exchange Rates query checks</h5>
+<h5 id="mod-xr-qry-2-3-list-exchange-rates-execution-of-the-query"><a class="toc-anchor" href="#mod-xr-qry-2-3-list-exchange-rates-execution-of-the-query" >§</a> [MOD-XR-QRY-2-3] List Exchange Rates execution of the query</h5>
+<p>If found, returns a list of found ExchangeRates, else return an empty list.</p>
+<h4 id="mod-xr-qry-3-get-price"><a class="toc-anchor" href="#mod-xr-qry-3-get-price" >§</a> [MOD-XR-QRY-3] Get Price</h4>
+<p>Anyone CAN run this <a class="term-reference" href="#term:query">query</a>, throgh module call or using the API.</p>
+<h5 id="mod-xr-qry-3-get-price-example"><a class="toc-anchor" href="#mod-xr-qry-3-get-price-example" >§</a> [MOD-XR-QRY-3] Get Price Example</h5>
+<p>base_asset_type  = TRUST_UNIT
+base_asset       = “TU”
+quote_asset_type = COIN
+quote_asset      = “uvna”
+rate             = R
+rate_scale       = S</p>
+<p>If a valid <code>ExchangeRate</code> entry exists with:</p>
+<ul>
+<li><code>base_asset_type = TRUST_UNIT</code></li>
+<li><code>base_asset = &quot;TU&quot;</code></li>
+<li><code>quote_asset_type = COIN</code></li>
+<li><code>quote_asset = &quot;uvna&quot;</code></li>
+</ul>
+<p>then the price of <strong><code>amount</code> Trust Unit expressed in uvna</strong> MUST be computed using the following formula:</p>
+<pre><code>price_uvna = floor(amount * rate / 10^rate_scale)
+</code></pre>
+<p>Where:</p>
+<ul>
+<li><code>rate</code> and <code>rate_scale</code> are the values stored in the corresponding <code>ExchangeRate</code> entry.</li>
+<li><code>price_uvna</code> is expressed in <strong>micro-denominated VNA units (<code>uvna</code>)</strong>.</li>
+<li>Rounding MUST always be performed <strong>downwards</strong>.</li>
+</ul>
+<p>If the corresponding <code>ExchangeRate</code> entry is expired or missing, the conversion MUST fail.</p>
+<h5 id="mod-xr-qry-3-1-get-price-parameters"><a class="toc-anchor" href="#mod-xr-qry-3-1-get-price-parameters" >§</a> [MOD-XR-QRY-3-1] Get Price parameters</h5>
+<ul>
+<li><code>base_asset_type</code> (PricingAssetType, <em>optional</em>)</li>
+<li><code>base_asset</code> (string, <em>optional</em>)</li>
+<li><code>quote_asset_type</code> (PricingAssetType, <em>optional</em>)</li>
+<li><code>quote_asset</code> (string, <em>optional</em>)</li>
+<li><code>amount</code> (number, <em>mandatory</em>)</li>
+</ul>
+<h5 id="mod-xr-qry-3-2-get-price-query-checks"><a class="toc-anchor" href="#mod-xr-qry-3-2-get-price-query-checks" >§</a> [MOD-XR-QRY-3-2] Get Price query checks</h5>
+<p>If the corresponding <code>ExchangeRate</code> entry is expired or missing, the conversion MUST fail and an error is returned</p>
+<h5 id="mod-xr-qry-3-3-get-price-execution-of-the-query"><a class="toc-anchor" href="#mod-xr-qry-3-3-get-price-execution-of-the-query" >§</a> [MOD-XR-QRY-3-3] Get Price execution of the query</h5>
+<ul>
+<li>if (base_asset_type, base_asset) == (quote_asset_type, quote_asset): <code>price</code> = <code>amount</code>.</li>
+<li>else load (base_asset_type, base_asset, quote_asset_type, quote_asset).
+<ul>
+<li>if entry doesn’t exist or is not active or expired, abort and generate an error.</li>
+<li>else return <code>price</code> = floor(amount * rate / 10^rate_scale)</li>
+</ul>
+</li>
+</ul>
+<div id="warning-75" class="notice warning"><a class="notice-link" href="#warning-75">WARNING</a><ul>
+<li>Conversions use base units only.</li>
+<li>Integer arithmetic MUST be used.</li>
+<li><code>quote_amount = floor(base_amount × rate / 10^rate_scale)</code>.</li>
+<li>Expired rates MUST NOT be used.</li>
+</ul>
+</div>
 <h2 id="initial-data-requirements"><a class="toc-anchor" href="#initial-data-requirements" >§</a> Initial Data Requirements</h2>
 <h3 id="glo-global-variables"><a class="toc-anchor" href="#glo-global-variables" >§</a> [GLO] Global Variables</h3>
 <p>Global variables CAN only be changed by the <a class="term-reference" href="#term:governance-authority">governance authority</a> through proposals.</p>
 <p>Default values MUST be set at VPR initialization (genesis). Below you’ll find some possible values. These values will have to be defined in the <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
-<p><strong>Trust Unit:</strong></p>
-<ul>
-<li><code>trust_unit_price</code> (number) (<em>mandatory</em>): 1.0 <a class="term-reference" href="#term:denom">denom</a>.</li>
-</ul>
 <p><strong>Credential Schema:</strong></p>
 <ul>
 <li><code>credential_schema_schema_max_size</code> (number) (<em>mandatory</em>): 8192.</li>
@@ -4500,6 +5391,7 @@ The decision between this method and specifying the amount directly is left to i
 <li><a href="#digest" >Digest</a></li>
 <li><a href="#operatorauthorization" >OperatorAuthorization</a></li>
 <li><a href="#vsoperatorauthorization" >VSOperatorAuthorization</a></li>
+<li><a href="#exchangerate" >ExchangeRate</a></li>
 <li><a href="#globalvariables" >GlobalVariables</a></li>
 </ul>
 </li>
@@ -4556,7 +5448,7 @@ The decision between this method and specifying the amount directly is left to i
 <li><a href="#mod-perm-msg-5-void" >[MOD-PERM-MSG-5] Void</a></li>
 <li><a href="#mod-perm-msg-6-cancel-permission-vp-last-request" >[MOD-PERM-MSG-6] Cancel Permission VP Last Request</a></li>
 <li><a href="#mod-perm-msg-7-create-root-permission" >[MOD-PERM-MSG-7] Create Root Permission</a></li>
-<li><a href="#mod-perm-msg-8-extend-permission" >[MOD-PERM-MSG-8] Extend Permission</a></li>
+<li><a href="#mod-perm-msg-8-adjust-permission" >[MOD-PERM-MSG-8] Adjust Permission</a></li>
 <li><a href="#mod-perm-msg-9-revoke-permission" >[MOD-PERM-MSG-9] Revoke Permission</a></li>
 <li><a href="#mod-perm-msg-10-create-or-update-permission-session" >[MOD-PERM-MSG-10] Create or Update Permission Session</a></li>
 <li><a href="#mod-perm-msg-11-update-permission-module-parameters" >[MOD-PERM-MSG-11] Update Permission Module Parameters</a></li>
@@ -4591,6 +5483,12 @@ The decision between this method and specifying the amount directly is left to i
 <li><a href="#mod-de-msg-5-grant-vs-operator-authorization" >[MOD-DE-MSG-5] Grant VS Operator Authorization</a></li>
 <li><a href="#mod-de-msg-6-revoke-vs-operator-authorization" >[MOD-DE-MSG-6] Revoke VS Operator Authorization</a></li>
 <li><a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1] Store Digest</a></li>
+<li><a href="#mod-xr-msg-1-create-exchange-rate" >[MOD-XR-MSG-1] Create Exchange Rate</a></li>
+<li><a href="#mod-xr-msg-2-update-exchange-rate" >[MOD-XR-MSG-2] Update Exchange Rate</a></li>
+<li><a href="#mod-xr-msg-3-toggle-exchange-rate-state" >[MOD-XR-MSG-3] Toggle Exchange Rate State</a></li>
+<li><a href="#mod-xr-qry-1-get-exchange-rate" >[MOD-XR-QRY-1] Get Exchange Rate</a></li>
+<li><a href="#mod-xr-qry-2-list-exchange-rates" >[MOD-XR-QRY-2] List Exchange Rates</a></li>
+<li><a href="#mod-xr-qry-3-get-price" >[MOD-XR-QRY-3] Get Price</a></li>
 </ul>
 </li>
 </ul>

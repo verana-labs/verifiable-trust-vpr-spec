@@ -145,8 +145,11 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: decentralized identifier communication, DIDComm]]:
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
 
-[[def: denom]]:
-~ Native token of a [[ref: VPR]], example: VNA.
+[[def: denom, denoms]]:
+~ Token that has been configured and is recognized in a [[ref: VPR]], example: uvna, USDC.  
+
+[[def: native denom]]:
+~ Native token of a [[ref: VPR]], example: uvna.
 
 [[def: ecosystem, ecosystems]]: a network of interacting entities, both technical and human, that work together to establish and maintain digital trust. It encompasses applications, credentials, governance frameworks, and the underlying technical infrastructure, all designed to facilitate trustworthy interactions.
 
@@ -216,8 +219,8 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: network fee, network fees]]:
 ~ Fees paid by a [[ref: participant]] that are distributed to network validators and trust deposit holders.
 
-[[def: trust unit, trust units]]:
-~ Price, in [[ref: denom]], of one unit of trust.
+[[def: trust unit, trust units, TU, TUs]]:
+~ A fake denom that is not usable as a token (cannot be transferred, or used for paying in transactions). Trust unit is used to define fees in Permissions. Fees defined in trust units are automatically converted to [[ref: native denom]] when a transaction is executed, using an exchange rate `TU/[[ref: native denom]]`. Trust unit is used to compensate [[ref: native denom]] fluctuation.
 
 [[def:trust registry, trust registries]]
 ~ An approved list of [[ref: issuers]] and [[ref: verifiers]] that are authorized to issue/verify certain credentials in an ecosystem.
@@ -225,8 +228,11 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: URI, URIs]]
 ~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
 
-[[def: valid permission, valid permissions]]:
+[[def: active permission, active permissions]]:
 ~ A credential schema permission of a given type, which effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
+
+[[def: future permission, future permissions]]:
+~ A credential schema permission of a given type, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.
 
 [[def: validation process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
@@ -940,7 +946,8 @@ entity "TrustRegistry" as tr {
   +aka: string
   +active_version: int
   +language: string
-  
+  +pricing_asset: string
+  +allow_pricing_asset_schema_override: boolean
 }
 
 entity "GovernanceFrameworkVersion" as gfv {
@@ -971,6 +978,7 @@ entity "CredentialSchema" as cs {
   +holder_validation_validity_period: number
   +issuer_perm_management_mode: PermissionManagementMode
   +verifier_perm_management_mode: PermissionManagementMode
+  +pricing_asset: string
 }
 
 enum "SchemaAuthorizationPolicyRole" as sapr {
@@ -1018,12 +1026,41 @@ entity "DenomAmount" as da {
   amount: number
 }
 
+enum "PricingAssetType" as pricingassettype {
+  TU
+  COIN
+  FIAT
+}
+
+entity "PermissionSession" as csps {
+  *id: uuid
+  +created: timestamp
+  +modified: timestamp
+  authz: (uint64, uint64, uint64)[]
+}
+
+entity "ExchangeRate" as xr {
+  *id: uint64
+  +base_asset: string
+  +quote_asset: string
+  +rate: string
+  +rate_scale: uint32
+  +updated: timestamp
+  +expires: timestamp
+  +validity_duration: duration
+  +state: boolean
+}
+
+entity "ExchangeRateAuthorization" as xrauthz {
+}
+
+
 entity "Permission" as csp {
   *id: uint64
   did: string
   +created: timestamp
   +modified: timestamp
-  +extended: timestamp
+  +adjusted: timestamp
   +slashed: timestamp
   +repaid: timestamp
   effective_from: timestamp
@@ -1083,7 +1120,6 @@ enum "PermissionType" as cspt {
 
 
 entity "GlobalVariables" as gv {
-  +trust_unit_price: number
   +credential_schema_schema_max_size: number
   +credential_schema_issuer_grantor_validation_validity_period_max_days: number
   +credential_schema_verifier_grantor_validation_validity_period_max_days: number
@@ -1109,6 +1145,16 @@ entity "TrustDeposit" as td {
   last_repaid: timestamp
   slash_count: number
 }
+
+xrauthz o-- xr
+xrauthz o-- account: operator
+
+xr o-- pricingassettype: base_asset_type
+xr o-- pricingassettype: quote_asset_type
+
+xr --- "1..n" account: update_whitelist
+
+cs o-- pricingassettype: pricing_asset_type 
 
 group --o oauthz: authority
 account --o oauthz: operator
@@ -1210,6 +1256,8 @@ group  --o td: authority
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder validation process expires and must be renewed.
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
+- `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
 
 ### SchemaAuthorizationPolicy
 
@@ -1237,18 +1285,18 @@ group  --o td: authority
 - `authority` (group) (*mandatory*): [[ref: group]] that owns this permission.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account. This is the account that will have the right to create or update permission sessions.
 - `created` (timestamp) (*mandatory*): timestamp this `Permission` has been created.
-- `extended` (timestamp) (*mandatory*): timestamp this `Permission` has been extended.
+- `adjusted` (timestamp) (*mandatory*): timestamp this `Permission` has been adjusted.
 - `slashed` (timestamp) (*mandatory*): timestamp this `Permission` has been slashed.
 - `repaid` (timestamp) (*mandatory*): timestamp this `Permission` has been repaid.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Permission` is effective.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective, null if no time limit has been set for this permission.
 - `modified` (timestamp) (*mandatory*): timestamp this Permission has been modified.
-- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (grantee of this perm) for running a validation process for a given validation period, in trust unit. Default to 0.
-- `issuance_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is issued, in trust unit. Default to 0.
-- `verification_fees` (number) (*mandatory*): fees requested by grantee of this perm when a credential is verified, in trust unit. Default to 0.
-- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in `denom`. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `perm.deposit` value as well. If `perm` is, let's say revoked, then corresponding `perm.deposit` value is freed from `perm.grantee` Trust Deposit.
-- `slashed_deposit` (number) (*mandatory*): part of the deposit that has been slashed.
-- `repaid_deposit` (number) (*mandatory*): part of the slashed deposit that has been repaid.
+- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`authority` grantee of this perm) for running a validation process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
+- `issuance_fees` (number) (*mandatory*): fees requested by grantee `authority` of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
+- `verification_fees` (number) (*mandatory*): fees requested by grantee `authority` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
+- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in [[ ref: native denom ]]. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `perm.deposit` value as well. If `perm` is, let's say revoked, then corresponding `perm.deposit` value is freed from `perm.grantee` Trust Deposit.
+- `slashed_deposit` (number) (*mandatory*): part of the deposit in [[ ref: native denom ]] that has been slashed.
+- `repaid_deposit` (number) (*mandatory*): part of the slashed deposit in [[ ref: native denom ]] that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Permission` tree.
 - `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED, TERMINATION_REQUESTED.
@@ -1261,8 +1309,7 @@ group  --o td: authority
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `authority` account (trust fees will be paid by authority account)
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
-  as a direct consequence of executing authorized messages.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
 - `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with `authority` account.
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
 - `vs_operator_authz_spend_period`: (period) (*optional*): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
@@ -1304,7 +1351,7 @@ group  --o td: authority
 
 ### DenomAmount
 
-- `denom` (string) (*mandatory*): token denomination.
+- `denom` (string) (*mandatory*): token denomination, as explain in [[ref: denom]].
 - `amount` (number) (*mandatory*): amount expressed in the given denomination.
 
 ### Digest
@@ -1329,17 +1376,29 @@ group  --o td: authority
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization.
 - `permissions[]` (uint64[]) (*mandatory*): permission ids for which we grant this authorization.
 
+### ExchangeRate
+
+Represents an on-chain exchange rate between two assets.
+
+`ExchangeRate`:
+
+- `base_asset_type` (PricingAssetType, mandatory): Type of the base asset.
+- `base_asset` (string, mandatory if `base_asset_type` is COIN or FIAT, null if `base_asset_type` is TU): Identifier of the base asset.
+- `quote_asset_type` (PricingAssetType, mandatory): Type of the quote asset.
+- `quote_asset` (string, mandatory): Identifier of the quote asset.
+- `rate` (string, mandatory): Fixed-point integer representing the exchange rate from base asset to quote asset.
+- `rate_scale` (uint32, mandatory): Number of decimal digits used to scale rate.
+- `validity_duration` (duration, mandatory): when updated, set `expires` to block time plus `validity_duration`.
+- `updated` (timestamp, mandatory): Timestamp of the last exchange rate update.
+- `expires` (timestamp, mandatory): Timestamp after which the exchange rate is considered invalid.
+- `state` (boolean, mandatory): true means enabled, false means disabled.
+
 ### GlobalVariables
 
 `GlobalVariables`:
 
-**Trust Unit:**
-
-- `trust_unit_price` (number) (*mandatory*): [[ref: trust unit]] price, in [[ref: denom]].
-
 **Credential Schema:**
 
-- `credential_schema_trust_deposit` (number) (*mandatory*): default trust deposit value for creating a credential schema, in [[ref: trust units]].
 - `credential_schema_schema_max_size` (number) (*mandatory*): maximum size of the `schema` string attribute for a `CredentialSchema`.
 - `credential_schema_issuer_grantor_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer grantor validation can be valid for.
 - `credential_schema_verifier_grantor_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an verifier grantor validation can be valid for.
@@ -1349,7 +1408,7 @@ group  --o td: authority
 
 **Trust Deposit:**
 
-- `trust_deposit_share_value`(number) (*mandatory*): Value of one share of trust deposit, in `denom`. Default an initial value: 1. Increase over time, when yield is produced.
+- `trust_deposit_share_value`(number) (*mandatory*): Value of one share of trust deposit, in [[ref: native denom]]. Default an initial value: 1. Increase over time, when yield is produced.
 - `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 20% (0.20)
 - `trust_deposit_max_yield_rate`(number) (*mandatory*): Maximum yearly yield, in percent, that a trust deposit holder can obtain by receiving block rewards.
 - `trust_deposit_block_reward_share`(number) (*mandatory*): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)
@@ -1590,7 +1649,7 @@ As a result, `accountABC` is authorized to:
 |                                | Set Permission VP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated)    |authority + operator |
 |                                | Cancel Permission VP Last Request       |         N/A (Tx)                    | Msg    | [[MOD-PERM-MSG-6]](#mod-perm-msg-6-cancel-permission-vp-last-request)    |authority + operator |
 |                                | Create Root Permission                  |         N/A (Tx)                | Msg    | [[MOD-PERM-MSG-7]](#mod-perm-msg-7-create-root-permission)   |authority + operator |
-|                                | Extend Permission                       |         N/A (Tx)            | Msg    | [[MOD-PERM-MSG-8]](#mod-perm-msg-8-extend-permission)  |authority + operator |
+|                                | Adjust Permission                       |         N/A (Tx)            | Msg    | [[MOD-PERM-MSG-8]](#mod-perm-msg-8-adjust-permission)  |authority + operator |
 |                                | Revoke Permission                       |          N/A (Tx)              | Msg    | [[MOD-PERM-MSG-9]](#mod-perm-msg-9-revoke-permission)  |authority + operator |
 |                                | Create or update Permission Session     |           N/A (Tx)              | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-create-or-update-permission-session)  |authority + operator |
 |                                | Update Permission Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |governance proposal |
@@ -1616,7 +1675,15 @@ As a result, `accountABC` is authorized to:
 |             | Revoke Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization)   |authority (group proposal) OR authority + operator OR module call|
 |             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |module call|
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
+|             | Grant Exchange Rate Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-7]](#mod-de-msg-7-grant-exchange-rate-authorization)   |governance proposal|
+|             | Revoke Exchange Rate Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-8]](#mod-de-msg-8-revoke-exchange-rate-authorization)   |governance proposal|
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |authority + operator OR module call|
+| Exchange Rate     | Create Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
+|                   | Update Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
+|                   | Toggle Exchange Rate State        |                                  | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-toggle-exchange-rate-state)   |governance proposal|
+|                   | Get Exchange Rate                 | /xr/v1/get                  | Query  | [[MOD-XR-QRY-1]](#mod-xr-qry-1-get-exchange-rate)   |N/A |
+|                   | List Exchange Rates               | /xr/v1/list                 | Query  | [[MOD-XR-QRY-2]](#mod-xr-qry-2-list-exchange-rates)   |N/A |
+|                   | Get Price               | /xr/v1/price                 | Query  | [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)   |N/A |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -1994,6 +2061,8 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `holder_validation_validity_period` (*mandatory*), default to 0 (days).
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*).
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*).
+- `pricing_asset_type` (PricingAssetType) (*mandatory*).
+- `pricing_asset` (string) (*mandatory*).
 
 ##### [MOD-CS-MSG-1-2] Create New Credential Schema precondition checks
 
@@ -2014,6 +2083,16 @@ If any of these precondition checks fail, method MUST abort.
 - `holder_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*) MUST be a valid PermissionManagementMode.
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*) MUST be a valid PermissionManagementMode.
+
+- `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
+- `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"EUR"`, `"GBP"`,...
+
+:::note
+When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
+The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
+FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
+FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.
+:::
 
 ###### [MOD-CS-MSG-1-2-2] Create New Credential Schema fee checks
 
@@ -2039,6 +2118,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.verifier_perm_management_mode`: `verifier_perm_management_mode`
   - `cs.created`: current timestamp
   - `cs.modified`: `cs.created`.
+  - `cs.pricing_asset_type`: `pricing_asset_type`
+  - `cs.pricing_asset`: `pricing_asset`
 
 :::note
 If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM `Permission` so that validation processes can be run.
@@ -2608,7 +2689,7 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 ###### [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks
 
-- Load `Permission` entry `validator_perm` from `validator_perm_id`. It MUST be a [[ref: valid permission]] else transaction MUST abort.
+- Load `Permission` entry `validator_perm` from `validator_perm_id`. It MUST be a [[ref: active permission]] else transaction MUST abort.
 - Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`. It MUST exist.
 
 - if `type` (PermissionType) is equal to ISSUER:
@@ -2645,16 +2726,46 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
   
   - else abort.
 
-At the end, if a [[ ref: valid permission]] `validator_perm` is not found, [[ref: transaction]] MUST abort.
+At the end, if a [[ ref: active permission]] `validator_perm` is not found, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PERM-MSG-1-2-3] Start Permission VP fee checks
 
 - Load `Permission` entry `validator_perm` from `validator_perm_id`.
+- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`.
 
 - Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
-- `authority` MUST have an available balance in its [[ref: account]], to cover the following fees:
-  - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
-  - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
+
+> If a conversion is needed below, use [Get Price](#mod-xr-qry-3-get-price) to convert amounts to [[ref: native denom]]:
+
+- For trust fees:
+
+if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) in [[ref: native denom]];
+  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = 0 in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+:::note
+Trust deposit MUST always be paid in [[ref: native denom]]
+:::
 
 ###### [MOD-PERM-MSG-1-2-4] Start Permission VP overlap checks
 
@@ -2673,9 +2784,9 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - Load `Permission` entry `validator_perm` of the selected validator.
-- calculate `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
-- calculate `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
-- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module.
+
+- calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
+- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
 - define `now`: current timestamp.
@@ -2697,7 +2808,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.vp_last_state_change`: `now`
   - `applicant_perm.vp_state`: PENDING.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_denom`.
+  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
   - `applicant_perm.vp_summary_digest_sri`: null.
   - `applicant_perm.vp_validator_deposit`: 0.
   - `applicant_perm.vs_operator_authz_enabled`: `vs_operator_authz_enabled`
@@ -2763,17 +2874,46 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PERM-MSG-2-2-2] Renew Permission VP permission checks
 
-- Load `Permission` entry `applicant_perm`. `authority` running the operation MUST be `applicant_perm.authority`, else MUST abort. `applicant_perm` MUST be a [[ref: valid permission]].
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`. It MUST exist, and be a [[ref: valid permission]], else MUST abort.
+- Load `Permission` entry `applicant_perm`. `authority` running the operation MUST be `applicant_perm.authority`, else MUST abort. `applicant_perm` MUST be a [[ref: active permission]].
+- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`. It MUST exist, and be a [[ref: active permission]], else MUST abort.
 
 ###### [MOD-PERM-MSG-2-2-3] Renew Permission VP fee checks
 
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
 
 - Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
-- `authority` account MUST have  an available balance in its [[ref: account]], to cover:
-  - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
-  - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
+
+> If a conversion is needed below, use [Get Price](#mod-xr-qry-3-get-price) to convert amounts to [[ref: native denom]]:
+
+- For trust fees:
+
+if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) in [[ref: native denom]];
+  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = 0 in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+:::note
+Trust deposit MUST always be paid in [[ref: native denom]]
+:::
 
 ###### [MOD-PERM-MSG-2-3] Renew Permission VP execution
 
@@ -2783,9 +2923,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Permission` entry `applicant_perm`. 
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
-- calculate `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
-- calculate `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
-- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module.
+
+- calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
+- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
 - define `now`: current timestamp.
@@ -2794,9 +2934,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
   - `applicant_perm.vp_state`: PENDING.
   - `applicant_perm.vp_last_state_change`: current timestamp.
-  - `applicant_perm.deposit`: `applicant_perm.deposit` + `validation_trust_deposit_in_denom`.
+  - `applicant_perm.deposit`: `applicant_perm.deposit` + `validation_trust_deposit_in_native_denom`.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_denom`.
+  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
   - `applicant_perm.modified`: `now`
 
 #### [MOD-PERM-MSG-3] Set Permission VP to Validated
@@ -2873,20 +3013,21 @@ Now, let's verify `effective_until`:
 
 ###### [MOD-PERM-MSG-3-2-2] Set Permission VP to Validated validator perms
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]].
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]].
 - `authority` running the method MUST be `validator_perm.authority`.
 
-If `validator_perm` is not a [[ ref: valid permission]] (expired, revoked, slashed...) then applicant MUST start a new validation process.
+If `validator_perm` is not a [[ ref: active permission]] (expired, revoked, slashed...) then applicant MUST start a new validation process.
 
 ###### [MOD-PERM-MSG-3-2-3] Set Permission VP to Validated fee checks
 
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+- if `applicant_perm.vp_current_fees` is not in [[ref: native denom]], `authority` account MUST have `applicant_perm.vp_current_deposit` available in [[ref: native denom]] on its account for paying the trust deposit.
 
 ###### [MOD-PERM-MSG-3-2-4] Set Permission VP to Validated overlap checks
 
 We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. That should not occur in this method, but better do the check anyway.
 
-Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
+Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
 
 for each `Permission` entry `p` from `perms[]`:
 
@@ -2928,6 +3069,13 @@ Change value of provided `effective_until` if needed, and abort if needed:
   - `effective_until` MUST be greater than `applicant_perm.effective_until` else MUST abort
   - if `vp_exp` is not null, verify that provided `effective_until` is lower or equal to `vp_exp` else MUST abort.
 
+Fees and Trust Deposits:
+
+- transfer the full amount `applicant_perm.vp_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to validator `authority` [[ref: account]] `validator_perm.authority`;
+- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_perm.vp_current_deposit` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `applicant_perm.vp_current_deposit`.
+
+> Important: if `applicant_perm.vp_current_fees` is not in [[ref: native denom]], `authority` account MUST have `applicant_perm.vp_current_deposit` available for paying the trust deposit.
+
 Update `Permission` `applicant_perm`:
 
 - set `applicant_perm.modified` to `now`.
@@ -2946,16 +3094,9 @@ Update `Permission` `applicant_perm`:
   - set `applicant_perm.issuance_fee_discount` to `issuance_fee_discount`.
   - set `applicant_perm.verification_fee_discount` to `verification_fee_discount`.
 
-Fees and Trust Deposits:
-
-- transfer the full amount `applicant_perm.vp_current_fees` from escrow [[ref: account]] to validator `authority` [[ref: account]] `validator_perm.authority`;
-- Calculate `validator_trust_deposit` = `applicant_perm.vp_current_fees` * `GlobalVariables.trust_deposit_rate`;
-- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `validator_trust_deposit` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `validator_trust_deposit`.
-
 If `applicant_perm.type` is ISSUER or VERIFIER: Create authorization for `applicant_perm.vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
 
 - if `applicant_perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`applicant_perm.id`)**.
-
 
 #### [MOD-PERM-MSG-4] Void
 
@@ -3006,7 +3147,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if `applicant_perm.vp_exp` is null (validation never completed), set `applicant_perm.vp_state` to TERMINATED, else set `applicant_perm.vp_state` to VALIDATED.
 - set `applicant_perm.vp_last_state_change` to `now`.
 - if `applicant_perm.vp_current_fees` > 0:
-  - transfer `applicant_perm.vp_current_fees` back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_perm.authority`.
+  - transfer `applicant_perm.vp_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_perm.authority`.
   - set `applicant_perm.vp_current_fees` to 0;
 
 - if `applicant_perm.vp_current_deposit` > 0:
@@ -3029,9 +3170,9 @@ An [[ref: account]] that would like to create a `Permission` entry MUST call thi
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS.
 - `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
-- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in trust unit. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
-- `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in trust unit. Default to 0.
-- `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in trust unit. Default to 0.
+- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
+- `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.
+- `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
 
 ##### [MOD-PERM-MSG-7-2] Create Root Permission precondition checks
 
@@ -3066,9 +3207,9 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PERM-MSG-7-2-4] Create Root Permission overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-extend-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-adjust-permission) to set or adjust the `effective_until` value.
 
-Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `authority`.
+Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `authority`.
 
 > Note: unlike overlap checks from other methods, here we do not need to check for `validator_perm_id`, as for ECOSYSTEM type permissions it is NULL.
 
@@ -3104,7 +3245,7 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.verification_fees`: `verification_fees`
 - `perm.deposit`: 0
 
-#### [MOD-PERM-MSG-8] Extend Permission
+#### [MOD-PERM-MSG-8] Adjust Permission
 
 Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
@@ -3114,18 +3255,18 @@ This method can be called:
 - by `perm.authority`, if it is a self-created permission (schema configuration is open)
 - by an `authority` of a validator permission (if permission is managed by a VP).
 
-##### [MOD-PERM-MSG-8-1] Extend Permission parameters
+##### [MOD-PERM-MSG-8-1] Adjust Permission parameters
 
 - `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission;
 - `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Permission` will be effective.
 
-##### [MOD-PERM-MSG-8-2] Extend Permission precondition checks
+##### [MOD-PERM-MSG-8-2] Adjust Permission precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-8-2-1] Extend Permission basic checks
+###### [MOD-PERM-MSG-8-2-1] Adjust Permission basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3133,13 +3274,13 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `applicant_perm` MUST be a [[ref: valid permission]]
+- `applicant_perm` MUST be a [[ref: active permission]]
 - `applicant_perm.effective_until` MUST be greater than now().
 - else MUST abort.
 
 > Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null,  which was not the case in spec v3.
 
-###### [MOD-PERM-MSG-8-2-2] Extend Permission advanced checks
+###### [MOD-PERM-MSG-8-2-2] Adjust Permission advanced checks
 
 1. ECOSYSTEM permissions
 
@@ -3147,22 +3288,22 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 2. Self-created permissions
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]] of type ECOSYSTEM. `authority` running the method MUST be `applicant_perm.authority`.
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]] of type ECOSYSTEM. `authority` running the method MUST be `applicant_perm.authority`.
 
 3. VP managed permissions
 
 - `effective_until` MUST be lower or equal to `applicant_perm.vp_exp` else MUST abort.
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: valid permission]]. `authority` running the method MUST be `validator_perm.authority`.
+- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]]. `authority` running the method MUST be `validator_perm.authority`.
 
-###### [MOD-PERM-MSG-8-2-3] Extend Permission fee checks
+###### [MOD-PERM-MSG-8-2-3] Adjust Permission fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-8-2-4] Extend Permission overlap checks
+###### [MOD-PERM-MSG-8-2-4] Adjust Permission overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-extend-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-adjust-permission) to set or adjust the `effective_until` value.
 
-Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
+Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
 
 for each `Permission` entry `p` from `perms[]`:
 
@@ -3172,7 +3313,7 @@ for each `Permission` entry `p` from `perms[]`:
 
 > note: this check was not present in v3.
 
-##### [MOD-PERM-MSG-8-3] Extend Permission execution
+##### [MOD-PERM-MSG-8-3] Adjust Permission execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -3182,7 +3323,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Permission` entry `applicant_perm` from `id`.
 - set `applicant_perm.effective_until` to `effective_until`
-- set `applicant_perm.extended` to `now`
+- set `applicant_perm.adjusted` to `now`
 - set `applicant_perm.modified` to `now`
 
 
@@ -3219,7 +3360,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `applicant_perm` MUST be a [[ref: valid permission]]
+- `applicant_perm` MUST be a [[ref: active permission]]
 
 ###### [MOD-PERM-MSG-9-2-2] Revoke Permission advanced checks
 
@@ -3232,7 +3373,7 @@ if `applicant_perm.validator_perm_id` is defined:
 - set `validator_perm` = `applicant_perm`
 - while `validator_perm.validator_perm_id` is defined, 
   - load `validator_perm` from `validator_perm.validator_perm_id`.
-  - if `validator_perm` is a [[ref: valid permission]] and `validator_perm.authority` is who is running the method, => return true.
+  - if `validator_perm` is a [[ref: active permission]] and `validator_perm.authority` is who is running the method, => return true.
 - end
 - return false.
 
@@ -3249,9 +3390,9 @@ Example:
 
 In the following permission tree, "Verifier E" permission can be revoked:
 
-- by "Verifier E", if the corresponding permission is a [[ref: valid permission]];
-- by "Verifier Grantor D", if the corresponding permission is a [[ref: valid permission]];
-- by "Ecosystem A", if the corresponding root permission is a [[ref: valid permission]];
+- by "Verifier E", if the corresponding permission is a [[ref: active permission]];
+- by "Verifier Grantor D", if the corresponding permission is a [[ref: active permission]];
+- by "Ecosystem A", if the corresponding root permission is a [[ref: active permission]];
 - by the `TrustRegistry` object controller, obtained by resolving perm => credential schema => trust registry.
 
 ```plantuml
@@ -3390,7 +3531,7 @@ if `issuer_perm_id` is no null:
 
 - Load `issuer_perm` from `issuer_perm_id`.
 - if `issuer_perm.type` is not ISSUER, abort.
-- if `issuer_perm` is not a [[ref: valid permission]], abort.
+- if `issuer_perm` is not a [[ref: active permission]], abort.
 - if `issuer_perm.vs_operator` is not equal to `operator`, abort.
 - if `issuer_perm.authority` is not equal to `authority`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
@@ -3399,7 +3540,7 @@ if `verifier_perm_id` is no null:
 
 - Load `verifier_perm` from `verifier_perm_id`.
 - if `verifier_perm.type` is not VERIFIER, abort.
-- if `verifier_perm` is not a [[ref: valid permission]], abort.
+- if `verifier_perm` is not a [[ref: active permission]], abort.
 - if `verifier_perm.vs_operator` is not equal to `operator`, abort.
 - if `verifier_perm.authority` is not equal to `authority`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
@@ -3408,13 +3549,13 @@ agent:
 
 - Load `agent_perm` from `agent_perm_id`.
 - if `agent_perm.type` is not ISSUER, abort.
-- if `agent_perm` is not a [[ref: valid permission]], abort.
+- if `agent_perm` is not a [[ref: active permission]], abort.
 
 wallet_agent:
 
 - Load `wallet_agent_perm` from `wallet_agent_perm_id`.
 - if `wallet_agent_perm.type` is not ISSUER, abort.
-- if `wallet_agent_perm` is not a [[ref: valid permission]], abort.
+- if `wallet_agent_perm` is not a [[ref: active permission]], abort.
 
 :::warning
 we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.
@@ -3424,25 +3565,107 @@ we might want to check that credential schema of agent and wallet_agent perms is
 
 - Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]];
 
-- `authority` account MUST have sufficient available balance for the required beneficiary fees and its corresponding trust deposit `trust_fees` as explained below:
+> If a conversion is needed below, use [Get Price](#mod-xr-qry-3-get-price) to convert amounts to [[ref: native denom]]:
 
-To calculate the required beneficiary fees, use "Find Beneficiaries" query method below to get the set of beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
+- For trust fees (See [Pay per trust fees](#pay-per-trust-fees) above)
 
-- define `beneficiary_fees` = 0
+- `authority` account MUST have sufficient available balance as explained below.
+
+1. To calculate the required beneficiary fees **in asset price defined in credential schema**, use "Find Beneficiaries" query method below to get the set of beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
+
+- define `beneficiary_fees_in_denom` = 0
 
 **Credential Issuance**
 
-- if `issuer_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.issuance_fees`. Then use `issuer_perm.issuance_fee_discount` to adjust fees: `beneficiary_fees` = `beneficiary_fees` * (1 - `issuer_perm.issuance_fee_discount`)
+- if `issuer_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees_in_denom` = `beneficiary_fees_in_denom` + `perm.issuance_fees` * (1 - `issuer_perm.issuance_fee_discount`).
 
 **Credential Verification**
 
-- if `verifier_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees` = `beneficiary_fees` + `perm.verification_fees`. Then use `verifier_perm.verification_fee_discount` to adjust fees: `beneficiary_fees` = `beneficiary_fees` * (1 - `verifier_perm.verification_fee_discount`)
+- if `verifier_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees_in_denom` = `beneficiary_fees_in_denom` + `perm.verification_fees`  * (1 - `verifier_perm.verification_fee_discount`).
 
-Total required `trust_fees` to be paid by `authority` executing the method, including Trust Deposit and agent rewards:
+2. Now, calculate needed amount in credential schema asset [[ref: denom]] AND in [[ref: native denom]] for user agent, wallet user agent, and trust deposit.
 
-`trust_fees` = `beneficiary_fees` \* (1 + `GlobalVariables.user_agent_reward_rate` + `GlobalVariables.wallet_user_agent_reward_rate` + `GlobalVariables.trust_deposit_rate`) \* `GlobalVariables.trust_unit_price`
+- define `payer_trust_fees_in_denom` = `beneficiary_fees_in_denom`
+- define `payer_trust_deposit_in_native_denom` = 0
+- define `payees_trust_fees_to_account` = 0
+- define `payees_trust_deposit_in_native_denom` = 0
+- define `user_agent_reward_in_native_denom` = 0
+- define `wallet_user_agent_reward_in_native_denom` = 0
 
-See [Pay per trust fees](#pay-per-trust-fees) above.
+if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` is not modified
+- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
+
+- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
+- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
+- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
+
+Then:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees, `payer_trust_fees_in_denom` + `payer_trust_deposit_in_native_denom` + `user_agent_reward_in_native_denom` + `wallet_user_agent_reward_in_native_denom` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom`)
+- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
+
+- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
+- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
+- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
+
+Then:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees, `payer_trust_fees_in_denom` + `payer_trust_deposit_in_native_denom` + `user_agent_reward_in_native_denom` + `wallet_user_agent_reward_in_native_denom` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
+- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
+
+- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
+- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
+- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
+
+Then:
+
+- `authority` MUST have an available balance in its [[ref: account]], `payer_trust_deposit_in_native_denom` + `payees_trust_deposit_in_native_denom` + `user_agent_reward_in_native_denom` + `wallet_user_agent_reward_in_native_denom` in [[ref: native denom]].
+- AND `authority` MUST have an available balance in its [[ref: account]], `payees_trust_fees_to_account` in the denom specified as the payment asset in the credential schema.
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
+- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
+
+- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`) => but considered as 0 because FIAT payment are managed off-chain
+- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
+- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
+
+Then:
+
+- `authority` MUST have an available balance in its [[ref: account]], `payer_trust_deposit_in_native_denom` + `payees_trust_deposit_in_native_denom` + `user_agent_reward_in_native_denom` + `wallet_user_agent_reward_in_native_denom` in [[ref: native denom]].
+- no need to have anything else, as FIAT payments are managed off chain.
+
+:::warning
+- Trust deposit MUST always be paid in [[ref: native denom]]
+- when paying with COIN != [[ref: native denom]] or with FIAT, trust deposits of payees MUST be paid by payer.
+:::
 
 ##### [MOD-PERM-MSG-10-4] Create or Update Permission Session execution
 
@@ -3454,61 +3677,250 @@ If all precondition checks passed, method is executed.
 
 - use "Find Beneficiaries" above to build `found_perm_set`.
 
+Calculate the following variable using the method above in **fee checks**
+
 define `user_agent_reward` = 0.
 define `wallet_user_agent_reward` = 0.
 
-> Note: All funds sent to accounts, trust deposits, etc are comming exclusively from `authority` account executing the method. Explanations below are to illustrate what must receive the target account, not how it should be done. It's up to implementer to decide how to calculate, which transfers are done, etc
+> Note: All funds sent to accounts, trust deposits, etc are coming exclusively from `authority` account executing the method. Explanations below are to illustrate what must receive the target account, not how it should be done. It's up to implementer to decide how to calculate, which transfers are done, etc
 
 **Credential Issuance**
 
 - if `issuer_perm` is NOT null:
-  - for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
-    - calculate `perm_total_trust_fees` = `perm.issuance_fees`  \* (1 - `issuer_perm.issuance_fee_discount`) \* `GlobalVariables.trust_unit_price`
-    - calculate `perm_total_trust_fees_to_td` = `perm_total_trust_fees` \* `GlobalVariables.trust_deposit_rate`
-    - calculate `perm_total_trust_fees_to_account` = `perm_total_trust_fees` - `perm_total_trust_fees_to_td`
-    - update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.user_agent_reward_rate`
-    - update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.wallet_user_agent_reward_rate`
-    - transfer `perm_total_trust_fees_to_account` to `perm.authority`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `issuer_perm.deposit`.
 
-  - if `user_agent_reward` > 0:
-    - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
-    - calculate `perm_total_trust_fees_ua_to_account` = `user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
-    - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.authority`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.authority`. Increase `agent_perm.deposit` by the same value.
+for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
+
+- define `payer_trust_fees_in_denom` = `perm.issuance_fees`
+- define `payer_trust_deposit_in_native_denom` = 0
+- define `payee_trust_fees_to_account` = 0
+- define `payee_trust_deposit_in_native_denom` = 0
+- define `user_agent_reward_in_native_denom` = 0
+- define `wallet_user_agent_reward_in_native_denom` = 0
+
+if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` is not modified
+- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
+
+- `payee_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
+- `payee_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
+- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
+
+Then:
+
+- transfer `payee_trust_fees_to_account` to `perm.authority`.
+
+- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
+- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `issuer_perm.deposit`.
+
+- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
+- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom`)
+- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
+
+- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
+- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
+- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
+
+Then:
+
+- transfer `payee_trust_fees_to_account` to `perm.authority`.
+
+- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
+- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `issuer_perm.deposit`.
+
+- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
+- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
+- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
+
+- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
+- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
+- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
+
+Then:
+
+- transfer `payee_trust_fees_to_account` to `perm.authority` in the denom specified as the payment asset in the credential schema.
+
+- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
+- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `issuer_perm.deposit`.
+
+- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
+- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
+- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
+
+- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`) => but considered as 0 because FIAT payment are managed off-chain
+- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
+- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
+
+Then:
+
+- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
+- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `issuer_perm.deposit`.
+
+- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
+- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
+
+Process Agent Rewards
+
+- if `user_agent_reward` > 0:
+  - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
+  - calculate `perm_total_trust_fees_ua_to_account` = `user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
+  - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.authority`.
+  - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.authority`. Increase `agent_perm.deposit` by the same value.
   
-  - if `wallet_user_agent_reward` > 0:
-    - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
-    - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
-    - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.authority`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.authority`. Increase `wallet_agent_perm.deposit` by the same value.
+- if `wallet_user_agent_reward` > 0:
+  - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
+  - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
+  - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.authority`.
+  - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.authority`. Increase `wallet_agent_perm.deposit` by the same value.
 
 **Credential Verification**
 
 - else (`verifier_perm` is NOT null):
-  - for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
-    - calculate `perm_total_trust_fees` = `perm.verification_fees`  \* (1 - `verifier_perm.verification_fee_discount`) \* `GlobalVariables.trust_unit_price`
-    - calculate `perm_total_trust_fees_to_td` = `perm_total_trust_fees` \* `GlobalVariables.trust_deposit_rate`
-    - calculate `perm_total_trust_fees_to_account` = `perm_total_trust_fees` - `perm_total_trust_fees_to_td`
-    - update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.user_agent_reward_rate`
-    - update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `perm_total_trust_fees` \* `GlobalVariables.wallet_user_agent_reward_rate`
-    - transfer `perm_total_trust_fees_to_account` to `perm.authority`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_to_td` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `verifier_perm.deposit`.
 
-  - if `user_agent_reward` > 0:
-    - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
-    - calculate `perm_total_trust_fees_ua_to_account` = `user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
-    - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.authority`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.authority`. Increase `agent_perm.deposit` by the same value.
+Interate over all permissions:
+
+for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
+
+- define `payer_trust_fees_in_denom` = `perm.verification_fees`
+- define `payer_trust_deposit_in_native_denom` = 0
+- define `payee_trust_fees_to_account` = 0
+- define `payee_trust_deposit_in_native_denom` = 0
+- define `user_agent_reward_in_native_denom` = 0
+- define `wallet_user_agent_reward_in_native_denom` = 0
+
+if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` is not modified
+- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
+
+- `payee_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
+- `payee_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
+- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
+
+Then:
+
+- transfer `payee_trust_fees_to_account` to `perm.authority`.
+
+- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
+- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `verifier_perm.deposit`.
+
+- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
+- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom`)
+- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
+
+- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
+- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
+- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
+
+Then:
+
+- transfer `payee_trust_fees_to_account` to `perm.authority`.
+
+- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
+- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `verifier_perm.deposit`.
+
+- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
+- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
+- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
+
+- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
+- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
+- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
+
+Then:
+
+- transfer `payee_trust_fees_to_account` to `perm.authority` in the denom specified as the payment asset in the credential schema.
+
+- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
+- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `verifier_perm.deposit`.
+
+- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
+- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
+
+Calculate:
+
+- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
+- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
+
+- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`) => but considered as 0 because FIAT payment are managed off-chain
+- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+
+- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
+- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
+
+Then:
+
+- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
+- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `verifier_perm.deposit`.
+
+- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
+- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
+
+Process Agent Rewards
+
+- if `user_agent_reward` > 0:
+  - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
+  - calculate `perm_total_trust_fees_ua_to_account` = `user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
+  - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.authority`.
+  - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.authority`. Increase `agent_perm.deposit` by the same value.
   
-  - if `wallet_user_agent_reward` > 0:
-    - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
-    - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
-    - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.authority`.
-    - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.authority`. Increase `wallet_agent_perm.deposit` by the same value.
+- if `wallet_user_agent_reward` > 0:
+  - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
+  - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
+  - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.authority`.
+  - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.authority`. Increase `wallet_agent_perm.deposit` by the same value.
 
+> Now that all transfers have been done, we can create the entries
 
 Create a `PermissionSessionRecord` `cspsr`:
 
@@ -3613,7 +4025,7 @@ if `applicant_perm.validator_perm_id` is defined:
 - set `validator_perm` = `applicant_perm`
 - while `validator_perm.validator_perm_id` is defined, 
   - load `validator_perm` from `validator_perm.validator_perm_id`.
-  - if `validator_perm` is a [[ref: valid permission]] and `validator_perm.authority` is who is running the method, => return true.
+  - if `validator_perm` is a [[ref: active permission]] and `validator_perm.authority` is who is running the method, => return true.
 - end
 - return false.
 
@@ -3707,16 +4119,17 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 
 ##### [MOD-PERM-MSG-14-1] Self Create Permission parameters
 
-- `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
-- `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
-- `schema_id` (uint64) (*mandatory*)
+- `authority` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
 - `type` (PermissionType) (*mandatory*): ISSUER or VERIFIER.
+- `validator_perm_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]] of the Credential Schema defined by `schema_id`
+- `schema_id` (uint64) (*mandatory*)
+- `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
-- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in trust unit. Default to 0.
-- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in trust unit. Default to 0.
+- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
+- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in the denom specified in the credential schema. Default to 0.
 - `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `authority` account (trust fees will be paid by authority account)
 - `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
   as a direct consequence of executing authorized messages.
@@ -3732,13 +4145,21 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
+Load `Permission` `validator_perm` from `validator_perm_id`.
+
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
 - `type` (PermissionType) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
+- `validator_perm_id` (uint64) (*mandatory*): `validator_perm` MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]] of the Credential Schema defined by `schema_id`
+- `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist and MUST be the same than `validator_perm.schema_id`
+- `vs_operator` (account) (*optional*): no check required.
 - `did`, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `effective_from` must be in the future.
-- `effective_until`, if not null, must be greater than `effective_from`
+- `effective_from` MUST be in the future AND
+  - MUST be greater or equal to `validator_perm.effective_from` AND
+  - if `validator_perm.effective_until` is not null, MUST be lower than `validator_perm.effective_until`
+- `effective_until`:
+  - if null, `validator_perm.effective_until` MUST be NULL
+  - else if not null, must be greater than `effective_from` AND if `validator_perm.effective_until` is not null, MUST be lower or equal to `validator_perm.effective_until`
 - `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
 - `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
 - `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
@@ -3764,9 +4185,9 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PERM-MSG-14-2-4] Self Create Permission overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-extend-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-adjust-permission) to set or adjust the `effective_until` value.
 
-Find all [[ref: valid permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
+Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
 
 for each `Permission` entry `p` from `perms[]`:
 
@@ -3783,11 +4204,11 @@ If all precondition checks passed, method is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-- load the root permission of the schema (the one of type `ECOSYSTEM`) to `ecosystem_perm_id`.
 
 A new entry `Permission` `perm` MUST be created:
 
 - `perm.id`: auto-incremented uint64.
+- `perm.validator_perm_id`: `validator_perm_id`
 - `perm.schema_id`: `schema_id`.
 - `perm.modified` to `now`.
 - `perm.type`: `type`.
@@ -3801,7 +4222,6 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.issuance_fees`: 0
 - `perm.verification_fees`: `verification_fees` if specified and `type` is ISSUER, else 0.
 - `perm.deposit`: 0
-- `perm.validator_perm_id`: `ecosystem_perm_id`
 - `perm.vs_operator_authz_enabled`: `vs_operator_authz_enabled`
 - `perm.vs_operator_authz_spend_limit`: `vs_operator_authz_spend_limit`
 - `perm.vs_operator_authz_with_feegrant`: `vs_operator_authz_with_feegrant`
@@ -3832,7 +4252,7 @@ Generic query used for (at least):
 - `did` (string) (*optional*): the did the permission refers to.
 - `perm_id` (number) (*optional*): limit to permissions where the `validator_perm_id` is `perm_id`.
 - `type` (PermissionType) (*optional*): if we want to limit to a specific permission type.
-- `only_valid` (boolean) (*optional*): if set to true, only return valid permissions.
+- `only_valid` (boolean) (*optional*): if set to true, only return active permissions.
 - `only_slashed` (boolean) (*optional*): if set to true, only return slashed permissions.
 - `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed permissions.
 - `modified_after` (timestamp) (*optional*): limit to permissions modified after (or equal to) `modified_after`.
@@ -3959,8 +4379,8 @@ v --> vg
 ##### [MOD-PERM-QRY-4-2] Find Beneficiaries checks
 
 - if `issuer_perm_id` and `verifier_perm_id` are unset then MUST abort.
-- if `issuer_perm_id` is specified, load `issuer_perm` from `issuer_perm_id`, Permission MUST exist and MUST be a [[ref: valid permission]].
-- if `verifier_perm_id` is specified, load `verifier_perm` from `verifier_perm_id`, Permission MUST exist and MUST be a [[ref: valid permission]].
+- if `issuer_perm_id` is specified, load `issuer_perm` from `issuer_perm_id`, Permission MUST exist and MUST be a [[ref: active permission]].
+- if `verifier_perm_id` is specified, load `verifier_perm` from `verifier_perm_id`, Permission MUST exist and MUST be a [[ref: active permission]].
 
 ##### [MOD-PERM-QRY-4-3] Find Beneficiaries execution
 
@@ -4690,7 +5110,7 @@ MUST abort if one of these conditions fails:
 This method can only be called directly by the following methods with no signer check:
 
 - Self Create Permission
-- Extend Permission
+- Adjust Permission
 - Set Permission VP to Validated
 
 > Note: This methid can only grant authorization for the `CreateOrUpdatePermissionSession` Msg.
@@ -4831,6 +5251,280 @@ Create Digest `digest`:
 - set `digest.digest_sri` to digest_sri
 - set `digest.created` to now.
 
+
+#### [MOD-XR-MSG-1] Create Exchange Rate
+
+The **Create Exchange Rate** method allows creating an `ExchangeRate` entry for a given `(base_asset_type, base_asset, quote_asset_type, quote_asset)` pair.
+
+- Only a governance proposal CAN execute this method.
+
+##### [MOD-XR-MSG-1] Create Exchange Rate method parameters
+
+- `base_asset_type` (PricingAssetType, *mandatory*)  
+- `base_asset` (string, *mandatory*)  
+- `quote_asset_type` (PricingAssetType, *mandatory*)  
+- `quote_asset` (string, *mandatory*)  
+- `rate` (string, *mandatory*)  
+- `rate_scale` (uint32, *mandatory*)  
+- `validity_duration` (duration, *mandatory*)
+
+##### [MOD-XR-MSG-1] Create Exchange Rate precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-XR-MSG-1] Create Exchange Rate basic checks
+
+If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- **Asset type validity**
+  - `base_asset_type` MUST be a valid `PricingAssetType` value.
+  - `quote_asset_type` MUST be a valid `PricingAssetType` value.
+
+- **Asset identifier basic validity**
+  - `base_asset` MUST be non-empty.
+  - `quote_asset` MUST be non-empty.
+  
+- **Asset type / identifier consistency**
+  - If `base_asset_type = TRUST_UNIT`:
+    - `base_asset` MUST equal `"TU"`.
+  - If `quote_asset_type = TRUST_UNIT`:
+    - `quote_asset` MUST equal `"TU"`.
+
+  - If `base_asset_type = COIN`:
+    - `base_asset` MUST be a valid Cosmos-SDK denom string.
+    - `base_asset` MUST correspond to an asset that exists on-chain (i.e., denom is recognized by the chain and can be held in balances).
+    - If `base_asset` starts with `ibc/`, a denom trace for this denom MUST exist in the IBC transfer module store.
+    - If `base_asset` starts with `factory/`, the denom MUST be a valid tokenfactory denom and the corresponding token MUST exist.
+  - If `quote_asset_type = COIN`:
+    - `quote_asset` MUST be a valid Cosmos-SDK denom string.
+    - `quote_asset` MUST correspond to an asset that exists on-chain.
+    - If `quote_asset` starts with `ibc/`, a denom trace for this denom MUST exist in the IBC transfer module store.
+    - If `quote_asset` starts with `factory/`, the denom MUST be a valid tokenfactory denom and the corresponding token MUST exist.
+
+  - If `base_asset_type = FIAT`:
+    - `base_asset` MUST be a valid ISO-4217 currency code.
+  - If `quote_asset_type = FIAT`:
+    - `quote_asset` MUST be a valid ISO-4217 currency code.
+
+- **Pair validity**
+  - The pair `(base_asset_type, base_asset, quote_asset_type, quote_asset)` MUST NOT be identical on both sides (base and quote MUST NOT represent the same asset).
+  - The pair `(base_asset_type, base_asset, quote_asset_type, quote_asset)` MUST be unique in storage. If an entry already exists, execution MUST abort.
+
+- **Rate validity**
+  - `rate` MUST be a base-10 encoded unsigned integer string.
+  - `rate` MUST be strictly greater than `"0"`.
+  - `rate_scale` MUST be within protocol-defined limits (e.g., `rate_scale <= 18`).
+
+- **validity_duration**
+  - `validity_duration` MUST be greater or equal to `1 minute`.
+  
+###### [MOD-XR-MSG-1] Create Exchange Rate fee checks
+
+Fee payer MUST have sufficient [[ref: estimated transaction fees]].
+
+##### [MOD-XR-MSG-1] Create Exchange Rate execution of the method
+
+Create `ExchangeRate` entry `xr`:
+
+- `xr.id` = auto generated id
+- `xr.base_asset_type` = `base_asset_type`
+- `xr.base_asset` = `base_asset`
+- `xr.quote_asset_type` = `quote_asset_type`
+- `xr.quote_asset` = `quote_asset`
+- `xr.rate` = `rate`
+- `xr.rate_scale` = `rate_scale`
+- `xr.validity_duration` = `validity_duration`
+- `xr.expires` = block timestamp + `validity_duration`
+- `xr.state` = false
+- `xr.updated` = block timestamp
+
+#### [MOD-XR-MSG-2] Update Exchange Rate
+
+Only an authorized operator that has an ExchangeRateAuthorization can execute this method.
+
+##### [MOD-XR-MSG-2] Update Exchange Rate method parameters
+
+- `id` (uint64, *mandatory*)
+- `rate` (string, *mandatory*)  
+
+##### [MOD-XR-MSG-2] Update Exchange Rate precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-XR-MSG-2] Update Exchange Rate basic checks
+
+If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- **Authorization**
+
+Only an authorized operator that has an ExchangeRateAuthorization can execute this method.
+
+- `id` (uint64, *mandatory*) must refer to an existing `ExchangeRate` entry `xr` with `xr.active` = true
+- `rate` MUST be strictly greater than `"0"`.
+  
+###### [MOD-XR-MSG-2] Update Exchange Rate fee checks
+
+Fee payer MUST have sufficient [[ref: estimated transaction fees]].
+
+##### [MOD-XR-MSG-2] Update Exchange Rate execution of the method
+
+Load `ExchangeRate` `xr`.
+
+- `xr.rate` = `rate`
+- `xr.expires` = block time + `validity_duration`
+- `xr.updated` = block time
+
+#### [MOD-XR-MSG-3] Toggle Exchange Rate State
+
+The **Toggle Exchange Rate State** method allows an authorized actor to enable or disable an exchange rate.
+
+##### [MOD-XR-MSG-3] Toggle Exchange Rate State method parameters
+
+- `id` (uint64, *mandatory*): id of the exchange rate
+- `state` (boolean, *mandatory*): true to set enabled, false to set disabled
+
+##### [MOD-XR-MSG-3] Toggle Exchange Rate State precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-XR-MSG-3] Toggle Exchange Rate State basic checks
+
+If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- **Authorization**
+  - Only a governance proposal can enable or disable an exchange rate.
+
+- ExchangeRate with id `id` MUST exist.
+  
+###### [MOD-XR-MSG-3] Toggle Exchange Rate State fee checks
+
+Fee payer MUST have sufficient [[ref: estimated transaction fees]].
+
+##### [MOD-XR-MSG-3] Toggle Exchange Rate State execution of the method
+
+Load `ExchangeRate` `xr`.
+
+- set `xr.state` to !`xr.state`.
+- set `xr.updated` to block time
+
+#### [MOD-XR-QRY-1] Get Exchange Rate
+
+Any [[ref: account]] CAN run this [[ref: query]].
+
+##### [MOD-XR-QRY-1-1] Get Exchange Rate query parameters
+
+- `state` (boolean, *optional*): to force state, enabled or disabled
+- `expire_ts` (timestamp, *optional*): return only if expire_ts is greater than `expire_ts`
+
+AND:
+
+(
+
+- `id` (uint64) (*mandatory*): the id of the exchange rate to get
+
+OR:
+
+- `base_asset_type` (PricingAssetType, *mandatory*)  
+- `base_asset` (string, *mandatory*)  
+- `quote_asset_type` (PricingAssetType, *mandatory*)  
+- `quote_asset` (string, *mandatory*)  
+)
+
+##### [MOD-XR-QRY-1-2] Get Exchange Rate query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `id` (uint64) (*mandatory*): MUST exist,
+
+OR
+
+an ExchangeRate entry with `base_asset_type`, `base_asset`, `quote_asset_type`, `quote_asset` MUST exist.
+
+##### [MOD-XR-QRY-1-3] Get Exchange Rate execution of the query
+
+If found, returns ExchangeRate entry, else return not found.
+
+#### [MOD-XR-QRY-2] List Exchange Rates
+
+Any [[ref: account]] CAN run this [[ref: query]]. As this method does not modify data, it does not require a [[ref: transaction]].
+
+##### [MOD-XR-QRY-2-1] List Exchange Rates query parameters
+
+- `base_asset_type` (PricingAssetType, *optional*)  
+- `base_asset` (string, *optional*)  
+- `quote_asset_type` (PricingAssetType, *optional*)  
+- `quote_asset` (string, *optional*)  
+- `state` (boolean, *optional*): to force state, enabled or disabled
+- `expire` (timestamp, *optional*): return only if expire is greater than `expire`
+
+##### [MOD-XR-QRY-2-2] List Exchange Rates query checks
+
+##### [MOD-XR-QRY-2-3] List Exchange Rates execution of the query
+
+If found, returns a list of found ExchangeRates, else return an empty list.
+
+#### [MOD-XR-QRY-3] Get Price
+
+Anyone CAN run this [[ref: query]], throgh module call or using the API.
+
+##### [MOD-XR-QRY-3] Get Price Example
+
+base_asset_type  = TRUST_UNIT
+base_asset       = "TU"
+quote_asset_type = COIN
+quote_asset      = "uvna"
+rate             = R
+rate_scale       = S
+
+If a valid `ExchangeRate` entry exists with:
+
+- `base_asset_type = TRUST_UNIT`
+- `base_asset = "TU"`
+- `quote_asset_type = COIN`
+- `quote_asset = "uvna"`
+
+then the price of **`amount` Trust Unit expressed in uvna** MUST be computed using the following formula:
+
+```
+price_uvna = floor(amount * rate / 10^rate_scale)
+```
+
+Where:
+
+- `rate` and `rate_scale` are the values stored in the corresponding `ExchangeRate` entry.
+- `price_uvna` is expressed in **micro-denominated VNA units (`uvna`)**.
+- Rounding MUST always be performed **downwards**.
+
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail.
+
+##### [MOD-XR-QRY-3-1] Get Price parameters
+
+- `base_asset_type` (PricingAssetType, *optional*)  
+- `base_asset` (string, *optional*)  
+- `quote_asset_type` (PricingAssetType, *optional*)  
+- `quote_asset` (string, *optional*)
+- `amount` (number, *mandatory*)
+
+##### [MOD-XR-QRY-3-2] Get Price query checks
+
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned
+
+##### [MOD-XR-QRY-3-3] Get Price execution of the query
+
+- if (base_asset_type, base_asset) == (quote_asset_type, quote_asset): `price` = `amount`.
+- else load (base_asset_type, base_asset, quote_asset_type, quote_asset).
+  - if entry doesn't exist or is not active or expired, abort and generate an error.
+  - else return `price` = floor(amount * rate / 10^rate_scale)
+
+::: warning
+
+- Conversions use base units only.
+- Integer arithmetic MUST be used.
+- `quote_amount = floor(base_amount × rate / 10^rate_scale)`.
+- Expired rates MUST NOT be used.
+
+:::
+
 ## Initial Data Requirements
 
 ### [GLO] Global Variables
@@ -4838,10 +5532,6 @@ Create Digest `digest`:
 Global variables CAN only be changed by the [[ref: governance authority]] through proposals.
 
 Default values MUST be set at VPR initialization (genesis). Below you'll find some possible values. These values will have to be defined in the [[ref: governance framework]].
-
-**Trust Unit:**
-
-- `trust_unit_price` (number) (*mandatory*): 1.0 [[ref: denom]].
 
 **Credential Schema:**
 
