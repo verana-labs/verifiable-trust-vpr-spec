@@ -1256,7 +1256,7 @@ group  --o td: authority
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder validation process expires and must be renewed.
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
-- `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
+- `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
 
 ### SchemaAuthorizationPolicy
@@ -2092,14 +2092,6 @@ When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency
 The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
 FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
 FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.
-:::
-
-:::warning
-As of spec v4, the only allowed `(pricing_asset_type, pricing_asset)` are:
-
-- `(TU, null)`
-- `(COIN, [[ref: native denom]])`
-
 :::
 
 ###### [MOD-CS-MSG-1-2-2] Create New Credential Schema fee checks
@@ -3593,18 +3585,10 @@ we might want to check that credential schema of agent and wallet_agent perms is
 
 2. Now, calculate needed amount in credential schema asset [[ref: denom]] AND in [[ref: native denom]] for user agent, wallet user agent, and trust deposit.
 
-> Payer
-
 - define `payer_trust_fees_in_denom` = `beneficiary_fees_in_denom`
 - define `payer_trust_deposit_in_native_denom` = 0
-
-> Payees
-
 - define `payees_trust_fees_to_account` = 0
 - define `payees_trust_deposit_in_native_denom` = 0
-
-> Agents
-
 - define `user_agent_reward_in_native_denom` = 0
 - define `wallet_user_agent_reward_in_native_denom` = 0
 
@@ -3704,22 +3688,12 @@ define `wallet_user_agent_reward` = 0.
 
 - if `issuer_perm` is NOT null:
 
-1. Interate over all permissions:
-
 for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
-
-> Payer
 
 - define `payer_trust_fees_in_denom` = `perm.issuance_fees`
 - define `payer_trust_deposit_in_native_denom` = 0
-
-> Current Payee
-
 - define `payee_trust_fees_to_account` = 0
 - define `payee_trust_deposit_in_native_denom` = 0
-
-> Agents
-
 - define `user_agent_reward_in_native_denom` = 0
 - define `wallet_user_agent_reward_in_native_denom` = 0
 
@@ -3813,7 +3787,7 @@ Then:
 - update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
 - update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
 
-2. Process Agent Rewards
+Process Agent Rewards
 
 - if `user_agent_reward` > 0:
   - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
@@ -3831,22 +3805,14 @@ Then:
 
 - else (`verifier_perm` is NOT null):
 
-1. Interate over all permissions:
+Interate over all permissions:
 
 for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
 
-> Payer
-
 - define `payer_trust_fees_in_denom` = `perm.verification_fees`
 - define `payer_trust_deposit_in_native_denom` = 0
-
-> Current Payee
-
 - define `payee_trust_fees_to_account` = 0
 - define `payee_trust_deposit_in_native_denom` = 0
-
-> Agents
-
 - define `user_agent_reward_in_native_denom` = 0
 - define `wallet_user_agent_reward_in_native_denom` = 0
 
@@ -3940,7 +3906,7 @@ Then:
 - update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
 - update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
 
-2. Process Agent Rewards
+Process Agent Rewards
 
 - if `user_agent_reward` > 0:
   - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
@@ -3953,6 +3919,8 @@ Then:
   - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
   - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.authority`.
   - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.authority`. Increase `wallet_agent_perm.deposit` by the same value.
+
+> Now that all transfers have been done, we can create the entries
 
 Create a `PermissionSessionRecord` `cspsr`:
 
@@ -5517,7 +5485,7 @@ If a valid `ExchangeRate` entry exists with:
 
 then the price of **`amount` Trust Unit expressed in uvna** MUST be computed using the following formula:
 
-```code
+```
 price_uvna = floor(amount * rate / 10^rate_scale)
 ```
 
