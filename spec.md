@@ -1683,6 +1683,7 @@ As a result, `accountABC` is authorized to:
 |                   | Toggle Exchange Rate State        |                                  | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-toggle-exchange-rate-state)   |governance proposal|
 |                   | Get Exchange Rate                 | /xr/v1/get                  | Query  | [[MOD-XR-QRY-1]](#mod-xr-qry-1-get-exchange-rate)   |N/A |
 |                   | List Exchange Rates               | /xr/v1/list                 | Query  | [[MOD-XR-QRY-2]](#mod-xr-qry-2-list-exchange-rates)   |N/A |
+|                   | Get Price               | /xr/v1/price                 | Query  | [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)   |N/A |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -2091,6 +2092,14 @@ When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency
 The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
 FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
 FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.
+:::
+
+:::warning
+As of spec v4, the only allowed `(pricing_asset_type, pricing_asset)` are:
+
+- `(TU, null)`
+- `(COIN, [[ref: native denom]])`
+
 :::
 
 ###### [MOD-CS-MSG-1-2-2] Create New Credential Schema fee checks
@@ -2730,14 +2739,41 @@ At the end, if a [[ ref: active permission]] `validator_perm` is not found, [[re
 ###### [MOD-PERM-MSG-1-2-3] Start Permission VP fee checks
 
 - Load `Permission` entry `validator_perm` from `validator_perm_id`.
+- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`.
 
 - Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
-- `authority` MUST have an available balance in its [[ref: account]], to cover the following fees.
 
-If `cs.
+> If a conversion is needed below, use [Get Price](#mod-xr-qry-3-get-price) to convert amounts to [[ref: native denom]]:
 
-  - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
-  - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
+- For trust fees:
+
+if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) in [[ref: native denom]];
+  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = 0 in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+:::note
+Trust deposit MUST always be paid in [[ref: native denom]]
+:::
 
 ###### [MOD-PERM-MSG-1-2-4] Start Permission VP overlap checks
 
@@ -2756,9 +2792,9 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - Load `Permission` entry `validator_perm` of the selected validator.
-- calculate `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
-- calculate `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
-- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module.
+
+- calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
+- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
 - define `now`: current timestamp.
@@ -2780,7 +2816,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.vp_last_state_change`: `now`
   - `applicant_perm.vp_state`: PENDING.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_denom`.
+  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
   - `applicant_perm.vp_summary_digest_sri`: null.
   - `applicant_perm.vp_validator_deposit`: 0.
   - `applicant_perm.vs_operator_authz_enabled`: `vs_operator_authz_enabled`
@@ -2854,9 +2890,38 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
 
 - Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
-- `authority` account MUST have  an available balance in its [[ref: account]], to cover:
-  - the required `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
-  - the required `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
+
+> If a conversion is needed below, use [Get Price](#mod-xr-qry-3-get-price) to convert amounts to [[ref: native denom]]:
+
+- For trust fees:
+
+if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) in [[ref: native denom]];
+  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
+
+- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
+  - the required `validation_fees_in_denom` = 0 in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+
+:::note
+Trust deposit MUST always be paid in [[ref: native denom]]
+:::
 
 ###### [MOD-PERM-MSG-2-3] Renew Permission VP execution
 
@@ -2866,9 +2931,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Permission` entry `applicant_perm`. 
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
-- calculate `validation_fees_in_denom`: `validator_perm.validation_fees` * `GlobalVariables.trust_unit_price`.
-- calculate `validation_trust_deposit_in_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`.
-- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_denom` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module.
+
+- calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
+- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
 - define `now`: current timestamp.
@@ -2877,9 +2942,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
   - `applicant_perm.vp_state`: PENDING.
   - `applicant_perm.vp_last_state_change`: current timestamp.
-  - `applicant_perm.deposit`: `applicant_perm.deposit` + `validation_trust_deposit_in_denom`.
+  - `applicant_perm.deposit`: `applicant_perm.deposit` + `validation_trust_deposit_in_native_denom`.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_denom`.
+  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
   - `applicant_perm.modified`: `now`
 
 #### [MOD-PERM-MSG-3] Set Permission VP to Validated
@@ -2963,7 +3028,8 @@ If `validator_perm` is not a [[ ref: active permission]] (expired, revoked, slas
 
 ###### [MOD-PERM-MSG-3-2-3] Set Permission VP to Validated fee checks
 
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+- if `applicant_perm.vp_current_fees` is not in [[ref: native denom]], `authority` account MUST have `applicant_perm.vp_current_deposit` available in [[ref: native denom]] on its account for paying the trust deposit.
 
 ###### [MOD-PERM-MSG-3-2-4] Set Permission VP to Validated overlap checks
 
@@ -3011,6 +3077,13 @@ Change value of provided `effective_until` if needed, and abort if needed:
   - `effective_until` MUST be greater than `applicant_perm.effective_until` else MUST abort
   - if `vp_exp` is not null, verify that provided `effective_until` is lower or equal to `vp_exp` else MUST abort.
 
+Fees and Trust Deposits:
+
+- transfer the full amount `applicant_perm.vp_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to validator `authority` [[ref: account]] `validator_perm.authority`;
+- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_perm.vp_current_deposit` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `applicant_perm.vp_current_deposit`.
+
+> Important: if `applicant_perm.vp_current_fees` is not in [[ref: native denom]], `authority` account MUST have `applicant_perm.vp_current_deposit` available for paying the trust deposit.
+
 Update `Permission` `applicant_perm`:
 
 - set `applicant_perm.modified` to `now`.
@@ -3029,16 +3102,9 @@ Update `Permission` `applicant_perm`:
   - set `applicant_perm.issuance_fee_discount` to `issuance_fee_discount`.
   - set `applicant_perm.verification_fee_discount` to `verification_fee_discount`.
 
-Fees and Trust Deposits:
-
-- transfer the full amount `applicant_perm.vp_current_fees` from escrow [[ref: account]] to validator `authority` [[ref: account]] `validator_perm.authority`;
-- Calculate `validator_trust_deposit` = `applicant_perm.vp_current_fees` * `GlobalVariables.trust_deposit_rate`;
-- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `validator_trust_deposit` the [[ref: trust deposit]] of `authority` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `validator_trust_deposit`.
-
 If `applicant_perm.type` is ISSUER or VERIFIER: Create authorization for `applicant_perm.vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
 
 - if `applicant_perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`applicant_perm.id`)**.
-
 
 #### [MOD-PERM-MSG-4] Void
 
@@ -3089,7 +3155,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if `applicant_perm.vp_exp` is null (validation never completed), set `applicant_perm.vp_state` to TERMINATED, else set `applicant_perm.vp_state` to VALIDATED.
 - set `applicant_perm.vp_last_state_change` to `now`.
 - if `applicant_perm.vp_current_fees` > 0:
-  - transfer `applicant_perm.vp_current_fees` back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_perm.authority`.
+  - transfer `applicant_perm.vp_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_perm.authority`.
   - set `applicant_perm.vp_current_fees` to 0;
 
 - if `applicant_perm.vp_current_deposit` > 0:
@@ -5168,7 +5234,7 @@ Where:
 
 If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail.
 
-##### [MOD-XR-QRY-3-1] Convert Amount parameters
+##### [MOD-XR-QRY-3-1] Get Price parameters
 
 - `base_asset_type` (PricingAssetType, *optional*)  
 - `base_asset` (string, *optional*)  
@@ -5176,14 +5242,16 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 - `quote_asset` (string, *optional*)
 - `amount` (number, *mandatory*)
 
-##### [MOD-XR-QRY-3-2] Convert Amount query checks
+##### [MOD-XR-QRY-3-2] Get Price query checks
 
 If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned
 
-##### [MOD-XR-QRY-3-3] Convert Amount execution of the query
+##### [MOD-XR-QRY-3-3] Get Price execution of the query
 
-
-`price` = floor(amount * rate / 10^rate_scale)
+- if (base_asset_type, base_asset) == (quote_asset_type, quote_asset): `price` = `amount`.
+- else load (base_asset_type, base_asset, quote_asset_type, quote_asset).
+  - if entry doesn't exist or is not active or expired, abort and generate an error.
+  - else return `price` = floor(amount * rate / 10^rate_scale)
 
 ::: warning
 
@@ -5194,8 +5262,6 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 
 :::
 
-Return `price`.
-
 ## Initial Data Requirements
 
 ### [GLO] Global Variables
@@ -5203,10 +5269,6 @@ Return `price`.
 Global variables CAN only be changed by the [[ref: governance authority]] through proposals.
 
 Default values MUST be set at VPR initialization (genesis). Below you'll find some possible values. These values will have to be defined in the [[ref: governance framework]].
-
-**Trust Unit:**
-
-- `trust_unit_price` (number) (*mandatory*): 1.0 [[ref: denom]].
 
 **Credential Schema:**
 
