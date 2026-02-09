@@ -2745,7 +2745,7 @@ if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native d
   - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in [[ref: native denom]].
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, "tu")`:
 
 - `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
   - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) in [[ref: native denom]];
@@ -2800,7 +2800,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.type`: `type`.
   - `applicant_perm.created`: `now`
   - `applicant_perm.modified`: `now`
-  - `applicant_perm.deposit`: `validation_trust_deposit_in_denom`.
+  - `applicant_perm.deposit`: `validation_trust_deposit_in_native_denom`.
   - `applicant_perm.validation_fees`: `validation_fees`.
   - `applicant_perm.issuance_fees`: `issuance_fees`.
   - `applicant_perm.verification_fees`: `verification_fees`.
@@ -2880,6 +2880,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 ###### [MOD-PERM-MSG-2-2-3] Renew Permission VP fee checks
 
 - Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
+- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`.
 
 - Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
 
@@ -2893,7 +2894,7 @@ if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native d
   - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in [[ref: native denom]].
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, "tu")`:
 
 - `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
   - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) in [[ref: native denom]];
@@ -3563,108 +3564,139 @@ we might want to check that credential schema of agent and wallet_agent perms is
 
 ###### [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks
 
-- Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]];
+- Load `CredentialSchema` entry `cs` from `issuer_perm.schema_id` if `issuer_perm` is not null, else from `verifier_perm.schema_id`.
+- Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]].
 
-> If a conversion is needed below, use [Get Price](#mod-xr-qry-3-get-price) to convert amounts to [[ref: native denom]]:
+For trust fees, `authority` account MUST have sufficient available balance as explained below.
 
-- For trust fees (See [Pay per trust fees](#pay-per-trust-fees) above)
+**Step 1: Calculate total beneficiary fees in credential schema pricing asset**
 
-- `authority` account MUST have sufficient available balance as explained below.
+Use "Find Beneficiaries" query method to get the set of beneficiary permissions `found_perm_set` (all ancestors in the permission tree).
 
-1. To calculate the required beneficiary fees **in asset price defined in credential schema**, use "Find Beneficiaries" query method below to get the set of beneficiary permission `found_perm_set`. Now that we have the set with all ancestors, we can calculate the required fees:
+- define `total_beneficiary_fees` = 0
 
-- define `beneficiary_fees_in_denom` = 0
+If **Credential Issuance** (`issuer_perm` is NOT null):
 
-**Credential Issuance**
+- for each `perm` in `found_perm_set`:
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.issuance_fees` × (1 - `issuer_perm.issuance_fee_discount`)
 
-- if `issuer_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees_in_denom` = `beneficiary_fees_in_denom` + `perm.issuance_fees` * (1 - `issuer_perm.issuance_fee_discount`).
+If **Credential Verification** (`verifier_perm` is NOT null):
 
-**Credential Verification**
+- for each `perm` in `found_perm_set`:
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.verification_fees` × (1 - `verifier_perm.verification_fee_discount`)
 
-- if `verifier_perm` is NOT null: iterate over permissions `perm` of `found_perm_set` and set `beneficiary_fees_in_denom` = `beneficiary_fees_in_denom` + `perm.verification_fees`  * (1 - `verifier_perm.verification_fee_discount`).
+> Note: `total_beneficiary_fees` is expressed in the credential schema pricing asset `(cs.pricing_asset_type, cs.pricing_asset)`.
 
-2. Now, calculate needed amount in credential schema asset [[ref: denom]] AND in [[ref: native denom]] for user agent, wallet user agent, and trust deposit.
+**Step 2: Calculate amounts payer must have available**
 
-- define `payer_trust_fees_in_denom` = `beneficiary_fees_in_denom`
-- define `payer_trust_deposit_in_native_denom` = 0
-- define `payees_trust_fees_to_account` = 0
-- define `payees_trust_deposit_in_native_denom` = 0
-- define `user_agent_reward_in_native_denom` = 0
-- define `wallet_user_agent_reward_in_native_denom` = 0
+Based on the credential schema pricing configuration, calculate the total amounts the payer (`authority`) must have available.
 
-if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
+Define the following variables:
 
-Calculate:
+| Variable | Description |
+|----------|-------------|
+| `total_fees_in_pricing_asset` | Total fees to be distributed to beneficiaries (in pricing asset) |
+| `total_fees_in_native_denom` | Total fees converted to [[ref: native denom]] (if needed) |
+| `total_payer_trust_deposit` | Trust deposit payer must stake for themselves |
+| `total_payees_trust_deposit` | Trust deposit payer must stake on behalf of payees |
+| `total_payees_fees_to_account` | Fees to be transferred to payees' accounts |
+| `total_user_agent_reward` | Reward for user agent (in [[ref: native denom]]) |
+| `total_wallet_agent_reward` | Reward for wallet agent (in [[ref: native denom]]) |
 
-- `payer_trust_fees_in_denom` is not modified
-- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
+Initialize:
 
-- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
-- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+- `total_fees_in_pricing_asset` = `total_beneficiary_fees`
+- `total_fees_in_native_denom` = 0
+- `total_payer_trust_deposit` = 0
+- `total_payees_trust_deposit` = 0
+- `total_payees_fees_to_account` = 0
+- `total_user_agent_reward` = 0
+- `total_wallet_agent_reward` = 0
 
-- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
-- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
+> If a conversion is needed below, use [Get Price](#mod-xr-qry-3-get-price) to convert amounts.
 
-Then:
+---
 
-- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees, `payer_trust_fees_in_denom` + `payer_trust_deposit_in_native_denom` + `user_agent_reward_in_native_denom` + `wallet_user_agent_reward_in_native_denom` in [[ref: native denom]].
+**Case A: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, [[ref: native denom]])`**
 
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
-
-Calculate:
-
-- `payer_trust_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom`)
-- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
-
-- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
-- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
-
-- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
-- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
-
-Then:
-
-- `authority` MUST have an available balance in its [[ref: account]], to cover the following trust fees, `payer_trust_fees_in_denom` + `payer_trust_deposit_in_native_denom` + `user_agent_reward_in_native_denom` + `wallet_user_agent_reward_in_native_denom` in [[ref: native denom]].
-
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
+Pricing is in native token. No conversion needed.
 
 Calculate:
 
-- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
-- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
+- `total_fees_in_native_denom` = `total_fees_in_pricing_asset`
+- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+- `total_payees_trust_deposit` = `total_payer_trust_deposit`
+- `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
+- `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+- `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
-- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
-- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+Required balance check:
 
-- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
-- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
+- `authority` MUST have available balance ≥ `total_fees_in_native_denom` + `total_payer_trust_deposit` + `total_user_agent_reward` + `total_wallet_agent_reward` in [[ref: native denom]].
 
-Then:
+---
 
-- `authority` MUST have an available balance in its [[ref: account]], `payer_trust_deposit_in_native_denom` + `payees_trust_deposit_in_native_denom` + `user_agent_reward_in_native_denom` + `wallet_user_agent_reward_in_native_denom` in [[ref: native denom]].
-- AND `authority` MUST have an available balance in its [[ref: account]], `payees_trust_fees_to_account` in the denom specified as the payment asset in the credential schema.
+**Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(TU, "tu")`**
 
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
+Pricing is in Trust Units. Convert to native denom for all on-chain payments.
 
 Calculate:
 
-- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
-- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
+- `total_fees_in_native_denom` = getPrice(`TU`, `"tu"`, `COIN`, `[[ref: native denom]]`, `total_fees_in_pricing_asset`)
+- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+- `total_payees_trust_deposit` = `total_payer_trust_deposit`
+- `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
+- `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+- `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
-- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`) => but considered as 0 because FIAT payment are managed off-chain
-- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+Required balance check:
 
-- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
-- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
+- `authority` MUST have available balance ≥ `total_fees_in_native_denom` + `total_payer_trust_deposit` + `total_user_agent_reward` + `total_wallet_agent_reward` in [[ref: native denom]].
 
-Then:
+---
 
-- `authority` MUST have an available balance in its [[ref: account]], `payer_trust_deposit_in_native_denom` + `payees_trust_deposit_in_native_denom` + `user_agent_reward_in_native_denom` + `wallet_user_agent_reward_in_native_denom` in [[ref: native denom]].
-- no need to have anything else, as FIAT payments are managed off chain.
+**Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
+
+Pricing is in an arbitrary on-chain coin (e.g., USDC). Fees to payees are paid in that coin; deposits and agent rewards are converted to native denom.
+
+Calculate:
+
+- `total_fees_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `total_fees_in_pricing_asset`)
+- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+- `total_payees_trust_deposit` = `total_payer_trust_deposit`
+- `total_payees_fees_to_account` = `total_fees_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`)
+- `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+- `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+
+Required balance check:
+
+- `authority` MUST have available balance ≥ `total_payer_trust_deposit` + `total_payees_trust_deposit` + `total_user_agent_reward` + `total_wallet_agent_reward` in [[ref: native denom]].
+- AND `authority` MUST have available balance ≥ `total_payees_fees_to_account` in `<arbitrary_denom>`.
+
+---
+
+**Case D: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
+
+Pricing is in fiat currency (e.g., USD). Fiat fees are settled off-chain; only deposits and agent rewards are paid on-chain in native denom.
+
+Calculate:
+
+- `total_fees_in_native_denom` = getPrice(`FIAT`, `<fiat_denom>`, `COIN`, `[[ref: native denom]]`, `total_fees_in_pricing_asset`)
+- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+- `total_payees_trust_deposit` = `total_payer_trust_deposit`
+- `total_payees_fees_to_account` = 0 (FIAT payments are managed off-chain)
+- `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+- `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+
+Required balance check:
+
+- `authority` MUST have available balance ≥ `total_payer_trust_deposit` + `total_payees_trust_deposit` + `total_user_agent_reward` + `total_wallet_agent_reward` in [[ref: native denom]].
+
+---
 
 :::warning
-- Trust deposit MUST always be paid in [[ref: native denom]]
-- when paying with COIN != [[ref: native denom]] or with FIAT, trust deposits of payees MUST be paid by payer.
+- Trust deposits MUST always be paid in [[ref: native denom]].
+- When paying with COIN ≠ [[ref: native denom]] or with FIAT, payer pays trust deposits on behalf of payees (since payees receive non-native assets that cannot be directly staked).
 :::
 
 ##### [MOD-PERM-MSG-10-4] Create or Update Permission Session execution
@@ -3672,253 +3704,116 @@ Then:
 If all precondition checks passed, method is executed.
 
 - Load all permissions as in basic checks.
-
+- Load `CredentialSchema` entry `cs` from `issuer_perm.schema_id` if `issuer_perm` is not null, else from `verifier_perm.schema_id`.
 - define `now`: current timestamp.
+- use "Find Beneficiaries" to build `found_perm_set`.
 
-- use "Find Beneficiaries" above to build `found_perm_set`.
+> Note: All funds are transferred from the `authority` account executing the method. The steps below describe what each recipient must receive. Implementation details (batching, order of transfers) are left to the implementer.
 
-Calculate the following variable using the method above in **fee checks**
+---
 
-define `user_agent_reward` = 0.
-define `wallet_user_agent_reward` = 0.
+**Step 1: Process fee distribution to each beneficiary**
 
-> Note: All funds sent to accounts, trust deposits, etc are coming exclusively from `authority` account executing the method. Explanations below are to illustrate what must receive the target account, not how it should be done. It's up to implementer to decide how to calculate, which transfers are done, etc
+Initialize accumulators for agent rewards:
 
-**Credential Issuance**
+- `accumulated_user_agent_reward` = 0
+- `accumulated_wallet_agent_reward` = 0
 
-- if `issuer_perm` is NOT null:
+Determine the operation type and applicable discount:
 
-for each `Permission` `perm` from `found_perm_set`, if `perm.issuance_fees` > 0:
+- If **Credential Issuance** (`issuer_perm` is NOT null):
+  - `fee_field` = `issuance_fees`
+  - `discount` = `issuer_perm.issuance_fee_discount`
+  - `payer_perm` = `issuer_perm`
 
-- define `payer_trust_fees_in_denom` = `perm.issuance_fees`
-- define `payer_trust_deposit_in_native_denom` = 0
-- define `payee_trust_fees_to_account` = 0
-- define `payee_trust_deposit_in_native_denom` = 0
-- define `user_agent_reward_in_native_denom` = 0
-- define `wallet_user_agent_reward_in_native_denom` = 0
+- Else if **Credential Verification** (`verifier_perm` is NOT null):
+  - `fee_field` = `verification_fees`
+  - `discount` = `verifier_perm.verification_fee_discount`
+  - `payer_perm` = `verifier_perm`
 
-if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
+**For each beneficiary permission `perm` in `found_perm_set`:**
 
-Calculate:
+If `perm.[fee_field]` > 0:
 
-- `payer_trust_fees_in_denom` is not modified
-- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
+1. Calculate the discounted fee for this beneficiary:
+   - `beneficiary_fee_in_pricing_asset` = `perm.[fee_field]` × (1 - `discount`)
 
-- `payee_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
-- `payee_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+2. Calculate amounts based on pricing configuration (same logic as fee checks):
 
-- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
-- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
+   **Case A: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, [[ref: native denom]])`**
+   
+   - `fee_in_native_denom` = `beneficiary_fee_in_pricing_asset`
+   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+   - `payee_trust_deposit` = `payer_trust_deposit`
+   - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
+   - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+   - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+   
+   **Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(TU, "tu")`**
+   
+   - `fee_in_native_denom` = getPrice(`TU`, `"tu"`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
+   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+   - `payee_trust_deposit` = `payer_trust_deposit`
+   - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
+   - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+   - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+   
+   **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
+   
+   - `fee_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
+   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+   - `payee_trust_deposit` = `payer_trust_deposit`
+   - `payee_fees_to_account` = `beneficiary_fee_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`) *(in `<arbitrary_denom>`)*
+   - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+   - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+   
+   **Case D: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
+   
+   - `fee_in_native_denom` = getPrice(`FIAT`, `<fiat_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
+   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+   - `payee_trust_deposit` = `payer_trust_deposit`
+   - `payee_fees_to_account` = 0 *(FIAT payments are managed off-chain)*
+   - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+   - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
-Then:
+3. Execute transfers and deposits for this beneficiary:
 
-- transfer `payee_trust_fees_to_account` to `perm.authority`.
+   - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `perm.authority` (in the appropriate denom).
+   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `perm.authority` by `payee_trust_deposit`. Increase `perm.deposit` by the same value.
+   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `authority` (payer) by `payer_trust_deposit`. Increase `payer_perm.deposit` by the same value.
 
-- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
-- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `issuer_perm.deposit`.
+4. Accumulate agent rewards:
 
-- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
-- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
+   - `accumulated_user_agent_reward` = `accumulated_user_agent_reward` + `user_agent_reward_portion`
+   - `accumulated_wallet_agent_reward` = `accumulated_wallet_agent_reward` + `wallet_agent_reward_portion`
 
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
+---
 
-Calculate:
+**Step 2: Process agent rewards**
 
-- `payer_trust_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom`)
-- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
+After processing all beneficiaries, distribute accumulated rewards to agents.
 
-- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
-- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
+**User Agent Reward:**
 
-- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
-- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
+If `accumulated_user_agent_reward` > 0:
 
-Then:
+- `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
+- `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
+- Transfer `agent_fees_to_account` to `agent_perm.authority` in [[ref: native denom]].
+- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `agent_perm.authority` by `agent_trust_deposit`. Increase `agent_perm.deposit` by the same value.
 
-- transfer `payee_trust_fees_to_account` to `perm.authority`.
+**Wallet Agent Reward:**
 
-- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
-- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `issuer_perm.deposit`.
+If `accumulated_wallet_agent_reward` > 0:
 
-- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
-- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
+- `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
+- `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
+- Transfer `wallet_agent_fees_to_account` to `wallet_agent_perm.authority` in [[ref: native denom]].
+- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `wallet_agent_perm.authority` by `wallet_agent_trust_deposit`. Increase `wallet_agent_perm.deposit` by the same value.
 
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
+---
 
-Calculate:
-
-- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
-- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
-
-- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
-- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
-
-- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
-- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
-
-Then:
-
-- transfer `payee_trust_fees_to_account` to `perm.authority` in the denom specified as the payment asset in the credential schema.
-
-- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
-- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `issuer_perm.deposit`.
-
-- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
-- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
-
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
-
-Calculate:
-
-- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
-- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
-
-- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`) => but considered as 0 because FIAT payment are managed off-chain
-- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
-
-- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
-- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
-
-Then:
-
-- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
-- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `issuer_perm.deposit`.
-
-- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
-- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
-
-Process Agent Rewards
-
-- if `user_agent_reward` > 0:
-  - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
-  - calculate `perm_total_trust_fees_ua_to_account` = `user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
-  - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.authority`.
-  - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.authority`. Increase `agent_perm.deposit` by the same value.
-  
-- if `wallet_user_agent_reward` > 0:
-  - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
-  - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
-  - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.authority`.
-  - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.authority`. Increase `wallet_agent_perm.deposit` by the same value.
-
-**Credential Verification**
-
-- else (`verifier_perm` is NOT null):
-
-Interate over all permissions:
-
-for each `Permission` `perm` from `found_perm_set`, if `perm.verification_fees` > 0:
-
-- define `payer_trust_fees_in_denom` = `perm.verification_fees`
-- define `payer_trust_deposit_in_native_denom` = 0
-- define `payee_trust_fees_to_account` = 0
-- define `payee_trust_deposit_in_native_denom` = 0
-- define `user_agent_reward_in_native_denom` = 0
-- define `wallet_user_agent_reward_in_native_denom` = 0
-
-if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
-
-Calculate:
-
-- `payer_trust_fees_in_denom` is not modified
-- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
-
-- `payee_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
-- `payee_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
-
-- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
-- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
-
-Then:
-
-- transfer `payee_trust_fees_to_account` to `perm.authority`.
-
-- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
-- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `verifier_perm.deposit`.
-
-- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
-- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
-
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, null)`:
-
-Calculate:
-
-- `payer_trust_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom`)
-- `payer_trust_deposit_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`
-
-- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
-- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
-
-- `user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`
-- `wallet_user_agent_reward_in_native_denom` = `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`
-
-Then:
-
-- transfer `payee_trust_fees_to_account` to `perm.authority`.
-
-- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
-- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `verifier_perm.deposit`.
-
-- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
-- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
-
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
-
-Calculate:
-
-- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
-- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
-
-- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`)
-- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
-
-- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
-- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
-
-Then:
-
-- transfer `payee_trust_fees_to_account` to `perm.authority` in the denom specified as the payment asset in the credential schema.
-
-- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
-- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `verifier_perm.deposit`.
-
-- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
-- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
-
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
-
-Calculate:
-
-- `payer_trust_fees_in_denom` is already in the right [[ref: denom]] and doesn't need to be modified
-- `payer_trust_deposit_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.trust_deposit_rate`)
-
-- `payees_trust_fees_to_account` = `payer_trust_fees_in_denom` * (1 - `GlobalVariables.trust_deposit_rate`) => but considered as 0 because FIAT payment are managed off-chain
-- `payees_trust_deposit_in_native_denom` = `payer_trust_deposit_in_native_denom`
-
-- `user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.user_agent_reward_rate`)
-- `wallet_user_agent_reward_in_native_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `payer_trust_fees_in_denom` * `GlobalVariables.wallet_user_agent_reward_rate`)
-
-Then:
-
-- use [MOD-TD-MSG-1] to increase by `payee_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `perm.authority`. Increase `perm.deposit` by the same value.
-- use [MOD-TD-MSG-1] to increase by `payer_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `authority` executing the method. Add the same amount to `verifier_perm.deposit`.
-
-- update `user_agent_reward` set `user_agent_reward` = `user_agent_reward` + `user_agent_reward_in_native_denom`
-- update `wallet_user_agent_reward` set `wallet_user_agent_reward` = `wallet_user_agent_reward` + `wallet_user_agent_reward_in_native_denom`
-
-Process Agent Rewards
-
-- if `user_agent_reward` > 0:
-  - calculate `perm_total_trust_fees_ua_to_td` = `user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
-  - calculate `perm_total_trust_fees_ua_to_account` = `user_agent_reward`  - `perm_total_trust_fees_ua_to_td`
-  - transfer `perm_total_trust_fees_ua_to_account` to `agent_perm.authority`.
-  - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_ua_to_td` the [[ref: trust deposit]] of `agent_perm.authority`. Increase `agent_perm.deposit` by the same value.
-  
-- if `wallet_user_agent_reward` > 0:
-  - calculate `perm_total_trust_fees_wua_to_td` = `wallet_user_agent_reward`  \* `GlobalVariables.trust_deposit_rate`
-  - calculate `perm_total_trust_fees_wua_to_account` = `wallet_user_agent_reward`  - `perm_total_trust_fees_wua_to_td`
-  - transfer `perm_total_trust_fees_wua_to_account` to `wallet_agent_perm.authority`.
-  - use [MOD-TD-MSG-1] to increase by `perm_total_trust_fees_wua_to_td` the [[ref: trust deposit]] of `wallet_agent_perm.authority`. Increase `wallet_agent_perm.deposit` by the same value.
+**Step 3: Create or update session records**
 
 > Now that all transfers have been done, we can create the entries
 
@@ -5469,8 +5364,8 @@ Anyone CAN run this [[ref: query]], throgh module call or using the API.
 
 ##### [MOD-XR-QRY-3] Get Price Example
 
-base_asset_type  = TRUST_UNIT
-base_asset       = "TU"
+base_asset_type  = TU
+base_asset       = "tu"
 quote_asset_type = COIN
 quote_asset      = "uvna"
 rate             = R
@@ -5478,8 +5373,8 @@ rate_scale       = S
 
 If a valid `ExchangeRate` entry exists with:
 
-- `base_asset_type = TRUST_UNIT`
-- `base_asset = "TU"`
+- `base_asset_type = TU`
+- `base_asset = "tu"`
 - `quote_asset_type = COIN`
 - `quote_asset = "uvna"`
 
