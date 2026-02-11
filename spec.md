@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft2](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft4](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -979,6 +979,7 @@ entity "CredentialSchema" as cs {
   +issuer_perm_management_mode: PermissionManagementMode
   +verifier_perm_management_mode: PermissionManagementMode
   +pricing_asset: string
+  +digest_algorithm: string
 }
 
 enum "SchemaAuthorizationPolicyRole" as sapr {
@@ -1258,6 +1259,7 @@ group  --o td: authority
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
+- `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestSRI` for credentials issued under this schema. Valid values are defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
 
 ### SchemaAuthorizationPolicy
 
@@ -1678,6 +1680,7 @@ As a result, `accountABC` is authorized to:
 |             | Grant Exchange Rate Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-7]](#mod-de-msg-7-grant-exchange-rate-authorization)   |governance proposal|
 |             | Revoke Exchange Rate Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-8]](#mod-de-msg-8-revoke-exchange-rate-authorization)   |governance proposal|
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |authority + operator OR module call|
+|          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
 | Exchange Rate     | Create Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
 |                   | Update Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
 |                   | Toggle Exchange Rate State        |                                  | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-toggle-exchange-rate-state)   |governance proposal|
@@ -2063,6 +2066,7 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*).
 - `pricing_asset_type` (PricingAssetType) (*mandatory*).
 - `pricing_asset` (string) (*mandatory*).
+- `digest_algorithm` (string) (*mandatory*): valid values are defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
 
 ##### [MOD-CS-MSG-1-2] Create New Credential Schema precondition checks
 
@@ -2083,6 +2087,7 @@ If any of these precondition checks fail, method MUST abort.
 - `holder_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
 - `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*) MUST be a valid PermissionManagementMode.
 - `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*) MUST be a valid PermissionManagementMode.
+- `digest_algorithm` (string) (*mandatory*) MUST be a valid digest algorithm as defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
 
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"EUR"`, `"GBP"`,...
@@ -2120,6 +2125,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.modified`: `cs.created`.
   - `cs.pricing_asset_type`: `pricing_asset_type`
   - `cs.pricing_asset`: `pricing_asset`
+  - `cs.digest_algorithm`: `digest_algorithm`
 
 :::note
 If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM `Permission` so that validation processes can be run.
@@ -5146,6 +5152,36 @@ Create Digest `digest`:
 - set `digest.digest_sri` to digest_sri
 - set `digest.created` to now.
 
+#### [MOD-DI-QRY-1] Get Digest
+
+Anyone CAN execute this method.
+
+##### [MOD-DI-QRY-1-1] Get Digest parameters
+
+- `digest_sri` (string) (*mandatory*): the digestSRI to look up.
+
+##### [MOD-DI-QRY-1-2] Get Digest checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `digest_sri` MUST be a valid digestSRI as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources).
+
+##### [MOD-DI-QRY-1-3] Get Digest execution
+
+If all checks passed, [[ref: query]] is executed.
+
+Return found `Digest` entry (if any) matching `digest_sri`.
+
+##### [MOD-DI-QRY-1-4] Get Digest API result example
+
+```json
+{
+  "digest": {
+    "digest_sri": "sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26",
+    "created": "2025-01-14T19:40:37.967Z"
+  }
+}
+```
 
 #### [MOD-XR-MSG-1] Create Exchange Rate
 

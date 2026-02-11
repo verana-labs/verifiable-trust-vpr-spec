@@ -48,7 +48,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
       
                     <article id="content">
                       <h1 id="verifiable-public-registry-v4-specification"><a class="toc-anchor" href="#verifiable-public-registry-v4-specification" >§</a> Verifiable Public Registry v4 Specification</h1>
-<p><strong>Latest draft:</strong> <a path-0="verana-labs.github.io"path-1="verifiable-trust-vpr-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-vpr-spec/" >spec v4-draft2</a></p>
+<p><strong>Latest draft:</strong> <a path-0="verana-labs.github.io"path-1="verifiable-trust-vpr-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-vpr-spec/" >spec v4-draft4</a></p>
 <p><strong>Latest stable:</strong> <a path-0="verana-labs.github.io"path-1="verifiable-trust-vpr-spec"path-2="index-v3.html"href="https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html" >spec v3</a></p>
 <dl>
 <dt><strong>Editors:</strong></dt>
@@ -89,7 +89,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <p>This specification deals with the Verifiable Public Registry (VPR), a decentralized registry of registries, part of the Verifiable Trust concept.</p>
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:trust-registry">trust registry</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
-<div id="note-253" class="notice note"><a class="notice-link" href="#note-253">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-415" class="notice note"><a class="notice-link" href="#note-415">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
 <h3 id="what-is-a-trust-registry"><a class="toc-anchor" href="#what-is-a-trust-registry" >§</a> What is a Trust Registry?</h3>
@@ -524,7 +524,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-254" class="notice note"><a class="notice-link" href="#note-254">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-416" class="notice note"><a class="notice-link" href="#note-416">NOTE</a><p><strong>Wallet User Agents</strong> and <strong>User Agents</strong> that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
@@ -536,7 +536,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>A designated <a class="term-reference" href="#term:governance-authority">governance authority</a> is responsible for <strong>enforcing these rules</strong> and, when necessary, <strong>applying financial sanctions</strong> to participants who violate the rules.</p>
-<div id="note-255" class="notice note"><a class="notice-link" href="#note-255">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
+<div id="note-417" class="notice note"><a class="notice-link" href="#note-417">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
 <p>While the <strong>VPR governance framework</strong> defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each <strong>ecosystem</strong> must define its own <strong>EGF</strong> to govern roles, permissions, credential policies, and compliance within its specific domain.</p>
 <p>This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.</p>
 </div>
@@ -544,7 +544,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p>For simplicity, the data model is presented using an <strong>object-relational structure</strong>. However, this representation may not be optimal for all implementation scenarios.</p>
 <p>Implementors are responsible for <strong>adapting the data model</strong> to suit their chosen architecture.<br>
 For example, a <strong>key-value store</strong> may be more appropriate for a <strong>ledger-based implementation</strong> than a relational model.</p>
-<img src="https://www.plantuml.com/plantuml/svg/jLXBR-Cs4BxhLmW-xRPDa6sBel0fHknDZMxYr7O254L1C29jSoE9AadPSOhzxnsIUf0MbTW8Uh6bcO_pud1cg4kfi51bbaQNpPDCS4hZ33_7lrvSn3j6r2QAQAwOsiU3fIYbcjCraqhi1p6MiHBnlr4SVyV8C2vPhdxv6Tw-9_eLC2nVwzT4KAmea1JBA6ZA2atDE64hrY5ZaMpOjaj-mgv8d2W0eIqLal5y68DgJKvnlYxnchhGGh047X6MaYfFHfho7VBOI2ORcc74GR1W1EGySfvId4VVsYXSQswEyuH-5ZYZEowU7gmT9YJhrJOKat0GN0Veceetz8nvKcR0hnIHunM58bEAr7qbR0ru90Lhg61DOywLe4G_utHXWcHiIEJn9fosuLybpwljS8raKfPKeBN0kU82RN7A25OGGli8bgA22iP1N5vcZn1H6sMj-THbbQuJTHm7t_2K70sk3056XZASmpRg940GKDZFEw0204JSDAmRu7X6dRuqV6nCUfPPFB0vC2hLXWlsOZouuobBzdCuBoOr92viSPWk5lUJEJmyJERJprDuTDEgLr0jv1s72MW2p1aQMuxBUBs4RlcJ5bwVVQ3HrOhQahCIFFFrjhmIV4fTfdLKnwilrDKfAZBZvknkSWj_r_FHxNAcGpQvcYt-N2mdDsvX-B0O__un7YK9BwjIWEqpo73hX-1bOIk5VlAPCyW834V12xm1Smoa5sCEd5cvHcfVK3cCwyU__ZOS-bmmOLRvqO3CgVANb9RlgdrOz2lUoaQris9CSvwDiiPLWerfH9ETNSC6qHoQ9a_lR1gFT1OlmNeZeyfjazhQ9IDnUGy_LxEfte3Fqz7IDQBTlGMLJQM7RNFBNyd8gSNF-3kCFzZC_Y7s_pz2g1qZ9i_91geudODue_yvs7mViQJTPlTFoLM035j13z-HcG6io9z-DCUc806NJ0RepF0FOLt6wkrt4W7OW5FXjkgwrqsEP-7aHc1VwWq9HEHTqmZv2YDFXonJB3STgg05PgIlE9nKEEf0sjQmeZhCVZ_GSq67OUjz4bv5QC4bKowfyWC5MDQP0ASfZxwr1O9yw1910HHOlUd8RcyNKZaARJbW1l2JKWZTiphEjgpmGbbc6HQGYS4oxmOH83Bn2aWWc66GHBogQCXaAA8vVamFsaSN9GkQ4zGfbK7iZgcDDi1CBzxPgOhSGvCg2rKN1uYg2Riv4D1MnjFRQzs3Hr-cuz5oCjOLRpA_cTwEbjFPBPfF_hYVB7mwlFplDV0r1NEQS44QDS5g5z3aDW-pyxPlc4Sh8fmGVQByzjqq4J19zSmtDGsrZRpceL1lZ-FVPb_61uFHTSeVSVg01TFv96qZjrSBRMerYzStbkeFBcv8iXVgfcWNVFGGRUGHl9UlopjXlZvIufkZzwcMlLlIcmFxaNAKlaE72fR7G7A31TKgIjeFCjsxZwdDsJEQajTXZobFdf2WEoo8rUf0ImakmxGA9RP27CZQmIKQhisluxuTV44OMzNs0uAzmrh5hQFT-2GfPfa-2GwjlttrTY_RZqBjst12BToWKN8uNzOJ2JyxW-d4Uwt6yM5S5tADDfp3oHEgUJEkcUcw7-XCS1QfeMS07NmwFzV5k5PgfpMqsp15KoPL5C4jFIpJ__XXHk4eihU5ipDUNGM6Pao5SKpje_gYuN9R9zkLzIpVjxRbE-rE6reOItLjXKtGNhOagDLLSI0DTN1nVlvfeF73k9qZp6tNe0n82P0bDA6cw6KGChWMGWpqRPDHQRHBDwAswO1QsuuWENG_ge0YxXZWNjEjZI6KVoVlnrL7ovwg6XjLLwG1eCvQHmWUndf2iLD5oZAcNa6wA1F90CQTGbpy4V13GwBcOkSiCYuMJLULa7UH4grekmFhrTO4h8BeJsiTX1wVgizYqijUlUrjzhLqexg78LsEbx5sxmwILVh7tMKtNAlEtyLcE6ib5tPAhion3X3Fcai8gVbOQ___0m00" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/jLXBR-Cs4BxhLmW-xRPDa6sBel0fHknDZMxYr7O254L1C29jSoE9AadPSOhzxnq-954MbTW8Uh6bcO_pud1cg4kfi51bbaQNzPDCS4hZ33_7lrvSn3j6r2QAQAwOsiU3fIYbcjCraqhi1p6MiHBnlr4SVyV8C2vPhdxv6Tw-9_eLC2nVwzT4KAmea1JBA6ZA2atDE64hrY5ZaMpOjaj-mhv8d2W0eIqLal5y68DgJKvnlYxnclhGGh047X6MaggMZ3JbEzHY8vbiQ8OH1y624P3po7bASHvzQw9mhRavpXFwMU2CxhXuUh1sc92iLzjGJC91y1sWQohUq3FcIPa1toaYnoiAHQOKgVzAs1hmI0fMKy6QsfmhGOb-nkd21CdOaCZZJJXjmxzAdhljy8raKfPKeBN0kU82RN7A25OGGli8bgA22iP1N5vcZn1H6sMj-THbJjU9Eew3RtXAZWOxGu2HeGpdi8qw2H045FRp3gW0014tDUi6E2sZJb_QUsnSck1qpGLJcynF5WesnmER7wDIRG3nOhoxuobBzdCuIoPj92viuPWk5lUJEJmyJERJprDuz5EkLr0bv1q73MW2p1aQMuux3Ne9tV8dBRog2q2ZgnMrvMWbUDRMs_1Ay2drcTPH7Q--RN0dhCYCcxExoItyNSz7jykP3jdaQhRuSx6StFX5uyDY_Fl7U9Gal7Hb0jjdaE7N5i7BmbOH_THcpY1RC1oJLk0Dc6CWlHXpu3pBDLBxWifXN3t-zRVXqEU22REg7Gt8AfVRfBHyN-t3eb_nLjQglHLZclDibDMk4cnC8vhixHesYFf0rNbwPrDyf3Dy2TOR6IxlJTfhbup4vJtyNCscUWC-JqTBtuXcznPKrbq0jiqlZIKZfnP6u-ym_c0p-uUu_VyHGkqPCNbEDb3XwHp46_tFmSRyY2NjdkX_Igu2PDWAUlYEp7nWHVxqepas1GcuP390PqRx45Obhjf-Bn603JWLRhc-UztaU1PURWJsfTgGG4JUDQcGhp0ETSWonNBJeGfQO4RwYiD9XQCAf6qRAwh3tEuLUcReC6mlICAh22suPCedEJzGW6MT2N3gyjYsja2G3rqYA802gpSTsUtjGfoZqB83PW0_AONG_QpZRCCABvHbbc41cHWiytuG0IAJLW4913CCaeYxYePCXYAQuyVqe7rqKRAWEK6TKXd4xg05QmFCPDCwEwx8FTIfib1LSO2ech2R0m5jPJozlTOzUFHbEXuj9sDTyIRpc-djQ3cTtQBvv8_xoQ9DXvV_lGQ-fc1E4ov8hIPOxGAQ_EPXTjxs3VDeHOGJeazKkttNJGHCKZtpJKL3JIElU2ZKs-FujzcNyS5WT9toHvm-OC5qFadRoEsrGvlgvlJgDkF-u5A797kXVefsmKSFs4OUmNlvkhmJPkyZ9RuvbfzgsRiblJdC7ob7wVjrg62r64XkiA1QHKdxGQPxzp6rENj6K_8wx37boHCIT8S5iLezQ2d1PPXMeSGwn86i7LomuKhzEkxRmTU5iLLjFoxO-wrLt3ZQZK-IOfRfa-3H-jjNR_Uo_IZKlWqdrC8D6YM7ysKraV2pCvXEMgzk71_6LI7NQCCvd3oXcjVZcfck-u7U16UH6de6qC6dytDTZ2kbTbf3kmrJD6LIHH7SuCCosnz6p2WSHVQsS7R6tLLWQCPKVH7SHzL5m-SsJZOhgrc-Rst3zzgTDhGmbkhQ2fkWlMn8KAjTSI0rTN1nVlvfeF73k9aZp4tOe0n82P0bDA6Yw6KGChWMGWpqRPDHQRHBFwAswO1QsuuWENG_Sa0HTmpmh_3MnX2gVL_lnxcZPKzLXOtS5Ma0gBF64OA7iPvGx5IHieofLv0-oaGoWF6d41z_1FpGaAY-s7cBZ8j5tLKbv5saH2FQxi1wjJK1Sn3zsQs3qEEJ-sGcMzchjxt9lePkLFSmfCzfPQpTkuDabUtZxhDhhbNNtiLwE6ia5tPATkPO1qZBcai8gVcGQ___0m00" alt="uml diagram">
 <h3 id="trustregistry"><a class="toc-anchor" href="#trustregistry" >§</a> TrustRegistry</h3>
 <p><code>TrustRegistry</code>:</p>
 <ul>
@@ -595,6 +595,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>): defines how permissions are managed for verifiers of this <code>CredentialSchema</code>. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the <code>CredentialSchema</code> entry in order to create a VERIFIER permission;</li>
 <li><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>): used asset for paying business fees. Can be TU (<a class="term-reference" href="#term:trust-unit">trust unit</a>),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in <code>denom</code>.</li>
 <li><code>pricing_asset</code> (string) (<em>mandatory</em>): <code>&quot;tu&quot;</code> if <code>pricing_asset_type</code> is set to TU, else examples: COIN: <code>denom</code> <code>&quot;uvna&quot;</code>, <code>&quot;ufoo&quot;</code>, <code>&quot;ibc/3A0F9C2E4E2A9B7D6F...&quot;</code>, <code>&quot;factory/verana1.../ueurv&quot;</code>, FIAT: <code>&quot;USD&quot;</code>, <code>&quot;GBP&quot;</code>,…</li>
+<li><code>digest_algorithm</code> (string) (<em>mandatory</em>): algorithm used to compute the <code>digestSRI</code> for credentials issued under this schema. Valid values are defined in the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust spec</a>.</li>
 </ul>
 <h3 id="schemaauthorizationpolicy"><a class="toc-anchor" href="#schemaauthorizationpolicy" >§</a> SchemaAuthorizationPolicy</h3>
 <p><code>SchemaAuthorizationPolicy</code>:</p>
@@ -853,10 +854,10 @@ as a direct consequence of executing authorized messages.</li>
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-130" class="notice warning"><a class="notice-link" href="#warning-130">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-211" class="notice warning"><a class="notice-link" href="#warning-211">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-256" class="notice note"><a class="notice-link" href="#note-256">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
+<div id="note-418" class="notice note"><a class="notice-link" href="#note-418">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="tr"path-3="v1"path-4="get"href="https://example/verana/tr/v1/get" ><span>https://example/verana/tr/v1/get</span></a>.</p>
 </div>
 <h3 id="authorization-and-fee-grants"><a class="toc-anchor" href="#authorization-and-fee-grants" >§</a> Authorization and Fee Grants</h3>
 <h4 id="delegable-module-messages"><a class="toc-anchor" href="#delegable-module-messages" >§</a> Delegable Module Messages</h4>
@@ -1384,6 +1385,14 @@ optionally enabling an associated fee grant.</li>
 <td>authority + operator OR module call</td>
 </tr>
 <tr>
+<td></td>
+<td>Get Digest</td>
+<td>/di/v1/get</td>
+<td>Query</td>
+<td><a href="#mod-di-qry-1-get-digest" >[MOD-DI-QRY-1]</a></td>
+<td>N/A</td>
+</tr>
+<tr>
 <td>Exchange Rate</td>
 <td>Create Exchange Rate</td>
 <td></td>
@@ -1433,7 +1442,7 @@ optionally enabling an associated fee grant.</li>
 </tr>
 </tbody>
 </table>
-<div id="note-257" class="notice note"><a class="notice-link" href="#note-257">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-419" class="notice note"><a class="notice-link" href="#note-419">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="trust-registry-module"><a class="toc-anchor" href="#trust-registry-module" >§</a> Trust Registry Module</h3>
 <h4 id="mod-tr-msg-1-create-new-trust-registry"><a class="toc-anchor" href="#mod-tr-msg-1-create-new-trust-registry" >§</a> [MOD-TR-MSG-1] Create New Trust Registry</h4>
@@ -1479,7 +1488,7 @@ optionally enabling an associated fee grant.</li>
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-258" class="notice note"><a class="notice-link" href="#note-258">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
+<div id="note-420" class="notice note"><a class="notice-link" href="#note-420">NOTE</a><p>It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a <code>TrustRegistry</code> is its id, and the Verifiable Trust Spec includes the id of the <code>TrustRegistry</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
 </div>
 <h6 id="mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks"><a class="toc-anchor" href="#mod-tr-msg-1-2-2-create-new-trust-registry-fee-checks" >§</a> [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks</h6>
 <p>Fee payer MUST have an available balance to cover the <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -1844,6 +1853,7 @@ optionally enabling an associated fee grant.</li>
 <li><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>).</li>
 <li><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>).</li>
 <li><code>pricing_asset</code> (string) (<em>mandatory</em>).</li>
+<li><code>digest_algorithm</code> (string) (<em>mandatory</em>): valid values are defined in the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust spec</a>.</li>
 </ul>
 <h5 id="mod-cs-msg-1-2-create-new-credential-schema-precondition-checks"><a class="toc-anchor" href="#mod-cs-msg-1-2-create-new-credential-schema-precondition-checks" >§</a> [MOD-CS-MSG-1-2] Create New Credential Schema precondition checks</h5>
 <p>If any of these precondition checks fail, method MUST abort.</p>
@@ -1886,13 +1896,16 @@ optionally enabling an associated fee grant.</li>
 <p><code>verifier_perm_management_mode</code> (PermissionManagementMode) (<em>mandatory</em>) MUST be a valid PermissionManagementMode.</p>
 </li>
 <li>
+<p><code>digest_algorithm</code> (string) (<em>mandatory</em>) MUST be a valid digest algorithm as defined in the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust spec</a>.</p>
+</li>
+<li>
 <p><code>pricing_asset_type</code> (PricingAssetType) (<em>mandatory</em>): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in <code>denom</code>.</p>
 </li>
 <li>
 <p><code>pricing_asset</code> (string) (<em>mandatory</em>): <code>&quot;tu&quot;</code> if <code>pricing_asset_type</code> is set to TU, else examples: COIN: <code>denom</code> <code>&quot;uvna&quot;</code>, <code>&quot;ufoo&quot;</code>, <code>&quot;ibc/3A0F9C2E4E2A9B7D6F...&quot;</code>, <code>&quot;factory/verana1.../ueurv&quot;</code>, FIAT: <code>&quot;EUR&quot;</code>, <code>&quot;GBP&quot;</code>,…</p>
 </li>
 </ul>
-<div id="note-259" class="notice note"><a class="notice-link" href="#note-259">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
+<div id="note-421" class="notice note"><a class="notice-link" href="#note-421">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
 The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
 FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
 FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.</p>
@@ -1920,10 +1933,11 @@ FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on
 <li><code>cs.modified</code>: <code>cs.created</code>.</li>
 <li><code>cs.pricing_asset_type</code>: <code>pricing_asset_type</code></li>
 <li><code>cs.pricing_asset</code>: <code>pricing_asset</code></li>
+<li><code>cs.digest_algorithm</code>: <code>digest_algorithm</code></li>
 </ul>
 </li>
 </ul>
-<div id="note-260" class="notice note"><a class="notice-link" href="#note-260">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
+<div id="note-422" class="notice note"><a class="notice-link" href="#note-422">NOTE</a><p>If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM <code>Permission</code> so that validation processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
@@ -2334,7 +2348,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li>If <a class="term-reference" href="#term:applicant">applicant</a> qualifies, <a class="term-reference" href="#term:validator">validator</a> updates the validation entry by running the [set to validated] <a class="term-reference" href="#term:transaction">transaction</a>, and <a class="term-reference" href="#term:applicant">applicant</a> is granted new permissions, and/or gets issued a credential.</li>
 </ol>
 <p>Validation is valid for a specific period, for example 365 days, as configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential schema related validations, or set by trust registry for user-agent validation.</p>
-<div id="note-261" class="notice note"><a class="notice-link" href="#note-261">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
+<div id="note-423" class="notice note"><a class="notice-link" href="#note-423">NOTE</a><p>In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the <a class="term-reference" href="#term:applicant">applicant</a> must provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration, in order to get issued an updated new permission and/or an updated credential.</p>
 </div>
 <p>If validation is set to expire, <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp must renew its validation.</p>
 <p>At any time, <a class="term-reference" href="#term:applicant">applicant</a> can cancel the validation process.</p>
@@ -2386,7 +2400,7 @@ as a direct consequence of executing authorized messages.</li>
 <li><code>vs_operator_authz_fee_spend_limit</code> (DenomAmount[]) (<em>optional</em>): maximum total amount of fees that can be spent by vs_operator in the context of this permission.</li>
 <li><code>vs_operator_authz_spend_period</code>: (period) (<em>optional</em>): if not null, <code>vs_operator</code> MUST NOT be null, else abort. Reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.</li>
 </ul>
-<div id="note-262" class="notice note"><a class="notice-link" href="#note-262">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process is REQUIRED or not.</p>
+<div id="note-424" class="notice note"><a class="notice-link" href="#note-424">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the validation process is REQUIRED or not.</p>
 </div>
 <h6 id="mod-perm-msg-1-2-2-start-permission-vp-permission-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-2-start-permission-vp-permission-checks" >§</a> [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks</h6>
 <ul>
@@ -2513,7 +2527,7 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 </li>
 </ul>
-<div id="note-263" class="notice note"><a class="notice-link" href="#note-263">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
+<div id="note-425" class="notice note"><a class="notice-link" href="#note-425">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
 </div>
 <h6 id="mod-perm-msg-1-2-4-start-permission-vp-overlap-checks"><a class="toc-anchor" href="#mod-perm-msg-1-2-4-start-permission-vp-overlap-checks" >§</a> [MOD-PERM-MSG-1-2-4] Start Permission VP overlap checks</h6>
 <p>We want to make sure that 2 validation processes cannot be active at the same time in the same context. This does not prevent an <code>authority</code> from running different VP with differents validators for the same <code>schema_id</code>, <code>type</code>.</p>
@@ -2672,7 +2686,7 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 </li>
 </ul>
-<div id="note-264" class="notice note"><a class="notice-link" href="#note-264">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
+<div id="note-426" class="notice note"><a class="notice-link" href="#note-426">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
 </div>
 <h6 id="mod-perm-msg-2-3-renew-permission-vp-execution"><a class="toc-anchor" href="#mod-perm-msg-2-3-renew-permission-vp-execution" >§</a> [MOD-PERM-MSG-2-3] Renew Permission VP execution</h6>
 <p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
@@ -3302,7 +3316,7 @@ as a direct consequence of executing authorized messages.</li>
 <li>if <code>wallet_agent_perm.type</code> is not ISSUER, abort.</li>
 <li>if <code>wallet_agent_perm</code> is not a <a class="term-reference" href="#term:active-permission">active permission</a>, abort.</li>
 </ul>
-<div id="warning-131" class="notice warning"><a class="notice-link" href="#warning-131">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
+<div id="warning-212" class="notice warning"><a class="notice-link" href="#warning-212">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.</p>
 </div>
 <h6 id="mod-perm-msg-10-3-create-or-update-permission-session-fee-checks"><a class="toc-anchor" href="#mod-perm-msg-10-3-create-or-update-permission-session-fee-checks" >§</a> [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks</h6>
 <ul>
@@ -3454,7 +3468,7 @@ as a direct consequence of executing authorized messages.</li>
 <li><code>authority</code> MUST have available balance ≥ <code>total_payer_trust_deposit</code> + <code>total_payees_trust_deposit</code> + <code>total_user_agent_reward</code> + <code>total_wallet_agent_reward</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
 </ul>
 <hr>
-<div id="warning-132" class="notice warning"><a class="notice-link" href="#warning-132">WARNING</a><ul>
+<div id="warning-213" class="notice warning"><a class="notice-link" href="#warning-213">WARNING</a><ul>
 <li>Trust deposits MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
 <li>When paying with COIN ≠ <a class="term-reference" href="#term:native-denom">native denom</a> or with FIAT, payer pays trust deposits on behalf of payees (since payees receive non-native assets that cannot be directly staked).</li>
 </ul>
@@ -3606,7 +3620,7 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 <p>then, add the <code>cspsr</code> to <code>session.session_records</code></p>
 <p>if current transaction if for issuance of a credential, persist the digest SRI by calling <a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1]</a>.</p>
-<div id="warning-133" class="notice warning"><a class="notice-link" href="#warning-133">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
+<div id="warning-214" class="notice warning"><a class="notice-link" href="#warning-214">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_perm_id</code> OR <code>verifier_perm_id</code></p>
 </div>
 <h4 id="mod-perm-msg-11-update-permission-module-parameters"><a class="toc-anchor" href="#mod-perm-msg-11-update-permission-module-parameters" >§</a> [MOD-PERM-MSG-11] Update Permission Module Parameters</h4>
 <p>Update Permission Module Parameters.</p>
@@ -3654,7 +3668,7 @@ as a direct consequence of executing authorized messages.</li>
 <li>Load <code>Permission</code> entry <code>applicant_perm</code> from <code>id</code>. If no entry found, abort.</li>
 <li><code>amount</code> MUST be lower or equal to <code>applicant_perm.deposit</code> else MUST abort.</li>
 </ul>
-<div id="note-265" class="notice note"><a class="notice-link" href="#note-265">NOTE</a><p>Even if the permission has expired or is revoked, it is still possible to slash it.</p>
+<div id="note-427" class="notice note"><a class="notice-link" href="#note-427">NOTE</a><p>Even if the permission has expired or is revoked, it is still possible to slash it.</p>
 </div>
 <h6 id="mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms"><a class="toc-anchor" href="#mod-perm-msg-12-2-2-slash-permission-trust-deposit-validator-perms" >§</a> [MOD-PERM-MSG-12-2-2] Slash Permission Trust Deposit validator perms</h6>
 <p>Either Option #1, or #2 MUST return true, else abort.</p>
@@ -3749,7 +3763,7 @@ as a direct consequence of executing authorized messages.</li>
 <h4 id="mod-perm-msg-14-self-create-permission"><a class="toc-anchor" href="#mod-perm-msg-14-self-create-permission" >§</a> [MOD-PERM-MSG-14] Self Create Permission</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of an <code>authority</code>.</p>
 <p>This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a permission for being issuer or verifier of a given schema.</p>
-<div id="note-266" class="notice note"><a class="notice-link" href="#note-266">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
+<div id="note-428" class="notice note"><a class="notice-link" href="#note-428">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.</p>
 </div>
 <h5 id="mod-perm-msg-14-1-self-create-permission-parameters"><a class="toc-anchor" href="#mod-perm-msg-14-1-self-create-permission-parameters" >§</a> [MOD-PERM-MSG-14-1] Self Create Permission parameters</h5>
 <ul>
@@ -3964,7 +3978,7 @@ as a direct consequence of executing authorized messages.</li>
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-267" class="notice note"><a class="notice-link" href="#note-267">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-429" class="notice note"><a class="notice-link" href="#note-429">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-perm-qry-5-get-permissionsession"><a class="toc-anchor" href="#mod-perm-qry-5-get-permissionsession" >§</a> [MOD-PERM-QRY-5] Get PermissionSession</h4>
 <h5 id="mod-perm-qry-5-1-get-permissionsession-parameters"><a class="toc-anchor" href="#mod-perm-qry-5-1-get-permissionsession-parameters" >§</a> [MOD-PERM-QRY-5-1] Get PermissionSession parameters</h5>
@@ -4342,14 +4356,14 @@ as a direct consequence of executing authorized messages.</li>
 </ul>
 <h4 id="mod-td-msg-7-burn-ecosystem-slashed-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >§</a> [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit</h4>
 <p>Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.</p>
-<div id="warning-134" class="notice warning"><a class="notice-link" href="#warning-134">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
+<div id="warning-215" class="notice warning"><a class="notice-link" href="#warning-215">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
 </div>
 <h5 id="mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters</h5>
 <ul>
 <li><code>authority</code> (group) (<em>mandatory</em>): authority of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to burn.</li>
 <li><code>amount</code> (number) (<em>mandatory</em>): value to burn, in <a class="term-reference" href="#term:denom">denom</a>.</li>
 </ul>
-<div id="warning-135" class="notice warning"><a class="notice-link" href="#warning-135">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
+<div id="warning-216" class="notice warning"><a class="notice-link" href="#warning-216">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
 The decision between this method and specifying the amount directly is left to implementers.</p>
 </div>
 <h5 id="mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks</h5>
@@ -4514,7 +4528,7 @@ The decision between this method and specifying the amount directly is left to i
 <p>Check if a <strong>VS Operator Authorization</strong> exists for <code>authority</code> and <code>grantee</code>. If this is the case, MUST abort.</p>
 </li>
 </ul>
-<div id="warning-136" class="notice warning"><a class="notice-link" href="#warning-136">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+<div id="warning-217" class="notice warning"><a class="notice-link" href="#warning-217">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
 </div>
 <h5 id="mod-de-msg-3-3-grant-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-3-3-grant-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks</h5>
 <ul>
@@ -4587,7 +4601,7 @@ The decision between this method and specifying the amount directly is left to i
 <li>load Permission <code>perm</code> with <code>perm_id</code>. <code>perm.authority</code> and <code>perm.vs_operator</code> MUST NOT be null.</li>
 <li>Check if a <strong>Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. If this is the case, MUST abort.</li>
 </ul>
-<div id="warning-137" class="notice warning"><a class="notice-link" href="#warning-137">WARNING</a><p>A <strong>VS Operator Authorization</strong> CAN be granted ONLY IF no <strong>Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+<div id="warning-218" class="notice warning"><a class="notice-link" href="#warning-218">WARNING</a><p>A <strong>VS Operator Authorization</strong> CAN be granted ONLY IF no <strong>Operator Authorization</strong> exists for <code>perm.authority</code> and <code>perm.vs_operator</code>. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
 </div>
 <h5 id="mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-5-3] Grant VS Operator Authorization fee checks</h5>
 <ul>
@@ -4626,7 +4640,7 @@ The decision between this method and specifying the amount directly is left to i
 </ul>
 </li>
 </ul>
-<div id="note-268" class="notice note"><a class="notice-link" href="#note-268">NOTE</a><p>We MUST align to the farthest effective_until for the feegrant, for the permissions that have <code>current_perm.effective_until</code> set.</p>
+<div id="note-430" class="notice note"><a class="notice-link" href="#note-430">NOTE</a><p>We MUST align to the farthest effective_until for the feegrant, for the permissions that have <code>current_perm.effective_until</code> set.</p>
 </div>
 <h4 id="mod-de-msg-6-revoke-vs-operator-authorization"><a class="toc-anchor" href="#mod-de-msg-6-revoke-vs-operator-authorization" >§</a> [MOD-DE-MSG-6] Revoke VS Operator Authorization</h4>
 <p>This method can only be called by the following methods with no signer check:</p>
@@ -4677,9 +4691,9 @@ The decision between this method and specifying the amount directly is left to i
 </ul>
 </li>
 </ul>
-<div id="note-269" class="notice note"><a class="notice-link" href="#note-269">NOTE</a><p>When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.</p>
+<div id="note-431" class="notice note"><a class="notice-link" href="#note-431">NOTE</a><p>When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.</p>
 </div>
-<div id="note-270" class="notice note"><a class="notice-link" href="#note-270">NOTE</a><p>In the case of VS Operator Authorizations, spending limit are managed by the Permission module.</p>
+<div id="note-432" class="notice note"><a class="notice-link" href="#note-432">NOTE</a><p>In the case of VS Operator Authorizations, spending limit are managed by the Permission module.</p>
 </div>
 <h4 id="mod-di-msg-1-store-digest"><a class="toc-anchor" href="#mod-di-msg-1-store-digest" >§</a> [MOD-DI-MSG-1] Store Digest</h4>
 <ul>
@@ -4715,6 +4729,28 @@ The decision between this method and specifying the amount directly is left to i
 <li>set <code>digest.digest_sri</code> to digest_sri</li>
 <li>set <code>digest.created</code> to now.</li>
 </ul>
+<h4 id="mod-di-qry-1-get-digest"><a class="toc-anchor" href="#mod-di-qry-1-get-digest" >§</a> [MOD-DI-QRY-1] Get Digest</h4>
+<p>Anyone CAN execute this method.</p>
+<h5 id="mod-di-qry-1-1-get-digest-parameters"><a class="toc-anchor" href="#mod-di-qry-1-1-get-digest-parameters" >§</a> [MOD-DI-QRY-1-1] Get Digest parameters</h5>
+<ul>
+<li><code>digest_sri</code> (string) (<em>mandatory</em>): the digestSRI to look up.</li>
+</ul>
+<h5 id="mod-di-qry-1-2-get-digest-checks"><a class="toc-anchor" href="#mod-di-qry-1-2-get-digest-checks" >§</a> [MOD-DI-QRY-1-2] Get Digest checks</h5>
+<p>If any of these checks fail, <a class="term-reference" href="#term:query">query</a> MUST fail.</p>
+<ul>
+<li><code>digest_sri</code> MUST be a valid digestSRI as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>.</li>
+</ul>
+<h5 id="mod-di-qry-1-3-get-digest-execution"><a class="toc-anchor" href="#mod-di-qry-1-3-get-digest-execution" >§</a> [MOD-DI-QRY-1-3] Get Digest execution</h5>
+<p>If all checks passed, <a class="term-reference" href="#term:query">query</a> is executed.</p>
+<p>Return found <code>Digest</code> entry (if any) matching <code>digest_sri</code>.</p>
+<h5 id="mod-di-qry-1-4-get-digest-api-result-example"><a class="toc-anchor" href="#mod-di-qry-1-4-get-digest-api-result-example" >§</a> [MOD-DI-QRY-1-4] Get Digest API result example</h5>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"digest"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"digest_sri"</span><span class="token operator">:</span> <span class="token string">"sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26"</span><span class="token punctuation">,</span>
+    <span class="token property">"created"</span><span class="token operator">:</span> <span class="token string">"2025-01-14T19:40:37.967Z"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
 <h4 id="mod-xr-msg-1-create-exchange-rate"><a class="toc-anchor" href="#mod-xr-msg-1-create-exchange-rate" >§</a> [MOD-XR-MSG-1] Create Exchange Rate</h4>
 <p>The <strong>Create Exchange Rate</strong> method allows creating an <code>ExchangeRate</code> entry for a given <code>(base_asset_type, base_asset, quote_asset_type, quote_asset)</code> pair.</p>
 <ul>
@@ -4982,7 +5018,7 @@ rate_scale       = S</p>
 </ul>
 </li>
 </ul>
-<div id="warning-138" class="notice warning"><a class="notice-link" href="#warning-138">WARNING</a><ul>
+<div id="warning-219" class="notice warning"><a class="notice-link" href="#warning-219">WARNING</a><ul>
 <li>Conversions use base units only.</li>
 <li>Integer arithmetic MUST be used.</li>
 <li><code>quote_amount = floor(base_amount × rate / 10^rate_scale)</code>.</li>
@@ -5210,6 +5246,7 @@ rate_scale       = S</p>
 <li><a href="#mod-de-msg-5-grant-vs-operator-authorization" >[MOD-DE-MSG-5] Grant VS Operator Authorization</a></li>
 <li><a href="#mod-de-msg-6-revoke-vs-operator-authorization" >[MOD-DE-MSG-6] Revoke VS Operator Authorization</a></li>
 <li><a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1] Store Digest</a></li>
+<li><a href="#mod-di-qry-1-get-digest" >[MOD-DI-QRY-1] Get Digest</a></li>
 <li><a href="#mod-xr-msg-1-create-exchange-rate" >[MOD-XR-MSG-1] Create Exchange Rate</a></li>
 <li><a href="#mod-xr-msg-2-update-exchange-rate" >[MOD-XR-MSG-2] Update Exchange Rate</a></li>
 <li><a href="#mod-xr-msg-3-toggle-exchange-rate-state" >[MOD-XR-MSG-3] Toggle Exchange Rate State</a></li>
