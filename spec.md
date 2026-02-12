@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft6](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft7](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -1729,6 +1729,8 @@ As a result, `accountABC` is authorized to:
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
 |             | Grant Exchange Rate Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-7]](#mod-de-msg-7-grant-exchange-rate-authorization)   |governance proposal|
 |             | Revoke Exchange Rate Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-8]](#mod-de-msg-8-revoke-exchange-rate-authorization)   |governance proposal|
+|             | List Operator Authorizations              | /de/v1/authz/list | Query  | [[MOD-DE-QRY-1]](#mod-de-qry-1-list-operator-authorizations)   |N/A |
+|             | List VS Operator Authorizations           | /de/v1/vs-authz/list | Query  | [[MOD-DE-QRY-2]](#mod-de-qry-2-list-vs-operator-authorizations)   |N/A |
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |authority + operator OR module call|
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
 | Exchange Rate     | Create Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
@@ -5191,6 +5193,50 @@ When a permission is removed from authorization, and the removed permission had 
 ::: note
 In the case of VS Operator Authorizations, spending limit are managed by the Permission module.
 :::
+
+#### [MOD-DE-QRY-1] List Operator Authorizations
+
+Anyone CAN execute this method.
+
+##### [MOD-DE-QRY-1-1] List Operator Authorizations parameters
+
+- `authority` (group) (*optional*): filter by the authority group that granted the authorization.
+- `operator` (account) (*optional*): filter by the operator account that received the authorization.
+- `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
+
+##### [MOD-DE-QRY-1-2] List Operator Authorizations checks
+
+Basic type check arg SHOULD be applied.
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
+
+##### [MOD-DE-QRY-1-3] List Operator Authorizations execution
+
+Return a list of `OperatorAuthorization` entries matching the filter criteria, or an empty list if nothing found.
+
+#### [MOD-DE-QRY-2] List VS Operator Authorizations
+
+Anyone CAN execute this method.
+
+##### [MOD-DE-QRY-2-1] List VS Operator Authorizations parameters
+
+- `authority` (group) (*optional*): filter by the authority group that granted the authorization.
+- `vs_operator` (account) (*optional*): filter by the VS operator account that received the authorization.
+- `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
+
+##### [MOD-DE-QRY-2-2] List VS Operator Authorizations checks
+
+Basic type check arg SHOULD be applied.
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
+
+##### [MOD-DE-QRY-2-3] List VS Operator Authorizations execution
+
+Return a list of `VSOperatorAuthorization` entries matching the filter criteria, or an empty list if nothing found.
 
 #### [MOD-DI-MSG-1] Store Digest
 
