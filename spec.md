@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft5](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft6](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -1042,6 +1042,12 @@ entity "ExchangeRate" as xr {
   +state: boolean
 }
 
+entity "FeeGrant" as fg {
+  +msg_types: msg_type[]
+  +expiration: timestamp
+  +period: duration
+}
+
 entity "ExchangeRateAuthorization" as xrauthz {
 }
 
@@ -1135,6 +1141,10 @@ entity "TrustDeposit" as td {
   last_repaid: timestamp
   slash_count: number
 }
+
+group --o fg: grantor
+account --o fg: grantee
+fg "1" --- "0..n" da: spend_limit
 
 xrauthz o-- xr
 xrauthz o-- account: operator
@@ -1361,6 +1371,17 @@ group  --o td: authority
 - `expiration` (timestamp) (*optional*): timestamp after which the authorization is no longer valid.
 - `period` (duration) (*optional*): reset period for spend_limit and fee_spend_limit.
 
+### FeeGrant
+
+`FeeGrant`:
+
+- `grantor` (group) (*mandatory*): the authority group granting the fee allowance.
+- `grantee` (account) (*mandatory*): the account that receives the fee grant from `grantor`.
+- `msg_types` (msg_type[]) (*mandatory*): list of VPR delegable message types for which the fee allowance applies.
+- `spend_limit` (DenomAmount[]) (*optional*): maximum amount of fees that can be spent using this grant.
+- `expiration` (timestamp) (*optional*): timestamp after which the fee grant is no longer valid.
+- `period` (duration) (*optional*): reset period for spend_limit.
+
 ### VSOperatorAuthorization
 
 - `authority` (group) (*mandatory*): the authority group granting the authorization.
@@ -1554,7 +1575,7 @@ Such messages conceptually involve **two roles**:
 When a delegable message is executed **directly by an operator account**, both roles are authenticated and enforced by the authorization system.
 
 Using this model makes it possible to:
-vs_operator_authz_spend_limit
+
 - identify, within the Msg, both the authenticated `authority` and the executing `operator`,
 - allow network fees to be paid either by the `operator` account or by the `authority` account via a fee grant.
 
@@ -1590,6 +1611,46 @@ An `authority` group MAY allow its `operator`s to pay **network transaction fees
 Fee grants are **not created directly**.  
 They are created, updated, and revoked **exclusively by Authorization module messages**.  
 When an authorization is created or updated, it MAY optionally include an associated fee grant.
+
+#### [AUTHZ-CHECK] Common Authorization and Fee Grant Precondition Checks
+
+For any **delegable message** executed by an `operator` on behalf of an `authority`, the following precondition checks MUST be performed before any method-specific checks. If any check fails, the [[ref: transaction]] MUST abort.
+
+##### [AUTHZ-CHECK-1] Operator Authorization checks
+
+1. An `OperatorAuthorization` `oauthz` MUST exist where `oauthz.authority` = `authority`, `oauthz.operator` = `operator`, and `oauthz.msg_types` includes the current message type.
+2. If `oauthz.expiration` is set, it MUST be in the future.
+3. If `oauthz.spend_limit` is set, the remaining balance MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from the remaining balance.
+4. If `oauthz.period` is set and the current period has elapsed since the last reset, the remaining balance MUST be reset to `oauthz.spend_limit` before evaluating the check above.
+
+##### [AUTHZ-CHECK-2] Fee Grant checks
+
+If the transaction fees are paid by the `authority` account (via fee grant) instead of the `operator` account:
+
+1. A `FeeGrant` `fg` MUST exist where `fg.grantor` = `authority`, `fg.grantee` = `operator`, and `fg.msg_types` includes the current message type.
+2. If `fg.expiration` is set, it MUST be in the future.
+3. If `fg.spend_limit` is set, the remaining balance MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from the remaining balance.
+4. If `fg.period` is set and the current period has elapsed since the last reset, the remaining balance MUST be reset to `fg.spend_limit` before evaluating the check above.
+
+##### [AUTHZ-CHECK-3] VS Operator Authorization checks
+
+For `CreateOrUpdatePermissionSession`, the authorization model differs from other delegable messages: it relies on `VSOperatorAuthorization` and per-permission settings instead of `OperatorAuthorization`.
+
+Given an `authority`, an `operator` (the `vs_operator`), and a **primary permission** `perm` (determined by the calling method):
+
+1. A `VSOperatorAuthorization` `vso` MUST exist where `vso.authority` = `authority` and `vso.vs_operator` = `operator`.
+2. `vso.permissions` MUST include `perm.id`.
+3. `perm.vs_operator_authz_enabled` MUST be true.
+4. If `perm.vs_operator_authz_spend_period` is set and the current period has elapsed since the last reset, the remaining balances for `perm.vs_operator_authz_spend_limit` and `perm.vs_operator_authz_fee_spend_limit` MUST be reset to their original values before evaluating the checks below.
+5. If `perm.vs_operator_authz_spend_limit` is set, the remaining balance MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from the remaining balance.
+
+##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
+
+If the [[ref: transaction]] fees are paid by the `authority` account (via fee grant) instead of the `operator` account, using the same **primary permission** `perm`:
+
+1. `perm.vs_operator_authz_with_feegrant` MUST be true, else abort.
+2. If `perm.vs_operator_authz_spend_period` is set and the current period has elapsed since the last reset, the remaining balance for `perm.vs_operator_authz_fee_spend_limit` MUST be reset to its original value before evaluating the check below.
+3. If `perm.vs_operator_authz_fee_spend_limit` is set, the remaining balance MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from the remaining balance.
 
 #### Example
 
@@ -1711,6 +1772,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `aka` (string) (*optional*): optional additional URI of this trust registry. MUST be an [[ref: URI]].
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)).
@@ -1785,6 +1847,7 @@ if a mandatory parameter is not present, method MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and `authority` executing the method MUST be the `authority` of the `TrustRegistry` entry.
 - `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` where `gfv.tr_id` is equal to `id` and `gfv.version` = `version`, or `version` MUST be exactly equal to the biggest found `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries found for this `gfv.tr_id` equal to `id`. `version` MUST be greater than the `tr.active_version`.
 - `doc_language` (string) (*mandatory*): MUST be a language tag ([rfc1766](https://www.ietf.org/rfc/rfc1766.txt)).
@@ -1838,6 +1901,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and `authority` executing the method MUST be the `authority` of the `TrustRegistry` entry.
 - load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort.
 - find `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `tr.language`. If no document is found (and thus no document exist for the default language of this version for this trust registry), transaction MUST abort.
@@ -1876,6 +1940,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `TrustRegistry` entry `tr` with id `id` MUST exist and `authority` executing the method MUST be the `authority` of the `TrustRegistry` entry `tr`.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `aka` (string) (*optional*): optional additional URI of this trust registry. MUST be an [[ref: URI]] or null.
@@ -1917,6 +1982,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - load `TrustRegistry` `tr` from `id`. `tr.authority` MUST be the authority executing the method, else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean.
   - If `archive` is true and `tr.archived` is not null, MUST abort as `TrustRegistry` is already archived.
@@ -2067,6 +2133,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `tr_id` MUST represent an existing `TrustRegistry` entry `tr` and `tr.authority` MUST be the `authority` executing the method.
 - `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] is ignored and will be replaced during execution by the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
@@ -2149,6 +2216,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
 - load `TrustRegistry` `tr` from `cs.tr_id`. `tr.authority` MUST be the `authority` executing the method, else MUST abort.
 - `issuer_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
@@ -2199,6 +2267,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
 - load `TrustRegistry` `tr` from `cs.tr_id`. `tr.authority` MUST be the `authority` executing the method, else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean. 
@@ -2280,6 +2349,7 @@ If any of these precondition checks fail, method MUST abort.
 - if a mandatory parameter is not present, method MUST abort.
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `authority`.
 - `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
 - `url` MUST be a non-empty valid URI.
@@ -2334,6 +2404,7 @@ If any of these precondition checks fail, method MUST abort.
 - if a mandatory parameter is not present, method MUST abort.
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `authority`.
 - exactly one draft policy MUST exist for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
 - the draft policy MUST have non-empty `url` and `digest_sri`.
@@ -2377,6 +2448,7 @@ If any of these precondition checks fail, method MUST abort.
 - if a mandatory parameter is not present, method MUST abort.
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - a policy MUST exist for `(schema_id, role, version)`.
 - the targeted policy MUST have `effective_from != null` (a policy that has never been enabled MUST NOT be revoked).
 - the targeted policy MUST NOT already be revoked.
@@ -2664,6 +2736,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `type` (PermissionType) (*mandatory*) MUST be a valid PermissionType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
 - `validator_perm_id` (uint64) (*mandatory*): see [MOD-PERM-MSG-1-2-2](#mod-perm-msg-1-2-2-start-permission-vp-permission-checks).
 - `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
@@ -2864,6 +2937,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64 and a permission entry with the same id MUST exist.
 
 ###### [MOD-PERM-MSG-2-2-2] Renew Permission VP permission checks
@@ -2963,6 +3037,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm.vp_state` MUST be equal to PENDING, else abort.
@@ -3119,6 +3194,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` with this id. It MUST exist.
 - `authority` running the [[ref: transaction]] MUST be `applicant_perm.authority`.
@@ -3179,6 +3255,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `effective_from` must be in the future.
@@ -3267,6 +3344,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm` MUST be a [[ref: active permission]]
@@ -3353,6 +3431,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `applicant_perm` MUST be a [[ref: active permission]]
@@ -3461,7 +3540,7 @@ If `applicant_perm.type` is ISSUER or VERIFIER: Delete authorization for `applic
 
 Any authorized `operator` CAN execute this method on behalf of an `authority`.
 
-Any credential exchange that requires issuer or verifier to pay fees implies the creation of a `PermissionSession`.
+Any credential exchange that requires issuer or verifier to pay fees, register a digest_sri, or produce a proof implies the creation of a `PermissionSession`.
 
 If the peer wants to issue a credential, the `agent`, the Verifiable User Agent or Verifiable Service that receive the request MUST send to peer:
 
@@ -3522,7 +3601,7 @@ if `issuer_perm_id` is null AND `verifier_perm_id` is null, MUST abort.
 - define `issuer_perm` as null.
 - define `verifier_perm` as null.
 
-if `issuer_perm_id` is no null:
+if `issuer_perm_id` is not null:
 
 - Load `issuer_perm` from `issuer_perm_id`.
 - if `issuer_perm.type` is not ISSUER, abort.
@@ -3531,7 +3610,7 @@ if `issuer_perm_id` is no null:
 - if `issuer_perm.authority` is not equal to `authority`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
 
-if `verifier_perm_id` is no null:
+if `verifier_perm_id` is not null:
 
 - Load `verifier_perm` from `verifier_perm_id`.
 - if `verifier_perm.type` is not VERIFIER, abort.
@@ -3539,6 +3618,11 @@ if `verifier_perm_id` is no null:
 - if `verifier_perm.vs_operator` is not equal to `operator`, abort.
 - if `verifier_perm.authority` is not equal to `authority`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
+
+Define the **primary permission** `perm`: if `verifier_perm` is not null, `perm` = `verifier_perm` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_perm` (the caller is the `vs_operator` of the issuer).
+
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`authority`, `operator`, `perm`) tuple.
+[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`authority`, `operator`, `perm`) tuple.
 
 agent:
 
@@ -3895,6 +3979,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - `amount` MUST be lower or equal to `applicant_perm.deposit` else MUST abort.
@@ -3945,7 +4030,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_perm.authority`.
 
-
 If `applicant_perm.type` is ISSUER or VERIFIER: Delete authorization for `applicant_perm.vs_operator`:
 
 - call **Revoke VS Operator Authorization(`applicant_perm.id`)** with the following parameters:
@@ -3972,6 +4056,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
 - if `applicant_perm.authority` is not equal to `authority`, abort.
@@ -4008,8 +4093,8 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 
 ##### [MOD-PERM-MSG-14-1] Self Create Permission parameters
 
-- `authority` (group): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
+- `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `type` (PermissionType) (*mandatory*): ISSUER or VERIFIER.
 - `validator_perm_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]] of the Credential Schema defined by `schema_id`
 - `schema_id` (uint64) (*mandatory*)
@@ -4038,6 +4123,7 @@ Load `Permission` `validator_perm` from `validator_perm_id`.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `type` (PermissionType) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
 - `validator_perm_id` (uint64) (*mandatory*): `validator_perm` MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]] of the Credential Schema defined by `schema_id`
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist and MUST be the same than `validator_perm.schema_id`
@@ -4602,6 +4688,7 @@ If `claimable_yield` is positive, it can be claimed.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 
 ###### [MOD-TD-MSG-2-2-1] Reclaim Trust Deposit Yield basic checks
 
@@ -4723,6 +4810,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `amount` must be > 0.
 - `TrustDeposit` entry `td` MUST exist for this `authority`, and `amount` MUST be exactly equal to `td.slashed_deposit` - `td.repaid_deposit`.
 
@@ -4928,6 +5016,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `CreateOrUpdatePermissionSession` which is not allowed.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `authz_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
@@ -4983,6 +5072,7 @@ MUST abort if one of these conditions fails:
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - An Authorization entry MUST exist for this (`authority`, `grantee`)
 
 ##### [MOD-DE-MSG-4-3] Revoke Operator Authorization fee checks
@@ -5123,6 +5213,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - if `digest_sri` is not present or `digest_sri` is not a valid digestSRI, abort.
 
 ###### [MOD-DI-MSG-1-2-2] Store Digest fee checks
