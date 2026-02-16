@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft7](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft8](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -1023,13 +1023,6 @@ enum "PricingAssetType" as pricingassettype {
   FIAT
 }
 
-entity "PermissionSession" as csps {
-  *id: uuid
-  +created: timestamp
-  +modified: timestamp
-  authz: (uint64, uint64, uint64)[]
-}
-
 entity "ExchangeRate" as xr {
   *id: uint64
   +base_asset: string
@@ -1074,7 +1067,7 @@ entity "Permission" as csp {
   +vp_validator_deposit: number
   +vp_current_fees: number
   +vp_current_deposit: number
-  +vp_summary_digest_sri: string
+  +vp_summary_digest: string
   +issuance_fee_discount: number
   +verification_fee_discount: number
   +vs_operator_authz_enabled: boolean
@@ -1101,7 +1094,7 @@ entity "PermissionSessionRecord" as cspsr {
 }
 
 entity "Digest" as digest {
-  *digest_sri: string
+  *digest: string
   +created: timestamp
 }
 
@@ -1306,7 +1299,7 @@ group  --o td: authority
 - `vp_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
 - `vp_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon validation process completion, in [[ref: denom]].
 - `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
-- `vp_summary_digest_sri` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `vp_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `authority` account (trust fees will be paid by authority account)
@@ -1357,7 +1350,7 @@ group  --o td: authority
 
 ### Digest
 
-- `digest_sri` (string) (*mandatory*): digestSRI to store.
+- `digest` (string) (*mandatory*): digest to store.
 - `created` (timestamp) (*mandatory*): block execution date of when it was persisted.
 
 ### OperatorAuthorization
@@ -2878,7 +2871,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.vp_state`: PENDING.
   - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
   - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
-  - `applicant_perm.vp_summary_digest_sri`: null.
+  - `applicant_perm.vp_summary_digest`: null.
   - `applicant_perm.vp_validator_deposit`: 0.
   - `applicant_perm.vs_operator_authz_enabled`: `vs_operator_authz_enabled`
   - `applicant_perm.vs_operator_authz_spend_limit`: `vs_operator_authz_spend_limit`
@@ -2910,7 +2903,7 @@ Once the [[ref: validator]] determines that the process is complete, they may te
 
 The [[ref: validator]] may compile a summary file of the validation process, documenting exchanged data, proofs, and decisions, and share it with the [[ref: applicant]] via the [[ref: VS]] connection or another secure channel.
 
-For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_perm.vp_summary_digest_sri`.
+For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_perm.vp_summary_digest`.
 
 #### [MOD-PERM-MSG-2] Renew Permission VP
 
@@ -3025,7 +3018,7 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `validation_fees` (number) (*mandatory*): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `verification_fees` (number) (*mandatory*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
-- `vp_summary_digest_sri` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `vp_summary_digest` (string) (*optional*): an optional digest, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
@@ -3046,7 +3039,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_perm.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_perm.validation_fees`, else abort.
 - `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_perm.issuance_fees` or, else abort.
 - `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_perm.verification_fees`, else abort.
-- `vp_summary_digest_sri` (string) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
+- `vp_summary_digest` (string) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest. Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
 - Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
 - Load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`.
@@ -3155,7 +3148,7 @@ Update `Permission` `applicant_perm`:
 - set `applicant_perm.vp_last_state_change` to `now`.
 - set `applicant_perm.vp_current_fees` to 0;
 - set `applicant_perm.vp_current_deposit` to 0;
-- set `applicant_perm.vp_summary_digest_sri` to `vp_summary_digest_sri`.
+- set `applicant_perm.vp_summary_digest` to `vp_summary_digest`.
 - set `applicant_perm.vp_exp` to `vp_exp`.
 - set `applicant_perm.effective_until` to `effective_until`.
 - if `applicant_perm.effective_from` IS NULL (first time method is called for this perm, and thus we are not in a renewal):
@@ -3588,7 +3581,7 @@ An [[ref: account]] that would like to create or update a `PermissionSession` en
 - `verifier_perm_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
 - `agent_perm_id` (uint64) (*mandatory*): the agent credential issuer permission id (extracted from the agent credential that agent has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification).
 - `wallet_agent_perm_id` (uint64) (*mandatory*): the wallet credential issuer permission id of the agent where the credential will be or is stored. Can be the same perm than `agent_perm_id` if agent and wallet_agent are the same agent.
-- `digest_sri` (string) (*optional*): digestSRI derived from an issued or verified credential.
+- `digest` (string) (*optional*): digest derived from an issued or verified credential.
 
 ##### [MOD-PERM-MSG-10-2] Create or Update Permission Session precondition checks
 
@@ -5247,7 +5240,7 @@ Return a list of `VSOperatorAuthorization` entries matching the filter criteria,
 
 - `authority` (group) (*mandatory*): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `authority` to run this Msg.
-- `digest_sri` (string) (*mandatory*): digest_sri to store.
+- `digest` (string) (*mandatory*): digest to store.
 
 ##### [MOD-DI-MSG-1-2] Store Digest precondition checks
 
@@ -5260,7 +5253,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `authority` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
-- if `digest_sri` is not present or `digest_sri` is not a valid digestSRI, abort.
+- if `digest` is not present, abort.
 
 ###### [MOD-DI-MSG-1-2-2] Store Digest fee checks
 
@@ -5274,7 +5267,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 Create Digest `digest`:
 
-- set `digest.digest_sri` to digest_sri
+- set `digest.digest` to digest
 - set `digest.created` to now.
 
 #### [MOD-DI-QRY-1] Get Digest
@@ -5283,26 +5276,26 @@ Anyone CAN execute this method.
 
 ##### [MOD-DI-QRY-1-1] Get Digest parameters
 
-- `digest_sri` (string) (*mandatory*): the digestSRI to look up.
+- `digest` (string) (*mandatory*): the digest to look up.
 
 ##### [MOD-DI-QRY-1-2] Get Digest checks
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
-- `digest_sri` MUST be a valid digestSRI as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources).
+- `digest` MUST not be empty.
 
 ##### [MOD-DI-QRY-1-3] Get Digest execution
 
 If all checks passed, [[ref: query]] is executed.
 
-Return found `Digest` entry (if any) matching `digest_sri`.
+Return found `Digest` entry (if any) matching `digest`.
 
 ##### [MOD-DI-QRY-1-4] Get Digest API result example
 
 ```json
 {
   "digest": {
-    "digest_sri": "sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26",
+    "digest": "sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26",
     "created": "2025-01-14T19:40:37.967Z"
   }
 }
