@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft8](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft9](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -2164,7 +2164,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
   - `cs.id`: auto-incremented uint64.
   - `cs.tr_id`: id of the `TrustRegistry` entry that will be the owner of `cs`.
-  - `cs.json_schema`: `json_schema`, with VPR_CREDENTIAL_SCHEMA_ID string replaced by generated `cs.id`.
+  - `cs.json_schema`: `json_schema`, with VPR_CREDENTIAL_SCHEMA_ID string replaced by generated `cs.id`, and then canonicalize it using the [JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785) as defined in RFC 8785. Schema MUST be saved canonized.
   - `cs.issuer_grantor_validation_validity_period`: `issuer_grantor_validation_validity_period`
   - `cs.verifier_grantor_validation_validity_period`: `verifier_grantor_validation_validity_period`
   - `cs.issuer_validation_validity_period`: `issuer_validation_validity_period`
@@ -2511,6 +2511,8 @@ Anyone CAN execute this method.
 ##### [MOD-CS-QRY-3-3] Render Json Schema execution
 
 Render found entry (if any). In case value is returned by a REST API, content type MUST be set to "application/schema+json".
+
+Schema MUST be rendered cononized, even if it was not created canonized using the [JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785) as defined in RFC 8785.
 
 #### [MOD-CS-QRY-4] List Module Parameters
 
