@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft10](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft11](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -4093,8 +4093,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `authority` (group): (Signer) the signing authority on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `authority` to run this Msg.
 - `type` (PermissionType) (*mandatory*): ISSUER or VERIFIER.
-- `validator_perm_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]] of the Credential Schema defined by `schema_id`
-- `schema_id` (uint64) (*mandatory*)
+- `validator_perm_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]].
 - `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
@@ -4122,8 +4121,7 @@ Load `Permission` `validator_perm` from `validator_perm_id`.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`authority`, `operator`) pair and this message type.
 - `type` (PermissionType) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
-- `validator_perm_id` (uint64) (*mandatory*): `validator_perm` MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]] of the Credential Schema defined by `schema_id`
-- `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist and MUST be the same than `validator_perm.schema_id`
+- `validator_perm_id` (uint64) (*mandatory*): `validator_perm` MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]].
 - `vs_operator` (account) (*optional*): no check required.
 - `did`, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `effective_from` MUST be in the future AND
@@ -4145,7 +4143,7 @@ Load `Permission` `validator_perm` from `validator_perm_id`.
 
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
-- The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
+- The related `CredentialSchema` entry is loaded with `validator_perm.schema_id`, and will be named `cs` in this section.
 - if `type` is equal to ISSUER: if `cs.issuer_perm_management_mode` is not equal to OPEN, MUST abort.
 - if `type` is equal to VERIFIER: if `cs.verifier_perm_management_mode` is not equal to OPEN, MUST abort.
 - if `type` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
@@ -4159,7 +4157,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `authority` wishes to create a new permission but existing active one never expires (or expire too far from now), `authority` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-adjust-permission) to set or adjust the `effective_until` value.
 
-Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `authority`.
+Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `cs.id`, `type`, `validator_perm_id`, `authority`.
 
 for each `Permission` entry `p` from `perms[]`:
 
@@ -4176,12 +4174,13 @@ If all precondition checks passed, method is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
+- Load `Permission` `validator_perm` from `validator_perm_id`.
 
 A new entry `Permission` `perm` MUST be created:
 
 - `perm.id`: auto-incremented uint64.
 - `perm.validator_perm_id`: `validator_perm_id`
-- `perm.schema_id`: `schema_id`.
+- `perm.schema_id`: `validator_perm.schema_id`
 - `perm.modified` to `now`.
 - `perm.type`: `type`.
 - `perm.did`: `did`.
