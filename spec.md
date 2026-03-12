@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft11](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft12](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -301,14 +301,17 @@ object "Trust Registry" as tra #3fbdb6 {
 [[ref: Credential schemas]] are created and managed by trust registry authority ([[ref: ecosystems]]). Each [[ref: Credential schema]] includes, at a minimum:
 
 - A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]]
-- A **PermissionManagementMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
-  - `OPEN`: `ISSUER` permissions can be created by anyone.
-  - `ECOSYSTEM`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the trust registry authority
-  - `GRANTOR_VALIDATION`: `ISSUER` permissions are granted by one or several [[ref: issuer grantor]](s) (trust registry operator(s) responsible for selecting issuers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
-- A **PermissionManagementMode** for **verification policy**, which determines how `VERIFIER` permissions are granted. Modes include:
+- A **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
+  - `OPEN`: `ISSUER` permissions can be self-created by anyone.
+  - `ECOSYSTEM_VALIDATION_PROCESS`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the trust registry authority through the execution of a Validation Process.
+  - `GRANTOR_VALIDATION_PROCESS`: `ISSUER` permissions are granted by one or several [[ref: issuer grantor]](s) (trust registry operator(s) responsible for selecting issuers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]] through the execution of a Validation Process.
+- A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` permissions are granted. Modes include:
   - `OPEN`: `VERIFIER` permissions can be created by anyone.
-  - `ECOSYSTEM`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Trust Registry authority
-  - `GRANTOR_VALIDATION`: `VERIFIER` permissions are granted by one or several [[ref: verifier grantor]](s) (trust registry operator(s) responsible for selecting verifiers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]].
+  - `ECOSYSTEM_VALIDATION_PROCESS`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Trust Registry authority through the execution of a Validation Process.
+  - `GRANTOR_VALIDATION_PROCESS`: `VERIFIER` permissions are granted by one or several [[ref: verifier grantor]](s) (trust registry operator(s) responsible for selecting verifiers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]], through the execution of a Validation Process.
+- An **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` permissions are granted. Modes include:
+  - `ISSUER_VALIDATION_PROCESS`: `HOLDER` permissions are granted directly by issuers to holder through the execution of a Validation Process.
+  - `PERMISSIONLESS`: holder that want to obtain credentials from an issuer do not require a permission in the VPR.
 - A **Permission tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
 
 ```plantuml
@@ -367,7 +370,7 @@ Participant roles are defined in the table below:
 | **Verifier Grantor**  | Trust Registry operator that grants Verifier permissions to candidate verifiers.               |
 | **Issuer**            | Can issue credentials of this schema.                            |
 | **Verifier**          | Can request presentation of credentials of this schema.          |
-| **Holder**            | Holds a credential.   |
+| **Holder**            | Holds a credential. Holder permission provide credential status (active, revoked...)  |
 
 Example of a Json Schema credential schema:
 
@@ -457,11 +460,15 @@ package "Pay per validation Fee Structure" as cs {
     object "Verifier E - Credential Schema Permission" as verifier #00b0f0 {
         did:example:vE
     }
+
+    object "Holder Z - Credential Schema Permission" as holder #FFB073 {
+        permissionType: HOLDER
+    }
 }
 
 tr --> ig : granted schema permission
 ig --> issuer : granted schema permission
-
+issuer --> holder: granted schema permission
 tr --> vg : granted schema permission
 vg --> verifier : granted schema permission
 
@@ -555,12 +562,14 @@ The table below summarizes the possible combinations of applicants and validator
 | Verifier Grantor | renewable subscription (2)          |                                       |                                     |                                     |          |                                         |
 | Issuer           | renewable subscription (3)          | renewable subscription (1)            |                                     |                                     |          |                                         |
 | Verifier         | renewable subscription (4)          |                                       | renewable subscription (2)          |                                     |          |                                         |
-| Holder           |                                     |                                       |                                     | renewable subscription              |          |                                         |
+| Holder           |                                     |                                       |                                     | renewable subscription  (5)         |          |                                         |
 
-- (1): if *issuer mode* is set to GRANTOR_VALIDATION.
-- (2): if *verifier mode* is set to GRANTOR_VALIDATION.
-- (3): if *issuer mode* is set to ECOSYSTEM.
-- (4): if *verifier mode* is set to ECOSYSTEM.
+- (1): if *issuer onboarding mode* is set to GRANTOR_VALIDATION_PROCESS.
+- (2): if *verifier onboarding mode* is set to GRANTOR_VALIDATION_PROCESS.
+- (3): if *issuer onboarding mode* is set to ECOSYSTEM_VALIDATION_PROCESS.
+- (4): if *verifier onboarding mode* is set to ECOSYSTEM_VALIDATION_PROCESS.
+- (5): if *holder onboarding mode* is set to ISSUEr_VALIDATION_PROCESS.
+
 
 Validation process is started by the applicant.
 
@@ -966,8 +975,9 @@ entity "CredentialSchema" as cs {
   +issuer_validation_validity_period: number
   +verifier_validation_validity_period: number
   +holder_validation_validity_period: number
-  +issuer_perm_management_mode: PermissionManagementMode
-  +verifier_perm_management_mode: PermissionManagementMode
+  +issuer_onboarding_mode: IssuerOnboardingMode
+  +verifier_onboarding_mode: VerifierOnboardingMode
+  +holder_onboarding_mode: HolderOnboardingMode
   +pricing_asset: string
   +digest_algorithm: string
 }
@@ -991,11 +1001,23 @@ entity "SchemaAuthorizationPolicy" as sap {
 }
 
 
-enum "PermissionManagementMode" as cspm {
+enum "IssuerOnboardingMode" as iom {
   OPEN
-  GRANTOR_VALIDATION
-  ECOSYSTEM
+  GRANTOR_VALIDATION_PROCESS
+  ECOSYSTEM_VALIDATION_PROCESS
 }
+
+enum "VerifierOnboardingMode" as vom {
+  OPEN
+  GRANTOR_VALIDATION_PROCESS
+  ECOSYSTEM_VALIDATION_PROCESS
+}
+
+enum "HolderOnboardingMode" as hom {
+  ISSUER_VALIDATION_PROCESS
+  PERMISSIONLESS
+}
+
 
 entity "(SDK) Account" as account {
 }
@@ -1247,8 +1269,9 @@ group  --o td: authority
 - `issuer_validation_validity_period` (number) (*mandatory*): number of days after which an issuer validation process expires and must be renewed.
 - `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier validation process expires and must be renewed.
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder validation process expires and must be renewed.
-- `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR_VALIDATION means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
-- `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR_VALIDATION means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR_VALIDATION_PROCESS means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_VALIDATION_PROCESS means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
+- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR_VALIDATION_PROCESS means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_VALIDATION_PROCESS means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_VALIDATION_PROCESS means a validation process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission. HOLDER permission is used to check credential revocation status; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
 - `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestSRI` for credentials issued under this schema. Valid values are defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
@@ -1300,8 +1323,8 @@ group  --o td: authority
 - `vp_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon validation process completion, in [[ref: denom]].
 - `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
 - `vp_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION_PROCESS mode) or an ISSUER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `authority` account (trust fees will be paid by authority account)
 - `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
 - `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with `authority` account.
@@ -2112,8 +2135,9 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `issuer_validation_validity_period` (*mandatory*), default to 0 (days).
 - `verifier_validation_validity_period` (*mandatory*), default to 0 (days).
 - `holder_validation_validity_period` (*mandatory*), default to 0 (days).
-- `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*).
-- `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*).
+- `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*).
+- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*).
+- `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*).
 - `pricing_asset_type` (PricingAssetType) (*mandatory*).
 - `pricing_asset` (string) (*mandatory*).
 - `digest_algorithm` (string) (*mandatory*): valid values are defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
@@ -2136,8 +2160,9 @@ If any of these precondition checks fail, method MUST abort.
 - `issuer_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
 - `verifier_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_validation_validity_period_max_days` days.
 - `holder_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
-- `issuer_perm_management_mode` (PermissionManagementMode) (*mandatory*) MUST be a valid PermissionManagementMode.
-- `verifier_perm_management_mode` (PermissionManagementMode) (*mandatory*) MUST be a valid PermissionManagementMode.
+- `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*). MUST be a valid IssuerOnbpardingMode.
+- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*). MUST be a valid VerifierOnboardingMode.
+- `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*). MUST be a valid HolderOnboardingMode.
 - `digest_algorithm` (string) (*mandatory*) MUST be a valid digest algorithm as defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
 
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
@@ -2170,8 +2195,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.issuer_validation_validity_period`: `issuer_validation_validity_period`
   - `cs.verifier_validation_validity_period`: `verifier_validation_validity_period`
   - `cs.holder_validation_validity_period`: `holder_validation_validity_period`
-  - `cs.issuer_perm_management_mode`: `issuer_perm_management_mode`
-  - `cs.verifier_perm_management_mode`: `verifier_perm_management_mode`
+  - `cs.issuer_onboarding_mode`: `issuer_onboarding_mode`
+  - `cs.verifier_onboarding_mode`: `verifier_onboarding_mode`
+  - `cs.holder_onboarding_mode`: `holder_onboarding_mode`
   - `cs.created`: current timestamp
   - `cs.modified`: `cs.created`.
   - `cs.pricing_asset_type`: `pricing_asset_type`
@@ -2468,8 +2494,9 @@ Method execution MUST perform the following task in a [[ref: transaction]]:
 - `modified_after` (timestamp) (*optional*): show schemas modified after this timestamp.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 - `only_active` (boolean): if set to true, returns only not archived entries.
-- `issuer_perm_management_mode` (PermissionManagementMode): if set, filter by `issuer_perm_management_mode`.
-- `verifier_perm_management_mode` (PermissionManagementMode): if set, filter by `verifier_perm_management_mode`.
+- `issuer_onboarding_mode` (IssuerOnboardingMode): if set, filter by `issuer_onboarding_mode`.
+- `verifier_onboarding_mode` (VerifierOnboardingMode): if set, filter by `verifier_onboarding_mode`.
+- `holder_onboarding_mode` (HolderOnboardingMode): if set, filter by `holder_onboarding_mode`.
 
 ##### [MOD-CS-QRY-1-2] List Credential Schemas checks
 
@@ -2663,7 +2690,7 @@ issuer --> holder: granted schema permission
 
 ```
 
-The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process (or by any account: - for `ISSUER` permissions if issuer_perm_management_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_perm_management_mode is equal to `OPEN`).
+The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process (or by any account: - for `ISSUER` permissions if issuer_onboarding_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_onboarding_mode is equal to `OPEN`).
 
 A Validation Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: authority]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional validation fees plus transaction fees.
 
@@ -2758,35 +2785,35 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 - if `type` (PermissionType) is equal to ISSUER:
 
-  - if `cs.issuer_perm_management_mode` is equal to GRANTOR: `validator_perm.type` MUST be ISSUER_GRANTOR, else MUST abort.
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS: `validator_perm.type` MUST be ISSUER_GRANTOR, else MUST abort.
   
-  - else if `cs.issuer_perm_management_mode` is equal to ECOSYSTEM: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - else if `cs.issuer_onboarding_mode` is equal to ECOSYSTEM_VALIDATION_PROCESS: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
 
   - else MUST abort.
 
 - else if `type` (PermissionType) is equal to ISSUER_GRANTOR:
 
-  - if `cs.issuer_perm_management_mode` is equal to GRANTOR:  `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS:  `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
   
   - else abort.
 
 - else if `type` (PermissionType) is equal to VERIFIER:
 
-  - if `cs.verifier_perm_management_mode` is equal to GRANTOR: `validator_perm.type` MUST be VERIFIER_GRANTOR, else MUST abort.
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR: `validator_perm.type` MUST be VERIFIER_GRANTOR, else MUST abort.
   
-  - else if `cs.verifier_perm_management_mode` is equal to ECOSYSTEM: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - else if `cs.verifier_onboarding_mode` is equal to ECOSYSTEM_VALIDATION_PROCESS: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
 
   - else abort.
 
 - else if `type` (PermissionType) is equal to VERIFIER_GRANTOR:
 
-  - if `cs.verifier_perm_management_mode` is equal to GRANTOR: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
   
   - else abort.
 
 - else if `type` (PermissionType) is equal to HOLDER:
 
-  - if `cs.verifier_perm_management_mode` is equal to GRANTOR or ECOSYSTEM: `validator_perm.type` MUST be ISSUER, else MUST abort.
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS or ECOSYSTEM_VALIDATION_PROCESS: `validator_perm.type` MUST be ISSUER, else MUST abort.
   
   - else abort.
 
@@ -3021,8 +3048,8 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `verification_fees` (number) (*mandatory*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `vp_summary_digest` (string) (*optional*): an optional digest, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION mode) or an ISSUER permission (ECOSYSTEM mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION mode) and/or a VERIFIER permission (ECOSYSTEM mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION_PROCESS mode) or an ISSUER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 ##### [MOD-PERM-MSG-3-2] Set Permission VP to Validated precondition checks
 
@@ -3048,19 +3075,19 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `issuance_fee_discount` : (number) (*mandatory*):
   - if `applicant_perm.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_perm.issuance_fee_discount` else MUST abort.
-  - if `cs.issuer_perm_management_mode` is set to GRANTOR_VALIDATION:
+  - if `cs.issuer_onboarding_mode` is set to GRANTOR_VALIDATION_PROCESS:
     - if `applicant_perm.type` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
     - if `applicant_perm.type` == ISSUER: if `validator_perm.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_perm.issuance_fee_discount` (100% discount) inclusive.
-  - if `cs.issuer_perm_management_mode` is set to ECOSYSTEM:
+  - if `cs.issuer_onboarding_mode` is set to ECOSYSTEM_VALIDATION_PROCESS:
     - if `applicant_perm.type` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
   - else MUST abort.
 
 - `verification_fee_discount` : (number) (*mandatory*):
   - if `applicant_perm.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_perm.verification_fee_discount` else MUST abort.
-  - if `cs.verifier_perm_management_mode` is set to GRANTOR_VALIDATION:
+  - if `cs.verifier_onboarding_mode` is set to GRANTOR_VALIDATION_PROCESS:
     - if `applicant_perm.type` == VERIFIER_GRANTOR: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
     - if `applicant_perm.type` == VERIFIER: if `validator_perm.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_perm.verification_fee_discount` (100% discount) inclusive.
-  - if `cs.verifier_perm_management_mode` is set to ECOSYSTEM:
+  - if `cs.verifier_onboarding_mode` is set to ECOSYSTEM_VALIDATION_PROCESS:
     - if `applicant_perm.type` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
   - else MUST abort.
 
@@ -4144,8 +4171,8 @@ Load `Permission` `validator_perm` from `validator_perm_id`.
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
 - The related `CredentialSchema` entry is loaded with `validator_perm.schema_id`, and will be named `cs` in this section.
-- if `type` is equal to ISSUER: if `cs.issuer_perm_management_mode` is not equal to OPEN, MUST abort.
-- if `type` is equal to VERIFIER: if `cs.verifier_perm_management_mode` is not equal to OPEN, MUST abort.
+- if `type` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
+- if `type` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is not equal to OPEN, MUST abort.
 - if `type` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
 - if `type` is equal to VERIFIER and `verification_fees` is specified and different than 0, MUST abort.
 
