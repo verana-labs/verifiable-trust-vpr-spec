@@ -1724,6 +1724,8 @@ As a result, `accountABC` is authorized to:
 |                                | Slash Permission Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-PERM-MSG-12]](#mod-perm-msg-12-slash-permission-trust-deposit) |corporation + operator |
 |                                | Repay Permission Slashed Trust Deposit  |     N/A (Tx)                | Msg    | [[MOD-PERM-MSG-13]](#mod-perm-msg-13-repay-permission-slashed-trust-deposit) |corporation + operator |
 |                                | Self Create Permission (OPEN mode)      |         N/A (Tx)              | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission) |corporation + operator  |
+|                                | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-PERM-MSG-15]](#mod-perm-msg-15-grant-vs-operator-authorization)   |module call|
+|                                | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-PERM-MSG-16]](#mod-perm-msg-16-revoke-vs-operator-authorization)   |module call|
 |                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |N/A |
 |                                | Get a Permission                        | /perm/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |N/A |
 |                                | Find Beneficiaries                      | /perm/v1/beneficiaries       | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-find-beneficiaries)  |N/A |
@@ -1741,8 +1743,6 @@ As a result, `accountABC` is authorized to:
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
 |             | Grant Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
 |             | Revoke Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
-|             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |module call|
-|             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
 |             | Grant Exchange Rate Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-7]](#mod-de-msg-7-grant-exchange-rate-authorization)   |governance proposal|
 |             | Revoke Exchange Rate Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-8]](#mod-de-msg-8-revoke-exchange-rate-authorization)   |governance proposal|
 |             | List Operator Authorizations              | /de/v1/authz/list | Query  | [[MOD-DE-QRY-1]](#mod-de-qry-1-list-operator-authorizations)   |N/A |
@@ -4230,6 +4230,122 @@ Create authorization for `vs_operator` so that the Verifiable Service will be ab
 
 - if `perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`perm.id`)**.
 
+#### [MOD-PERM-MSG-15] Grant VS Operator Authorization
+
+This method can only be called directly by the following methods with no signer check:
+
+- Self Create Permission
+- Adjust Permission
+- Set Permission VP to Validated
+
+> Note: This method can only grant authorization for the `CreateOrUpdatePermissionSession` Msg.
+
+::: note Implementation
+This method was moved from the Delegation Engine module (formerly [MOD-DE-MSG-5]) to the Permission module to avoid a cyclic dependency between DE and PERM modules (TR → DE → PERM → TR). The DE module provides VSOA storage and fee grant primitives; the Permission module orchestrates the full flow.
+:::
+
+##### [MOD-PERM-MSG-15-1] Grant VS Operator Authorization method parameters
+
+- `perm_id` (uint64) (*mandatory*): the permission this authorization is referring to.
+
+##### [MOD-PERM-MSG-15-2] Grant VS Operator Authorization basic checks
+
+if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- `perm_id` (uint64) (*mandatory*): Permission MUST exist.
+- load Permission `perm` with `perm_id`. `perm.corporation` and `perm.vs_operator` MUST NOT be null.
+- Check if a **Operator Authorization** exists for `perm.corporation` and `perm.vs_operator`. If this is the case, MUST abort.
+
+::: warning
+A **VS Operator Authorization** CAN be granted ONLY IF no **Operator Authorization** exists for `perm.corporation` and `perm.vs_operator`. **VS Operator Authorization** and **Operator Authorization** are mutually exclusive for a given grantee.
+:::
+
+##### [MOD-PERM-MSG-15-3] Grant VS Operator Authorization fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+
+##### [MOD-PERM-MSG-15-4] Grant VS Operator Authorization execution of the method
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+Load Permission `perm` with `perm_id`.
+
+Create VSOperatorAuthorization `vs_operator_authz` if it doesn't exist yet:
+
+- set `vs_operator_authz.grantor` to `perm.corporation`
+- set `vs_operator_authz.grantee` to `perm.vs_operator`
+
+then, add the perm_id to the list of authorized permissions:
+
+- Add `perm_id` to `vs_operator_authz.permissions`
+
+Then check for feegrant:
+
+- if `perm.vs_operator_authz_with_feegrant` is true:
+  - set `max_expire` = `perm.effective_until`
+  - if `max_expire` == null: call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, null, null, null) and EXIT.
+  - else foreach `current_perm_id` of `vs_operator_authz.permissions`
+    - load Permission `current_perm` from `current_perm_id`
+    - if `current_perm.vs_operator_authz_with_feegrant` is true:
+      - if `current_perm.effective_until` == null: call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, null, null, null) and EXIT.
+      - else if `current_perm.effective_until` > `max_expire` => set `max_expire` = `current_perm.effective_until`
+  - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, `max_expire`, null, null).
+
+::: note
+We MUST align to the farthest effective_until for the feegrant, for the permissions that have `current_perm.effective_until` set.
+:::
+
+#### [MOD-PERM-MSG-16] Revoke VS Operator Authorization
+
+This method can only be called by the following methods with no signer check:
+
+- Revoke Permission
+- Slash Permission Trust Deposit
+
+::: note Implementation
+This method was moved from the Delegation Engine module (formerly [MOD-DE-MSG-6]) to the Permission module to avoid a cyclic dependency between DE and PERM modules (TR → DE → PERM → TR). The DE module provides VSOA storage and fee grant primitives; the Permission module orchestrates the full flow.
+:::
+
+##### [MOD-PERM-MSG-16-1] Revoke VS Operator Authorization method parameters
+
+- `perm_id` (uint64) (*mandatory*): the permission this authorization is referring to.
+
+##### [MOD-PERM-MSG-16-2] Revoke VS Operator Authorization basic checks
+
+MUST abort if one of these conditions fails:
+
+- `perm_id` (uint64) (*mandatory*): Permission MUST exist.
+- load Permission `perm` with `perm_id`. `perm.corporation` and `perm.vs_operator` MUST NOT be null.
+
+##### [MOD-PERM-MSG-16-3] Revoke VS Operator Authorization fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+
+##### [MOD-PERM-MSG-16-4] Revoke VS Operator Authorization execution of the method
+
+- load Permission `perm` with `perm_id`.
+- load VSOperatorAuthorization `vs_operator_authz` with `perm.corporation` and `perm.vs_operator`.
+- If `vs_operator_authz` is not null:
+  - remove `perm_id` from `vs_operator_authz.permissions` if present.
+  - if `perm.vs_operator_authz_with_feegrant` is true:
+    - if size(vs_operator_authz.permissions) == 0 => call Revoke Fee Allowance (`perm.corporation`, `perm.vs_operator`).
+    - else define `max_expire` = null
+    - foreach `current_perm_id` of `vs_operator_authz.permissions`
+      - load Permission `current_perm` from `current_perm_id`
+      - if `current_perm.vs_operator_authz_with_feegrant` is true:
+        - if `current_perm.effective_until` == null set `max_expire` = null
+        - else if `max_expire` == null set `max_expire` = `current_perm.effective_until`
+        - else `max_expire` = max (`max_expire`, `current_perm.effective_until`)
+    - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, `max_expire`, null, null).
+
+::: note
+When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.
+:::
+
+::: note
+In the case of VS Operator Authorizations, spending limit are managed by the Permission module.
+:::
+
 #### [MOD-PERM-QRY-1] List Permissions
 
 Anyone CAN execute this method.
@@ -4949,8 +5065,8 @@ Return the list of the existing parameters and their values.
 This method can only be called directly by the following methods:
 
 - Grant Operator Authorization
-- Grant VS Operator Authorization
-- Revoke VS Operator Authorization
+- Grant VS Operator Authorization (Permission module, [MOD-PERM-MSG-15])
+- Revoke VS Operator Authorization (Permission module, [MOD-PERM-MSG-16])
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
@@ -4993,7 +5109,7 @@ This method can only be called directly by the following methods:
 
 - Grant Operator Authorization
 - Revoke Operator Authorization
-- Revoke VS Operator Authorization
+- Revoke VS Operator Authorization (Permission module, [MOD-PERM-MSG-16])
 
 ##### [MOD-DE-MSG-2-1] Revoke Allowance method parameters
 
@@ -5107,112 +5223,16 @@ MUST abort if one of these conditions fails:
 - Delete Authorization entry for this (`corporation`, `grantee`).
 - revoke Fee Allowance (`corporation`, `grantee`).
 
-#### [MOD-DE-MSG-5] Grant VS Operator Authorization
-
-This method can only be called directly by the following methods with no signer check:
-
-- Self Create Permission
-- Adjust Permission
-- Set Permission VP to Validated
-
-> Note: This methid can only grant authorization for the `CreateOrUpdatePermissionSession` Msg.
-
-##### [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters
-
-- `perm_id` (uint64) (*mandatory*): the permission this authorization is referring to.
-
-##### [MOD-DE-MSG-5-2] Grant VS Operator Authorization basic checks
-
-if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
-
-- `perm_id` (uint64) (*mandatory*): Permission MUST exist.
-- load Permission `perm` with `perm_id`. `perm.corporation` and `perm.vs_operator` MUST NOT be null.
-- Check if a **Operator Authorization** exists for `perm.corporation` and `perm.vs_operator`. If this is the case, MUST abort.
-
-::: warning
-A **VS Operator Authorization** CAN be granted ONLY IF no **Operator Authorization** exists for `perm.corporation` and `perm.vs_operator`. **VS Operator Authorization** and **Operator Authorization** are mutually exclusive for a given grantee.
-:::
-
-##### [MOD-DE-MSG-5-3] Grant VS Operator Authorization fee checks
-
-- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-
-##### [MOD-DE-MSG-5-4] Grant VS Operator Authorization execution of the method
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-Load Permission `perm` with `perm_id`.
-
-Create VSOperatorAuthorization `vs_operator_authz` if it doesn't exist yet:
-
-- set `vs_operator_authz.grantor` to `perm.corporation`
-- set `vs_operator_authz.grantee` to `perm.vs_operator`
-
-then, add the perm_id to the list of authorized permissions:
-
-- Add `perm_id` to `vs_operator_authz.permissions`
-
-Then check for feegrant:
-
-- if `perm.vs_operator_authz_with_feegrant` is true:
-  - set `max_expire` = `perm.effective_until`
-  - if `max_expire` == null: call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, null, null, null) and EXIT.
-  - else foreach `current_perm_id` of `vs_operator_authz.permissions`
-    - load Permission `current_perm` from `current_perm_id`
-    - if `current_perm.vs_operator_authz_with_feegrant` is true:
-      - if `current_perm.effective_until` == null: call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, null, null, null) and EXIT.
-      - else if `current_perm.effective_until` > `max_expire` => set `max_expire` = `current_perm.effective_until`
-  - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, `max_expire`, null, null).
+#### [MOD-DE-MSG-5] — Moved
 
 ::: note
-We MUST align to the farthest effective_until for the feegrant, for the permissions that have `current_perm.effective_until` set.
+Grant VS Operator Authorization has been moved to the Permission module as [[MOD-PERM-MSG-15]](#mod-perm-msg-15-grant-vs-operator-authorization) to avoid a cyclic dependency between DE and PERM modules.
 :::
 
-#### [MOD-DE-MSG-6] Revoke VS Operator Authorization
-
-This method can only be called by the following methods with no signer check:
-
-- Revoke Permission
-- Slash Permission Trust Deposit
-
-##### [MOD-DE-MSG-6-1] Revoke VS Operator Authorization method parameters
-
-- `perm_id` (uint64) (*mandatory*): the permission this authorization is referring to.
-
-##### [MOD-DE-MSG-6-2] Revoke VS Operator Authorization basic checks
-
-MUST abort if one of these conditions fails:
-
-- `perm_id` (uint64) (*mandatory*): Permission MUST exist.
-- load Permission `perm` with `perm_id`. `perm.corporation` and `perm.vs_operator` MUST NOT be null.
-
-##### [MOD-DE-MSG-6-3] Revoke VS Operator Authorization fee checks
-
-- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-
-##### [MOD-DE-MSG-6-4] Revoke VS Operator Authorization execution of the method
-
-- load Permission `perm` with `perm_id`.
-- load VSOperatorAuthorization `vs_operator_authz` with `perm.corporation` and `perm.vs_operator`.
-- If `vs_operator_authz` is not null:
-  - remove `perm_id` from `vs_operator_authz.permissions` if present.
-  - if `perm.vs_operator_authz_with_feegrant` is true:
-    - if size(vs_operator_authz.permissions) == 0 => call Revoke Fee Allowance (`perm.corporation`, `perm.vs_operator`).
-    - else define `max_expire` = null
-    - foreach `current_perm_id` of `vs_operator_authz.permissions`
-      - load Permission `current_perm` from `current_perm_id`
-      - if `current_perm.vs_operator_authz_with_feegrant` is true:
-        - if `current_perm.effective_until` == null set `max_expire` = null
-        - else if `max_expire` == null set `max_expire` = `current_perm.effective_until`
-        - else `max_expire` = max (`max_expire`, `current_perm.effective_until`)
-    - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, `max_expire`, null, null).
+#### [MOD-DE-MSG-6] — Moved
 
 ::: note
-When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.
-:::
-
-::: note
-In the case of VS Operator Authorizations, spending limit are managed by the Permission module.
+Revoke VS Operator Authorization has been moved to the Permission module as [[MOD-PERM-MSG-16]](#mod-perm-msg-16-revoke-vs-operator-authorization) to avoid a cyclic dependency between DE and PERM modules.
 :::
 
 #### [MOD-DE-QRY-1] List Operator Authorizations
