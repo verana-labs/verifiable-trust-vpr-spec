@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft13](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft14](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -1724,6 +1724,7 @@ As a result, `accountABC` is authorized to:
 |                                | Slash Permission Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-PERM-MSG-12]](#mod-perm-msg-12-slash-permission-trust-deposit) |corporation + operator |
 |                                | Repay Permission Slashed Trust Deposit  |     N/A (Tx)                | Msg    | [[MOD-PERM-MSG-13]](#mod-perm-msg-13-repay-permission-slashed-trust-deposit) |corporation + operator |
 |                                | Self Create Permission (OPEN mode)      |         N/A (Tx)              | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission) |corporation + operator  |
+|                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-PERM-MSG-15]](#mod-perm-msg-15-trigger-resolver) |corporation + operator |
 |                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |N/A |
 |                                | Get a Permission                        | /perm/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |N/A |
 |                                | Find Beneficiaries                      | /perm/v1/beneficiaries       | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-find-beneficiaries)  |N/A |
@@ -4229,6 +4230,81 @@ A new entry `Permission` `perm` MUST be created:
 Create authorization for `vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
 
 - if `perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`perm.id`)**.
+
+#### [MOD-PERM-MSG-15] Trigger Resolver
+
+This method CAN be executed by:
+
+- the `vs_operator` of the permission, acting on behalf of `perm.corporation`; or
+- any ancestor validator of the permission in the permission tree (from the direct parent up to the root permission). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` defined in `v`, or by any `operator` authorized by `v.corporation` for this message type.
+
+This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the `did` registered in the permission. Typical use cases include:
+
+- a new [[ref: verifiable service]] has been onboarded and its credentials are now present in the DID Document, so trust can be (re-)evaluated;
+- an issuer has revoked a credential issued to a holder: the issuer (acting as the validator of the corresponding HOLDER permission) notifies the trust resolver to re-evaluate trust for the revoked HOLDER permission;
+- an issuer is no longer operating: a parent issuer grantor or root ecosystem permission triggers a re-evaluation.
+
+The method does not modify the [[ref: VPR]] state; it only emits an event that off-chain components MAY consume.
+
+##### [MOD-PERM-MSG-15-1] Trigger Resolver parameters
+
+- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `id` (uint64) (*mandatory*): id of the permission for which a trust resolution must be triggered.
+
+##### [MOD-PERM-MSG-15-2] Trigger Resolver precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-PERM-MSG-15-2-1] Trigger Resolver basic checks
+
+if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
+
+- `corporation` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- `id` MUST be a valid uint64.
+- Load `Permission` entry `perm` from `id`. If no entry found, abort.
+- `perm` MUST be an [[ref: active permission]], else abort.
+- `perm.did` MUST NOT be null, else abort.
+
+###### [MOD-PERM-MSG-15-2-2] Trigger Resolver authorization checks
+
+At least one of the two authorization paths below MUST pass, else [[ref: transaction]] MUST abort.
+
+*Path 1 — vs_operator of the target permission*
+
+- `corporation` MUST be equal to `perm.corporation`.
+- `operator` MUST be equal to `perm.vs_operator`.
+- [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
+- [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
+
+*Path 2 — ancestor validator in the permission tree*
+
+The target `perm` itself is excluded from this walk; only its ancestors (from the direct parent up to the root) are considered. Walk the tree:
+
+- set `v` = `perm`.
+- while `v.validator_perm_id` is defined:
+  - load `v` from `v.validator_perm_id`.
+  - if `v` is not an [[ref: active permission]], continue with the next iteration.
+  - if `corporation` is equal to `v.corporation` AND at least one of the two sub-paths below passes, authorization succeeds and the walk terminates:
+    - *sub-path 2a — vs_operator of the ancestor*: `operator` MUST be equal to `v.vs_operator` AND [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) + [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `v`) tuple.
+    - *sub-path 2b — authorized operator of the ancestor corporation*: [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+
+If the walk terminates without a match, Path 2 fails.
+
+###### [MOD-PERM-MSG-15-2-3] Trigger Resolver fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+
+##### [MOD-PERM-MSG-15-3] Trigger Resolver execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+This method does not modify the state of the [[ref: VPR]]. It MUST emit an event signaling that a trust resolution has been triggered for `perm`. The event MUST include at least:
+
+- `perm_id`: equal to `id`.
+
+> Note: the identity of the signers (`corporation`, `operator`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `Permission` entry queried by `perm_id` to resolve `did`, `corporation`, `vs_operator`, and ancestor chain without duplicating them in the event payload.
 
 #### [MOD-PERM-QRY-1] List Permissions
 
