@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft14](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft15](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -1189,6 +1189,7 @@ csps --- "1..n" cspsr : session_records
 cspsr  o-- "0..1" csp: issuer_perm_id
 cspsr  o-- "0..1" csp: verifier_perm_id
 cspsr  o-- "0..1" csp: wallet_agent_perm_id
+cspsr  o-- "0..1" csp: agent_perm_id
 
 oauthz "1" --- "0..n" da: fee_spend_limit
 oauthz "1" --- "0..n" da: spend_limit
@@ -1209,7 +1210,6 @@ group --o csps: corporation
 account --o csp: vs_operator
 
 csps o-- account: vs_operator
-csps o-- csp: agent_perm_id
 
 valstate --o csp: vp_state
 group  --o td: corporation
@@ -3570,18 +3570,22 @@ Any credential exchange that requires issuer or verifier to pay fees, register a
 If the peer wants to issue a credential, the `agent`, the Verifiable User Agent or Verifiable Service that receive the request MUST send to peer:
 
 - a `uuid` for session identification;
-- the `wallet_agent_perm_id` permission id of the agent wallet that will store the credential.
+- *optional*: the `agent_perm_id` permission id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: the `wallet_agent_perm_id` permission id of the agent wallet that will store the credential. If this is the same software than the agent, then it should be equal to `agent_perm_id`. It MUST NOT be set if peer is a **Verifiable Service**.
 
 If the peer wants to verify a credential, agent must send to peer:
 
 - a `uuid` for session identification;
-- a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64: wallet_agent_perm_id, uint64[] issuer_perm_ids>
+- *optional*: the `agent_perm_id` permission id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_perm_ids, uint64: wallet_agent_perm_id>. wallet_agent_perm_id MUST NOT be set if peer is a **Verifiable Service**.
+
+In case peer is a **Verifiable Service** and illegaly set `agent_perm_id` and/or `wallet_agent_perm_id`, the other end MUST refuse the request.
 
 `payer` MUST create a Permission Session using the above information, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
 
 ```plantuml
 scale max 800 width
-actor "Agent\nVUA" as Issued 
+actor "Agent\nVUA or VS" as Issued 
 participant "Payer\nVS" as Issuer 
 participant "VPR" as vpr 
 
@@ -3609,8 +3613,8 @@ An [[ref: account]] that would like to create or update a `PermissionSession` en
 - `id` (uuid) (*mandatory*): id of the `PermissionSession`.
 - `issuer_perm_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the issuance of a credential.
 - `verifier_perm_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
-- `agent_perm_id` (uint64) (*mandatory*): the agent credential issuer permission id (extracted from the agent credential that agent has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification).
-- `wallet_agent_perm_id` (uint64) (*mandatory*): the wallet credential issuer permission id of the agent where the credential will be or is stored. Can be the same perm than `agent_perm_id` if agent and wallet_agent are the same agent.
+- `agent_perm_id` (uint64) (*optional*): the agent credential issuer permission id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
+- `wallet_agent_perm_id` (uint64) (*optional*): the wallet credential issuer permission id of the VUA where the credential will be or is stored. Can be the same perm than `agent_perm_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `digest` (string) (*optional*): digest derived from an issued or verified credential.
 
 ##### [MOD-PERM-MSG-10-2] Create or Update Permission Session precondition checks
@@ -3730,7 +3734,13 @@ Calculate:
 - `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
+
+if `agent_perm_id` is set:
+
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+
+if `wallet_agent_perm_id` is set:
+
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
 Required balance check:
@@ -3749,7 +3759,13 @@ Calculate:
 - `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
+
+if `agent_perm_id` is set:
+
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+
+if `wallet_agent_perm_id` is set:
+
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
 Required balance check:
@@ -3768,7 +3784,13 @@ Calculate:
 - `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`)
+
+if `agent_perm_id` is set:
+
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+
+if `wallet_agent_perm_id` is set:
+
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
 Required balance check:
@@ -3788,7 +3810,13 @@ Calculate:
 - `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = 0 (FIAT payments are managed off-chain)
+
+if `agent_perm_id` is set:
+
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+
+if `wallet_agent_perm_id` is set:
+
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
 Required balance check:
@@ -3849,35 +3877,53 @@ If `perm.[fee_field]` > 0:
    - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
-   - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-   - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
-   
+
+  if `agent_perm_id` is set:
+    - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+
+  if `wallet_agent_perm_id` is set:
+    - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+
+  
    **Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(TU, "tu")`**
    
    - `fee_in_native_denom` = getPrice(`TU`, `"tu"`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
    - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
-   - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-   - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
-   
+
+  if `agent_perm_id` is set:
+    - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+
+  if `wallet_agent_perm_id` is set:
+    - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+
    **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
    
    - `fee_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
    - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `beneficiary_fee_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`) *(in `<arbitrary_denom>`)*
-   - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-   - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
-   
+
+  if `agent_perm_id` is set:
+    - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+
+  if `wallet_agent_perm_id` is set:
+    - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+
+
    **Case D: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
    
    - `fee_in_native_denom` = getPrice(`FIAT`, `<fiat_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
    - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = 0 *(FIAT payments are managed off-chain)*
-   - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-   - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+
+  if `agent_perm_id` is set:
+    - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
+
+  if `wallet_agent_perm_id` is set:
+    - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
 3. Execute transfers and deposits for this beneficiary:
 
@@ -3898,7 +3944,7 @@ After processing all beneficiaries, distribute accumulated rewards to agents.
 
 **User Agent Reward:**
 
-If `accumulated_user_agent_reward` > 0:
+If `agent_perm_id` is set AND `accumulated_user_agent_reward` > 0:
 
 - `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
@@ -3907,7 +3953,7 @@ If `accumulated_user_agent_reward` > 0:
 
 **Wallet Agent Reward:**
 
-If `accumulated_wallet_agent_reward` > 0:
+If `wallet_agent_perm_id` is set AND `accumulated_wallet_agent_reward` > 0:
 
 - `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
@@ -3925,6 +3971,7 @@ Create a `PermissionSessionRecord` `cspsr`:
 - `cspsr.created`: `now`
 - `cspsr.issuer_perm_id`: `issuer_perm_id`
 - `cspsr.verifier_perm_id`: `verifier_perm_id`
+- `cspsr.agent_perm_id`: `agent_perm_id`
 - `cspsr.wallet_agent_perm_id`: `wallet_agent_perm_id`
 
 If new, create entry `PermissionSession` `session`:
@@ -3932,7 +3979,6 @@ If new, create entry `PermissionSession` `session`:
 - `session.id`: `id`
 - `session.corporation`: `corporation`
 - `session.vs_operator`: `operator`
-- `session.agent_perm_id`: `agent_perm_id`
 - `session.modified:` : `now`
 - `session.created:` : `now`
 
