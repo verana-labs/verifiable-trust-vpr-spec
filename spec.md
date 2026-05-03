@@ -1650,7 +1650,7 @@ If the transaction fees are paid by the `corporation` account (via fee grant) in
 
 ##### [AUTHZ-CHECK-3] VS Operator Authorization checks
 
-For `CreateOrUpdatePermissionSession`, the authorization model differs from other delegable messages: it relies on `VSOperatorAuthorization` and per-permission settings instead of `OperatorAuthorization`.
+For `CreateOrUpdatePermissionSession` and `TriggerResolver`, the authorization model differs from other delegable messages: it relies on `VSOperatorAuthorization` and per-permission settings instead of `OperatorAuthorization`.
 
 Given a `corporation`, an `operator` (the `vs_operator`), and a **primary permission** `perm` (determined by the calling method):
 
