@@ -2945,6 +2945,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - Renewal is only possible with the same validator.
 - If validator permission is not valid anymore, applicant MUST perform a new validation process with another validator.
 - Renewal does not allow changing the `perm.validation_fees`, `perm.issuance_fees`, `perm.verification_fees`. To change these values, applicant MUST start a new validation process.
+- if permission is revoked, slashed, or repaid, method MUST fail.
 
 ##### [MOD-PERM-MSG-2-1] Renew Permission VP parameters
 
