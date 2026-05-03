@@ -5238,7 +5238,7 @@ This method can only be called directly by the following methods with no signer 
 - Adjust Permission
 - Set Permission VP to Validated
 
-> Note: This methid can only grant authorization for the `CreateOrUpdatePermissionSession` Msg.
+> Note: This method can only grant authorization for the `CreateOrUpdatePermissionSession` and `TriggerResolver` Msgs.
 
 ##### [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters
 
@@ -5279,13 +5279,13 @@ Then check for feegrant:
 
 - if `perm.vs_operator_authz_with_feegrant` is true:
   - set `max_expire` = `perm.effective_until`
-  - if `max_expire` == null: call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, null, null, null) and EXIT.
+  - if `max_expire` == null: call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `TriggerResolver`], null, null, null) and EXIT.
   - else foreach `current_perm_id` of `vs_operator_authz.permissions`
     - load Permission `current_perm` from `current_perm_id`
     - if `current_perm.vs_operator_authz_with_feegrant` is true:
-      - if `current_perm.effective_until` == null: call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, null, null, null) and EXIT.
+      - if `current_perm.effective_until` == null: call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `TriggerResolver`], null, null, null) and EXIT.
       - else if `current_perm.effective_until` > `max_expire` => set `max_expire` = `current_perm.effective_until`
-  - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, `max_expire`, null, null).
+  - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `TriggerResolver`], `max_expire`, null, null).
 
 ::: note
 We MUST align to the farthest effective_until for the feegrant, for the permissions that have `current_perm.effective_until` set.
@@ -5328,7 +5328,7 @@ MUST abort if one of these conditions fails:
         - if `current_perm.effective_until` == null set `max_expire` = null
         - else if `max_expire` == null set `max_expire` = `current_perm.effective_until`
         - else `max_expire` = max (`max_expire`, `current_perm.effective_until`)
-    - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, `CreateOrUpdatePermissionSession`, `max_expire`, null, null).
+    - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `TriggerResolver`] , `max_expire`, null, null).
 
 ::: note
 When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.
