@@ -1204,8 +1204,6 @@ oauthz "1" --- "0..n" da: spend_limit
 csp "1" --- "0..n" da: vs_operator_spend_limit
 csp "1" --- "0..n" da: vs_operator_fee_spend_limit
 
-vsoauthz --- "0..n" csp: permissions 
-
 
 tr "1" --- "1..n" gfv: versions 
 gfv "1" --- "1..n" gfd: documents 
@@ -2771,11 +2769,23 @@ An Applicant that would like to start a permission validation process MUST execu
 
 The following VS Operator Authorization parameters are **optional** and collectively define the initial [PermissionAuthorizationRecord](#permissionauthorizationrecord) that will be created for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode (the corporation signs and pays for its own permission-related transactions directly). VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
 
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `PermissionAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified.
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `PermissionAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
 - `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
 - `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
 - `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`.
+
+|Permission type|Permitted Messages|
+|-|-|
+| HOLDER | TriggerResolver |
+| ISSUER | CreateOrUpdatePermissionSession, SetPermissionVPtoValidated |
+| VERIFIER | CreateOrUpdatePermissionSession |
+| ISSUER_GRANTOR | SetPermissionVPtoValidated |
+| VERIFIER_GRANTOR | SetPermissionVPtoValidated |
+| ECOSYSTEM | SetPermissionVPtoValidated |
+ 
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
@@ -2796,7 +2806,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types.
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PERM-MSG-1-1](#mod-perm-msg-1-1-start-permission-vp-parameters).
 
 :::note
 A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the validation process is REQUIRED or not.
@@ -3311,12 +3321,27 @@ An [[ref: account]] that would like to create a `Permission` entry MUST call thi
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
+- `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this permission. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS.
 - `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
+
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [PermissionAuthorizationRecord](#permissionauthorizationrecord) for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `PermissionAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`. Since [Create Root Permission](#mod-perm-msg-7-create-root-permission) always creates an ECOSYSTEM permission, only the following is allowed:
+
+|Permission type|Permitted Messages|
+|-|-|
+| ECOSYSTEM | SetPermissionVPtoValidated |
 
 ##### [MOD-PERM-MSG-7-2] Create Root Permission precondition checks
 
@@ -3336,6 +3361,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `validation_fees` (number) (*mandatory*): MUST be >= 0.
 - `issuance_fees` (number) (*mandatory*): MUST be >= 0.
 - `verification_fees` (number) (*mandatory*): MUST be >= 0.
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PERM-MSG-7-1](#mod-perm-msg-7-1-create-root-permission-parameters).
 
 ###### [MOD-PERM-MSG-7-2-2] Create Root Permission permission checks
 
@@ -3382,6 +3408,7 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.type`: ECOSYSTEM.
 - `perm.did`: `did`.
 - `perm.corporation`: `corporation`.
+- `perm.vs_operator`: `vs_operator`.
 - `perm.created`: `now`
 - `perm.effective_from`: `effective_from`
 - `perm.effective_until`: `effective_until`
@@ -3389,6 +3416,21 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.issuance_fees`: `issuance_fees`
 - `perm.verification_fees`: `verification_fees`
 - `perm.deposit`: 0
+
+If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+
+- `corporation`: `corporation`
+- `vs_operator`: `vs_operator`
+- `record`:
+  - `record.perm_id`: `perm.id`
+  - `record.msg_types`: `vs_operator_authz_msg_types`
+  - `record.spend_limit`: `vs_operator_authz_spend_limit`
+  - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+  - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
+  - `record.expiration`: `perm.effective_until`
+  - `record.period`: `vs_operator_authz_period`
+
+> Note: like [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission), the record is created with `expiration = perm.effective_until` and is therefore immediately active. If `with_feegrant` is true and `perm.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
 #### [MOD-PERM-MSG-8] Adjust Permission
 
@@ -4229,6 +4271,17 @@ The following VS Operator Authorization parameters are **optional** and collecti
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
 - `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
 
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`.
+
+|Permission type|Permitted Messages|
+|-|-|
+| HOLDER | TriggerResolver |
+| ISSUER | CreateOrUpdatePermissionSession, SetPermissionVPtoValidated |
+| VERIFIER | CreateOrUpdatePermissionSession |
+| ISSUER_GRANTOR | SetPermissionVPtoValidated |
+| VERIFIER_GRANTOR | SetPermissionVPtoValidated |
+| ECOSYSTEM | SetPermissionVPtoValidated |
+ 
 ##### [MOD-PERM-MSG-14-2] Self Create Permission precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
@@ -4254,7 +4307,7 @@ Load `Permission` `validator_perm` from `validator_perm_id`.
   - else if not null, must be greater than `effective_from` AND if `validator_perm.effective_until` is not null, MUST be lower or equal to `validator_perm.effective_until`
 - `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
 - `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types.
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PERM-MSG-14-1](#mod-perm-msg-14-1-self-create-permission-parameters).
 
 ###### [MOD-PERM-MSG-14-2-2] Self Create Permission permission checks
 
