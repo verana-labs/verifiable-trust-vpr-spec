@@ -1181,6 +1181,8 @@ account --o oauthz: operator
 
 group --o vsoauthz: corporation
 account --o vsoauthz: vs_operator
+vsoauthz "1" --- "1..n" par: records
+par o-- csp: perm_id
 
 csp o-- cspt: type
 csp o-- cs: schema_id
