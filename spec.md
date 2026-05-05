@@ -5103,9 +5103,8 @@ Return the list of the existing parameters and their values.
 
 This method can only be called directly by the following methods:
 
-- Grant Operator Authorization
-- Grant VS Operator Authorization
-- Revoke VS Operator Authorization
+- [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-7]](#mod-de-msg-7-update-vs-operator-authorization-expiration))
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
@@ -5146,9 +5145,9 @@ Create (or update if it already exist) FeeGrant `feegrant`:
 
 This method can only be called directly by the following methods:
 
-- Grant Operator Authorization
-- Revoke Operator Authorization
-- Revoke VS Operator Authorization
+- [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
+- [Revoke Operator Authorization](#mod-de-msg-4-revoke-operator-authorization)
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-7]](#mod-de-msg-7-update-vs-operator-authorization-expiration))
 
 ##### [MOD-DE-MSG-2-1] Revoke Allowance method parameters
 
@@ -5264,111 +5263,127 @@ MUST abort if one of these conditions fails:
 
 #### [MOD-DE-MSG-5] Grant VS Operator Authorization
 
-This method can only be called directly by the following methods with no signer check:
+This method can only be called directly by the following Permission module methods, with no signer check:
 
-- Self Create Permission
-- Adjust Permission
-- Set Permission VP to Validated
+- [Start Permission VP](#mod-perm-msg-1-start-permission-vp)
+- [Self Create Permission](#mod-perm-msg-14-self-create-permission)
 
-> Note: This method can only grant authorization for the `CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated` and `TriggerResolver` Msgs.
+It creates a new [PermissionAuthorizationRecord](#permissionauthorizationrecord) inside `VSOperatorAuthorization[corporation, vs_operator]` and, if the record enables a fee grant and its `expiration` is in the future, synchronises the on-chain `FeeGrant` for the containing VSOA.
+
+This method does NOT read `Permission` state. All authorization configuration is provided by the caller.
 
 ##### [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters
 
-- `perm_id` (uint64) (*mandatory*): the permission this authorization is referring to.
+- `corporation` (group) (*mandatory*): the corporation delegating the authorization.
+- `vs_operator` (account) (*mandatory*): the account receiving the authorization.
+- `record` ([PermissionAuthorizationRecord](#permissionauthorizationrecord)) (*mandatory*): the full record to store.
 
 ##### [MOD-DE-MSG-5-2] Grant VS Operator Authorization basic checks
 
-if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
+If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `perm_id` (uint64) (*mandatory*): Permission MUST exist.
-- load Permission `perm` with `perm_id`. `perm.corporation` and `perm.vs_operator` MUST NOT be null.
-- Check if a **Operator Authorization** exists for `perm.corporation` and `perm.vs_operator`. If this is the case, MUST abort.
+- `corporation` and `vs_operator` MUST NOT be null.
+- `record.perm_id` MUST NOT match an existing `PermissionAuthorizationRecord` anywhere in the store (each record is globally unique by `perm_id`).
+- `record.msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
+- No `OperatorAuthorization` `oauthz` where `oauthz.corporation` = `corporation` and `oauthz.operator` = `vs_operator` MUST exist.
 
 ::: warning
-A **VS Operator Authorization** CAN be granted ONLY IF no **Operator Authorization** exists for `perm.corporation` and `perm.vs_operator`. **VS Operator Authorization** and **Operator Authorization** are mutually exclusive for a given grantee.
+A **VS Operator Authorization** record CAN be granted ONLY IF no **OperatorAuthorization** exists for the same `(corporation, vs_operator)` pair. **VS Operator Authorization** and **Operator Authorization** are mutually exclusive for a given grantee.
 :::
 
 ##### [MOD-DE-MSG-5-3] Grant VS Operator Authorization fee checks
 
-- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
 
 ##### [MOD-DE-MSG-5-4] Grant VS Operator Authorization execution of the method
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-Load Permission `perm` with `perm_id`.
+- Load `VSOperatorAuthorization` `vsoa` with `(corporation, vs_operator)`. If it does not exist, create a new `vsoa` with `vsoa.corporation = corporation`, `vsoa.vs_operator = vs_operator`, `vsoa.records = []`.
+- Append `record` to `vsoa.records`.
+- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
 
-Create VSOperatorAuthorization `vs_operator_authz` if it doesn't exist yet:
+##### [MOD-DE-MSG-5-5] Recompute VS Operator Fee Allowance
 
-- set `vs_operator_authz.grantor` to `perm.corporation`
-- set `vs_operator_authz.grantee` to `perm.vs_operator`
+This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-7]](#mod-de-msg-7-update-vs-operator-authorization-expiration) after they mutate `vsoa.records`.
 
-then, add the perm_id to the list of authorized permissions:
+- define `max_expire` = null.
+- define `feegrant_msg_types` = empty set.
+- for each `r` in `vsoa.records`:
+  - if `r.with_feegrant` is true AND `r.expiration` > now():
+    - if `max_expire` is null OR `r.expiration` > `max_expire`, set `max_expire` = `r.expiration`.
+    - add all entries of `r.msg_types` to `feegrant_msg_types`.
+- if `max_expire` is null (no active feegrant-enabled record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation`, `vsoa.vs_operator`).
+- else: call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation`, `vsoa.vs_operator`, `feegrant_msg_types`, `max_expire`, null, null).
 
-- Add `perm_id` to `vs_operator_authz.permissions`
-
-Then check for feegrant:
-
-- if `perm.vs_operator_authz_with_feegrant` is true:
-  - set `max_expire` = `perm.effective_until`
-  - if `max_expire` == null: call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`], null, null, null) and EXIT.
-  - else foreach `current_perm_id` of `vs_operator_authz.permissions`
-    - load Permission `current_perm` from `current_perm_id`
-    - if `current_perm.vs_operator_authz_with_feegrant` is true:
-      - if `current_perm.effective_until` == null: call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`], null, null, null) and EXIT.
-      - else if `current_perm.effective_until` > `max_expire` => set `max_expire` = `current_perm.effective_until`
-  - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`], `max_expire`, null, null).
-
-::: note
-We MUST align to the farthest effective_until for the feegrant, for the permissions that have `current_perm.effective_until` set.
-:::
+> Note: `max_expire` is bounded by the farthest `record.expiration` among feegrant-enabled records. The chain-level `FeeGrant` `msg_types` is the union of all such records' `msg_types`. Per-record spend limits are enforced at [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) time; they are not replicated on the `FeeGrant` object.
 
 #### [MOD-DE-MSG-6] Revoke VS Operator Authorization
 
-This method can only be called by the following methods with no signer check:
+This method can only be called directly by the following Permission module methods, with no signer check:
 
-- Revoke Permission
-- Slash Permission Trust Deposit
+- [Cancel Permission VP Last Request](#mod-perm-msg-6-cancel-permission-vp-last-request) (only when the cancellation terminates the permission)
+- [Revoke Permission](#mod-perm-msg-9-revoke-permission)
+- [Slash Permission Trust Deposit](#mod-perm-msg-12-slash-permission-trust-deposit)
+
+It removes the unique [PermissionAuthorizationRecord](#permissionauthorizationrecord) identified by `perm_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no such record exists.
+
+This method does NOT read `Permission` state.
 
 ##### [MOD-DE-MSG-6-1] Revoke VS Operator Authorization method parameters
 
-- `perm_id` (uint64) (*mandatory*): the permission this authorization is referring to.
+- `perm_id` (uint64) (*mandatory*): id of the permission whose authorization record must be removed.
 
 ##### [MOD-DE-MSG-6-2] Revoke VS Operator Authorization basic checks
 
-MUST abort if one of these conditions fails:
+- `perm_id` MUST be a valid uint64.
 
-- `perm_id` (uint64) (*mandatory*): Permission MUST exist.
-- load Permission `perm` with `perm_id`. `perm.corporation` and `perm.vs_operator` MUST NOT be null.
+> Note: absence of a record for `perm_id` is NOT an error. The method is a no-op in that case (the permission was never VS-operator-authorized, or was already revoked).
 
 ##### [MOD-DE-MSG-6-3] Revoke VS Operator Authorization fee checks
 
-- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
 
 ##### [MOD-DE-MSG-6-4] Revoke VS Operator Authorization execution of the method
 
-- load Permission `perm` with `perm_id`.
-- load VSOperatorAuthorization `vs_operator_authz` with `perm.corporation` and `perm.vs_operator`.
-- If `vs_operator_authz` is not null:
-  - remove `perm_id` from `vs_operator_authz.permissions` if present.
-  - if `perm.vs_operator_authz_with_feegrant` is true:
-    - if size(vs_operator_authz.permissions) == 0 => call Revoke Fee Allowance (`perm.corporation`, `perm.vs_operator`).
-    - else define `max_expire` = null
-    - foreach `current_perm_id` of `vs_operator_authz.permissions`
-      - load Permission `current_perm` from `current_perm_id`
-      - if `current_perm.vs_operator_authz_with_feegrant` is true:
-        - if `current_perm.effective_until` == null set `max_expire` = null
-        - else if `max_expire` == null set `max_expire` = `current_perm.effective_until`
-        - else `max_expire` = max (`max_expire`, `current_perm.effective_until`)
-    - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`] , `max_expire`, null, null).
+- Locate the unique `PermissionAuthorizationRecord` `record` with `record.perm_id = perm_id`. If none exists, EXIT (no-op).
+- Let `vsoa` = the `VSOperatorAuthorization` that contains `record`.
+- Remove `record` from `vsoa.records`.
+- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
+- If `vsoa.records` is now empty, delete `vsoa`.
 
-::: note
-When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.
-:::
+#### [MOD-DE-MSG-7] Update VS Operator Authorization Expiration
 
-::: note
-In the case of VS Operator Authorizations, spending limit are managed by the Permission module.
-:::
+This method can only be called directly by the following Permission module methods, with no signer check:
+
+- [Set Permission VP to Validated](#mod-perm-msg-3-set-permission-vp-to-validated)
+- [Adjust Permission](#mod-perm-msg-8-adjust-permission)
+
+It updates the `expiration` of the unique record identified by `perm_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no record exists for `perm_id`.
+
+This method does NOT read `Permission` state; the caller supplies the new expiration value directly.
+
+##### [MOD-DE-MSG-7-1] Update VS Operator Authorization Expiration method parameters
+
+- `perm_id` (uint64) (*mandatory*): id of the permission whose authorization record's `expiration` must be updated.
+- `new_expiration` (timestamp) (*mandatory*): the new value of `record.expiration`.
+
+##### [MOD-DE-MSG-7-2] Update VS Operator Authorization Expiration basic checks
+
+- `perm_id` MUST be a valid uint64.
+- `new_expiration` MUST be a valid timestamp.
+
+> Note: absence of a record for `perm_id` is NOT an error. The method is a no-op in that case (the permission does not enable VS operator authorization).
+
+##### [MOD-DE-MSG-7-3] Update VS Operator Authorization Expiration fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-DE-MSG-7-4] Update VS Operator Authorization Expiration execution of the method
+
+- Locate the unique `PermissionAuthorizationRecord` `record` with `record.perm_id = perm_id`. If none exists, EXIT (no-op).
+- Set `record.expiration = new_expiration`.
+- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for the VSOA containing `record`.
 
 #### [MOD-DE-QRY-1] List Operator Authorizations
 
