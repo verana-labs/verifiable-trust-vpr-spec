@@ -1338,7 +1338,6 @@ group  --o td: corporation
 - `id` (uuid) (*mandatory*): session uuid.
 - `corporation` (group) (*mandatory*): corporation that controls the entry.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account that controls the entry (agent crypto account).
-- `agent_perm_id` (uint64) (*mandatory*): permission id of the agent.
 - `created` (timestamp) (*mandatory*): timestamp this PermissionSession has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this PermissionSession has been modified.
 - `session_records` (PermissionSessionRecord[]) (*mandatory*): session records, for this session.
@@ -1351,6 +1350,7 @@ group  --o td: corporation
 - `issuer_perm_id` (uint64) (*optional*): related issuer `Permission` id (if applicable).
 - `verifier_perm_id` (uint64) (*optional*): related verifier `Permission` id (if applicable).
 - `wallet_agent_perm_id` (uint64) (*optional*): related wallet agent `Permission` id (if applicable).
+- `agent_perm_id` (uint64) (*optional*): permission id of the agent `Permission` id (if applicable).
 
 ### TrustDeposit
 
