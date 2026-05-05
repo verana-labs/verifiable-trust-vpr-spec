@@ -2765,12 +2765,14 @@ An Applicant that would like to start a permission validation process MUST execu
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
 - `did` (string) (*required*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `corporation` account (trust fees will be paid by corporation account)
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
-  as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with `corporation` account.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
-- `vs_operator_authz_spend_period`: (period) (*optional*): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
+
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [PermissionAuthorizationRecord](#permissionauthorizationrecord) that will be created for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode (the corporation signs and pays for its own permission-related transactions directly). VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `PermissionAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
@@ -2791,12 +2793,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
-  as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
-- `vs_operator_authz_spend_period`: (period) (*optional*): if not null, `vs_operator` MUST NOT be null, else abort. Reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types.
 
 :::note
 A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the validation process is REQUIRED or not.
@@ -2926,12 +2923,21 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
   - `applicant_perm.vp_summary_digest`: null.
   - `applicant_perm.vp_validator_deposit`: 0.
-  - `applicant_perm.vs_operator_authz_enabled`: `vs_operator_authz_enabled`
-  - `applicant_perm.vs_operator_authz_spend_limit`: `vs_operator_authz_spend_limit`
-  - `applicant_perm.vs_operator_authz_with_feegrant`: `vs_operator_authz_with_feegrant`
-  - `applicant_perm.vs_operator_authz_fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
-  - `applicant_perm.vs_operator_authz_spend_period`: `vs_operator_authz_spend_period`
-  
+
+If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+
+- `corporation`: `corporation`
+- `vs_operator`: `vs_operator`
+- `record`:
+  - `record.perm_id`: `applicant_perm.id`
+  - `record.msg_types`: `vs_operator_authz_msg_types`
+  - `record.spend_limit`: `vs_operator_authz_spend_limit`
+  - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+  - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
+  - `record.expiration`: `now`
+  - `record.period`: `vs_operator_authz_period`
+
+> Note: the record is created with `expiration = now` so authorization is **not yet active**. [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) will reject any attempt to use it until [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated) updates `expiration` to `applicant_perm.effective_until`. No on-chain `FeeGrant` object is created at this stage even if `with_feegrant` is true (the recompute subroutine in [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) requires `expiration > now`).
 
 #### Connecting to the VS of the Validator
 
