@@ -3293,6 +3293,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_perm.corporation` by `applicant_perm.vp_current_deposit`
   - set `applicant_perm.vp_current_deposit` to 0.
 
+If `applicant_perm.vp_state` was set to TERMINATED (i.e. `applicant_perm.vp_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any disabled authorization record created at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp). The call is a no-op if no record exists. If `applicant_perm.vp_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
+
 #### [MOD-PERM-MSG-7] Create Root Permission
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
@@ -3602,9 +3604,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_perm.revoked` to `now`
 - set `applicant_perm.modified` to `now`
 
-If `applicant_perm.type` is ISSUER or VERIFIER: Delete authorization for `applicant_perm.vs_operator`:
-
-- call **Revoke VS Operator Authorization(`applicant_perm.id`)**.
+Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
 
 #### [MOD-PERM-MSG-10] Create or Update Permission Session
 
@@ -4146,9 +4146,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_perm.corporation`.
 
-If `applicant_perm.type` is ISSUER or VERIFIER: Delete authorization for `applicant_perm.vs_operator`:
-
-- call **Revoke VS Operator Authorization(`applicant_perm.id`)** with the following parameters:
+Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
 
 #### [MOD-PERM-MSG-13] Repay Permission Slashed Trust Deposit
 
