@@ -1666,26 +1666,26 @@ If the transaction fees are paid by the `corporation` account (via fee grant) in
 
 ##### [AUTHZ-CHECK-3] VS Operator Authorization checks
 
-A second authorization grant mode exists for vs-agents.
-It is used to grant access to `CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated` and `TriggerResolver` for specific permission manipulation only. The authorization model differs from other delegable messages: it relies on `VSOperatorAuthorization` and per-permission settings instead of `OperatorAuthorization`.
+A second authorization grant mode exists for vs-agents. It is used when a corporation delegates a specific permission (and a specific set of message types, scoped to that permission) to a `vs_operator` account. The authorization model differs from other delegable messages: it relies on [VSOperatorAuthorization](#vsoperatorauthorization) / [PermissionAuthorizationRecord](#permissionauthorizationrecord) instead of `OperatorAuthorization`.
 
-> Note: when a vs-agent account is granted a `VSOperatorAuthorization` for a given permission, the permission is automatically granted for all tree messages `CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated` and `TriggerResolver`. It is not possible to limit specific messages per permission.
+> Note: the set of messages a `vs_operator` is authorized to execute in the context of a permission is declared by the applicant at permission creation time (see [[MOD-PERM-MSG-1-1]](#mod-perm-msg-1-1-start-permission-vp-parameters) and [[MOD-PERM-MSG-14-1]](#mod-perm-msg-14-1-self-create-permission-parameters)) and stored in `record.msg_types`. It is frozen for the lifetime of the record and can only be changed by revoking the permission and starting a new one.
 
-Given a `corporation`, an `operator` (the `vs_operator`), and a **primary permission** `perm` (determined by the calling method):
+Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission id** `perm_id` (determined by the calling method), and the current message type `msg_type`:
 
-1. A `VSOperatorAuthorization` `vso` MUST exist where `vso.corporation` = `corporation` and `vso.vs_operator` = `operator`.
-2. `vso.permissions` MUST include `perm.id`.
-3. `perm.vs_operator_authz_enabled` MUST be true.
-4. If `perm.vs_operator_authz_spend_period` is set and the current period has elapsed since the last reset, the remaining balances for `perm.vs_operator_authz_spend_limit` and `perm.vs_operator_authz_fee_spend_limit` MUST be reset to their original values before evaluating the checks below.
-5. If `perm.vs_operator_authz_spend_limit` is set, the remaining balance MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from the remaining balance.
+1. A `PermissionAuthorizationRecord` `record` MUST exist for `perm_id`. Abort if not found.
+2. `record` MUST belong to `VSOperatorAuthorization[corporation, operator]`, that is: the containing `VSOperatorAuthorization` MUST have `corporation` as its `corporation` and `operator` as its `vs_operator`. Abort otherwise.
+3. `msg_type` MUST be in `record.msg_types`. Abort otherwise.
+4. `record.expiration` MUST be strictly greater than now(). Abort otherwise.
+5. If `record.period` is set and the current period has elapsed since the last reset, the remaining balances for `record.spend_limit` and `record.fee_spend_limit` MUST be reset to their original values before evaluating the check below.
+6. If `record.spend_limit` is set, the remaining balance MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from the remaining balance.
 
 ##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
 
-If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same **primary permission** `perm`:
+If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `PermissionAuthorizationRecord` `record` looked up in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
 
-1. `perm.vs_operator_authz_with_feegrant` MUST be true, else abort.
-2. If `perm.vs_operator_authz_spend_period` is set and the current period has elapsed since the last reset, the remaining balance for `perm.vs_operator_authz_fee_spend_limit` MUST be reset to its original value before evaluating the check below.
-3. If `perm.vs_operator_authz_fee_spend_limit` is set, the remaining balance MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from the remaining balance.
+1. `record.with_feegrant` MUST be true, else abort.
+2. If `record.period` is set and the current period has elapsed since the last reset, the remaining balance for `record.fee_spend_limit` MUST be reset to its original value before evaluating the check below.
+3. If `record.fee_spend_limit` is set, the remaining balance MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from the remaining balance.
 
 #### Example
 
