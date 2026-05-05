@@ -3468,10 +3468,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_perm.modified` to `now`
 
 
-If `applicant_perm.type` is ISSUER or VERIFIER: Update authorization for `applicant_perm.vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
+Synchronise VS Operator Authorization expiration, if any. Call [[MOD-DE-MSG-7]](#mod-de-msg-7-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
 
-- if `applicant_perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`applicant_perm.id`)**.
+- `perm_id`: `applicant_perm.id`
+- `new_expiration`: `applicant_perm.effective_until`
 
+This call is a no-op if no record exists for `applicant_perm.id`. If a record exists, its `expiration` is updated and the on-chain `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Adjust Permission does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) and [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission)). Adjust also cannot create a record that does not already exist.
 
 #### [MOD-PERM-MSG-9] Revoke Permission
 
