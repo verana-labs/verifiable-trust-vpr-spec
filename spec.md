@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft17](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft18](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -1769,6 +1769,7 @@ As a result, `accountABC` is authorized to:
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
 |             | Grant Exchange Rate Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-7]](#mod-de-msg-7-grant-exchange-rate-authorization)   |governance proposal|
 |             | Revoke Exchange Rate Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-8]](#mod-de-msg-8-revoke-exchange-rate-authorization)   |governance proposal|
+|             | Update VS Operator Authorization Expiration |     N/A (Tx) | Msg  | [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration)   |module call|
 |             | List Operator Authorizations              | /de/v1/authz/list | Query  | [[MOD-DE-QRY-1]](#mod-de-qry-1-list-operator-authorizations)   |N/A |
 |             | List VS Operator Authorizations           | /de/v1/vs-authz/list | Query  | [[MOD-DE-QRY-2]](#mod-de-qry-2-list-vs-operator-authorizations)   |N/A |
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + operator OR module call|
@@ -3229,7 +3230,7 @@ Update `Permission` `applicant_perm`:
   - set `applicant_perm.issuance_fee_discount` to `issuance_fee_discount`.
   - set `applicant_perm.verification_fee_discount` to `verification_fee_discount`.
 
-Activate VS Operator Authorization, if any. Call [[MOD-DE-MSG-7]](#mod-de-msg-7-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
+Activate VS Operator Authorization, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
 
 - `perm_id`: `applicant_perm.id`
 - `new_expiration`: `applicant_perm.effective_until`
@@ -3470,7 +3471,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_perm.modified` to `now`
 
 
-Synchronise VS Operator Authorization expiration, if any. Call [[MOD-DE-MSG-7]](#mod-de-msg-7-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
+Synchronise VS Operator Authorization expiration, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
 
 - `perm_id`: `applicant_perm.id`
 - `new_expiration`: `applicant_perm.effective_until`
@@ -5116,7 +5117,7 @@ Return the list of the existing parameters and their values.
 This method can only be called directly by the following methods:
 
 - [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
-- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-7]](#mod-de-msg-7-update-vs-operator-authorization-expiration))
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration))
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
@@ -5159,7 +5160,7 @@ This method can only be called directly by the following methods:
 
 - [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
 - [Revoke Operator Authorization](#mod-de-msg-4-revoke-operator-authorization)
-- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-7]](#mod-de-msg-7-update-vs-operator-authorization-expiration))
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration))
 
 ##### [MOD-DE-MSG-2-1] Revoke Allowance method parameters
 
@@ -5317,7 +5318,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 ##### [MOD-DE-MSG-5-5] Recompute VS Operator Fee Allowance
 
-This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-7]](#mod-de-msg-7-update-vs-operator-authorization-expiration) after they mutate `vsoa.records`.
+This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) after they mutate `vsoa.records`.
 
 - define `max_expire` = null.
 - define `feegrant_msg_types` = empty set.
@@ -5364,7 +5365,7 @@ This method does NOT read `Permission` state.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
 - If `vsoa.records` is now empty, delete `vsoa`.
 
-#### [MOD-DE-MSG-7] Update VS Operator Authorization Expiration
+#### [MOD-DE-MSG-9] Update VS Operator Authorization Expiration
 
 This method can only be called directly by the following Permission module methods, with no signer check:
 
@@ -5375,23 +5376,23 @@ It updates the `expiration` of the unique record identified by `perm_id` and rec
 
 This method does NOT read `Permission` state; the caller supplies the new expiration value directly.
 
-##### [MOD-DE-MSG-7-1] Update VS Operator Authorization Expiration method parameters
+##### [MOD-DE-MSG-9-1] Update VS Operator Authorization Expiration method parameters
 
 - `perm_id` (uint64) (*mandatory*): id of the permission whose authorization record's `expiration` must be updated.
 - `new_expiration` (timestamp) (*mandatory*): the new value of `record.expiration`.
 
-##### [MOD-DE-MSG-7-2] Update VS Operator Authorization Expiration basic checks
+##### [MOD-DE-MSG-9-2] Update VS Operator Authorization Expiration basic checks
 
 - `perm_id` MUST be a valid uint64.
 - `new_expiration` MUST be a valid timestamp.
 
 > Note: absence of a record for `perm_id` is NOT an error. The method is a no-op in that case (the permission does not enable VS operator authorization).
 
-##### [MOD-DE-MSG-7-3] Update VS Operator Authorization Expiration fee checks
+##### [MOD-DE-MSG-9-3] Update VS Operator Authorization Expiration fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
 
-##### [MOD-DE-MSG-7-4] Update VS Operator Authorization Expiration execution of the method
+##### [MOD-DE-MSG-9-4] Update VS Operator Authorization Expiration execution of the method
 
 - Locate the unique `PermissionAuthorizationRecord` `record` with `record.perm_id = perm_id`. If none exists, EXIT (no-op).
 - Set `record.expiration = new_expiration`.
