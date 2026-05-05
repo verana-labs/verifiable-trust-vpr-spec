@@ -3229,9 +3229,12 @@ Update `Permission` `applicant_perm`:
   - set `applicant_perm.issuance_fee_discount` to `issuance_fee_discount`.
   - set `applicant_perm.verification_fee_discount` to `verification_fee_discount`.
 
-If `applicant_perm.type` is ISSUER or VERIFIER: Create authorization for `applicant_perm.vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
+Activate VS Operator Authorization, if any. Call [[MOD-DE-MSG-7]](#mod-de-msg-7-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
 
-- if `applicant_perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`applicant_perm.id`)**.
+- `perm_id`: `applicant_perm.id`
+- `new_expiration`: `applicant_perm.effective_until`
+
+This call is a no-op if no record was created at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its `expiration` is updated from `now` (disabled) to `applicant_perm.effective_until`, and the on-chain `FeeGrant` for the containing VSOA is granted for the first time (or refreshed) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 
 #### [MOD-PERM-MSG-4] Void
 
