@@ -4278,9 +4278,6 @@ Permitted message types to be set in `vs_operator_authz_msg_types` depends on `t
 | HOLDER | TriggerResolver |
 | ISSUER | CreateOrUpdatePermissionSession, SetPermissionVPtoValidated |
 | VERIFIER | CreateOrUpdatePermissionSession |
-| ISSUER_GRANTOR | SetPermissionVPtoValidated |
-| VERIFIER_GRANTOR | SetPermissionVPtoValidated |
-| ECOSYSTEM | SetPermissionVPtoValidated |
  
 ##### [MOD-PERM-MSG-14-2] Self Create Permission precondition checks
 
@@ -4337,7 +4334,7 @@ for each `Permission` entry `p` from `perms[]`:
 
 > note: this check was not present in v3.
 
-##### [MOD-PERM-MSG-14-3] Create Permission execution
+##### [MOD-PERM-MSG-14-3] Self Create Permission execution
 
 If all precondition checks passed, method is executed.
 
