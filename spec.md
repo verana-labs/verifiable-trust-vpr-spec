@@ -1034,6 +1034,14 @@ entity "OperatorAuthorization" as oauthz {
 entity "VSOperatorAuthorization" as vsoauthz {
 }
 
+entity "PermissionAuthorizationRecord" as par {
+   *perm_id: uint64
+   +msg_types: msg_type[]
+   +with_feegrant: boolean
+   +expiration: timestamp
+   +period: duration
+}
+
 entity "DenomAmount" as da {
   denom: string
   amount: number
@@ -1394,9 +1402,23 @@ group  --o td: corporation
 
 ### VSOperatorAuthorization
 
+A `VSOperatorAuthorization` groups all `PermissionAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. It is keyed by the `(corporation, vs_operator)` pair. The entry exists if, and only if, it has at least one record.
+
 - `corporation` (group) (*mandatory*): the corporation group granting the authorization.
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization.
-- `permissions[]` (uint64[]) (*mandatory*): permission ids for which we grant this authorization.
+- `records` (PermissionAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation`.
+
+### PermissionAuthorizationRecord
+
+A `PermissionAuthorizationRecord` carries the per-permission authorization configuration that was previously stored on `Permission.vs_operator_authz_*` fields. Each record is globally unique by `perm_id`: for any `Permission.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `perm_id` via a direct lookup.
+
+- `perm_id` (uint64) (*mandatory*): id of the `Permission` this authorization record applies to. Globally unique across all `PermissionAuthorizationRecord` entries.
+- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `perm_id`. Declared by the applicant at record creation time (see [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) and [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission)). Frozen after creation.
+- `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this permission, as a direct consequence of executing authorized messages.
+- `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
+- `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this permission, through an on-chain `FeeGrant`.
+- `expiration` (timestamp) (*mandatory*): timestamp after which this authorization is no longer valid. Written to `now` at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) (disabled until validation) and to `Permission.effective_until` at [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated) / [[MOD-PERM-MSG-8]](#mod-perm-msg-8-adjust-permission) / [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission).
+- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this permission.
 
 ### ExchangeRate
 
