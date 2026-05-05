@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft16](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft17](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -1650,7 +1650,10 @@ If the transaction fees are paid by the `corporation` account (via fee grant) in
 
 ##### [AUTHZ-CHECK-3] VS Operator Authorization checks
 
-For `CreateOrUpdatePermissionSession` and `TriggerResolver`, the authorization model differs from other delegable messages: it relies on `VSOperatorAuthorization` and per-permission settings instead of `OperatorAuthorization`.
+A second authorization grant mode exists for vs-agents.
+It is used to grant access to `CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated` and `TriggerResolver` for specific permission manipulation only. The authorization model differs from other delegable messages: it relies on `VSOperatorAuthorization` and per-permission settings instead of `OperatorAuthorization`.
+
+> Note: when a vs-agent account is granted a `VSOperatorAuthorization` for a given permission, the permission is automatically granted for all tree messages `CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated` and `TriggerResolver`. It is not possible to limit specific messages per permission.
 
 Given a `corporation`, an `operator` (the `vs_operator`), and a **primary permission** `perm` (determined by the calling method):
 
@@ -1671,19 +1674,23 @@ If the [[ref: transaction]] fees are paid by the `corporation` account (via fee 
 #### Example
 
 A corporation group `corporationABC` wants to authorize an operator account `accountABC` to execute the  
-[`mod-perm-msg-10-create-or-update-permission-session`](#mod-perm-msg-10-create-or-update-permission-session) message.
+[`mod-perm-msg-10-create-or-update-permission-session`](#mod-perm-msg-10-create-or-update-permission-session),
+[`mod-perm-msg-3-set-permission-vp-to-validated`](#mod-perm-msg-3-set-permission-vp-to-validated), and
+[`mod-perm-msg-15-trigger-resolver`](#mod-perm-msg-15-trigger-resolver)
+ messages.
 
 Additionally, the corporation wants `accountABC` to pay the transaction fees for this message using the corporation's funds.
 
 To achieve this, `corporationABC` MUST:
 
 - create an **authorization** from `corporationABC` to `accountABC` for the  
-  [`mod-perm-msg-10-create-or-update-permission-session`](#mod-perm-msg-10-create-or-update-permission-session) message type,  
-  optionally enabling an associated fee grant.
+  [`mod-perm-msg-10-create-or-update-permission-session`](#mod-perm-msg-10-create-or-update-permission-session),
+[`mod-perm-msg-3-set-permission-vp-to-validated`](#mod-perm-msg-3-set-permission-vp-to-validated), and
+[`mod-perm-msg-15-trigger-resolver`](#mod-perm-msg-15-trigger-resolver) message types, optionally enabling an associated fee grant.
 
 As a result, `accountABC` is authorized to:
 
-- execute the specified message type on behalf of `corporationABC`, including any state changes and fund movements that are a direct consequence of that message, and
+- execute the specified messages type on behalf of `corporationABC`, including any state changes and fund movements that are a direct consequence of that message, and
 - pay the network transaction fees for that message using the funds of `corporationABC`, via the associated fee grant.
 
 ### Method List
@@ -3063,9 +3070,19 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
+- Load `Permission` entry `validator_perm` from `applicant_perm_validator_perm_id`.
+- Authorization:
+
+either (executed by any operator of corporation):
+[[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetPermissionVPtoValidated` message.
+[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetPermissionVPtoValidated` message.
+OR (executed by vs-agent account defined in validator permission):
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `validator_perm`) tuple.
+[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `validator_perm`) tuple.
+else MUST abort.
+
 - `applicant_perm.vp_state` MUST be equal to PENDING, else abort.
 - `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_perm.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_perm.validation_fees`, else abort.
 - `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_perm.issuance_fees` or, else abort.
@@ -4333,9 +4350,8 @@ The target `perm` itself is excluded from this walk; only its ancestors (from th
 - while `v.validator_perm_id` is defined:
   - load `v` from `v.validator_perm_id`.
   - if `v` is not an [[ref: active permission]], continue with the next iteration.
-  - if `corporation` is equal to `v.corporation` AND at least one of the two sub-paths below passes, authorization succeeds and the walk terminates:
-    - *sub-path 2a — vs_operator of the ancestor*: `operator` MUST be equal to `v.vs_operator` AND [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) + [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `v`) tuple.
-    - *sub-path 2b — authorized operator of the ancestor corporation*: [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+  - `corporation` MUST be equal to `v.corporation`.
+  - if [AUTHZ-CHECK-1](#authz-check-1-operator-authorization-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver`, then authorization is granted => match.
 
 If the walk terminates without a match, Path 2 fails.
 
@@ -5238,7 +5254,7 @@ This method can only be called directly by the following methods with no signer 
 - Adjust Permission
 - Set Permission VP to Validated
 
-> Note: This method can only grant authorization for the `CreateOrUpdatePermissionSession` and `TriggerResolver` Msgs.
+> Note: This method can only grant authorization for the `CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated` and `TriggerResolver` Msgs.
 
 ##### [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters
 
@@ -5279,13 +5295,13 @@ Then check for feegrant:
 
 - if `perm.vs_operator_authz_with_feegrant` is true:
   - set `max_expire` = `perm.effective_until`
-  - if `max_expire` == null: call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `TriggerResolver`], null, null, null) and EXIT.
+  - if `max_expire` == null: call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`], null, null, null) and EXIT.
   - else foreach `current_perm_id` of `vs_operator_authz.permissions`
     - load Permission `current_perm` from `current_perm_id`
     - if `current_perm.vs_operator_authz_with_feegrant` is true:
-      - if `current_perm.effective_until` == null: call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `TriggerResolver`], null, null, null) and EXIT.
+      - if `current_perm.effective_until` == null: call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`], null, null, null) and EXIT.
       - else if `current_perm.effective_until` > `max_expire` => set `max_expire` = `current_perm.effective_until`
-  - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `TriggerResolver`], `max_expire`, null, null).
+  - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`], `max_expire`, null, null).
 
 ::: note
 We MUST align to the farthest effective_until for the feegrant, for the permissions that have `current_perm.effective_until` set.
@@ -5328,7 +5344,7 @@ MUST abort if one of these conditions fails:
         - if `current_perm.effective_until` == null set `max_expire` = null
         - else if `max_expire` == null set `max_expire` = `current_perm.effective_until`
         - else `max_expire` = max (`max_expire`, `current_perm.effective_until`)
-    - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `TriggerResolver`] , `max_expire`, null, null).
+    - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`] , `max_expire`, null, null).
 
 ::: note
 When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.
