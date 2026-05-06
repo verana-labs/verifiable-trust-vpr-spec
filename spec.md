@@ -5351,6 +5351,7 @@ If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `record.perm_id` MUST NOT match an existing `PermissionAuthorizationRecord` anywhere in the store (each record is globally unique by `perm_id`).
 - `record.msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
 - No `OperatorAuthorization` `oauthz` where `oauthz.corporation` = `corporation` and `oauthz.operator` = `vs_operator` MUST exist.
+- Another `VsOperatorAuthorization` `vsoauthz` where `vsoauthz.operator` = `vs_operator` and `vsoauthz.corporation` != `corporation` MUST NOT exist. In other words, a vs-agent Vpr account cannot be controlled by multiples corporations.
 
 ::: warning
 A **VS Operator Authorization** record CAN be granted ONLY IF no **OperatorAuthorization** exists for the same `(corporation, vs_operator)` pair. **VS Operator Authorization** and **Operator Authorization** are mutually exclusive for a given grantee.
