@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft17](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft18](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -1034,6 +1034,14 @@ entity "OperatorAuthorization" as oauthz {
 entity "VSOperatorAuthorization" as vsoauthz {
 }
 
+entity "PermissionAuthorizationRecord" as par {
+   *perm_id: uint64
+   +msg_types: msg_type[]
+   +with_feegrant: boolean
+   +expiration: timestamp
+   +period: duration
+}
+
 entity "DenomAmount" as da {
   denom: string
   amount: number
@@ -1092,9 +1100,6 @@ entity "Permission" as csp {
   +vp_summary_digest: string
   +issuance_fee_discount: number
   +verification_fee_discount: number
-  +vs_operator_authz_enabled: boolean
-  +vs_operator_authz_spend_period: duration
-  +vs_operator_authz_with_feegrant: boolean
 }
 
 
@@ -1149,7 +1154,7 @@ entity "GlobalVariables" as gv {
 entity "TrustDeposit" as td {
   share: number
   deposit: number
-  claimable: number
+  refunded: number
   slashed_deposit: number
   repaid_deposit: number
   last_slashed: timestamp
@@ -1160,6 +1165,7 @@ entity "TrustDeposit" as td {
 group --o fg: grantor
 account --o fg: grantee
 fg "1" --- "0..n" da: spend_limit
+fg "1" --- "0..n" da: remaining_spend
 
 xrauthz o-- xr
 xrauthz o-- account: operator
@@ -1176,6 +1182,8 @@ account --o oauthz: operator
 
 group --o vsoauthz: corporation
 account --o vsoauthz: vs_operator
+vsoauthz "1" --- "1..n" par: records
+par o-- csp: perm_id
 
 csp o-- cspt: type
 csp o-- cs: schema_id
@@ -1193,11 +1201,16 @@ cspsr  o-- "0..1" csp: agent_perm_id
 
 oauthz "1" --- "0..n" da: fee_spend_limit
 oauthz "1" --- "0..n" da: spend_limit
+oauthz "1" --- "0..n" da: remaining_spend
+oauthz "1" --- "0..n" da: remaining_fee_spend
+
+par "1" --- "0..n" da: spend_limit
+par "1" --- "0..n" da: fee_spend_limit
+par "1" --- "0..n" da: remaining_spend
+par "1" --- "0..n" da: remaining_fee_spend
 
 csp "1" --- "0..n" da: vs_operator_spend_limit
 csp "1" --- "0..n" da: vs_operator_fee_spend_limit
-
-vsoauthz --- "0..n" csp: permissions 
 
 
 tr "1" --- "1..n" gfv: versions 
@@ -1325,11 +1338,8 @@ group  --o td: corporation
 - `vp_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION_PROCESS mode) or an ISSUER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `corporation` account (trust fees will be paid by corporation account)
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with `corporation` account.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
-- `vs_operator_authz_spend_period`: (period) (*optional*): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
+
+> Note: VS operator authorization settings (spend limits, feegrant, expiration, authorized message types) are no longer stored on `Permission`. They live in `PermissionAuthorizationRecord` entries inside [VSOperatorAuthorization](#vsoperatorauthorization), keyed by `Permission.id`. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
 ### PermissionSession
 
@@ -1338,7 +1348,6 @@ group  --o td: corporation
 - `id` (uuid) (*mandatory*): session uuid.
 - `corporation` (group) (*mandatory*): corporation that controls the entry.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account that controls the entry (agent crypto account).
-- `agent_perm_id` (uint64) (*mandatory*): permission id of the agent.
 - `created` (timestamp) (*mandatory*): timestamp this PermissionSession has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this PermissionSession has been modified.
 - `session_records` (PermissionSessionRecord[]) (*mandatory*): session records, for this session.
@@ -1351,6 +1360,7 @@ group  --o td: corporation
 - `issuer_perm_id` (uint64) (*optional*): related issuer `Permission` id (if applicable).
 - `verifier_perm_id` (uint64) (*optional*): related verifier `Permission` id (if applicable).
 - `wallet_agent_perm_id` (uint64) (*optional*): related wallet agent `Permission` id (if applicable).
+- `agent_perm_id` (uint64) (*optional*): permission id of the agent `Permission` id (if applicable).
 
 ### TrustDeposit
 
@@ -1359,11 +1369,11 @@ group  --o td: corporation
 - `share` (number) (*mandatory*): share of the module total deposit.
 - `corporation` (group) (*mandatory*) (key): the [[ref: group]]
 - `deposit` (number) (*mandatory*): amount of deposit in `denom`.
-- `claimable` (number) (*mandatory*): amount of claimable deposit in `denom`.
+- `refunded` (number) (*mandatory*): amount of refunded trust deposit, in `denom`. Refunded trust deposit is reused as funding for the next trust deposit spending before drawing additional funds from the corporation account.
 - `slashed_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
-- `repaid_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
+- `repaid_deposit` (number) (*optional*): part of the slashed trust deposit, in `denom`, that has been repaid.
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed.
-- `last_repaid` (timestamp) (*optional*): last time this trust deposit has been slashed.
+- `last_repaid` (timestamp) (*optional*): last time this trust deposit has been repaid.
 - `slash_count` (number) (*optional*): number of times this account has been slashed.
 
 ### DenomAmount
@@ -1383,9 +1393,11 @@ group  --o td: corporation
 - `msg_types` (msg_type[]) (*mandatory*): list of module message types this authorization applies to.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the grantee is allowed to spend
   as a direct consequence of executing authorized messages.
+- `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be paid using this authorization.
-- `expiration` (timestamp) (*optional*): timestamp after which the authorization is no longer valid.
-- `period` (duration) (*optional*): reset period for spend_limit and fee_spend_limit.
+- `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
+- `expiration` (timestamp) (*optional*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the authorization is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the authorization auto-renews until the corporation revokes it).
+- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit`. If set, `expiration` MUST also be set.
 
 ### FeeGrant
 
@@ -1395,14 +1407,31 @@ group  --o td: corporation
 - `grantee` (account) (*mandatory*): the account that receives the fee grant from `grantor`.
 - `msg_types` (msg_type[]) (*mandatory*): list of VPR delegable message types for which the fee allowance applies.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of fees that can be spent using this grant.
-- `expiration` (timestamp) (*optional*): timestamp after which the fee grant is no longer valid.
-- `period` (duration) (*optional*): reset period for spend_limit.
+- `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
+- `expiration` (timestamp) (*optional*): grant window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the grant is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, `remaining_spend` is reset to `spend_limit` and `expiration` is advanced to `now() + period` (the grant auto-renews until the grantor revokes it).
+- `period` (duration) (*optional*): reset period for `spend_limit`. If set, `expiration` MUST also be set.
 
 ### VSOperatorAuthorization
 
+A `VSOperatorAuthorization` groups all `PermissionAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. It is keyed by the `(corporation, vs_operator)` pair. The entry exists if, and only if, it has at least one record.
+
 - `corporation` (group) (*mandatory*): the corporation group granting the authorization.
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization.
-- `permissions[]` (uint64[]) (*mandatory*): permission ids for which we grant this authorization.
+- `records` (PermissionAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation`.
+
+### PermissionAuthorizationRecord
+
+A `PermissionAuthorizationRecord` carries the per-permission authorization configuration that was previously stored on `Permission.vs_operator_authz_*` fields. Each record is globally unique by `perm_id`: for any `Permission.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `perm_id` via a direct lookup.
+
+- `perm_id` (uint64) (*mandatory*): id of the `Permission` this authorization record applies to. Globally unique across all `PermissionAuthorizationRecord` entries.
+- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `perm_id`. Declared by the applicant at record creation time (see [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) and [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission)). Frozen after creation.
+- `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this permission, as a direct consequence of executing authorized messages.
+- `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
+- `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
+- `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
+- `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this permission, through an on-chain `FeeGrant`.
+- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) (disabled until validation) and to `Permission.effective_until` at [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated) / [[MOD-PERM-MSG-8]](#mod-perm-msg-8-adjust-permission) / [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission).
+- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this permission.
 
 ### ExchangeRate
 
@@ -1635,41 +1664,52 @@ For any **delegable message** executed by an `operator` on behalf of a `corporat
 ##### [AUTHZ-CHECK-1] Operator Authorization checks
 
 1. An `OperatorAuthorization` `oauthz` MUST exist where `oauthz.corporation` = `corporation`, `oauthz.operator` = `operator`, and `oauthz.msg_types` includes the current message type.
-2. If `oauthz.expiration` is set, it MUST be in the future.
-3. If `oauthz.spend_limit` is set, the remaining balance MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from the remaining balance.
-4. If `oauthz.period` is set and the current period has elapsed since the last reset, the remaining balance MUST be reset to `oauthz.spend_limit` before evaluating the check above.
+2. If `oauthz.expiration` is set:
+   - if `oauthz.period` is set and `now() >= oauthz.expiration`:
+     - if `oauthz.spend_limit` is set, set `oauthz.remaining_spend := oauthz.spend_limit`.
+     - if `oauthz.fee_spend_limit` is set, set `oauthz.remaining_fee_spend := oauthz.fee_spend_limit`.
+     - set `oauthz.expiration := now() + oauthz.period`.
+   - else, `oauthz.expiration` MUST be strictly greater than `now()`. Abort otherwise.
+3. If `oauthz.spend_limit` is set, `oauthz.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `oauthz.remaining_spend` (per matching `denom` entry).
 
 ##### [AUTHZ-CHECK-2] Fee Grant checks
 
 If the transaction fees are paid by the `corporation` account (via fee grant) instead of the `operator` account:
 
 1. A `FeeGrant` `fg` MUST exist where `fg.grantor` = `corporation`, `fg.grantee` = `operator`, and `fg.msg_types` includes the current message type.
-2. If `fg.expiration` is set, it MUST be in the future.
-3. If `fg.spend_limit` is set, the remaining balance MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from the remaining balance.
-4. If `fg.period` is set and the current period has elapsed since the last reset, the remaining balance MUST be reset to `fg.spend_limit` before evaluating the check above.
+2. If `fg.expiration` is set:
+   - if `fg.period` is set and `now() >= fg.expiration`:
+     - if `fg.spend_limit` is set, set `fg.remaining_spend := fg.spend_limit`.
+     - set `fg.expiration := now() + fg.period`.
+   - else, `fg.expiration` MUST be strictly greater than `now()`. Abort otherwise.
+3. If `fg.spend_limit` is set, `fg.remaining_spend` MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from `fg.remaining_spend` (per matching `denom` entry).
 
 ##### [AUTHZ-CHECK-3] VS Operator Authorization checks
 
-A second authorization grant mode exists for vs-agents.
-It is used to grant access to `CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated` and `TriggerResolver` for specific permission manipulation only. The authorization model differs from other delegable messages: it relies on `VSOperatorAuthorization` and per-permission settings instead of `OperatorAuthorization`.
+A second authorization grant mode exists for vs-agents. It is used when a corporation delegates a specific permission (and a specific set of message types, scoped to that permission) to a `vs_operator` account. The authorization model differs from other delegable messages: it relies on [VSOperatorAuthorization](#vsoperatorauthorization) / [PermissionAuthorizationRecord](#permissionauthorizationrecord) instead of `OperatorAuthorization`.
 
-> Note: when a vs-agent account is granted a `VSOperatorAuthorization` for a given permission, the permission is automatically granted for all tree messages `CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated` and `TriggerResolver`. It is not possible to limit specific messages per permission.
+> Note: the set of messages a `vs_operator` is authorized to execute in the context of a permission is declared by the applicant at permission creation time (see [[MOD-PERM-MSG-1-1]](#mod-perm-msg-1-1-start-permission-vp-parameters) and [[MOD-PERM-MSG-14-1]](#mod-perm-msg-14-1-self-create-permission-parameters)) and stored in `record.msg_types`. It is frozen for the lifetime of the record and can only be changed by revoking the permission and starting a new one.
 
-Given a `corporation`, an `operator` (the `vs_operator`), and a **primary permission** `perm` (determined by the calling method):
+Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission id** `perm_id` (determined by the calling method), and the current message type `msg_type`:
 
-1. A `VSOperatorAuthorization` `vso` MUST exist where `vso.corporation` = `corporation` and `vso.vs_operator` = `operator`.
-2. `vso.permissions` MUST include `perm.id`.
-3. `perm.vs_operator_authz_enabled` MUST be true.
-4. If `perm.vs_operator_authz_spend_period` is set and the current period has elapsed since the last reset, the remaining balances for `perm.vs_operator_authz_spend_limit` and `perm.vs_operator_authz_fee_spend_limit` MUST be reset to their original values before evaluating the checks below.
-5. If `perm.vs_operator_authz_spend_limit` is set, the remaining balance MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from the remaining balance.
+1. A `PermissionAuthorizationRecord` `record` MUST exist for `perm_id`. Abort if not found.
+2. `record` MUST belong to `VSOperatorAuthorization[corporation, operator]`, that is: the containing `VSOperatorAuthorization` MUST have `corporation` as its `corporation` and `operator` as its `vs_operator`. Abort otherwise.
+3. `msg_type` MUST be in `record.msg_types`. Abort otherwise.
+4. Cycle / expiration check:
+   - if `record.period` is set and `now() >= record.expiration`:
+     - if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
+     - if `record.fee_spend_limit` is set, set `record.remaining_fee_spend := record.fee_spend_limit`.
+     - set `record.expiration := now() + record.period`.
+   - else, `record.expiration` MUST be strictly greater than `now()`. Abort otherwise.
+5. If `record.spend_limit` is set, `record.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `record.remaining_spend` (per matching `denom` entry).
 
 ##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
 
-If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same **primary permission** `perm`:
+If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `PermissionAuthorizationRecord` `record` looked up in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
 
-1. `perm.vs_operator_authz_with_feegrant` MUST be true, else abort.
-2. If `perm.vs_operator_authz_spend_period` is set and the current period has elapsed since the last reset, the remaining balance for `perm.vs_operator_authz_fee_spend_limit` MUST be reset to its original value before evaluating the check below.
-3. If `perm.vs_operator_authz_fee_spend_limit` is set, the remaining balance MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from the remaining balance.
+1. `record.with_feegrant` MUST be true, else abort.
+2. The cycle / expiration check from [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 4 has already been performed against the same `record`; `record.remaining_fee_spend` is therefore current.
+3. If `record.fee_spend_limit` is set, `record.remaining_fee_spend` MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from `record.remaining_fee_spend` (per matching `denom` entry).
 
 #### Example
 
@@ -1753,6 +1793,7 @@ As a result, `accountABC` is authorized to:
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
 |             | Grant Exchange Rate Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-7]](#mod-de-msg-7-grant-exchange-rate-authorization)   |governance proposal|
 |             | Revoke Exchange Rate Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-8]](#mod-de-msg-8-revoke-exchange-rate-authorization)   |governance proposal|
+|             | Update VS Operator Authorization Expiration |     N/A (Tx) | Msg  | [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration)   |module call|
 |             | List Operator Authorizations              | /de/v1/authz/list | Query  | [[MOD-DE-QRY-1]](#mod-de-qry-1-list-operator-authorizations)   |N/A |
 |             | List VS Operator Authorizations           | /de/v1/vs-authz/list | Query  | [[MOD-DE-QRY-2]](#mod-de-qry-2-list-vs-operator-authorizations)   |N/A |
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + operator OR module call|
@@ -2749,12 +2790,26 @@ An Applicant that would like to start a permission validation process MUST execu
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
 - `did` (string) (*required*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `corporation` account (trust fees will be paid by corporation account)
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
-  as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with `corporation` account.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
-- `vs_operator_authz_spend_period`: (period) (*optional*): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
+
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [PermissionAuthorizationRecord](#permissionauthorizationrecord) that will be created for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode (the corporation signs and pays for its own permission-related transactions directly). VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `PermissionAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`.
+
+|Permission type|Permitted Messages|
+|-|-|
+| HOLDER | TriggerResolver |
+| ISSUER | CreateOrUpdatePermissionSession, SetPermissionVPtoValidated |
+| VERIFIER | CreateOrUpdatePermissionSession |
+| ISSUER_GRANTOR | SetPermissionVPtoValidated |
+| VERIFIER_GRANTOR | SetPermissionVPtoValidated |
+| ECOSYSTEM | SetPermissionVPtoValidated |
+ 
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
@@ -2775,12 +2830,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
-  as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
-- `vs_operator_authz_spend_period`: (period) (*optional*): if not null, `vs_operator` MUST NOT be null, else abort. Reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PERM-MSG-1-1](#mod-perm-msg-1-1-start-permission-vp-parameters).
 
 :::note
 A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the validation process is REQUIRED or not.
@@ -2910,12 +2960,21 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
   - `applicant_perm.vp_summary_digest`: null.
   - `applicant_perm.vp_validator_deposit`: 0.
-  - `applicant_perm.vs_operator_authz_enabled`: `vs_operator_authz_enabled`
-  - `applicant_perm.vs_operator_authz_spend_limit`: `vs_operator_authz_spend_limit`
-  - `applicant_perm.vs_operator_authz_with_feegrant`: `vs_operator_authz_with_feegrant`
-  - `applicant_perm.vs_operator_authz_fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
-  - `applicant_perm.vs_operator_authz_spend_period`: `vs_operator_authz_spend_period`
-  
+
+If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+
+- `corporation`: `corporation`
+- `vs_operator`: `vs_operator`
+- `record`:
+  - `record.perm_id`: `applicant_perm.id`
+  - `record.msg_types`: `vs_operator_authz_msg_types`
+  - `record.spend_limit`: `vs_operator_authz_spend_limit`
+  - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+  - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
+  - `record.expiration`: `now`
+  - `record.period`: `vs_operator_authz_period`
+
+> Note: the record is created with `expiration = now` so authorization is **not yet active**. [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) will reject any attempt to use it until [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated) updates `expiration` to `applicant_perm.effective_until`. No on-chain `FeeGrant` object is created at this stage even if `with_feegrant` is true (the recompute subroutine in [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) requires `expiration > now`).
 
 #### Connecting to the VS of the Validator
 
@@ -3207,9 +3266,12 @@ Update `Permission` `applicant_perm`:
   - set `applicant_perm.issuance_fee_discount` to `issuance_fee_discount`.
   - set `applicant_perm.verification_fee_discount` to `verification_fee_discount`.
 
-If `applicant_perm.type` is ISSUER or VERIFIER: Create authorization for `applicant_perm.vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
+Activate VS Operator Authorization, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
 
-- if `applicant_perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`applicant_perm.id`)**.
+- `perm_id`: `applicant_perm.id`
+- `new_expiration`: `applicant_perm.effective_until`
+
+This call is a no-op if no record was created at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its `expiration` is updated from `now` (disabled) to `applicant_perm.effective_until`, and the on-chain `FeeGrant` for the containing VSOA is granted for the first time (or refreshed) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 
 #### [MOD-PERM-MSG-4] Void
 
@@ -3268,6 +3330,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_perm.corporation` by `applicant_perm.vp_current_deposit`
   - set `applicant_perm.vp_current_deposit` to 0.
 
+If `applicant_perm.vp_state` was set to TERMINATED (i.e. `applicant_perm.vp_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any disabled authorization record created at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp). The call is a no-op if no record exists. If `applicant_perm.vp_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
+
 #### [MOD-PERM-MSG-7] Create Root Permission
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
@@ -3281,12 +3345,27 @@ An [[ref: account]] that would like to create a `Permission` entry MUST call thi
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
+- `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this permission. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS.
 - `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
+
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [PermissionAuthorizationRecord](#permissionauthorizationrecord) for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `PermissionAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`. Since [Create Root Permission](#mod-perm-msg-7-create-root-permission) always creates an ECOSYSTEM permission, only the following is allowed:
+
+|Permission type|Permitted Messages|
+|-|-|
+| ECOSYSTEM | SetPermissionVPtoValidated |
 
 ##### [MOD-PERM-MSG-7-2] Create Root Permission precondition checks
 
@@ -3306,6 +3385,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `validation_fees` (number) (*mandatory*): MUST be >= 0.
 - `issuance_fees` (number) (*mandatory*): MUST be >= 0.
 - `verification_fees` (number) (*mandatory*): MUST be >= 0.
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PERM-MSG-7-1](#mod-perm-msg-7-1-create-root-permission-parameters).
 
 ###### [MOD-PERM-MSG-7-2-2] Create Root Permission permission checks
 
@@ -3352,6 +3432,7 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.type`: ECOSYSTEM.
 - `perm.did`: `did`.
 - `perm.corporation`: `corporation`.
+- `perm.vs_operator`: `vs_operator`.
 - `perm.created`: `now`
 - `perm.effective_from`: `effective_from`
 - `perm.effective_until`: `effective_until`
@@ -3359,6 +3440,21 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.issuance_fees`: `issuance_fees`
 - `perm.verification_fees`: `verification_fees`
 - `perm.deposit`: 0
+
+If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+
+- `corporation`: `corporation`
+- `vs_operator`: `vs_operator`
+- `record`:
+  - `record.perm_id`: `perm.id`
+  - `record.msg_types`: `vs_operator_authz_msg_types`
+  - `record.spend_limit`: `vs_operator_authz_spend_limit`
+  - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+  - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
+  - `record.expiration`: `perm.effective_until`
+  - `record.period`: `vs_operator_authz_period`
+
+> Note: like [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission), the record is created with `expiration = perm.effective_until` and is therefore immediately active. If `with_feegrant` is true and `perm.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
 #### [MOD-PERM-MSG-8] Adjust Permission
 
@@ -3443,10 +3539,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_perm.modified` to `now`
 
 
-If `applicant_perm.type` is ISSUER or VERIFIER: Update authorization for `applicant_perm.vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
+Synchronise VS Operator Authorization expiration, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
 
-- if `applicant_perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`applicant_perm.id`)**.
+- `perm_id`: `applicant_perm.id`
+- `new_expiration`: `applicant_perm.effective_until`
 
+This call is a no-op if no record exists for `applicant_perm.id`. If a record exists, its `expiration` is updated and the on-chain `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Adjust Permission does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) and [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission)). Adjust also cannot create a record that does not already exist.
 
 #### [MOD-PERM-MSG-9] Revoke Permission
 
@@ -3575,9 +3673,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_perm.revoked` to `now`
 - set `applicant_perm.modified` to `now`
 
-If `applicant_perm.type` is ISSUER or VERIFIER: Delete authorization for `applicant_perm.vs_operator`:
-
-- call **Revoke VS Operator Authorization(`applicant_perm.id`)**.
+Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
 
 #### [MOD-PERM-MSG-10] Create or Update Permission Session
 
@@ -4119,9 +4215,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_perm.corporation`.
 
-If `applicant_perm.type` is ISSUER or VERIFIER: Delete authorization for `applicant_perm.vs_operator`:
-
-- call **Revoke VS Operator Authorization(`applicant_perm.id`)** with the following parameters:
+Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
 
 #### [MOD-PERM-MSG-13] Repay Permission Slashed Trust Deposit
 
@@ -4192,13 +4286,23 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
 - `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in the denom specified in the credential schema. Default to 0.
-- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true authorize this vs_operator to execute CreateOrUpdatePermissionSession *on behalf* of `corporation` account (trust fees will be paid by corporation account)
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
-  as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, enable feegrant for this permission so vs_operator can pay the fees for CreateOrUpdatePermissionSession with `corporation` account.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
-- `vs_operator_authz_spend_period`: (period) (*optional*): reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
 
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [PermissionAuthorizationRecord](#permissionauthorizationrecord) for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `PermissionAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`.
+
+|Permission type|Permitted Messages|
+|-|-|
+| HOLDER | TriggerResolver |
+| ISSUER | CreateOrUpdatePermissionSession, SetPermissionVPtoValidated |
+| VERIFIER | CreateOrUpdatePermissionSession |
+ 
 ##### [MOD-PERM-MSG-14-2] Self Create Permission precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
@@ -4224,12 +4328,7 @@ Load `Permission` `validator_perm` from `validator_perm_id`.
   - else if not null, must be greater than `effective_from` AND if `validator_perm.effective_until` is not null, MUST be lower or equal to `validator_perm.effective_until`
 - `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
 - `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
-- `vs_operator_authz_enabled`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the vs_operator is allowed to spend in the context of this permission.
-  as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant`: boolean (*mandatory*): if set to true, `vs_operator` MUST NOT be null, else abort.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be spent by vs_operator in the context of this permission.
-- `vs_operator_authz_spend_period`: (period) (*optional*): if not null, `vs_operator` MUST NOT be null, else abort. Reset period for vs_operator_authz_spend_limit and vs_operator_authz_fee_spend_limit in the context of this permission.
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PERM-MSG-14-1](#mod-perm-msg-14-1-self-create-permission-parameters).
 
 ###### [MOD-PERM-MSG-14-2-2] Self Create Permission permission checks
 
@@ -4259,7 +4358,7 @@ for each `Permission` entry `p` from `perms[]`:
 
 > note: this check was not present in v3.
 
-##### [MOD-PERM-MSG-14-3] Create Permission execution
+##### [MOD-PERM-MSG-14-3] Self Create Permission execution
 
 If all precondition checks passed, method is executed.
 
@@ -4285,15 +4384,21 @@ A new entry `Permission` `perm` MUST be created:
 - `perm.issuance_fees`: 0
 - `perm.verification_fees`: `verification_fees` if specified and `type` is ISSUER, else 0.
 - `perm.deposit`: 0
-- `perm.vs_operator_authz_enabled`: `vs_operator_authz_enabled`
-- `perm.vs_operator_authz_spend_limit`: `vs_operator_authz_spend_limit`
-- `perm.vs_operator_authz_with_feegrant`: `vs_operator_authz_with_feegrant`
-- `perm.vs_operator_authz_fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
-- `perm.vs_operator_authz_spend_period`: `vs_operator_authz_spend_period`
-  
-Create authorization for `vs_operator` so that the Verifiable Service will be able to call CreateOrUpdatePermissionSession when issuing or verifying credentials:
 
-- if `perm.vs_operator_authz_enabled` == true: call **Grant VS Operator Authorization(`perm.id`)**.
+If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+
+- `corporation`: `corporation`
+- `vs_operator`: `vs_operator`
+- `record`:
+  - `record.perm_id`: `perm.id`
+  - `record.msg_types`: `vs_operator_authz_msg_types`
+  - `record.spend_limit`: `vs_operator_authz_spend_limit`
+  - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+  - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
+  - `record.expiration`: `perm.effective_until`
+  - `record.period`: `vs_operator_authz_period`
+
+> Note: unlike [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp), the record is created with `expiration = perm.effective_until` and is therefore immediately active. If `with_feegrant` is true and `perm.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
 #### [MOD-PERM-MSG-15] Trigger Resolver
 
@@ -4347,10 +4452,10 @@ At least one of the two authorization paths below MUST pass, else [[ref: transac
 The target `perm` itself is excluded from this walk; only its ancestors (from the direct parent up to the root) are considered. Walk the tree:
 
 - set `v` = `perm`.
-- while `v.validator_perm_id` is defined:
+- while `v.validator_perm_id` is defined and != `perm.id` :
   - load `v` from `v.validator_perm_id`.
   - if `v` is not an [[ref: active permission]], continue with the next iteration.
-  - `corporation` MUST be equal to `v.corporation`.
+  - if corporation != v.corporation, continue with the next iteration.
   - if [AUTHZ-CHECK-1](#authz-check-1-operator-authorization-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver`, then authorization is granted => match.
 
 If the walk terminates without a match, Path 2 fails.
@@ -4770,7 +4875,7 @@ Value checks:
   - if `td` does not exist:
     - if `augend` is negative, [[ref: transaction]] MUST abort.
   - else
-    - if `augend` is negative and `td.claimable` - `augend` is greater than `td.deposit` transaction MUST abort. (`td.claimable` trust deposit cannot be greater than `td.deposit`).
+    - if `augend` is negative and `td.refunded` - `augend` is greater than `td.deposit` transaction MUST abort. (`td.refunded` trust deposit cannot be greater than `td.deposit`).
 
 ###### [MOD-TD-MSG-1-2-2] Adjust Trust Deposit fee checks
 
@@ -4781,7 +4886,7 @@ Additionally:
 - load `TrustDeposit` entry `td` for `corporation`.
 - if `td` exists:
   - if `augend` is positive:
-    - calculate `needed_deposit` = `augend` - `td.claimable`. 
+    - calculate `needed_deposit` = `augend` - `td.refunded`. 
     - if `needed_deposit` < 0: `needed_deposit` = 0.
   - else `needed_deposit` = 0.
 - else `needed_deposit` = `augend`.
@@ -4801,7 +4906,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `td.corporation` to `corporation`;
   - set `td.deposit` to `augend`;
   - set `td.share` to `augend_share`;
-  - set `td.claimable` to 0.
+  - set `td.refunded` to 0.
   - set `td.slashed_deposit` to 0.
   - set `td.repaid_deposit` to 0.
   - set `td.slash_count` to 0.
@@ -4810,15 +4915,15 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - else if `augend` > 0:
   
-  - if `td.claimable` > 0:
-    - if `td.claimable` >= `augend` :
-      - set `td.claimable` to `td.claimable` - `augend`
+  - if `td.refunded` > 0:
+    - if `td.refunded` >= `augend` :
+      - set `td.refunded` to `td.refunded` - `augend`
     - else
-      - use bank? to transfer `augend` - `td.claimable` from corporation account to corporation `TrustDeposit` account.
-      - set `td.deposit` to `td.deposit` + `augend` - `td.claimable`
-      - set `td.claimable` to 0
-      - calculate `missing_augend_share` from missing tokens :  `missing_augend_share` = (`augend` - `td.claimable`) / `GlobalVariables.trust_deposit_share_value`.
+      - use bank? to transfer `augend` - `td.refunded` from corporation account to corporation `TrustDeposit` account.
+      - set `td.deposit` to `td.deposit` + `augend` - `td.refunded`
+      - calculate `missing_augend_share` from missing tokens :  `missing_augend_share` = (`augend` - `td.refunded`) / `GlobalVariables.trust_deposit_share_value`.
       - set `td.share` to `td.share` + `missing_augend_share`
+      - set `td.refunded` to 0
   
   - else
     - use bank? to transfer `augend` from `account` to `TrustDeposit` account.
@@ -4827,9 +4932,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
     - set `td.share` to `td.share` + `augend_share`
 
 - else if `augend` < 0:
-  - set `td.claimable` to `td.claimable` - `augend`
+  - set `td.refunded` to `td.refunded` - `augend`
 
-The last case, `augend` < 0, is to free trust deposit (ej when canceling a validation process).
+The last case, `augend` < 0, is to refund trust deposit (e.g. when canceling a validation process). The refunded amount is added to `td.refunded` and is reused for the next trust deposit spending.
 
 #### [MOD-TD-MSG-2] Reclaim Trust Deposit Yield
 
@@ -5087,9 +5192,8 @@ Return the list of the existing parameters and their values.
 
 This method can only be called directly by the following methods:
 
-- Grant Operator Authorization
-- Grant VS Operator Authorization
-- Revoke VS Operator Authorization
+- [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration))
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
@@ -5108,6 +5212,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `period` (duration): if specified MUST be a valid period.
+- if `period` is specified, `expiration` MUST also be specified.
 
 ##### [MOD-DE-MSG-1-3] Grant Fee Allowance fee checks
 
@@ -5124,15 +5229,16 @@ Create (or update if it already exist) FeeGrant `feegrant`:
 - set `feegrant.msg_types` to `msg_types`
 - set `feegrant.expiration` to `expiration`
 - set `feegrant.spend_limit` to `spend_limit`
-- set `feegrant.period` to `period``
+- if `spend_limit` is set, set `feegrant.remaining_spend` to `spend_limit`
+- set `feegrant.period` to `period`
 
 #### [MOD-DE-MSG-2] Revoke Fee Allowance
 
 This method can only be called directly by the following methods:
 
-- Grant Operator Authorization
-- Revoke Operator Authorization
-- Revoke VS Operator Authorization
+- [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
+- [Revoke Operator Authorization](#mod-de-msg-4-revoke-operator-authorization)
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration))
 
 ##### [MOD-DE-MSG-2-1] Revoke Allowance method parameters
 
@@ -5185,6 +5291,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `authz_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `authz_spend_limit` is not set.
 - `feegrant_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts. Ignored if `with_feegrant` is false.
 - `feegrant_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `feegrant_spend_limit` is not set or if `with_feegrant` is false.
+- if `authz_spend_limit_period` or `feegrant_spend_limit_period` is specified, `expiration` MUST also be specified.
 
 - Check if a **VS Operator Authorization** exists for `corporation` and `grantee`. If this is the case, MUST abort.
 
@@ -5207,6 +5314,7 @@ Create (or update if it already exist) Authorization `authz`:
 - set `authz.msg_types` to `msg_types`
 - set `authz.expiration` to `expiration`
 - set `authz.spend_limit` to `authz_spend_limit`
+- if `authz_spend_limit` is set, set `authz.remaining_spend` to `authz_spend_limit`
 - set `authz.period` to `authz_spend_limit_period`
 
 if `with_feegrant` is false:
@@ -5248,111 +5356,131 @@ MUST abort if one of these conditions fails:
 
 #### [MOD-DE-MSG-5] Grant VS Operator Authorization
 
-This method can only be called directly by the following methods with no signer check:
+This method can only be called directly by the following Permission module methods, with no signer check:
 
-- Self Create Permission
-- Adjust Permission
-- Set Permission VP to Validated
+- [Start Permission VP](#mod-perm-msg-1-start-permission-vp)
+- [Self Create Permission](#mod-perm-msg-14-self-create-permission)
 
-> Note: This method can only grant authorization for the `CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated` and `TriggerResolver` Msgs.
+It creates a new [PermissionAuthorizationRecord](#permissionauthorizationrecord) inside `VSOperatorAuthorization[corporation, vs_operator]` and, if the record enables a fee grant and its `expiration` is in the future, synchronises the on-chain `FeeGrant` for the containing VSOA.
+
+This method does NOT read `Permission` state. All authorization configuration is provided by the caller.
 
 ##### [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters
 
-- `perm_id` (uint64) (*mandatory*): the permission this authorization is referring to.
+- `corporation` (group) (*mandatory*): the corporation delegating the authorization.
+- `vs_operator` (account) (*mandatory*): the account receiving the authorization.
+- `record` ([PermissionAuthorizationRecord](#permissionauthorizationrecord)) (*mandatory*): the full record to store.
 
 ##### [MOD-DE-MSG-5-2] Grant VS Operator Authorization basic checks
 
-if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
+If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `perm_id` (uint64) (*mandatory*): Permission MUST exist.
-- load Permission `perm` with `perm_id`. `perm.corporation` and `perm.vs_operator` MUST NOT be null.
-- Check if a **Operator Authorization** exists for `perm.corporation` and `perm.vs_operator`. If this is the case, MUST abort.
+- `corporation` and `vs_operator` MUST NOT be null.
+- `record.perm_id` MUST NOT match an existing `PermissionAuthorizationRecord` anywhere in the store (each record is globally unique by `perm_id`).
+- `record.msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
+- No `OperatorAuthorization` `oauthz` where `oauthz.corporation` = `corporation` and `oauthz.operator` = `vs_operator` MUST exist.
+- No other `VSOperatorAuthorization` `vsoauthz'` where `vsoauthz'.vs_operator` = `vs_operator` AND `vsoauthz'.corporation` != `corporation` MUST exist. In other words, a vs-agent VPR account cannot be controlled by multiple corporations.
 
 ::: warning
-A **VS Operator Authorization** CAN be granted ONLY IF no **Operator Authorization** exists for `perm.corporation` and `perm.vs_operator`. **VS Operator Authorization** and **Operator Authorization** are mutually exclusive for a given grantee.
+A **VS Operator Authorization** record CAN be granted ONLY IF no **OperatorAuthorization** exists for the same `(corporation, vs_operator)` pair. **VS Operator Authorization** and **Operator Authorization** are mutually exclusive for a given grantee.
 :::
 
 ##### [MOD-DE-MSG-5-3] Grant VS Operator Authorization fee checks
 
-- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
 
 ##### [MOD-DE-MSG-5-4] Grant VS Operator Authorization execution of the method
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-Load Permission `perm` with `perm_id`.
+- Initialize the runtime balances on `record`:
+  - if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
+  - if `record.fee_spend_limit` is set, set `record.remaining_fee_spend := record.fee_spend_limit`.
+- Load `VSOperatorAuthorization` `vsoa` with `(corporation, vs_operator)`. If it does not exist, create a new `vsoa` with `vsoa.corporation = corporation`, `vsoa.vs_operator = vs_operator`, `vsoa.records = []`.
+- Append `record` to `vsoa.records`.
+- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
 
-Create VSOperatorAuthorization `vs_operator_authz` if it doesn't exist yet:
+##### [MOD-DE-MSG-5-5] Recompute VS Operator Fee Allowance
 
-- set `vs_operator_authz.grantor` to `perm.corporation`
-- set `vs_operator_authz.grantee` to `perm.vs_operator`
+This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) after they mutate `vsoa.records`.
 
-then, add the perm_id to the list of authorized permissions:
+- define `max_expire` = null.
+- define `feegrant_msg_types` = empty set.
+- for each `r` in `vsoa.records`:
+  - if `r.with_feegrant` is true AND `r.expiration` > now():
+    - if `max_expire` is null OR `r.expiration` > `max_expire`, set `max_expire` = `r.expiration`.
+    - add all entries of `r.msg_types` to `feegrant_msg_types`.
+- if `max_expire` is null (no active feegrant-enabled record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation`, `vsoa.vs_operator`).
+- else: call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation`, `vsoa.vs_operator`, `feegrant_msg_types`, `max_expire`, null, null).
 
-- Add `perm_id` to `vs_operator_authz.permissions`
-
-Then check for feegrant:
-
-- if `perm.vs_operator_authz_with_feegrant` is true:
-  - set `max_expire` = `perm.effective_until`
-  - if `max_expire` == null: call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`], null, null, null) and EXIT.
-  - else foreach `current_perm_id` of `vs_operator_authz.permissions`
-    - load Permission `current_perm` from `current_perm_id`
-    - if `current_perm.vs_operator_authz_with_feegrant` is true:
-      - if `current_perm.effective_until` == null: call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`], null, null, null) and EXIT.
-      - else if `current_perm.effective_until` > `max_expire` => set `max_expire` = `current_perm.effective_until`
-  - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`], `max_expire`, null, null).
-
-::: note
-We MUST align to the farthest effective_until for the feegrant, for the permissions that have `current_perm.effective_until` set.
-:::
+> Note: `max_expire` is bounded by the farthest `record.expiration` among feegrant-enabled records. The chain-level `FeeGrant` `msg_types` is the union of all such records' `msg_types`. Per-record spend limits are enforced at [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) time; they are not replicated on the `FeeGrant` object.
 
 #### [MOD-DE-MSG-6] Revoke VS Operator Authorization
 
-This method can only be called by the following methods with no signer check:
+This method can only be called directly by the following Permission module methods, with no signer check:
 
-- Revoke Permission
-- Slash Permission Trust Deposit
+- [Cancel Permission VP Last Request](#mod-perm-msg-6-cancel-permission-vp-last-request) (only when the cancellation terminates the permission)
+- [Revoke Permission](#mod-perm-msg-9-revoke-permission)
+- [Slash Permission Trust Deposit](#mod-perm-msg-12-slash-permission-trust-deposit)
+
+It removes the unique [PermissionAuthorizationRecord](#permissionauthorizationrecord) identified by `perm_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no such record exists.
+
+This method does NOT read `Permission` state.
 
 ##### [MOD-DE-MSG-6-1] Revoke VS Operator Authorization method parameters
 
-- `perm_id` (uint64) (*mandatory*): the permission this authorization is referring to.
+- `perm_id` (uint64) (*mandatory*): id of the permission whose authorization record must be removed.
 
 ##### [MOD-DE-MSG-6-2] Revoke VS Operator Authorization basic checks
 
-MUST abort if one of these conditions fails:
+- `perm_id` MUST be a valid uint64.
 
-- `perm_id` (uint64) (*mandatory*): Permission MUST exist.
-- load Permission `perm` with `perm_id`. `perm.corporation` and `perm.vs_operator` MUST NOT be null.
+> Note: absence of a record for `perm_id` is NOT an error. The method is a no-op in that case (the permission was never VS-operator-authorized, or was already revoked).
 
 ##### [MOD-DE-MSG-6-3] Revoke VS Operator Authorization fee checks
 
-- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
 
 ##### [MOD-DE-MSG-6-4] Revoke VS Operator Authorization execution of the method
 
-- load Permission `perm` with `perm_id`.
-- load VSOperatorAuthorization `vs_operator_authz` with `perm.corporation` and `perm.vs_operator`.
-- If `vs_operator_authz` is not null:
-  - remove `perm_id` from `vs_operator_authz.permissions` if present.
-  - if `perm.vs_operator_authz_with_feegrant` is true:
-    - if size(vs_operator_authz.permissions) == 0 => call Revoke Fee Allowance (`perm.corporation`, `perm.vs_operator`).
-    - else define `max_expire` = null
-    - foreach `current_perm_id` of `vs_operator_authz.permissions`
-      - load Permission `current_perm` from `current_perm_id`
-      - if `current_perm.vs_operator_authz_with_feegrant` is true:
-        - if `current_perm.effective_until` == null set `max_expire` = null
-        - else if `max_expire` == null set `max_expire` = `current_perm.effective_until`
-        - else `max_expire` = max (`max_expire`, `current_perm.effective_until`)
-    - if `max_expire` > now, call Grant Fee Allowance (`corporation`, `grantee`, [`CreateOrUpdatePermissionSession`, `SetPermissionVPtoValidated`, `TriggerResolver`] , `max_expire`, null, null).
+- Locate the unique `PermissionAuthorizationRecord` `record` with `record.perm_id = perm_id`. If none exists, EXIT (no-op).
+- Let `vsoa` = the `VSOperatorAuthorization` that contains `record`.
+- Remove `record` from `vsoa.records`.
+- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
+- If `vsoa.records` is now empty, delete `vsoa`.
 
-::: note
-When a permission is removed from authorization, and the removed permission had a feegrant, new expire of the feegrant is the biggest effective_until of all associated permissions that have feegrant enabled.
-:::
+#### [MOD-DE-MSG-9] Update VS Operator Authorization Expiration
 
-::: note
-In the case of VS Operator Authorizations, spending limit are managed by the Permission module.
-:::
+This method can only be called directly by the following Permission module methods, with no signer check:
+
+- [Set Permission VP to Validated](#mod-perm-msg-3-set-permission-vp-to-validated)
+- [Adjust Permission](#mod-perm-msg-8-adjust-permission)
+
+It updates the `expiration` of the unique record identified by `perm_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no record exists for `perm_id`.
+
+This method does NOT read `Permission` state; the caller supplies the new expiration value directly.
+
+##### [MOD-DE-MSG-9-1] Update VS Operator Authorization Expiration method parameters
+
+- `perm_id` (uint64) (*mandatory*): id of the permission whose authorization record's `expiration` must be updated.
+- `new_expiration` (timestamp) (*mandatory*): the new value of `record.expiration`.
+
+##### [MOD-DE-MSG-9-2] Update VS Operator Authorization Expiration basic checks
+
+- `perm_id` MUST be a valid uint64.
+- `new_expiration` MUST be a valid timestamp.
+
+> Note: absence of a record for `perm_id` is NOT an error. The method is a no-op in that case (the permission does not enable VS operator authorization).
+
+##### [MOD-DE-MSG-9-3] Update VS Operator Authorization Expiration fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-DE-MSG-9-4] Update VS Operator Authorization Expiration execution of the method
+
+- Locate the unique `PermissionAuthorizationRecord` `record` with `record.perm_id = perm_id`. If none exists, EXIT (no-op).
+- Set `record.expiration = new_expiration`.
+- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for the VSOA containing `record`.
 
 #### [MOD-DE-QRY-1] List Operator Authorizations
 
