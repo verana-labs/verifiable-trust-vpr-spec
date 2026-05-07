@@ -5599,7 +5599,7 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
   - An `ExchangeRateAuthorization` `xrauthz` MUST exist where `xrauthz.xr_id` = `id` and `xrauthz.operator` = `operator`.
   - `xrauthz.expiration` MUST be in the future (`now() < xrauthz.expiration`).
   - If `xrauthz.min_interval` is set, then `now() - xr.updated` MUST be greater than or equal to `xrauthz.min_interval`.
-  - If `xrauthz.max_deviation_bps` is set, then `|rate * (10 ^ xr.rate_scale_diff) - xr.rate| * 10000` MUST be less than or equal to `xrauthz.max_deviation_bps * xr.rate` (i.e., the relative change MUST NOT exceed `xrauthz.max_deviation_bps` basis points). Implementations MAY compute this check using rate-scale-aligned arithmetic; the intent is to compare the new and current rates as real numbers.
+  - If `xrauthz.max_deviation_bps` is set, then `|rate - xr.rate| * 10000` MUST be less than or equal to `xrauthz.max_deviation_bps * xr.rate` (i.e., the relative change between the new `rate` and `xr.rate` MUST NOT exceed `xrauthz.max_deviation_bps` basis points). Both values share the same `xr.rate_scale`, since `MOD-XR-MSG-2` does not update the scale.
 
 ###### [MOD-XR-MSG-2] Update Exchange Rate fee checks
 
