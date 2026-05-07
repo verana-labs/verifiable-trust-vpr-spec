@@ -1371,9 +1371,9 @@ group  --o td: corporation
 - `deposit` (number) (*mandatory*): amount of deposit in `denom`.
 - `refunded` (number) (*mandatory*): amount of refunded trust deposit, in `denom`. Refunded trust deposit is reused as funding for the next trust deposit spending before drawing additional funds from the corporation account.
 - `slashed_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
-- `repaid_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
+- `repaid_deposit` (number) (*optional*): part of the slashed trust deposit, in `denom`, that has been repaid.
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed.
-- `last_repaid` (timestamp) (*optional*): last time this trust deposit has been slashed.
+- `last_repaid` (timestamp) (*optional*): last time this trust deposit has been repaid.
 - `slash_count` (number) (*optional*): number of times this account has been slashed.
 
 ### DenomAmount
@@ -5379,7 +5379,7 @@ If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `record.perm_id` MUST NOT match an existing `PermissionAuthorizationRecord` anywhere in the store (each record is globally unique by `perm_id`).
 - `record.msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
 - No `OperatorAuthorization` `oauthz` where `oauthz.corporation` = `corporation` and `oauthz.operator` = `vs_operator` MUST exist.
-- Another `VsOperatorAuthorization` `vsoauthz.vs_operator` = `vs_operator` and `vsoauthz.corporation` != `corporation` MUST NOT exist. In other words, a vs-agent Vpr account cannot be controlled by multiples corporations.
+- No other `VSOperatorAuthorization` `vsoauthz'` where `vsoauthz'.vs_operator` = `vs_operator` AND `vsoauthz'.corporation` != `corporation` MUST exist. In other words, a vs-agent VPR account cannot be controlled by multiple corporations.
 
 ::: warning
 A **VS Operator Authorization** record CAN be granted ONLY IF no **OperatorAuthorization** exists for the same `(corporation, vs_operator)` pair. **VS Operator Authorization** and **Operator Authorization** are mutually exclusive for a given grantee.
