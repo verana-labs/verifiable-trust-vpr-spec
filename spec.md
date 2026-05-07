@@ -1154,7 +1154,7 @@ entity "GlobalVariables" as gv {
 entity "TrustDeposit" as td {
   share: number
   deposit: number
-  claimable: number
+  refunded: number
   slashed_deposit: number
   repaid_deposit: number
   last_slashed: timestamp
@@ -1364,7 +1364,7 @@ group  --o td: corporation
 - `share` (number) (*mandatory*): share of the module total deposit.
 - `corporation` (group) (*mandatory*) (key): the [[ref: group]]
 - `deposit` (number) (*mandatory*): amount of deposit in `denom`.
-- `claimable` (number) (*mandatory*): amount of claimable deposit in `denom`.
+- `refunded` (number) (*mandatory*): amount of refunded trust deposit, in `denom`. Refunded trust deposit is reused as funding for the next trust deposit spending before drawing additional funds from the corporation account.
 - `slashed_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
 - `repaid_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed.
@@ -4870,7 +4870,7 @@ Value checks:
   - if `td` does not exist:
     - if `augend` is negative, [[ref: transaction]] MUST abort.
   - else
-    - if `augend` is negative and `td.claimable` - `augend` is greater than `td.deposit` transaction MUST abort. (`td.claimable` trust deposit cannot be greater than `td.deposit`).
+    - if `augend` is negative and `td.refunded` - `augend` is greater than `td.deposit` transaction MUST abort. (`td.refunded` trust deposit cannot be greater than `td.deposit`).
 
 ###### [MOD-TD-MSG-1-2-2] Adjust Trust Deposit fee checks
 
@@ -4881,7 +4881,7 @@ Additionally:
 - load `TrustDeposit` entry `td` for `corporation`.
 - if `td` exists:
   - if `augend` is positive:
-    - calculate `needed_deposit` = `augend` - `td.claimable`. 
+    - calculate `needed_deposit` = `augend` - `td.refunded`. 
     - if `needed_deposit` < 0: `needed_deposit` = 0.
   - else `needed_deposit` = 0.
 - else `needed_deposit` = `augend`.
@@ -4901,7 +4901,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `td.corporation` to `corporation`;
   - set `td.deposit` to `augend`;
   - set `td.share` to `augend_share`;
-  - set `td.claimable` to 0.
+  - set `td.refunded` to 0.
   - set `td.slashed_deposit` to 0.
   - set `td.repaid_deposit` to 0.
   - set `td.slash_count` to 0.
@@ -4910,14 +4910,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - else if `augend` > 0:
   
-  - if `td.claimable` > 0:
-    - if `td.claimable` >= `augend` :
-      - set `td.claimable` to `td.claimable` - `augend`
+  - if `td.refunded` > 0:
+    - if `td.refunded` >= `augend` :
+      - set `td.refunded` to `td.refunded` - `augend`
     - else
-      - use bank? to transfer `augend` - `td.claimable` from corporation account to corporation `TrustDeposit` account.
-      - set `td.deposit` to `td.deposit` + `augend` - `td.claimable`
-      - set `td.claimable` to 0
-      - calculate `missing_augend_share` from missing tokens :  `missing_augend_share` = (`augend` - `td.claimable`) / `GlobalVariables.trust_deposit_share_value`.
+      - use bank? to transfer `augend` - `td.refunded` from corporation account to corporation `TrustDeposit` account.
+      - set `td.deposit` to `td.deposit` + `augend` - `td.refunded`
+      - set `td.refunded` to 0
+      - calculate `missing_augend_share` from missing tokens :  `missing_augend_share` = (`augend` - `td.refunded`) / `GlobalVariables.trust_deposit_share_value`.
       - set `td.share` to `td.share` + `missing_augend_share`
   
   - else
@@ -4927,9 +4927,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
     - set `td.share` to `td.share` + `augend_share`
 
 - else if `augend` < 0:
-  - set `td.claimable` to `td.claimable` - `augend`
+  - set `td.refunded` to `td.refunded` - `augend`
 
-The last case, `augend` < 0, is to free trust deposit (ej when canceling a validation process).
+The last case, `augend` < 0, is to refund trust deposit (e.g. when canceling a validation process). The refunded amount is added to `td.refunded` and is reused for the next trust deposit spending.
 
 #### [MOD-TD-MSG-2] Reclaim Trust Deposit Yield
 
