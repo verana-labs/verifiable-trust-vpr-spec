@@ -4921,9 +4921,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
     - else
       - use bank? to transfer `augend` - `td.refunded` from corporation account to corporation `TrustDeposit` account.
       - set `td.deposit` to `td.deposit` + `augend` - `td.refunded`
-      - set `td.refunded` to 0
       - calculate `missing_augend_share` from missing tokens :  `missing_augend_share` = (`augend` - `td.refunded`) / `GlobalVariables.trust_deposit_share_value`.
       - set `td.share` to `td.share` + `missing_augend_share`
+      - set `td.refunded` to 0
   
   - else
     - use bank? to transfer `augend` from `account` to `TrustDeposit` account.
