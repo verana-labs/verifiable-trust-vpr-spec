@@ -1204,6 +1204,11 @@ oauthz "1" --- "0..n" da: spend_limit
 oauthz "1" --- "0..n" da: remaining_spend
 oauthz "1" --- "0..n" da: remaining_fee_spend
 
+par "1" --- "0..n" da: spend_limit
+par "1" --- "0..n" da: fee_spend_limit
+par "1" --- "0..n" da: remaining_spend
+par "1" --- "0..n" da: remaining_fee_spend
+
 csp "1" --- "0..n" da: vs_operator_spend_limit
 csp "1" --- "0..n" da: vs_operator_fee_spend_limit
 
