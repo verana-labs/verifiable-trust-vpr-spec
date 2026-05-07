@@ -1072,6 +1072,9 @@ entity "FeeGrant" as fg {
 }
 
 entity "ExchangeRateAuthorization" as xrauthz {
+   +expiration: timestamp
+   min_interval: duration
+   max_deviation_bps: uint32
 }
 
 
@@ -1450,6 +1453,20 @@ Represents an on-chain exchange rate between two assets.
 - `expires` (timestamp, mandatory): Timestamp after which the exchange rate is considered invalid.
 - `state` (boolean, mandatory): true means enabled, false means disabled.
 
+### ExchangeRateAuthorization
+
+Represents the authorization granted by network governance to a specific operator account to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) Update Exchange Rate on a given `ExchangeRate` entry.
+
+Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price) Get Price and used across the protocol (trust deposit pricing, fees). Therefore, ownership and update permission of an `ExchangeRate` is scoped to the network (governance), not to a corporation. `ExchangeRateAuthorization` is the on-chain record that designates which operator account is authorized to push fresh values for a given `ExchangeRate`, and under what runtime constraints.
+
+`ExchangeRateAuthorization`:
+
+- `xr_id` (uint64, *mandatory*): id of the `ExchangeRate` this authorization applies to. Together with `operator`, forms the composite key.
+- `operator` (account, *mandatory*): account authorized to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) on `xr_id`. Together with `xr_id`, forms the composite key.
+- `expiration` (timestamp, *mandatory*): authorization end-of-life. When `now() >= expiration`, the authorization is dead and [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected.
+- `min_interval` (duration, *optional*): anti-spam guard. If set, two successive successful [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls under this authorization MUST be separated by at least `min_interval`.
+- `max_deviation_bps` (uint32, *optional*): circuit breaker, expressed in basis points (1 bps = 0.01%). If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh governance proposal (typically a new [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate) or an updated authorization).
+
 ### GlobalVariables
 
 `GlobalVariables`:
@@ -1791,9 +1808,6 @@ As a result, `accountABC` is authorized to:
 |             | Revoke Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
 |             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |module call|
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
-|             | Grant Exchange Rate Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-7]](#mod-de-msg-7-grant-exchange-rate-authorization)   |governance proposal|
-|             | Revoke Exchange Rate Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-8]](#mod-de-msg-8-revoke-exchange-rate-authorization)   |governance proposal|
-|             | Update VS Operator Authorization Expiration |     N/A (Tx) | Msg  | [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration)   |module call|
 |             | List Operator Authorizations              | /de/v1/authz/list | Query  | [[MOD-DE-QRY-1]](#mod-de-qry-1-list-operator-authorizations)   |N/A |
 |             | List VS Operator Authorizations           | /de/v1/vs-authz/list | Query  | [[MOD-DE-QRY-2]](#mod-de-qry-2-list-vs-operator-authorizations)   |N/A |
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + operator OR module call|
@@ -1801,6 +1815,8 @@ As a result, `accountABC` is authorized to:
 | Exchange Rate     | Create Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
 |                   | Update Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
 |                   | Toggle Exchange Rate State        |                                  | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-toggle-exchange-rate-state)   |governance proposal|
+|                   | Grant Exchange Rate Authorization |     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization)   |governance proposal|
+|                   | Revoke Exchange Rate Authorization|     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-5]](#mod-xr-msg-5-revoke-exchange-rate-authorization)   |governance proposal|
 |                   | Get Exchange Rate                 | /xr/v1/get                  | Query  | [[MOD-XR-QRY-1]](#mod-xr-qry-1-get-exchange-rate)   |N/A |
 |                   | List Exchange Rates               | /xr/v1/list                 | Query  | [[MOD-XR-QRY-2]](#mod-xr-qry-2-list-exchange-rates)   |N/A |
 |                   | Get Price               | /xr/v1/price                 | Query  | [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)   |N/A |
@@ -5684,12 +5700,15 @@ Create `ExchangeRate` entry `xr`:
 
 #### [MOD-XR-MSG-2] Update Exchange Rate
 
-Only an authorized operator that has an ExchangeRateAuthorization can execute this method.
+The **Update Exchange Rate** method allows an operator authorized by network governance (via an [[ref: ExchangeRateAuthorization]]) to push a fresh `rate` for a given `ExchangeRate` entry.
+
+- Only the `operator` designated in an `ExchangeRateAuthorization` matching the target `ExchangeRate` CAN execute this method.
 
 ##### [MOD-XR-MSG-2] Update Exchange Rate method parameters
 
-- `id` (uint64, *mandatory*)
-- `rate` (string, *mandatory*)  
+- `operator` (account) (*mandatory*): (Signer) the account pushing the new rate.
+- `id` (uint64, *mandatory*): id of the target `ExchangeRate` entry.
+- `rate` (string, *mandatory*): the new fixed-point integer rate value.
 
 ##### [MOD-XR-MSG-2] Update Exchange Rate precondition checks
 
@@ -5699,13 +5718,16 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- **Authorization**
-
-Only an authorized operator that has an ExchangeRateAuthorization can execute this method.
-
-- `id` (uint64, *mandatory*) must refer to an existing `ExchangeRate` entry `xr` with `xr.active` = true
+- `operator` (account): (Signer) signature MUST be verified.
+- `id` (uint64, *mandatory*) MUST refer to an existing `ExchangeRate` entry `xr` with `xr.state` = true.
 - `rate` MUST be strictly greater than `"0"`.
-  
+
+- **Authorization**:
+  - An `ExchangeRateAuthorization` `xrauthz` MUST exist where `xrauthz.xr_id` = `id` and `xrauthz.operator` = `operator`.
+  - `xrauthz.expiration` MUST be in the future (`now() < xrauthz.expiration`).
+  - If `xrauthz.min_interval` is set, then `now() - xr.updated` MUST be greater than or equal to `xrauthz.min_interval`.
+  - If `xrauthz.max_deviation_bps` is set, then `|rate - xr.rate| * 10000` MUST be less than or equal to `xrauthz.max_deviation_bps * xr.rate` (i.e., the relative change between the new `rate` and `xr.rate` MUST NOT exceed `xrauthz.max_deviation_bps` basis points). Both values share the same `xr.rate_scale`, since `MOD-XR-MSG-2` does not update the scale.
+
 ###### [MOD-XR-MSG-2] Update Exchange Rate fee checks
 
 Fee payer MUST have sufficient [[ref: estimated transaction fees]].
@@ -5715,7 +5737,7 @@ Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 Load `ExchangeRate` `xr`.
 
 - `xr.rate` = `rate`
-- `xr.expires` = block time + `validity_duration`
+- `xr.expires` = block time + `xr.validity_duration`
 - `xr.updated` = block time
 
 #### [MOD-XR-MSG-3] Toggle Exchange Rate State
@@ -5750,6 +5772,81 @@ Load `ExchangeRate` `xr`.
 
 - set `xr.state` to !`xr.state`.
 - set `xr.updated` to block time
+
+#### [MOD-XR-MSG-4] Grant Exchange Rate Authorization
+
+The **Grant Exchange Rate Authorization** method creates (or updates) an `ExchangeRateAuthorization` record designating a network-level operator allowed to push fresh rates for a given `ExchangeRate` via [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate).
+
+- Only a governance proposal CAN execute this method.
+
+##### [MOD-XR-MSG-4] Grant Exchange Rate Authorization method parameters
+
+- `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
+- `operator` (account) (*mandatory*): the account receiving the authorization.
+- `expiration` (timestamp) (*mandatory*): authorization end-of-life.
+- `min_interval` (duration) (*optional*): minimum time between two successive [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls under this authorization.
+- `max_deviation_bps` (uint32) (*optional*): maximum relative change per update, in basis points.
+
+##### [MOD-XR-MSG-4] Grant Exchange Rate Authorization precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-XR-MSG-4] Grant Exchange Rate Authorization basic checks
+
+If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- **Authorization**
+  - Only a governance proposal can grant an `ExchangeRateAuthorization`.
+- `xr_id` MUST refer to an existing `ExchangeRate` entry.
+- `operator` MUST be a valid account.
+- `expiration` MUST be in the future.
+- `min_interval`, if specified, MUST be a valid, strictly positive duration.
+- `max_deviation_bps`, if specified, MUST be strictly greater than `0` and less than or equal to `10000`.
+
+###### [MOD-XR-MSG-4] Grant Exchange Rate Authorization fee checks
+
+Fee payer MUST have sufficient [[ref: estimated transaction fees]].
+
+##### [MOD-XR-MSG-4] Grant Exchange Rate Authorization execution of the method
+
+Create (or update if it already exists) `ExchangeRateAuthorization` `xrauthz` keyed by (`xr_id`, `operator`):
+
+- `xrauthz.xr_id` = `xr_id`
+- `xrauthz.operator` = `operator`
+- `xrauthz.expiration` = `expiration`
+- `xrauthz.min_interval` = `min_interval` (if provided, else unset)
+- `xrauthz.max_deviation_bps` = `max_deviation_bps` (if provided, else unset)
+
+#### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization
+
+The **Revoke Exchange Rate Authorization** method deletes an existing `ExchangeRateAuthorization` record, immediately preventing the designated operator from executing further [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls on the target `ExchangeRate`.
+
+- Only a governance proposal CAN execute this method.
+
+##### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization method parameters
+
+- `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
+- `operator` (account) (*mandatory*): the account whose authorization is revoked.
+
+##### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization basic checks
+
+If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- **Authorization**
+  - Only a governance proposal can revoke an `ExchangeRateAuthorization`.
+- An `ExchangeRateAuthorization` entry MUST exist for (`xr_id`, `operator`).
+
+###### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization fee checks
+
+Fee payer MUST have sufficient [[ref: estimated transaction fees]].
+
+##### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization execution of the method
+
+- Delete `ExchangeRateAuthorization` entry for (`xr_id`, `operator`).
 
 #### [MOD-XR-QRY-1] Get Exchange Rate
 
