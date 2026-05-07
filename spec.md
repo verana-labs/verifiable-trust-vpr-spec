@@ -1165,6 +1165,7 @@ entity "TrustDeposit" as td {
 group --o fg: grantor
 account --o fg: grantee
 fg "1" --- "0..n" da: spend_limit
+fg "1" --- "0..n" da: remaining_spend
 
 xrauthz o-- xr
 xrauthz o-- account: operator
@@ -1200,6 +1201,8 @@ cspsr  o-- "0..1" csp: agent_perm_id
 
 oauthz "1" --- "0..n" da: fee_spend_limit
 oauthz "1" --- "0..n" da: spend_limit
+oauthz "1" --- "0..n" da: remaining_spend
+oauthz "1" --- "0..n" da: remaining_fee_spend
 
 csp "1" --- "0..n" da: vs_operator_spend_limit
 csp "1" --- "0..n" da: vs_operator_fee_spend_limit
@@ -1385,9 +1388,11 @@ group  --o td: corporation
 - `msg_types` (msg_type[]) (*mandatory*): list of module message types this authorization applies to.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the grantee is allowed to spend
   as a direct consequence of executing authorized messages.
+- `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be paid using this authorization.
-- `expiration` (timestamp) (*optional*): timestamp after which the authorization is no longer valid.
-- `period` (duration) (*optional*): reset period for spend_limit and fee_spend_limit.
+- `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
+- `expiration` (timestamp) (*optional*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the authorization is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the authorization auto-renews until the corporation revokes it).
+- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit`. If set, `expiration` MUST also be set.
 
 ### FeeGrant
 
@@ -1397,8 +1402,9 @@ group  --o td: corporation
 - `grantee` (account) (*mandatory*): the account that receives the fee grant from `grantor`.
 - `msg_types` (msg_type[]) (*mandatory*): list of VPR delegable message types for which the fee allowance applies.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of fees that can be spent using this grant.
-- `expiration` (timestamp) (*optional*): timestamp after which the fee grant is no longer valid.
-- `period` (duration) (*optional*): reset period for spend_limit.
+- `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
+- `expiration` (timestamp) (*optional*): grant window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the grant is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, `remaining_spend` is reset to `spend_limit` and `expiration` is advanced to `now() + period` (the grant auto-renews until the grantor revokes it).
+- `period` (duration) (*optional*): reset period for `spend_limit`. If set, `expiration` MUST also be set.
 
 ### VSOperatorAuthorization
 
@@ -1415,9 +1421,11 @@ A `PermissionAuthorizationRecord` carries the per-permission authorization confi
 - `perm_id` (uint64) (*mandatory*): id of the `Permission` this authorization record applies to. Globally unique across all `PermissionAuthorizationRecord` entries.
 - `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `perm_id`. Declared by the applicant at record creation time (see [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) and [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission)). Frozen after creation.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this permission, as a direct consequence of executing authorized messages.
+- `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
+- `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
 - `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this permission, through an on-chain `FeeGrant`.
-- `expiration` (timestamp) (*mandatory*): timestamp after which this authorization is no longer valid. Written to `now` at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) (disabled until validation) and to `Permission.effective_until` at [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated) / [[MOD-PERM-MSG-8]](#mod-perm-msg-8-adjust-permission) / [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission).
+- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) (disabled until validation) and to `Permission.effective_until` at [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated) / [[MOD-PERM-MSG-8]](#mod-perm-msg-8-adjust-permission) / [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission).
 - `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this permission.
 
 ### ExchangeRate
@@ -1651,18 +1659,25 @@ For any **delegable message** executed by an `operator` on behalf of a `corporat
 ##### [AUTHZ-CHECK-1] Operator Authorization checks
 
 1. An `OperatorAuthorization` `oauthz` MUST exist where `oauthz.corporation` = `corporation`, `oauthz.operator` = `operator`, and `oauthz.msg_types` includes the current message type.
-2. If `oauthz.expiration` is set, it MUST be in the future.
-3. If `oauthz.spend_limit` is set, the remaining balance MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from the remaining balance.
-4. If `oauthz.period` is set and the current period has elapsed since the last reset, the remaining balance MUST be reset to `oauthz.spend_limit` before evaluating the check above.
+2. If `oauthz.expiration` is set:
+   - if `oauthz.period` is set and `now() >= oauthz.expiration`:
+     - if `oauthz.spend_limit` is set, set `oauthz.remaining_spend := oauthz.spend_limit`.
+     - if `oauthz.fee_spend_limit` is set, set `oauthz.remaining_fee_spend := oauthz.fee_spend_limit`.
+     - set `oauthz.expiration := now() + oauthz.period`.
+   - else, `oauthz.expiration` MUST be strictly greater than `now()`. Abort otherwise.
+3. If `oauthz.spend_limit` is set, `oauthz.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `oauthz.remaining_spend` (per matching `denom` entry).
 
 ##### [AUTHZ-CHECK-2] Fee Grant checks
 
 If the transaction fees are paid by the `corporation` account (via fee grant) instead of the `operator` account:
 
 1. A `FeeGrant` `fg` MUST exist where `fg.grantor` = `corporation`, `fg.grantee` = `operator`, and `fg.msg_types` includes the current message type.
-2. If `fg.expiration` is set, it MUST be in the future.
-3. If `fg.spend_limit` is set, the remaining balance MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from the remaining balance.
-4. If `fg.period` is set and the current period has elapsed since the last reset, the remaining balance MUST be reset to `fg.spend_limit` before evaluating the check above.
+2. If `fg.expiration` is set:
+   - if `fg.period` is set and `now() >= fg.expiration`:
+     - if `fg.spend_limit` is set, set `fg.remaining_spend := fg.spend_limit`.
+     - set `fg.expiration := now() + fg.period`.
+   - else, `fg.expiration` MUST be strictly greater than `now()`. Abort otherwise.
+3. If `fg.spend_limit` is set, `fg.remaining_spend` MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from `fg.remaining_spend` (per matching `denom` entry).
 
 ##### [AUTHZ-CHECK-3] VS Operator Authorization checks
 
@@ -1675,17 +1690,21 @@ Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission
 1. A `PermissionAuthorizationRecord` `record` MUST exist for `perm_id`. Abort if not found.
 2. `record` MUST belong to `VSOperatorAuthorization[corporation, operator]`, that is: the containing `VSOperatorAuthorization` MUST have `corporation` as its `corporation` and `operator` as its `vs_operator`. Abort otherwise.
 3. `msg_type` MUST be in `record.msg_types`. Abort otherwise.
-4. `record.expiration` MUST be strictly greater than now(). Abort otherwise.
-5. If `record.period` is set and the current period has elapsed since the last reset, the remaining balances for `record.spend_limit` and `record.fee_spend_limit` MUST be reset to their original values before evaluating the check below.
-6. If `record.spend_limit` is set, the remaining balance MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from the remaining balance.
+4. Cycle / expiration check:
+   - if `record.period` is set and `now() >= record.expiration`:
+     - if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
+     - if `record.fee_spend_limit` is set, set `record.remaining_fee_spend := record.fee_spend_limit`.
+     - set `record.expiration := now() + record.period`.
+   - else, `record.expiration` MUST be strictly greater than `now()`. Abort otherwise.
+5. If `record.spend_limit` is set, `record.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `record.remaining_spend` (per matching `denom` entry).
 
 ##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
 
 If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `PermissionAuthorizationRecord` `record` looked up in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
 
 1. `record.with_feegrant` MUST be true, else abort.
-2. If `record.period` is set and the current period has elapsed since the last reset, the remaining balance for `record.fee_spend_limit` MUST be reset to its original value before evaluating the check below.
-3. If `record.fee_spend_limit` is set, the remaining balance MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from the remaining balance.
+2. The cycle / expiration check from [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 4 has already been performed against the same `record`; `record.remaining_fee_spend` is therefore current.
+3. If `record.fee_spend_limit` is set, `record.remaining_fee_spend` MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from `record.remaining_fee_spend` (per matching `denom` entry).
 
 #### Example
 
@@ -4428,10 +4447,10 @@ At least one of the two authorization paths below MUST pass, else [[ref: transac
 The target `perm` itself is excluded from this walk; only its ancestors (from the direct parent up to the root) are considered. Walk the tree:
 
 - set `v` = `perm`.
-- while `v.validator_perm_id` is defined:
+- while `v.validator_perm_id` is defined and != `perm.id` :
   - load `v` from `v.validator_perm_id`.
   - if `v` is not an [[ref: active permission]], continue with the next iteration.
-  - `corporation` MUST be equal to `v.corporation`.
+  - if corporation != v.corporation, continue with the next iteration.
   - if [AUTHZ-CHECK-1](#authz-check-1-operator-authorization-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver`, then authorization is granted => match.
 
 If the walk terminates without a match, Path 2 fails.
@@ -5188,6 +5207,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `period` (duration): if specified MUST be a valid period.
+- if `period` is specified, `expiration` MUST also be specified.
 
 ##### [MOD-DE-MSG-1-3] Grant Fee Allowance fee checks
 
@@ -5204,7 +5224,8 @@ Create (or update if it already exist) FeeGrant `feegrant`:
 - set `feegrant.msg_types` to `msg_types`
 - set `feegrant.expiration` to `expiration`
 - set `feegrant.spend_limit` to `spend_limit`
-- set `feegrant.period` to `period``
+- if `spend_limit` is set, set `feegrant.remaining_spend` to `spend_limit`
+- set `feegrant.period` to `period`
 
 #### [MOD-DE-MSG-2] Revoke Fee Allowance
 
@@ -5265,6 +5286,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `authz_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `authz_spend_limit` is not set.
 - `feegrant_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts. Ignored if `with_feegrant` is false.
 - `feegrant_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `feegrant_spend_limit` is not set or if `with_feegrant` is false.
+- if `authz_spend_limit_period` or `feegrant_spend_limit_period` is specified, `expiration` MUST also be specified.
 
 - Check if a **VS Operator Authorization** exists for `corporation` and `grantee`. If this is the case, MUST abort.
 
@@ -5287,6 +5309,7 @@ Create (or update if it already exist) Authorization `authz`:
 - set `authz.msg_types` to `msg_types`
 - set `authz.expiration` to `expiration`
 - set `authz.spend_limit` to `authz_spend_limit`
+- if `authz_spend_limit` is set, set `authz.remaining_spend` to `authz_spend_limit`
 - set `authz.period` to `authz_spend_limit_period`
 
 if `with_feegrant` is false:
@@ -5365,6 +5388,9 @@ A **VS Operator Authorization** record CAN be granted ONLY IF no **OperatorAutho
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
+- Initialize the runtime balances on `record`:
+  - if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
+  - if `record.fee_spend_limit` is set, set `record.remaining_fee_spend := record.fee_spend_limit`.
 - Load `VSOperatorAuthorization` `vsoa` with `(corporation, vs_operator)`. If it does not exist, create a new `vsoa` with `vsoa.corporation = corporation`, `vsoa.vs_operator = vs_operator`, `vsoa.records = []`.
 - Append `record` to `vsoa.records`.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
