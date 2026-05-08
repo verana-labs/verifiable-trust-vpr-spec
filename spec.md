@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft18](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft19](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -105,7 +105,7 @@ package "Verifiable Public Registry" as vpr {
 
 ```
 
-Permission directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: verifiable services]], and index them.
+Participant directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: verifiable services]], and index them.
 
 Indexers may expose this data through APIs for querying the indexed services or use it to build a search engine for querying the database of indexed [[ref: verifiable services]].
 
@@ -312,14 +312,14 @@ object "Ecosystem" as tra #3fbdb6 {
 - An **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` permissions are granted. Modes include:
   - `ISSUER_VALIDATION_PROCESS`: `HOLDER` permissions are granted directly by issuers to holder through the execution of a Validation Process.
   - `PERMISSIONLESS`: holder that want to obtain credentials from an issuer do not require a permission in the VPR.
-- A **Permission tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
+- A **Participant tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
 
 ```plantuml
 
 @startuml
 scale max 800 width
  
-package "Example Credential Schema Permission Tree" as cs {
+package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
         permissionType: ECOSYSTEM (Root)
@@ -441,27 +441,27 @@ scale max 800 width
  
 package "Pay per validation Fee Structure" as cs {
 
-    object "Ecosystem A - Credential Schema Root Permission" as tr #3fbdb6 {
+    object "Ecosystem A - Credential Schema Root Participant" as tr #3fbdb6 {
         did:example:ecosystemA
         Grantor applicant validation cost: 1000 TUs
     }
-    object "Issuer Grantor B - Credential Schema Permission" as ig {
+    object "Issuer Grantor B - Credential Schema Participant" as ig {
         did:example:igB
         Issuer applicant validation cost: 1000 TUs
     }
-    object "Issuer C - Credential Schema Permission" as issuer #7677ed  {
+    object "Issuer C - Credential Schema Participant" as issuer #7677ed  {
         did:example:iC
         Holder applicant validation cost: 10 TUs
     }
-    object "Verifier Grantor D -  Credential Schema Permission" as vg {
+    object "Verifier Grantor D -  Credential Schema Participant" as vg {
         did:example:vgD
         Verifier applicant validation cost: 200 TUs
     }
-    object "Verifier E - Credential Schema Permission" as verifier #00b0f0 {
+    object "Verifier E - Credential Schema Participant" as verifier #00b0f0 {
         did:example:vE
     }
 
-    object "Holder Z - Credential Schema Permission" as holder #FFB073 {
+    object "Holder Z - Credential Schema Participant" as holder #FFB073 {
         permissionType: HOLDER
     }
 }
@@ -689,25 +689,25 @@ scale max 800 width
  
 package "Ecosystem #A - Credential Schema #1" as cs {
 
-    object "Ecosystem #A - Credential Schema #1 Root Permission" as tr #3fbdb6 {
+    object "Ecosystem #A - Credential Schema #1 Root Participant" as tr #3fbdb6 {
         did:example:ecosystemA
         issuance cost: 10 TUs
         verification cost: 20 TUs
     }
-    object "Issuer Grantor #B - Credential Schema #1 Permission" as ig {
+    object "Issuer Grantor #B - Credential Schema #1 Participant" as ig {
         did:example:igB
         issuance cost: 5 TUs
         verification cost: 5 TUs
     }
-    object "Issuer #C - Credential Schema #1 Permission" as issuer #7677ed  {
+    object "Issuer #C - Credential Schema #1 Participant" as issuer #7677ed  {
         did:example:iC
         verification cost: 30 TUs
     }
-    object "Verifier Grantor #D - Credential #1 Schema Permission" as vg {
+    object "Verifier Grantor #D - Credential #1 Schema Participant" as vg {
         did:example:vgD
         verification cost: 2 TUs
     }
-    object "Verifier #E - Credential Schema #1 Permission" as verifier #00b0f0 {
+    object "Verifier #E - Credential Schema #1 Participant" as verifier #00b0f0 {
         did:example:vE
     }
 }
@@ -1078,7 +1078,7 @@ entity "ExchangeRateAuthorization" as xrauthz {
 }
 
 
-entity "Permission" as csp {
+entity "Participant" as csp {
   *id: uint64
   did: string
   +created: timestamp
@@ -1323,7 +1323,7 @@ group  --o td: corporation
 - `repaid` (timestamp) (*mandatory*): timestamp this `Participant` has been repaid.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` is effective.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit has been set for this permission.
-- `modified` (timestamp) (*mandatory*): timestamp this Permission has been modified.
+- `modified` (timestamp) (*mandatory*): timestamp this Participant has been modified.
 - `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`corporation` grantee of this perm) for running a validation process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
@@ -1342,7 +1342,7 @@ group  --o td: corporation
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION_PROCESS mode) or an ISSUER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
-> Note: VS operator authorization settings (spend limits, feegrant, expiration, authorized message types) are no longer stored on `Participant`. They live in `ParticipantAuthorizationRecord` entries inside [VSOperatorAuthorization](#vsoperatorauthorization), keyed by `Permission.id`. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
+> Note: VS operator authorization settings (spend limits, feegrant, expiration, authorized message types) are no longer stored on `Participant`. They live in `ParticipantAuthorizationRecord` entries inside [VSOperatorAuthorization](#vsoperatorauthorization), keyed by `Participant.id`. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
 ### ParticipantSession
 
@@ -1424,7 +1424,7 @@ A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries 
 
 ### ParticipantAuthorizationRecord
 
-A `ParticipantAuthorizationRecord` carries the per-permission authorization configuration that was previously stored on `Permission.vs_operator_authz_*` fields. Each record is globally unique by `participant_id`: for any `Permission.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `participant_id` via a direct lookup.
+A `ParticipantAuthorizationRecord` carries the per-permission authorization configuration that was previously stored on `Participant.vs_operator_authz_*` fields. Each record is globally unique by `participant_id`: for any `Participant.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `participant_id` via a direct lookup.
 
 - `participant_id` (uint64) (*mandatory*): id of the `Participant` this authorization record applies to. Globally unique across all `ParticipantAuthorizationRecord` entries.
 - `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `participant_id`. Declared by the applicant at record creation time (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). Frozen after creation.
@@ -1433,7 +1433,7 @@ A `ParticipantAuthorizationRecord` carries the per-permission authorization conf
 - `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
 - `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
 - `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this permission, through an on-chain `FeeGrant`.
-- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp) (disabled until validation) and to `Permission.effective_until` at [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-vp-to-validated) / [[MOD-PP-MSG-8]](#mod-pp-msg-8-adjust-participant) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant).
+- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp) (disabled until validation) and to `Participant.effective_until` at [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-vp-to-validated) / [[MOD-PP-MSG-8]](#mod-pp-msg-8-adjust-participant) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant).
 - `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this permission.
 
 ### ExchangeRate
@@ -1502,14 +1502,14 @@ Note about Query REST API:
 
 - all query methods MUST return valid JSON.
 - objects MUST be nested when needed, such as when returning an ecosystem.
-- JSON formatting MUST obey to data model regarding attribute names. A method that returns a `Ecosystem` entry MUST return an entry called "trust_registry". A method that returns a list of Ecosystems MUST return an entry called "trustRegistries" that contain a list of `Ecosystem` entries.
+- JSON formatting MUST obey to data model regarding attribute names. A method that returns a `Ecosystem` entry MUST return an entry called "ecosystem". A method that returns a list of Ecosystems MUST return an entry called "ecosystems" that contain a list of `Ecosystem` entries.
 
 Examples:
 
-Get a `Ecosystem`
+Get an `Ecosystem`
 
 ```json
-"trust_registry": {
+"ecosystem": {
   {
     "active_version": 0,
     "aka": "string",
@@ -1543,7 +1543,7 @@ Get a `Ecosystem`
 ```
 
 ```json
-"trustRegistries": [ {
+"ecosystems": [ {
   {
     "active_version": 0,
     "aka": "string",
@@ -1776,7 +1776,7 @@ As a result, `accountABC` is authorized to:
 |                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-CS-QRY-4]](#mod-cs-qry-4-list-module-parameters)   |N/A  |
 |                  | Get Schema Authorization Policy                         | /cs/v1/sap/get         | Query | [[MOD-CS-QRY-5]](#mod-cs-qry-5-get-schema-authorization-policy) | N/A |
 |                  | List Schema Authorization Policies                      | /cs/v1/sap/list        | Query | [[MOD-CS-QRY-6]](#mod-cs-qry-6-list-schema-authorization-policies) | N/A |
-| Permission                     | Start Participant VP                     |     N/A (Tx)                       | Msg    | [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp)    |corporation + operator |
+| Participant                    | Start Participant VP                     |     N/A (Tx)                       | Msg    | [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp)    |corporation + operator |
 |                                | Renew a Participant VP                   |       N/A (Tx)                     | Msg    | [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-vp)    |corporation + operator |
 |                                | Set Participant VP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-vp-to-validated)    |corporation + operator |
 |                                | Cancel Participant VP Last Request       |         N/A (Tx)                    | Msg    | [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-vp-last-request)    |corporation + operator |
@@ -2707,14 +2707,14 @@ Entries MUST be ordered by ascending `version`.
 
 *This section is non-normative.*
 
-Permission are linked to a Credential Schema and representable as a tree.
+Participants are linked to a Credential Schema and representable as a tree.
 
 ```plantuml
 
 @startuml
 scale max 800 width
  
-package "Example Credential Schema Permission Tree" as cs {
+package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
         permissionType: ECOSYSTEM (Root)
@@ -2817,7 +2817,7 @@ The following VS Operator Authorization parameters are **optional** and collecti
 
 Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`.
 
-|Permission type|Permitted Messages|
+|Participant role|Permitted Messages|
 |-|-|
 | HOLDER | TriggerResolver |
 | ISSUER | CreateOrUpdateParticipantSession, SetPermissionVPtoValidated |
@@ -3379,7 +3379,7 @@ The following VS Operator Authorization parameters are **optional** and collecti
 
 Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`. Since [Create Root Participant](#mod-pp-msg-7-create-root-participant) always creates an ECOSYSTEM permission, only the following is allowed:
 
-|Permission type|Permitted Messages|
+|Participant role|Permitted Messages|
 |-|-|
 | ECOSYSTEM | SetPermissionVPtoValidated |
 
@@ -3631,7 +3631,7 @@ In the following permission tree, "Verifier E" permission can be revoked:
 @startuml
 scale max 800 width
  
-package "Example Credential Schema Permission Tree" as cs {
+package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
         permissionType: ECOSYSTEM (Root)
@@ -3711,7 +3711,7 @@ If the peer wants to verify a credential, agent must send to peer:
 
 In case peer is a **Verifiable Service** and illegaly set `agent_participant_id` and/or `wallet_agent_participant_id`, the other end MUST refuse the request.
 
-`payer` MUST create a Permission Session using the above information, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
+`payer` MUST create a Participant Session using the above information, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
 
 ```plantuml
 scale max 800 width
@@ -4313,7 +4313,7 @@ The following VS Operator Authorization parameters are **optional** and collecti
 
 Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`.
 
-|Permission type|Permitted Messages|
+|Participant role|Permitted Messages|
 |-|-|
 | HOLDER | TriggerResolver |
 | ISSUER | CreateOrUpdateParticipantSession, SetPermissionVPtoValidated |
@@ -4637,8 +4637,8 @@ v --> vg
 ##### [MOD-PP-QRY-4-2] Find Beneficiaries checks
 
 - if `issuer_participant_id` and `verifier_participant_id` are unset then MUST abort.
-- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`, Permission MUST exist and MUST be a [[ref: active permission]].
-- if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Permission MUST exist and MUST be a [[ref: active permission]].
+- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`, Participant MUST exist and MUST be a [[ref: active permission]].
+- if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Participant MUST exist and MUST be a [[ref: active permission]].
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
@@ -4727,7 +4727,7 @@ autonumber "<font color='#7677ed'><b>(end start method)"
 Applicant <-- VPR: Transaction completed and Validation entry created
 autonumber stop
 autonumber "<font color='#7677ed'><b>(connects to Certification Entity Validation VS)"
-Applicant --> CE: share id of Permission
+Applicant --> CE: share id of Participant
 autonumber stop
 Applicant <-- CE: Request proof of account and DID ownership (blind sign)
 Applicant --> CE: send blind sign proofs 
@@ -5372,7 +5372,7 @@ MUST abort if one of these conditions fails:
 
 #### [MOD-DE-MSG-5] Grant VS Operator Authorization
 
-This method can only be called directly by the following Permission module methods, with no signer check:
+This method can only be called directly by the following Participant module methods, with no signer check:
 
 - [Start Participant VP](#mod-pp-msg-1-start-participant-vp)
 - [Self Create Participant](#mod-pp-msg-14-self-create-participant)
@@ -5433,7 +5433,7 @@ This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-o
 
 #### [MOD-DE-MSG-6] Revoke VS Operator Authorization
 
-This method can only be called directly by the following Permission module methods, with no signer check:
+This method can only be called directly by the following Participant module methods, with no signer check:
 
 - [Cancel Participant VP Last Request](#mod-pp-msg-6-cancel-participant-vp-last-request) (only when the cancellation terminates the permission)
 - [Revoke Participant](#mod-pp-msg-9-revoke-participant)
@@ -5467,7 +5467,7 @@ This method does NOT read `Participant` state.
 
 #### [MOD-DE-MSG-9] Update VS Operator Authorization Expiration
 
-This method can only be called directly by the following Permission module methods, with no signer check:
+This method can only be called directly by the following Participant module methods, with no signer check:
 
 - [Set Participant VP to Validated](#mod-pp-msg-3-set-participant-vp-to-validated)
 - [Adjust Participant](#mod-pp-msg-8-adjust-participant)
