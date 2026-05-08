@@ -1096,12 +1096,12 @@ entity "Participant" as csp {
   +slashed_deposit: number
   +repaid_deposit: number
   revoked: timestamp
-  +vp_exp: timestamp
-  +vp_last_state_change: timestamp
-  +vp_validator_deposit: number
-  +vp_current_fees: number
-  +vp_current_deposit: number
-  +vp_summary_digest: string
+  +op_exp: timestamp
+  +op_last_state_change: timestamp
+  +op_validator_deposit: number
+  +op_current_fees: number
+  +op_current_deposit: number
+  +op_summary_digest: string
   +issuance_fee_discount: number
   +verification_fee_discount: number
 }
@@ -1228,7 +1228,7 @@ account --o csp: vs_operator
 
 csps o-- account: vs_operator
 
-valstate --o csp: vp_state
+valstate --o csp: op_state
 group  --o td: corporation
 
 @enduml
@@ -1333,13 +1333,13 @@ group  --o td: corporation
 - `repaid_deposit` (number) (*mandatory*): part of the slashed deposit in [[ ref: native denom ]] that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the onboarding process of this permission, ie *parent node* in the `Participant` tree.
-- `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
-- `vp_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Participant` expiration timestamp.
-- `vp_last_state_change` (timestamp) (*mandatory*)
-- `vp_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
-- `vp_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon onboarding process completion, in [[ref: denom]].
-- `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
-- `vp_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `op_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
+- `op_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Participant` expiration timestamp.
+- `op_last_state_change` (timestamp) (*mandatory*)
+- `op_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
+- `op_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon onboarding process completion, in [[ref: denom]].
+- `op_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
+- `op_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_ONBOARDING_PROCESS mode) or an ISSUER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_ONBOARDING_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
@@ -2937,7 +2937,7 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 
 We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different VP with differents validators for the same `schema_id`, `type`.
 
-Find all permission `participants[]` for `schema_id`, `type`, `validator_participant_id`, `corporation` with vp_state = VALIDATED or PENDING.
+Find all permission `participants[]` for `schema_id`, `type`, `validator_participant_id`, `corporation` with op_state = VALIDATED or PENDING.
 
 if size of `participants[]` > 0, it means there is already an existing onboarding process in this context, so MUST abort.
 
@@ -2971,12 +2971,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.issuance_fees`: `issuance_fees`.
   - `applicant_participant.verification_fees`: `verification_fees`.
   - `applicant_participant.validator_participant_id`: `validator_participant_id`.
-  - `applicant_participant.vp_last_state_change`: `now`
-  - `applicant_participant.vp_state`: PENDING.
-  - `applicant_participant.vp_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_participant.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
-  - `applicant_participant.vp_summary_digest`: null.
-  - `applicant_participant.vp_validator_deposit`: 0.
+  - `applicant_participant.op_last_state_change`: `now`
+  - `applicant_participant.op_state`: PENDING.
+  - `applicant_participant.op_current_fees` (number): `validation_fees_in_denom`.
+  - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.op_summary_digest`: null.
+  - `applicant_participant.op_validator_deposit`: 0.
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -3016,7 +3016,7 @@ Once the [[ref: validator]] determines that the process is complete, they may te
 
 The [[ref: validator]] may compile a summary file of the onboarding process, documenting exchanged data, proofs, and decisions, and share it with the [[ref: applicant]] via the [[ref: VS]] connection or another secure channel.
 
-For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_participant.vp_summary_digest`.
+For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_participant.op_summary_digest`.
 
 #### [MOD-PP-MSG-2] Renew Participant OP
 
@@ -3110,11 +3110,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - update permission entry:
 
-  - `applicant_participant.vp_state`: PENDING.
-  - `applicant_participant.vp_last_state_change`: current timestamp.
+  - `applicant_participant.op_state`: PENDING.
+  - `applicant_participant.op_last_state_change`: current timestamp.
   - `applicant_participant.deposit`: `applicant_participant.deposit` + `validation_trust_deposit_in_native_denom`.
-  - `applicant_participant.vp_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_participant.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.op_current_fees` (number): `validation_fees_in_denom`.
+  - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
   - `applicant_participant.modified`: `now`
 
 #### [MOD-PP-MSG-3] Set Participant OP to Validated
@@ -3132,7 +3132,7 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `validation_fees` (number) (*mandatory*): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `verification_fees` (number) (*mandatory*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
-- `vp_summary_digest` (string) (*optional*): an optional digest, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `op_summary_digest` (string) (*optional*): an optional digest, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_ONBOARDING_PROCESS mode) or an ISSUER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_ONBOARDING_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
@@ -3159,11 +3159,11 @@ OR (executed by vs-agent account defined in validator permission):
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `validator_participant`) tuple.
 else MUST abort.
 
-- `applicant_participant.vp_state` MUST be equal to PENDING, else abort.
+- `applicant_participant.op_state` MUST be equal to PENDING, else abort.
 - `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_participant.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_participant.validation_fees`, else abort.
 - `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_participant.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_participant.issuance_fees` or, else abort.
 - `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_participant.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_participant.verification_fees`, else abort.
-- `vp_summary_digest` (string) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest. Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
+- `op_summary_digest` (string) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest. Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
 - Load `CredentialSchema` `cs` from `applicant_participant.schema_id`.
 - Load `Participant` `validator_participant` from `applicant_participant.validator_participant_id`.
@@ -3186,19 +3186,19 @@ else MUST abort.
     - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
   - else MUST abort.
 
-Calculation of `vp_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
+Calculation of `op_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
 
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_participant.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_participant.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_participant.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_participant.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_participant.role` is HOLDER).
 
-- if `validity_period` is NULL:  `vp_exp` = NULL.
-- else if `applicant_participant.vp_exp` is null, `vp_exp` =  timestamp of now() plus `validity_period`.
-- else `vp_exp` =  `applicant_participant.vp_exp` plus `validity_period`
+- if `validity_period` is NULL:  `op_exp` = NULL.
+- else if `applicant_participant.op_exp` is null, `op_exp` =  timestamp of now() plus `validity_period`.
+- else `op_exp` =  `applicant_participant.op_exp` plus `validity_period`
 
 Now, let's verify `effective_until`:
 
 - if `effective_until` is NULL, no issue.
-- else if `applicant_participant.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
-- else `effective_until` MUST be greater than `applicant_participant.effective_until` AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
+- else if `applicant_participant.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `op_exp` is not null, lower or equal to `op_exp`.
+- else `effective_until` MUST be greater than `applicant_participant.effective_until` AND, if `op_exp` is not null, lower or equal to `op_exp`.
 
 ###### [MOD-PP-MSG-3-2-2] Set Participant OP to Validated validator perms
 
@@ -3210,7 +3210,7 @@ If `validator_participant` is not a [[ref: active participant]] (expired, revoke
 ###### [MOD-PP-MSG-3-2-3] Set Participant OP to Validated fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
-- if `applicant_participant.vp_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.vp_current_deposit` available in [[ref: native denom]] on its account for paying the trust deposit.
+- if `applicant_participant.op_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.op_current_deposit` available in [[ref: native denom]] on its account for paying the trust deposit.
 
 ###### [MOD-PP-MSG-3-2-4] Set Participant OP to Validated overlap checks
 
@@ -3236,44 +3236,44 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
 - define `now` timestamp of now().
 
-Calculate `vp_exp`:
+Calculate `op_exp`:
 
 - Load `CredentialSchema` `cs` from `applicant_participant.schema_id`.
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_participant.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_participant.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_participant.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_participant.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_participant.role` is HOLDER).
 
-- if `validity_period` is NULL:  `vp_exp` = NULL.
-- else if `applicant_participant.vp_exp` is null, `vp_exp` =  timestamp of now() plus `validity_period`.
-- else `vp_exp` =  `applicant_participant.vp_exp` plus `validity_period`.
+- if `validity_period` is NULL:  `op_exp` = NULL.
+- else if `applicant_participant.op_exp` is null, `op_exp` =  timestamp of now() plus `validity_period`.
+- else `op_exp` =  `applicant_participant.op_exp` plus `validity_period`.
 
 Change value of provided `effective_until` if needed, and abort if needed:
 
 - if provided  `effective_until` is NULL:
-  - change value of provided `effective_until` to `vp_exp`.
+  - change value of provided `effective_until` to `op_exp`.
 
 - else if `applicant_participant.effective_until` is NULL:
   - verify that provided `effective_until` is greater than `now` else MUST abort
-  - if `vp_exp` is not null, verify that provided `effective_until` is lower or equal to `vp_exp` else MUST abort
+  - if `op_exp` is not null, verify that provided `effective_until` is lower or equal to `op_exp` else MUST abort
 
 - else:
   - `effective_until` MUST be greater than `applicant_participant.effective_until` else MUST abort
-  - if `vp_exp` is not null, verify that provided `effective_until` is lower or equal to `vp_exp` else MUST abort.
+  - if `op_exp` is not null, verify that provided `effective_until` is lower or equal to `op_exp` else MUST abort.
 
 Fees and Trust Deposits:
 
-- transfer the full amount `applicant_participant.vp_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to validator `corporation` [[ref: account]] `validator_participant.corporation`;
-- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_participant.vp_current_deposit` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_participant.vp_validator_deposit` to `applicant_participant.vp_validator_deposit` + `applicant_participant.vp_current_deposit`.
+- transfer the full amount `applicant_participant.op_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to validator `corporation` [[ref: account]] `validator_participant.corporation`;
+- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_participant.op_current_deposit` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_participant.op_validator_deposit` to `applicant_participant.op_validator_deposit` + `applicant_participant.op_current_deposit`.
 
-> Important: if `applicant_participant.vp_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.vp_current_deposit` available for paying the trust deposit.
+> Important: if `applicant_participant.op_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.op_current_deposit` available for paying the trust deposit.
 
 Update `Participant` `applicant_participant`:
 
 - set `applicant_participant.modified` to `now`.
-- set `applicant_participant.vp_state` to VALIDATED.
-- set `applicant_participant.vp_last_state_change` to `now`.
-- set `applicant_participant.vp_current_fees` to 0;
-- set `applicant_participant.vp_current_deposit` to 0;
-- set `applicant_participant.vp_summary_digest` to `vp_summary_digest`.
-- set `applicant_participant.vp_exp` to `vp_exp`.
+- set `applicant_participant.op_state` to VALIDATED.
+- set `applicant_participant.op_last_state_change` to `now`.
+- set `applicant_participant.op_current_fees` to 0;
+- set `applicant_participant.op_current_deposit` to 0;
+- set `applicant_participant.op_summary_digest` to `op_summary_digest`.
+- set `applicant_participant.op_exp` to `op_exp`.
 - set `applicant_participant.effective_until` to `effective_until`.
 - if `applicant_participant.effective_from` IS NULL (first time method is called for this perm, and thus we are not in a renewal):
   - set `applicant_participant.validation_fees` to `validation_fees`;
@@ -3298,7 +3298,7 @@ This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-At any time, [[ref: applicant]] of a permission onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and escrewed [[ref: trust fees]] are refunded. If `vp_exp` is not null, `vp_state` is set back to VALIDATED, else `vp_state` is set to TERMINATED.
+At any time, [[ref: applicant]] of a permission onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and escrewed [[ref: trust fees]] are refunded. If `op_exp` is not null, `op_state` is set back to VALIDATED, else `op_state` is set to TERMINATED.
 
 ##### [MOD-PP-MSG-6-1] Cancel Participant OP Last Request parameters
 
@@ -3320,7 +3320,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` with this id. It MUST exist.
 - `corporation` running the [[ref: transaction]] MUST be `applicant_participant.corporation`.
-- `applicant_participant.vp_state` MUST be PENDING.
+- `applicant_participant.op_state` MUST be PENDING.
 - if `applicant_participant.deposit` has been slashed and not repaid, MUST abort
 
 ###### [MOD-PP-MSG-6-2-2] Cancel Participant OP Last Request fee checks
@@ -3337,17 +3337,17 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 
 - set `applicant_participant.modified` to `now`.
-- if `applicant_participant.vp_exp` is null (validation never completed), set `applicant_participant.vp_state` to TERMINATED, else set `applicant_participant.vp_state` to VALIDATED.
-- set `applicant_participant.vp_last_state_change` to `now`.
-- if `applicant_participant.vp_current_fees` > 0:
-  - transfer `applicant_participant.vp_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_participant.corporation`.
-  - set `applicant_participant.vp_current_fees` to 0;
+- if `applicant_participant.op_exp` is null (validation never completed), set `applicant_participant.op_state` to TERMINATED, else set `applicant_participant.op_state` to VALIDATED.
+- set `applicant_participant.op_last_state_change` to `now`.
+- if `applicant_participant.op_current_fees` > 0:
+  - transfer `applicant_participant.op_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_participant.corporation`.
+  - set `applicant_participant.op_current_fees` to 0;
 
-- if `applicant_participant.vp_current_deposit` > 0:
-  - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_participant.corporation` by `applicant_participant.vp_current_deposit`
-  - set `applicant_participant.vp_current_deposit` to 0.
+- if `applicant_participant.op_current_deposit` > 0:
+  - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_participant.corporation` by `applicant_participant.op_current_deposit`
+  - set `applicant_participant.op_current_deposit` to 0.
 
-If `applicant_participant.vp_state` was set to TERMINATED (i.e. `applicant_participant.vp_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The call is a no-op if no record exists. If `applicant_participant.vp_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
+If `applicant_participant.op_state` was set to TERMINATED (i.e. `applicant_participant.op_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The call is a no-op if no record exists. If `applicant_participant.op_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
 
 #### [MOD-PP-MSG-7] Create Root Participant
 
@@ -3521,7 +3521,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 3. VP managed permissions
 
-- `effective_until` MUST be lower or equal to `applicant_participant.vp_exp` else MUST abort.
+- `effective_until` MUST be lower or equal to `applicant_participant.op_exp` else MUST abort.
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]]. `corporation` running the method MUST be `validator_participant.corporation`.
 
 ###### [MOD-PP-MSG-8-2-3] Adjust Participant fee checks
@@ -4515,7 +4515,7 @@ Generic query used for (at least):
 - `only_slashed` (boolean) (*optional*): if set to true, only return slashed permissions.
 - `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed permissions.
 - `modified_after` (timestamp) (*optional*): limit to permissions modified after (or equal to) `modified_after`.
-- `vp_state` (ValidationState) (*optional*): limit to permissions with a `vp_state` not null and equal to `vp_state`.
+- `op_state` (ValidationState) (*optional*): limit to permissions with a `op_state` not null and equal to `op_state`.
 - `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
 - `when` (timestamp) (*optional*): if set, query *at* `when`, else query *at* now(). Used to query the VPR state at a previous datetime.
 
