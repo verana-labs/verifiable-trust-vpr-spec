@@ -1107,7 +1107,7 @@ entity "Participant" as csp {
 }
 
 
-enum "ValidationState" as valstate {
+enum "OnboardingState" as valstate {
   PENDING
   VALIDATED
   TERMINATED
@@ -2821,11 +2821,11 @@ Permitted message types to be set in `vs_operator_authz_msg_types` depends on `t
 |Participant role|Permitted Messages|
 |-|-|
 | HOLDER | TriggerResolver |
-| ISSUER | CreateOrUpdateParticipantSession, SetPermissionVPtoValidated |
+| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated |
 | VERIFIER | CreateOrUpdateParticipantSession |
-| ISSUER_GRANTOR | SetPermissionVPtoValidated |
-| VERIFIER_GRANTOR | SetPermissionVPtoValidated |
-| ECOSYSTEM | SetPermissionVPtoValidated |
+| ISSUER_GRANTOR | SetParticipantOPtoValidated |
+| VERIFIER_GRANTOR | SetParticipantOPtoValidated |
+| ECOSYSTEM | SetParticipantOPtoValidated |
  
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
@@ -3152,8 +3152,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - Authorization:
 
 either (executed by any operator of corporation):
-[[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetPermissionVPtoValidated` message.
-[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetPermissionVPtoValidated` message.
+[[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetParticipantOPtoValidated` message.
+[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetParticipantOPtoValidated` message.
 OR (executed by vs-agent account defined in validator permission):
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `validator_participant`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `validator_participant`) tuple.
@@ -3382,7 +3382,7 @@ Permitted message types to be set in `vs_operator_authz_msg_types` depends on `t
 
 |Participant role|Permitted Messages|
 |-|-|
-| ECOSYSTEM | SetPermissionVPtoValidated |
+| ECOSYSTEM | SetParticipantOPtoValidated |
 
 ##### [MOD-PP-MSG-7-2] Create Root Participant precondition checks
 
@@ -4317,7 +4317,7 @@ Permitted message types to be set in `vs_operator_authz_msg_types` depends on `t
 |Participant role|Permitted Messages|
 |-|-|
 | HOLDER | TriggerResolver |
-| ISSUER | CreateOrUpdateParticipantSession, SetPermissionVPtoValidated |
+| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated |
 | VERIFIER | CreateOrUpdateParticipantSession |
  
 ##### [MOD-PP-MSG-14-2] Self Create Participant precondition checks
@@ -4515,7 +4515,7 @@ Generic query used for (at least):
 - `only_slashed` (boolean) (*optional*): if set to true, only return slashed permissions.
 - `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed permissions.
 - `modified_after` (timestamp) (*optional*): limit to permissions modified after (or equal to) `modified_after`.
-- `op_state` (ValidationState) (*optional*): limit to permissions with a `op_state` not null and equal to `op_state`.
+- `op_state` (OnboardingState) (*optional*): limit to permissions with a `op_state` not null and equal to `op_state`.
 - `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
 - `when` (timestamp) (*optional*): if set, query *at* `when`, else query *at* now(). Used to query the VPR state at a previous datetime.
 
