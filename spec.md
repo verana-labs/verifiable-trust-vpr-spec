@@ -121,7 +121,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A [[ref: verifiable public registry]] account.
 
 [[def: applicant, applicants]]:
-~ A [[ref: account]] that starts a [[ref: validation process]].
+~ A [[ref: account]] that starts a [[ref: onboarding process]].
 
 [[def: corporation, corporations]]:
 ~ An [[ref: group]] which is the owner of a specific resource in an [[ref: VPR]].
@@ -204,7 +204,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ Fees required, in [[ref: denom]], to execute a [[ref: transaction]] in an [[ref: VPR]].
 
 [[def: trust deposit, trust deposits]]:
-~ A financial deposit that is used as a trust guarantee. For a given [[ref: corporation]], its trust deposit is increased when running validation process (either as an [[ref: applicant]] or as a [[ref: validator]]).
+~ A financial deposit that is used as a trust guarantee. For a given [[ref: corporation]], its trust deposit is increased when running onboarding process (either as an [[ref: applicant]] or as a [[ref: validator]]).
 
 [[def: trust fee, trust fees]]:
 ~ Fees paid by a [[ref: participant]] that are distributed to other [[ref: participants]].
@@ -227,11 +227,11 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: future participant, future participants]]:
 ~ A participant of a given role, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.
 
-[[def: validation process]]:
+[[def: onboarding process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
 
 [[def: validator]]:
-~ A role an [[ref: entity]] performs by participating in validation processes with [[ref: applicants]] in order to register them as [[ref: issuer]], or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them.
+~ A role an [[ref: entity]] performs by participating in onboarding processes with [[ref: applicants]] in order to register them as [[ref: issuer]], or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them.
 
 [[def: verifiable public registry, VPR, VPRs]]:
 ~ a public, normally decentralized, ledger-based network, which provides: ecosystem features, that can be used by all its [[ref: participants]]: create ecosystems, for each ecosystem, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
@@ -304,14 +304,14 @@ object "Ecosystem" as tra #3fbdb6 {
 - A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]]
 - A **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
   - `OPEN`: `ISSUER` permissions can be self-created by anyone.
-  - `ECOSYSTEM_VALIDATION_PROCESS`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the ecosystem corporation through the execution of a Validation Process.
-  - `GRANTOR_VALIDATION_PROCESS`: `ISSUER` permissions are granted by one or several [[ref: issuer grantor]](s) (ecosystem operator(s) responsible for selecting issuers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]] through the execution of a Validation Process.
+  - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the ecosystem corporation through the execution of an Onboarding Process.
+  - `GRANTOR_ONBOARDING_PROCESS`: `ISSUER` permissions are granted by one or several [[ref: issuer grantor]](s) (ecosystem operator(s) responsible for selecting issuers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]] through the execution of an Onboarding Process.
 - A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` permissions are granted. Modes include:
   - `OPEN`: `VERIFIER` permissions can be created by anyone.
-  - `ECOSYSTEM_VALIDATION_PROCESS`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Ecosystem corporation through the execution of a Validation Process.
-  - `GRANTOR_VALIDATION_PROCESS`: `VERIFIER` permissions are granted by one or several [[ref: verifier grantor]](s) (ecosystem operator(s) responsible for selecting verifiers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]], through the execution of a Validation Process.
+  - `ECOSYSTEM_ONBOARDING_PROCESS`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Ecosystem corporation through the execution of an Onboarding Process.
+  - `GRANTOR_ONBOARDING_PROCESS`: `VERIFIER` permissions are granted by one or several [[ref: verifier grantor]](s) (ecosystem operator(s) responsible for selecting verifiers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]], through the execution of an Onboarding Process.
 - An **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` permissions are granted. Modes include:
-  - `ISSUER_VALIDATION_PROCESS`: `HOLDER` permissions are granted directly by issuers to holder through the execution of a Validation Process.
+  - `ISSUER_ONBOARDING_PROCESS`: `HOLDER` permissions are granted directly by issuers to holder through the execution of an Onboarding Process.
   - `PERMISSIONLESS`: holder that want to obtain credentials from an issuer do not require a permission in the VPR.
 - A **Participant tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
 
@@ -426,14 +426,14 @@ To participate in an [[ref: ecosystem]] and assume a role associated with a spec
 
 - if schema is `OPEN` for issuance and/or verification: an entity must have an [[ref: account]] in the [[ref: VPR]] and self-create its permission.
 
-- if schema is not `OPEN` for issuance and/or verification: an entity must have an [[ref: account]] in the [[ref: VPR]] and complete a [[ref: validation process]] to obtain the required permission.
+- if schema is not `OPEN` for issuance and/or verification: an entity must have an [[ref: account]] in the [[ref: VPR]] and complete a [[ref: onboarding process]] to obtain the required permission.
 
-The [[ref: validation process]] involves two parties:
+The [[ref: onboarding process]] involves two parties:
 
 - The [[ref: applicant]] — the entity requesting permission for a credential schema within the ecosystem.  
 - The [[ref: validator]] — an entity that already holds permission for the same credential schema and has been delegated authority to validate applicants and issue permissions.
 
-Running a validation process **typically involves the payment of [[ref: trust fees]]**. [[ref: Trust fee]] amount to be paid by the [[ref: applicant]] is defined in the permission of the [[ref: validator]] involved in the [[ref: validation process]]:
+Running an onboarding process **typically involves the payment of [[ref: trust fees]]**. [[ref: Trust fee]] amount to be paid by the [[ref: applicant]] is defined in the permission of the [[ref: validator]] involved in the [[ref: onboarding process]]:
 
 ```plantuml
 
@@ -549,11 +549,11 @@ The following operations **only require payment of network fees** (no trust depo
 - Updating an Ecosystem
 - ...
 
-#### Validation process trust fees
+#### Onboarding process trust fees
 
 *This section is non-normative.*
 
-We've explained in the [Credential Schemas and Permissions](#credential-schemas-and-permissions) section above what is a validation process.
+We've explained in the [Credential Schemas and Permissions](#credential-schemas-and-permissions) section above what is an onboarding process.
 
 The table below summarizes the possible combinations of applicants and validators:
 
@@ -565,14 +565,14 @@ The table below summarizes the possible combinations of applicants and validator
 | Verifier         | renewable subscription (4)          |                                       | renewable subscription (2)          |                                     |          |                                         |
 | Holder           |                                     |                                       |                                     | renewable subscription  (5)         |          |                                         |
 
-- (1): if *issuer onboarding mode* is set to GRANTOR_VALIDATION_PROCESS.
-- (2): if *verifier onboarding mode* is set to GRANTOR_VALIDATION_PROCESS.
-- (3): if *issuer onboarding mode* is set to ECOSYSTEM_VALIDATION_PROCESS.
-- (4): if *verifier onboarding mode* is set to ECOSYSTEM_VALIDATION_PROCESS.
-- (5): if *holder onboarding mode* is set to ISSUEr_VALIDATION_PROCESS.
+- (1): if *issuer onboarding mode* is set to GRANTOR_ONBOARDING_PROCESS.
+- (2): if *verifier onboarding mode* is set to GRANTOR_ONBOARDING_PROCESS.
+- (3): if *issuer onboarding mode* is set to ECOSYSTEM_ONBOARDING_PROCESS.
+- (4): if *verifier onboarding mode* is set to ECOSYSTEM_ONBOARDING_PROCESS.
+- (5): if *holder onboarding mode* is set to ISSUER_ONBOARDING_PROCESS.
 
 
-Validation process is started by the applicant.
+Onboarding process is started by the applicant.
 
 *Example of a candidate [[ref: issuer]] ([[ref: applicant]]) that would like to be granted an ISSUER permission for a credential schema of an ecosystem, by a [[ref: validator]] that has a ISSUER_GRANTOR permission:*
 
@@ -614,8 +614,8 @@ ApplicantBrowser <-- ValidatorVS: notify ISSUER permission created for your acco
 
 The **total fees** paid by the applicant consists of:
 
-- The validation [[ref: trust fees]] defined in the permission of the validator participating in the validation process, **plus**
-- An additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant’s trust deposit** when the validation process begins.
+- The validation [[ref: trust fees]] defined in the permission of the validator participating in the onboarding process, **plus**
+- An additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant’s trust deposit** when the onboarding process begins.
 - [[ref: network fees]] (not part of the escrowed amount).
 
 Example, using 20% for `trust_deposit_rate`:
@@ -647,7 +647,7 @@ issuera --> issuertd:  \t+200 TUs
 
 ```
 
-Upon completion of the validation process, **escrowed trust fees are distributed to the validator** as follows:
+Upon completion of the onboarding process, **escrowed trust fees are distributed to the validator** as follows:
 
 - A portion defined by `trust_deposit_rate` is allocated to the **validator’s trust deposit**.  
 - The remaining amount is **transferred directly to the validator’s wallet**.
@@ -1004,18 +1004,18 @@ entity "SchemaAuthorizationPolicy" as sap {
 
 enum "IssuerOnboardingMode" as iom {
   OPEN
-  GRANTOR_VALIDATION_PROCESS
-  ECOSYSTEM_VALIDATION_PROCESS
+  GRANTOR_ONBOARDING_PROCESS
+  ECOSYSTEM_ONBOARDING_PROCESS
 }
 
 enum "VerifierOnboardingMode" as vom {
   OPEN
-  GRANTOR_VALIDATION_PROCESS
-  ECOSYSTEM_VALIDATION_PROCESS
+  GRANTOR_ONBOARDING_PROCESS
+  ECOSYSTEM_ONBOARDING_PROCESS
 }
 
 enum "HolderOnboardingMode" as hom {
-  ISSUER_VALIDATION_PROCESS
+  ISSUER_ONBOARDING_PROCESS
   PERMISSIONLESS
 }
 
@@ -1281,14 +1281,14 @@ group  --o td: corporation
 - `modified` (timestamp) (*mandatory*): timestamp this CredentialSchema has been modified.
 - `archived` (timestamp) (*mandatory*): timestamp this CredentialSchema has been archived.
 - `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
-- `issuer_grantor_validation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor validation process expires and must be renewed.
-- `verifier_grantor_validation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor validation process expires and must be renewed.
-- `issuer_validation_validity_period` (number) (*mandatory*): number of days after which an issuer validation process expires and must be renewed.
-- `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier validation process expires and must be renewed.
-- `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder validation process expires and must be renewed.
-- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR_VALIDATION_PROCESS means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_VALIDATION_PROCESS means a validation process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
-- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR_VALIDATION_PROCESS means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_VALIDATION_PROCESS means a validation process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
-- `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_VALIDATION_PROCESS means a validation process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission. HOLDER permission is used to check credential revocation status; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
+- `issuer_grantor_validation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor onboarding process expires and must be renewed.
+- `verifier_grantor_validation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor onboarding process expires and must be renewed.
+- `issuer_validation_validity_period` (number) (*mandatory*): number of days after which an issuer onboarding process expires and must be renewed.
+- `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier onboarding process expires and must be renewed.
+- `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder onboarding process expires and must be renewed.
+- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
+- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission. HOLDER permission is used to check credential revocation status; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
 - `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestSRI` for credentials issued under this schema. Valid values are defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
@@ -1325,23 +1325,23 @@ group  --o td: corporation
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` is effective.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit has been set for this permission.
 - `modified` (timestamp) (*mandatory*): timestamp this Participant has been modified.
-- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`corporation` grantee of this perm) for running a validation process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
+- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`corporation` grantee of this perm) for running an onboarding process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
-- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in [[ ref: native denom ]]. Usually, it is incremented when for example, for a ISSUER type `Participant` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `participant.deposit` value as well. If `perm` is, let's say revoked, then corresponding `participant.deposit` value is freed from `participant.grantee` Trust Deposit.
+- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the onboarding process), in [[ ref: native denom ]]. Usually, it is incremented when for example, for a ISSUER type `Participant` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `participant.deposit` value as well. If `perm` is, let's say revoked, then corresponding `participant.deposit` value is freed from `participant.grantee` Trust Deposit.
 - `slashed_deposit` (number) (*mandatory*): part of the deposit in [[ ref: native denom ]] that has been slashed.
 - `repaid_deposit` (number) (*mandatory*): part of the slashed deposit in [[ ref: native denom ]] that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
-- `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Participant` tree.
+- `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the onboarding process of this permission, ie *parent node* in the `Participant` tree.
 - `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
-- `vp_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the validation process itself, not for the issued credential or `Participant` expiration timestamp.
+- `vp_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Participant` expiration timestamp.
 - `vp_last_state_change` (timestamp) (*mandatory*)
 - `vp_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
-- `vp_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon validation process completion, in [[ref: denom]].
+- `vp_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon onboarding process completion, in [[ref: denom]].
 - `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
 - `vp_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION_PROCESS mode) or an ISSUER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_ONBOARDING_PROCESS mode) or an ISSUER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_ONBOARDING_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 > Note: VS operator authorization settings (spend limits, feegrant, expiration, authorized message types) are no longer stored on `Participant`. They live in `ParticipantAuthorizationRecord` entries inside [VSOperatorAuthorization](#vsoperatorauthorization), keyed by `Participant.id`. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
@@ -2271,7 +2271,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.digest_algorithm`: `digest_algorithm`
 
 :::note
-If needed, depending on configuration mode, Ecosystem controller MAY need to create a ECOSYSTEM `Participant` so that validation processes can be run.
+If needed, depending on configuration mode, Ecosystem controller MAY need to create a ECOSYSTEM `Participant` so that onboarding processes can be run.
 :::
 
 #### [MOD-CS-MSG-2] Update Credential Schema
@@ -2416,7 +2416,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 This message creates a **draft** `SchemaAuthorizationPolicy` for a given `(schema_id, role)`, or overwrites the existing draft policy if one already exists.  
 A draft policy is defined as a policy with `effective_from == null` and MUST NOT be revoked.
 
-Accordingly, if a credential schema defines one or more active policies for the ISSUER or VERIFIER role, the corresponding corporation that grants the ISSUER or VERIFIER role for this schema (ISSUER_GRANTOR, VERIFIER_GRANTOR, or ECOSYSTEM, depending on how schema issuer and verifier modes have been configured) MUST issue an IAC or VAC credential to the candidate upon successful completion of the validation process. Refer to the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec) for more information.
+Accordingly, if a credential schema defines one or more active policies for the ISSUER or VERIFIER role, the corresponding corporation that grants the ISSUER or VERIFIER role for this schema (ISSUER_GRANTOR, VERIFIER_GRANTOR, or ECOSYSTEM, depending on how schema issuer and verifier modes have been configured) MUST issue an IAC or VAC credential to the candidate upon successful completion of the onboarding process. Refer to the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec) for more information.
 
 ##### [MOD-CS-MSG-5-1] Create Schema Authorization Policy parameters
 
@@ -2756,9 +2756,9 @@ issuer --> holder: granted schema permission
 
 ```
 
-The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process (or by any account: - for `ISSUER` permissions if issuer_onboarding_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_onboarding_mode is equal to `OPEN`).
+The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running an Onboarding Process (or by any account: - for `ISSUER` permissions if issuer_onboarding_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_onboarding_mode is equal to `OPEN`).
 
-A Validation Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: corporation]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional validation fees plus transaction fees.
+A Onboarding Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: corporation]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional validation fees plus transaction fees.
 
 Validation is used by [[ref: applicants]] that want to:
 
@@ -2769,10 +2769,10 @@ Validation is used by [[ref: applicants]] that want to:
 - get issued a credential of a specific [[ref: credential schema]];
 - obtain a HOLDER permission from a issuer of a specific [[ref: credential schema]] and get issued a verifiable credential of this schema (HOLDER permission provide credential status (revoked, etc...));
 
-In all cases, the process is very similar. Example execution of a validation process:
+In all cases, the process is very similar. Example execution of an onboarding process:
 
-1. Applicant starts a validation process by running the [start new validation] [[ref: transaction]]. Validation process may be subject to paying validation fees, as defined by validator.
-2. Validation process requires that [[ref: applicant]] connects to a validation [[ref: VS]] identified by its [[ref: DID]], and execute a some validation steps, required for the validation process to conclude.
+1. Applicant starts an onboarding process by running the [start new validation] [[ref: transaction]]. Onboarding process may be subject to paying validation fees, as defined by validator.
+2. Onboarding process requires that [[ref: applicant]] connects to a validation [[ref: VS]] identified by its [[ref: DID]], and execute a some validation steps, required for the onboarding process to conclude.
 3. If [[ref: applicant]] qualifies, [[ref: validator]] updates the validation entry by running the [set to validated] [[ref: transaction]], and [[ref: applicant]] is granted new permissions, and/or gets issued a credential.
 
 Validation is valid for a specific period, for example 365 days, as configured in the [[ref: credential schema]] for credential schema related validations, or set by ecosystem for user-agent validation.
@@ -2783,12 +2783,12 @@ In some cases, even if the validation is valid for a period of time, the resulti
 
 If validation is set to expire, [[ref: applicant]] that wishes to extend the expiration timestamp must renew its validation.
 
-At any time, [[ref: applicant]] can cancel the validation process.
+At any time, [[ref: applicant]] can cancel the onboarding process.
 
 Some special unexpected situation may arise and must be mitigated. Examples:
 
-- if selected validator permission is revoked while applicant's validation is in PENDING state: Applicant CAN cancel the validation process [MOD-PP-MSG-6].
-- if selected validator permission is revoked while applicant is in VALIDATED state: Applicant CAN renew the validation process by choosing a new validator [MOD-PP-MSG-2].
+- if selected validator permission is revoked while applicant's validation is in PENDING state: Applicant CAN cancel the onboarding process [MOD-PP-MSG-6].
+- if selected validator permission is revoked while applicant is in VALIDATED state: Applicant CAN renew the onboarding process by choosing a new validator [MOD-PP-MSG-2].
 
 #### [MOD-PP-MSG-1] Start Participant VP
 
@@ -2796,7 +2796,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-PP-MSG-1-1] Start Participant VP parameters
 
-An Applicant that would like to start a permission validation process MUST execute this method by specifying:
+An Applicant that would like to start a permission onboarding process MUST execute this method by specifying:
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
@@ -2850,7 +2850,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-vp-parameters).
 
 :::note
-A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the validation process is REQUIRED or not.
+A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the onboarding process is REQUIRED or not.
 :::
 
 ###### [MOD-PP-MSG-1-2-2] Start Participant VP permission checks
@@ -2860,15 +2860,15 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 - if `type` (ParticipantRole) is equal to ISSUER:
 
-  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS: `validator_participant.role` MUST be ISSUER_GRANTOR, else MUST abort.
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be ISSUER_GRANTOR, else MUST abort.
   
-  - else if `cs.issuer_onboarding_mode` is equal to ECOSYSTEM_VALIDATION_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+  - else if `cs.issuer_onboarding_mode` is equal to ECOSYSTEM_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
 
   - else MUST abort.
 
 - else if `type` (ParticipantRole) is equal to ISSUER_GRANTOR:
 
-  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS:  `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS:  `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
   
   - else abort.
 
@@ -2876,19 +2876,19 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
   - if `cs.verifier_onboarding_mode` is equal to GRANTOR: `validator_participant.role` MUST be VERIFIER_GRANTOR, else MUST abort.
   
-  - else if `cs.verifier_onboarding_mode` is equal to ECOSYSTEM_VALIDATION_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+  - else if `cs.verifier_onboarding_mode` is equal to ECOSYSTEM_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
 
   - else abort.
 
 - else if `type` (ParticipantRole) is equal to VERIFIER_GRANTOR:
 
-  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
   
   - else abort.
 
 - else if `type` (ParticipantRole) is equal to HOLDER:
 
-  - if `cs.holder_onboarding_mode` is equal to ISSUER_VALIDATION_PROCESS: `validator_participant.role` MUST be ISSUER, else MUST abort.
+  - if `cs.holder_onboarding_mode` is equal to ISSUER_ONBOARDING_PROCESS: `validator_participant.role` MUST be ISSUER, else MUST abort.
   
   - else abort.
 
@@ -2935,11 +2935,11 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 
 ###### [MOD-PP-MSG-1-2-4] Start Participant VP overlap checks
 
-We want to make sure that 2 validation processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different VP with differents validators for the same `schema_id`, `type`.
+We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different VP with differents validators for the same `schema_id`, `type`.
 
 Find all permission `participants[]` for `schema_id`, `type`, `validator_participant_id`, `corporation` with vp_state = VALIDATED or PENDING.
 
-if size of `participants[]` > 0, it means there is already an existing validation process in this context, so MUST abort.
+if size of `participants[]` > 0, it means there is already an existing onboarding process in this context, so MUST abort.
 
 > note: this check was not present in v3.
 
@@ -2999,7 +2999,7 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
 
 This action must be initiated by the [[ref: applicant]].
 
-During a validation process, if the associated `validator_participant` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
+During an onboarding process, if the associated `validator_participant` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
 
 Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by the [[ref: validator]] to complete one or more of the following tasks:
 
@@ -3007,14 +3007,14 @@ Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by
 2. **Provide requested information**, such as filling out forms, submitting documents, or other forms of disclosure as required by the validation [[ref: VS]].
 3. If the requested permission includes a [[ref: VS]] DID, the [[ref: applicant]] should prove control over the corresponding [[ref: DID]] to the validator's [[ref: VS]].
 
-Once the [[ref: validator]] determines that the process is complete, they may terminate the validation process and create the permission accordingly. This permission configuration usually include:
+Once the [[ref: validator]] determines that the process is complete, they may terminate the onboarding process and create the permission accordingly. This permission configuration usually include:
 
 - `validation_fees`  
 - `issuance_fees`  
 - `verification_fees`  
 - `permission expiration`
 
-The [[ref: validator]] may compile a summary file of the validation process, documenting exchanged data, proofs, and decisions, and share it with the [[ref: applicant]] via the [[ref: VS]] connection or another secure channel.
+The [[ref: validator]] may compile a summary file of the onboarding process, documenting exchanged data, proofs, and decisions, and share it with the [[ref: applicant]] via the [[ref: VS]] connection or another secure channel.
 
 For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_participant.vp_summary_digest`.
 
@@ -3026,15 +3026,15 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 - Requesting a renewal has no effect on permission expiration or issued credentials.
 - Renewal is only possible with the same validator.
-- If validator permission is not valid anymore, applicant MUST perform a new validation process with another validator.
-- Renewal does not allow changing the `participant.validation_fees`, `participant.issuance_fees`, `participant.verification_fees`. To change these values, applicant MUST start a new validation process.
+- If validator permission is not valid anymore, applicant MUST perform a new onboarding process with another validator.
+- Renewal does not allow changing the `participant.validation_fees`, `participant.issuance_fees`, `participant.verification_fees`. To change these values, applicant MUST start a new onboarding process.
 - if permission is revoked, slashed, or repaid, method MUST fail.
 
 ##### [MOD-PP-MSG-2-1] Renew Participant VP parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission for which applicant would like to renew the validation process;
+- `id` (uint64) (*mandatory*): id of the permission for which applicant would like to renew the onboarding process;
 
 ##### [MOD-PP-MSG-2-2] Renew Participant VP precondition checks
 
@@ -3127,14 +3127,14 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the validation process;
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit should been set for this permission or if we want it to be aligned with the validation process expiration timestamp calculated by this method.
+- `id` (uint64) (*mandatory*): id of the onboarding process;
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit should been set for this permission or if we want it to be aligned with the onboarding process expiration timestamp calculated by this method.
 - `validation_fees` (number) (*mandatory*): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `verification_fees` (number) (*mandatory*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `vp_summary_digest` (string) (*optional*): an optional digest, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION_PROCESS mode) or an ISSUER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_ONBOARDING_PROCESS mode) or an ISSUER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_ONBOARDING_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 ##### [MOD-PP-MSG-3-2] Set Participant VP to Validated precondition checks
 
@@ -3170,23 +3170,23 @@ else MUST abort.
 
 - `issuance_fee_discount` : (number) (*mandatory*):
   - if `applicant_participant.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_participant.issuance_fee_discount` else MUST abort.
-  - if `cs.issuer_onboarding_mode` is set to GRANTOR_VALIDATION_PROCESS:
+  - if `cs.issuer_onboarding_mode` is set to GRANTOR_ONBOARDING_PROCESS:
     - if `applicant_participant.role` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
     - if `applicant_participant.role` == ISSUER: if `validator_participant.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_participant.issuance_fee_discount` (100% discount) inclusive.
-  - if `cs.issuer_onboarding_mode` is set to ECOSYSTEM_VALIDATION_PROCESS:
+  - if `cs.issuer_onboarding_mode` is set to ECOSYSTEM_ONBOARDING_PROCESS:
     - if `applicant_participant.role` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
   - else MUST abort.
 
 - `verification_fee_discount` : (number) (*mandatory*):
   - if `applicant_participant.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_participant.verification_fee_discount` else MUST abort.
-  - if `cs.verifier_onboarding_mode` is set to GRANTOR_VALIDATION_PROCESS:
+  - if `cs.verifier_onboarding_mode` is set to GRANTOR_ONBOARDING_PROCESS:
     - if `applicant_participant.role` == VERIFIER_GRANTOR: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
     - if `applicant_participant.role` == VERIFIER: if `validator_participant.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_participant.verification_fee_discount` (100% discount) inclusive.
-  - if `cs.verifier_onboarding_mode` is set to ECOSYSTEM_VALIDATION_PROCESS:
+  - if `cs.verifier_onboarding_mode` is set to ECOSYSTEM_ONBOARDING_PROCESS:
     - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
   - else MUST abort.
 
-Calculation of `vp_exp`, the validation process expiration timestamp, required to verify provided `effective_until`:
+Calculation of `vp_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
 
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_participant.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_participant.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_participant.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_participant.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_participant.role` is HOLDER).
 
@@ -3205,7 +3205,7 @@ Now, let's verify `effective_until`:
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]].
 - `corporation` running the method MUST be `validator_participant.corporation`.
 
-If `validator_participant` is not a [[ref: active participant]] (expired, revoked, slashed...) then applicant MUST start a new validation process.
+If `validator_participant` is not a [[ref: active participant]] (expired, revoked, slashed...) then applicant MUST start a new onboarding process.
 
 ###### [MOD-PP-MSG-3-2-3] Set Participant VP to Validated fee checks
 
@@ -3298,7 +3298,7 @@ This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-At any time, [[ref: applicant]] of a permission validation process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and escrewed [[ref: trust fees]] are refunded. If `vp_exp` is not null, `vp_state` is set back to VALIDATED, else `vp_state` is set to TERMINATED.
+At any time, [[ref: applicant]] of a permission onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and escrewed [[ref: trust fees]] are refunded. If `vp_exp` is not null, `vp_state` is set back to VALIDATED, else `vp_state` is set to TERMINATED.
 
 ##### [MOD-PP-MSG-6-1] Cancel Participant VP Last Request parameters
 
@@ -3353,7 +3353,7 @@ If `applicant_participant.vp_state` was set to TERMINATED (i.e. `applicant_parti
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-This method is used by controller authorities of Ecosystems. When they create a Credential Schema, they need to create (a) permission(s) of type ECOSYSTEM so that other participants can run validation processes (if schema mode is ECOSYSTEM) or self create their permissions (schema mode set to OPEN).
+This method is used by controller authorities of Ecosystems. When they create a Credential Schema, they need to create (a) permission(s) of type ECOSYSTEM so that other participants can run onboarding processes (if schema mode is ECOSYSTEM) or self create their permissions (schema mode set to OPEN).
 
 ##### [MOD-PP-MSG-7-1] Create Root Participant parameters
 
@@ -3366,7 +3366,7 @@ An [[ref: account]] that would like to create a `Participant` entry MUST call th
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS.
 - `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
-- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
+- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running an onboarding process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean an onboarding process must take place. For enabling onboarding processes, at least one of the two issuer, verifier mode must be different than OPEN.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
 
@@ -4302,7 +4302,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
-- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in the denom specified in the credential schema. Default to 0.
+- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing an onboarding process to obtain a credential, in the denom specified in the credential schema. Default to 0.
 
 The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
 
@@ -4498,7 +4498,7 @@ Anyone CAN execute this method.
 Generic query used for (at least):
 
 - find all permissions (all or limit to active) of a given schema;
-- for a given validator, get PENDING validation processes;
+- for a given validator, get PENDING onboarding processes;
 - find all permissions of a given grantee;
 - find all permissions of a given did;
 - find all ISSUER_GRANTOR active participants, so that I can apply to an ISSUER permission;
@@ -4951,7 +4951,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - else if `augend` < 0:
   - set `td.refunded` to `td.refunded` - `augend`
 
-The last case, `augend` < 0, is to refund trust deposit (e.g. when canceling a validation process). The refunded amount is added to `td.refunded` and is reused for the next trust deposit spending.
+The last case, `augend` < 0, is to refund trust deposit (e.g. when canceling an onboarding process). The refunded amount is added to `td.refunded` and is reused for the next trust deposit spending.
 
 #### [MOD-TD-MSG-2] Reclaim Trust Deposit Yield
 
