@@ -1035,7 +1035,7 @@ entity "VSOperatorAuthorization" as vsoauthz {
 }
 
 entity "PermissionAuthorizationRecord" as par {
-   *perm_id: uint64
+   *participant_id: uint64
    +msg_types: msg_type[]
    +with_feegrant: boolean
    +expiration: timestamp
@@ -1186,21 +1186,21 @@ account --o oauthz: operator
 group --o vsoauthz: corporation
 account --o vsoauthz: vs_operator
 vsoauthz "1" --- "1..n" par: records
-par o-- csp: perm_id
+par o-- csp: participant_id
 
 csp o-- cspt: type
 csp o-- cs: schema_id
-csp o-- "0..1" csp: validator_perm_id
-cs o-- tr: tr_id
+csp o-- "0..1" csp: validator_participant_id
+cs o-- tr: ecosystem_id
 
 cs o-- "0..n" sap: policies
 
 csps --- "1..n" cspsr : session_records
 
-cspsr  o-- "0..1" csp: issuer_perm_id
-cspsr  o-- "0..1" csp: verifier_perm_id
-cspsr  o-- "0..1" csp: wallet_agent_perm_id
-cspsr  o-- "0..1" csp: agent_perm_id
+cspsr  o-- "0..1" csp: issuer_participant_id
+cspsr  o-- "0..1" csp: verifier_participant_id
+cspsr  o-- "0..1" csp: wallet_agent_participant_id
+cspsr  o-- "0..1" csp: agent_participant_id
 
 oauthz "1" --- "0..n" da: fee_spend_limit
 oauthz "1" --- "0..n" da: spend_limit
@@ -1253,7 +1253,7 @@ group  --o td: corporation
 `GovernanceFrameworkVersion`:
 
 - `id` (uint64) (*mandatory*): the id of the schema.
-- `tr_id` (uint64) (*mandatory*): the id of the trust registry that controls this `GovernanceFrameworkVersion` entry.
+- `ecosystem_id` (uint64) (*mandatory*): the id of the trust registry that controls this `GovernanceFrameworkVersion` entry.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkVersion has been created.
 - `version` (int) (*mandatory*): version of this GF. MUST Starts with 1.
 
@@ -1275,7 +1275,7 @@ group  --o td: corporation
 **General Info**:
 
 - `id` (uint64) (*mandatory*): the id of the schema.
-- `tr_id` (uint64) (*mandatory*): the id of the trust registry that controls this `CredentialSchema` entry.
+- `ecosystem_id` (uint64) (*mandatory*): the id of the trust registry that controls this `CredentialSchema` entry.
 - `created` (timestamp) (*mandatory*): timestamp this CredentialSchema has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this CredentialSchema has been modified.
 - `archived` (timestamp) (*mandatory*): timestamp this CredentialSchema has been archived.
@@ -1311,7 +1311,7 @@ group  --o td: corporation
 
 `Permission`:
 
-- `id` (uint64) (*mandatory*): the id of the perm.
+- `id` (uint64) (*mandatory*): the id of the participant.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `type` (PermissionType): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER
 - `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]].
@@ -1327,11 +1327,11 @@ group  --o td: corporation
 - `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`corporation` grantee of this perm) for running a validation process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
-- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in [[ ref: native denom ]]. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `perm.deposit` value as well. If `perm` is, let's say revoked, then corresponding `perm.deposit` value is freed from `perm.grantee` Trust Deposit.
+- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in [[ ref: native denom ]]. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `participant.deposit` value as well. If `perm` is, let's say revoked, then corresponding `participant.deposit` value is freed from `participant.grantee` Trust Deposit.
 - `slashed_deposit` (number) (*mandatory*): part of the deposit in [[ ref: native denom ]] that has been slashed.
 - `repaid_deposit` (number) (*mandatory*): part of the slashed deposit in [[ ref: native denom ]] that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
-- `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Permission` tree.
+- `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Permission` tree.
 - `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
 - `vp_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the validation process itself, not for the issued credential or `Permission` expiration timestamp.
 - `vp_last_state_change` (timestamp) (*mandatory*)
@@ -1360,10 +1360,10 @@ group  --o td: corporation
 `PermissionSessionRecord`:
 
 - `created` (timestamp) (*mandatory*): timestamp this record has been created.
-- `issuer_perm_id` (uint64) (*optional*): related issuer `Permission` id (if applicable).
-- `verifier_perm_id` (uint64) (*optional*): related verifier `Permission` id (if applicable).
-- `wallet_agent_perm_id` (uint64) (*optional*): related wallet agent `Permission` id (if applicable).
-- `agent_perm_id` (uint64) (*optional*): permission id of the agent `Permission` id (if applicable).
+- `issuer_participant_id` (uint64) (*optional*): related issuer `Permission` id (if applicable).
+- `verifier_participant_id` (uint64) (*optional*): related verifier `Permission` id (if applicable).
+- `wallet_agent_participant_id` (uint64) (*optional*): related wallet agent `Permission` id (if applicable).
+- `agent_participant_id` (uint64) (*optional*): permission id of the agent `Permission` id (if applicable).
 
 ### TrustDeposit
 
@@ -1424,10 +1424,10 @@ A `VSOperatorAuthorization` groups all `PermissionAuthorizationRecord` entries d
 
 ### PermissionAuthorizationRecord
 
-A `PermissionAuthorizationRecord` carries the per-permission authorization configuration that was previously stored on `Permission.vs_operator_authz_*` fields. Each record is globally unique by `perm_id`: for any `Permission.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `perm_id` via a direct lookup.
+A `PermissionAuthorizationRecord` carries the per-permission authorization configuration that was previously stored on `Permission.vs_operator_authz_*` fields. Each record is globally unique by `participant_id`: for any `Permission.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `participant_id` via a direct lookup.
 
-- `perm_id` (uint64) (*mandatory*): id of the `Permission` this authorization record applies to. Globally unique across all `PermissionAuthorizationRecord` entries.
-- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `perm_id`. Declared by the applicant at record creation time (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-permission-vp) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-permission)). Frozen after creation.
+- `participant_id` (uint64) (*mandatory*): id of the `Permission` this authorization record applies to. Globally unique across all `PermissionAuthorizationRecord` entries.
+- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `participant_id`. Declared by the applicant at record creation time (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-permission-vp) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-permission)). Frozen after creation.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this permission, as a direct consequence of executing authorized messages.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
@@ -1525,7 +1525,7 @@ Get a `TrustRegistry`
         "active_since": "2025-01-14T19:40:37.967Z",
         "created": "2025-01-14T19:40:37.967Z",
         "id": "string",
-        "tr_id": "string",
+        "ecosystem_id": "string",
         "version": 0,
         "documents": [
           {
@@ -1559,7 +1559,7 @@ Get a `TrustRegistry`
         "active_since": "2025-01-14T19:40:37.967Z",
         "created": "2025-01-14T19:40:37.967Z",
         "id": "string",
-        "tr_id": "string",
+        "ecosystem_id": "string",
         "version": 0,
         "documents": [
           {
@@ -1588,7 +1588,7 @@ Get a `TrustRegistry`
         "active_since": "2025-01-14T19:40:37.967Z",
         "created": "2025-01-14T19:40:37.967Z",
         "id": "string",
-        "tr_id": "string",
+        "ecosystem_id": "string",
         "version": 0,
         "documents": [
           {
@@ -1707,9 +1707,9 @@ A second authorization grant mode exists for vs-agents. It is used when a corpor
 
 > Note: the set of messages a `vs_operator` is authorized to execute in the context of a permission is declared by the applicant at permission creation time (see [[MOD-PP-MSG-1-1]](#mod-pp-msg-1-1-start-permission-vp-parameters) and [[MOD-PP-MSG-14-1]](#mod-pp-msg-14-1-self-create-permission-parameters)) and stored in `record.msg_types`. It is frozen for the lifetime of the record and can only be changed by revoking the permission and starting a new one.
 
-Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission id** `perm_id` (determined by the calling method), and the current message type `msg_type`:
+Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission id** `participant_id` (determined by the calling method), and the current message type `msg_type`:
 
-1. A `PermissionAuthorizationRecord` `record` MUST exist for `perm_id`. Abort if not found.
+1. A `PermissionAuthorizationRecord` `record` MUST exist for `participant_id`. Abort if not found.
 2. `record` MUST belong to `VSOperatorAuthorization[corporation, operator]`, that is: the containing `VSOperatorAuthorization` MUST have `corporation` as its `corporation` and `operator` as its `vs_operator`. Abort otherwise.
 3. `msg_type` MUST be in `record.msg_types`. Abort otherwise.
 4. Cycle / expiration check:
@@ -1878,19 +1878,19 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - create and persist a new `TrustRegistry` entry `tr`:
 
-- `tr.id` : auto-incremented uint64
-- `tr.did`: `did`
-- `tr.corporation`: `corporation`
-- `tr.created`: current timestamp
-- `tr.modified`: `tr.created`
-- `tr.aka`: `aka`
-- `tr.language`: `language`
-- `tr.active_version`: 1
+- `ecosystem.id` : auto-incremented uint64
+- `ecosystem.did`: `did`
+- `ecosystem.corporation`: `corporation`
+- `ecosystem.created`: current timestamp
+- `ecosystem.modified`: `ecosystem.created`
+- `ecosystem.aka`: `aka`
+- `ecosystem.language`: `language`
+- `ecosystem.active_version`: 1
 
 - create and persist a new `GovernanceFrameworkVersion` entry `gfv`:
 
 - `gfv.id`: auto-incremented uint64
-- `gfv.tr_id`: `tr.id`
+- `gfv.ecosystem_id`: `ecosystem.id`
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
@@ -1932,7 +1932,7 @@ if a mandatory parameter is not present, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and `corporation` executing the method MUST be the `corporation` of the `TrustRegistry` entry.
-- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` where `gfv.tr_id` is equal to `id` and `gfv.version` = `version`, or `version` MUST be exactly equal to the biggest found `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries found for this `gfv.tr_id` equal to `id`. `version` MUST be greater than the `tr.active_version`.
+- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` where `gfv.ecosystem_id` is equal to `id` and `gfv.version` = `version`, or `version` MUST be exactly equal to the biggest found `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries found for this `gfv.ecosystem_id` equal to `id`. `version` MUST be greater than the `ecosystem.active_version`.
 - `doc_language` (string) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
@@ -1950,7 +1950,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or create a new `GovernanceFrameworkVersion` `gfv` if required:
 
 - `gfv.id`: auto-incremented uint64
-- `gfv.tr_id`: `id`
+- `gfv.ecosystem_id`: `id`
 - `gfv.created`: current timestamp
 - `gfv.version`: `version`
 - `gfv.active_since`: null
@@ -1986,8 +1986,8 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and `corporation` executing the method MUST be the `corporation` of the `TrustRegistry` entry.
-- load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort.
-- find `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `tr.language`. If no document is found (and thus no document exist for the default language of this version for this trust registry), transaction MUST abort.
+- load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `ecosystem.active_version` + 1. If none is found, transaction MUST abort.
+- find `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `ecosystem.language`. If no document is found (and thus no document exist for the default language of this version for this trust registry), transaction MUST abort.
 
 ###### [MOD-ES-MSG-3-2-2] Increase Active Governance Framework Version fee checks
 
@@ -1999,7 +1999,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort. Else, update `tr.active_version` to `tr.active_version` + 1. Set `tr.modified` to current timestamp, and set `gfv.active_since` to current timestamp and persist changes.
+- load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `ecosystem.active_version` + 1. If none is found, transaction MUST abort. Else, update `ecosystem.active_version` to `ecosystem.active_version` + 1. Set `ecosystem.modified` to current timestamp, and set `gfv.active_since` to current timestamp and persist changes.
 
 #### [MOD-ES-MSG-4] Update Trust Registry
 
@@ -2040,9 +2040,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - load `TrustRegistry` entry `tr` from `id` and set:
 
-- `tr.did`: `did`
-- `tr.aka`: `aka`
-- `tr.modified`: current timestamp
+- `ecosystem.did`: `did`
+- `ecosystem.aka`: `aka`
+- `ecosystem.modified`: current timestamp
 
 #### [MOD-ES-MSG-5] Archive Trust Registry
 
@@ -2066,10 +2066,10 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- load `TrustRegistry` `tr` from `id`. `tr.corporation` MUST be the corporation executing the method, else MUST abort.
+- load `TrustRegistry` `tr` from `id`. `ecosystem.corporation` MUST be the corporation executing the method, else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean.
-  - If `archive` is true and `tr.archived` is not null, MUST abort as `TrustRegistry` is already archived.
-  - If `archive` is false and `tr.archived` is null, MUST abort as `TrustRegistry` is already not archived.
+  - If `archive` is true and `ecosystem.archived` is not null, MUST abort as `TrustRegistry` is already archived.
+  - If `archive` is false and `ecosystem.archived` is null, MUST abort as `TrustRegistry` is already not archived.
 
 ###### [MOD-ES-MSG-5-2-2] Archive Trust Registry fee checks
 
@@ -2081,10 +2081,10 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- update `TrustRegistry` entry `tr` with `tr.id` equal to `id`:
-- if `archived` is true: set `tr.archived` to current timestamp.
-- if `archived` is false: set `tr.archived` to null.
-- `tr.modified`: current timestamp
+- update `TrustRegistry` entry `tr` with `ecosystem.id` equal to `id`:
+- if `archived` is true: set `ecosystem.archived` to current timestamp.
+- if `archived` is false: set `ecosystem.archived` to null.
+- `ecosystem.modified`: current timestamp
 
 #### [MOD-ES-MSG-6] Update Module Parameters
 
@@ -2193,7 +2193,7 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `tr_id` id of the trust registry (*mandatory*);
+- `ecosystem_id` id of the trust registry (*mandatory*);
 - `json_schema` the [[ref: Json Schema]] of the credential (*mandatory*).
 - `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
 - `verifier_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
@@ -2218,7 +2218,7 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `tr_id` MUST represent an existing `TrustRegistry` entry `tr` and `tr.corporation` MUST be the `corporation` executing the method.
+- `ecosystem_id` MUST represent an existing `TrustRegistry` entry `tr` and `ecosystem.corporation` MUST be the `corporation` executing the method.
 - `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] is ignored and will be replaced during execution by the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
@@ -2253,7 +2253,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - create and persist a new `CredentialSchema` entry `cs`:
 
   - `cs.id`: auto-incremented uint64.
-  - `cs.tr_id`: id of the `TrustRegistry` entry that will be the owner of `cs`.
+  - `cs.ecosystem_id`: id of the `TrustRegistry` entry that will be the owner of `cs`.
   - `cs.json_schema`: `json_schema`, with VPR_CREDENTIAL_SCHEMA_ID string replaced by generated `cs.id`, and then canonicalize it using the [JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785) as defined in RFC 8785. Schema MUST be saved canonized.
   - `cs.issuer_grantor_validation_validity_period`: `issuer_grantor_validation_validity_period`
   - `cs.verifier_grantor_validation_validity_period`: `verifier_grantor_validation_validity_period`
@@ -2304,7 +2304,7 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
-- load `TrustRegistry` `tr` from `cs.tr_id`. `tr.corporation` MUST be the `corporation` executing the method, else MUST abort.
+- load `TrustRegistry` `tr` from `cs.ecosystem_id`. `ecosystem.corporation` MUST be the `corporation` executing the method, else MUST abort.
 - `issuer_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
 - `issuer_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
@@ -2355,7 +2355,7 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
-- load `TrustRegistry` `tr` from `cs.tr_id`. `tr.corporation` MUST be the `corporation` executing the method, else MUST abort.
+- load `TrustRegistry` `tr` from `cs.ecosystem_id`. `ecosystem.corporation` MUST be the `corporation` executing the method, else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean. 
   - If `archive` is true and `cs.archived` is not null, MUST abort as Credential Schema is already archived.
   - If `archive` is false and `cs.archived` is null, MUST abort as Credential Schema is already not archived.
@@ -2555,7 +2555,7 @@ Method execution MUST perform the following task in a [[ref: transaction]]:
 
 ##### [MOD-CS-QRY-1-1] List Credential Schemas parameters
 
-- `tr_id` (uint64) (*optional*): to filter by trust registry id.
+- `ecosystem_id` (uint64) (*optional*): to filter by trust registry id.
 - `modified_after` (timestamp) (*optional*): show schemas modified after this timestamp.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 - `only_active` (boolean): if set to true, returns only not archived entries.
@@ -2801,7 +2801,7 @@ An Applicant that would like to start a permission validation process MUST execu
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_operator` (account) (*optional*): the account of the Veriable Service we want to authorize to create permission sessions linked to this permission. If not specified, Verifiable Service will not be able to use the payment delegation feature. **Required** to use the payment delegation feature.
 - `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
-- `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
+- `validator_participant_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
@@ -2841,7 +2841,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `type` (PermissionType) (*mandatory*) MUST be a valid PermissionType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
-- `validator_perm_id` (uint64) (*mandatory*): see [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-permission-vp-permission-checks).
+- `validator_participant_id` (uint64) (*mandatory*): see [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-permission-vp-permission-checks).
 - `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
@@ -2854,49 +2854,49 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 ###### [MOD-PP-MSG-1-2-2] Start Permission VP permission checks
 
-- Load `Permission` entry `validator_perm` from `validator_perm_id`. It MUST be a [[ref: active permission]] else transaction MUST abort.
-- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`. It MUST exist.
+- Load `Permission` entry `validator_participant` from `validator_participant_id`. It MUST be a [[ref: active permission]] else transaction MUST abort.
+- Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`. It MUST exist.
 
 - if `type` (PermissionType) is equal to ISSUER:
 
-  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS: `validator_perm.type` MUST be ISSUER_GRANTOR, else MUST abort.
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS: `validator_participant.role` MUST be ISSUER_GRANTOR, else MUST abort.
   
-  - else if `cs.issuer_onboarding_mode` is equal to ECOSYSTEM_VALIDATION_PROCESS: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - else if `cs.issuer_onboarding_mode` is equal to ECOSYSTEM_VALIDATION_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
 
   - else MUST abort.
 
 - else if `type` (PermissionType) is equal to ISSUER_GRANTOR:
 
-  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS:  `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS:  `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
   
   - else abort.
 
 - else if `type` (PermissionType) is equal to VERIFIER:
 
-  - if `cs.verifier_onboarding_mode` is equal to GRANTOR: `validator_perm.type` MUST be VERIFIER_GRANTOR, else MUST abort.
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR: `validator_participant.role` MUST be VERIFIER_GRANTOR, else MUST abort.
   
-  - else if `cs.verifier_onboarding_mode` is equal to ECOSYSTEM_VALIDATION_PROCESS: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - else if `cs.verifier_onboarding_mode` is equal to ECOSYSTEM_VALIDATION_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
 
   - else abort.
 
 - else if `type` (PermissionType) is equal to VERIFIER_GRANTOR:
 
-  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
   
   - else abort.
 
 - else if `type` (PermissionType) is equal to HOLDER:
 
-  - if `cs.holder_onboarding_mode` is equal to ISSUER_VALIDATION_PROCESS: `validator_perm.type` MUST be ISSUER, else MUST abort.
+  - if `cs.holder_onboarding_mode` is equal to ISSUER_VALIDATION_PROCESS: `validator_participant.role` MUST be ISSUER, else MUST abort.
   
   - else abort.
 
-At the end, if a [[ ref: active permission]] `validator_perm` is not found, [[ref: transaction]] MUST abort.
+At the end, if a [[ ref: active permission]] `validator_participant` is not found, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PP-MSG-1-2-3] Start Permission VP fee checks
 
-- Load `Permission` entry `validator_perm` from `validator_perm_id`.
-- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`.
+- Load `Permission` entry `validator_participant` from `validator_participant_id`.
+- Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`.
 
 - Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
 
@@ -2907,26 +2907,26 @@ At the end, if a [[ ref: active permission]] `validator_perm` is not found, [[re
 if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in [[ref: native denom]].
+  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in [[ref: native denom]].
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, "tu")`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) in [[ref: native denom]];
+  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) in [[ref: native denom]];
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
+  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
   - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
   - the required `validation_fees_in_denom` = 0 in [[ref: native denom]].
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 :::note
 Trust deposit MUST always be paid in [[ref: native denom]]
@@ -2936,9 +2936,9 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 
 We want to make sure that 2 validation processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different VP with differents validators for the same `schema_id`, `type`.
 
-Find all permission `perms[]` for `schema_id`, `type`, `validator_perm_id`, `corporation` with vp_state = VALIDATED or PENDING.
+Find all permission `participants[]` for `schema_id`, `type`, `validator_participant_id`, `corporation` with vp_state = VALIDATED or PENDING.
 
-if size of `perms[]` > 0, it means there is already an existing validation process in this context, so MUST abort.
+if size of `participants[]` > 0, it means there is already an existing validation process in this context, so MUST abort.
 
 > note: this check was not present in v3.
 
@@ -2948,7 +2948,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Load `Permission` entry `validator_perm` of the selected validator.
+- Load `Permission` entry `validator_participant` of the selected validator.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
 - use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module.
@@ -2956,33 +2956,33 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- create an persist a new permission entry `applicant_perm`:
+- create an persist a new permission entry `applicant_participant`:
 
-  - `applicant_perm.id`: auto-incremented uint64.
-  - `applicant_perm.schema_id` = `validator_perm.schema_id`
-  - `applicant_perm.corporation`: `corporation`.
-  - `applicant_perm.vs_operator`: `vs_operator`.
-  - `applicant_perm.type`: `type`.
-  - `applicant_perm.created`: `now`
-  - `applicant_perm.modified`: `now`
-  - `applicant_perm.deposit`: `validation_trust_deposit_in_native_denom`.
-  - `applicant_perm.validation_fees`: `validation_fees`.
-  - `applicant_perm.issuance_fees`: `issuance_fees`.
-  - `applicant_perm.verification_fees`: `verification_fees`.
-  - `applicant_perm.validator_perm_id`: `validator_perm_id`.
-  - `applicant_perm.vp_last_state_change`: `now`
-  - `applicant_perm.vp_state`: PENDING.
-  - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
-  - `applicant_perm.vp_summary_digest`: null.
-  - `applicant_perm.vp_validator_deposit`: 0.
+  - `applicant_participant.id`: auto-incremented uint64.
+  - `applicant_participant.schema_id` = `validator_participant.schema_id`
+  - `applicant_participant.corporation`: `corporation`.
+  - `applicant_participant.vs_operator`: `vs_operator`.
+  - `applicant_participant.role`: `type`.
+  - `applicant_participant.created`: `now`
+  - `applicant_participant.modified`: `now`
+  - `applicant_participant.deposit`: `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.validation_fees`: `validation_fees`.
+  - `applicant_participant.issuance_fees`: `issuance_fees`.
+  - `applicant_participant.verification_fees`: `verification_fees`.
+  - `applicant_participant.validator_participant_id`: `validator_participant_id`.
+  - `applicant_participant.vp_last_state_change`: `now`
+  - `applicant_participant.vp_state`: PENDING.
+  - `applicant_participant.vp_current_fees` (number): `validation_fees_in_denom`.
+  - `applicant_participant.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.vp_summary_digest`: null.
+  - `applicant_participant.vp_validator_deposit`: 0.
 
 If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
 - `corporation`: `corporation`
 - `vs_operator`: `vs_operator`
 - `record`:
-  - `record.perm_id`: `applicant_perm.id`
+  - `record.participant_id`: `applicant_participant.id`
   - `record.msg_types`: `vs_operator_authz_msg_types`
   - `record.spend_limit`: `vs_operator_authz_spend_limit`
   - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
@@ -2990,7 +2990,7 @@ If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizatio
   - `record.expiration`: `now`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: the record is created with `expiration = now` so authorization is **not yet active**. [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) will reject any attempt to use it until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-permission-vp-to-validated) updates `expiration` to `applicant_perm.effective_until`. No on-chain `FeeGrant` object is created at this stage even if `with_feegrant` is true (the recompute subroutine in [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) requires `expiration > now`).
+> Note: the record is created with `expiration = now` so authorization is **not yet active**. [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) will reject any attempt to use it until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-permission-vp-to-validated) updates `expiration` to `applicant_participant.effective_until`. No on-chain `FeeGrant` object is created at this stage even if `with_feegrant` is true (the recompute subroutine in [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) requires `expiration > now`).
 
 #### Connecting to the VS of the Validator
 
@@ -2998,7 +2998,7 @@ If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizatio
 
 This action must be initiated by the [[ref: applicant]].
 
-During a validation process, if the associated `validator_perm` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
+During a validation process, if the associated `validator_participant` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
 
 Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by the [[ref: validator]] to complete one or more of the following tasks:
 
@@ -3015,7 +3015,7 @@ Once the [[ref: validator]] determines that the process is complete, they may te
 
 The [[ref: validator]] may compile a summary file of the validation process, documenting exchanged data, proofs, and decisions, and share it with the [[ref: applicant]] via the [[ref: VS]] connection or another secure channel.
 
-For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_perm.vp_summary_digest`.
+For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_participant.vp_summary_digest`.
 
 #### [MOD-PP-MSG-2] Renew Permission VP
 
@@ -3026,7 +3026,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - Requesting a renewal has no effect on permission expiration or issued credentials.
 - Renewal is only possible with the same validator.
 - If validator permission is not valid anymore, applicant MUST perform a new validation process with another validator.
-- Renewal does not allow changing the `perm.validation_fees`, `perm.issuance_fees`, `perm.verification_fees`. To change these values, applicant MUST start a new validation process.
+- Renewal does not allow changing the `participant.validation_fees`, `participant.issuance_fees`, `participant.verification_fees`. To change these values, applicant MUST start a new validation process.
 - if permission is revoked, slashed, or repaid, method MUST fail.
 
 ##### [MOD-PP-MSG-2-1] Renew Permission VP parameters
@@ -3050,13 +3050,13 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PP-MSG-2-2-2] Renew Permission VP permission checks
 
-- Load `Permission` entry `applicant_perm`. `corporation` running the operation MUST be `applicant_perm.corporation`, else MUST abort. `applicant_perm` MUST be a [[ref: active permission]].
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`. It MUST exist, and be a [[ref: active permission]], else MUST abort.
+- Load `Permission` entry `applicant_participant`. `corporation` running the operation MUST be `applicant_participant.corporation`, else MUST abort. `applicant_participant` MUST be a [[ref: active permission]].
+- Load `Permission` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: active permission]], else MUST abort.
 
 ###### [MOD-PP-MSG-2-2-3] Renew Permission VP fee checks
 
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
-- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`.
+- Load `Permission` entry `validator_participant` from `applicant_participant.validator_participant_id`.
+- Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`.
 
 - Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
 
@@ -3067,26 +3067,26 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in [[ref: native denom]].
+  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in [[ref: native denom]].
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, "tu")`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) in [[ref: native denom]];
+  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) in [[ref: native denom]];
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
+  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
   - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
   - the required `validation_fees_in_denom` = 0 in [[ref: native denom]].
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 :::note
 Trust deposit MUST always be paid in [[ref: native denom]]
@@ -3098,8 +3098,8 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Load `Permission` entry `applicant_perm`. 
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
+- Load `Permission` entry `applicant_participant`. 
+- Load `Permission` entry `validator_participant` from `applicant_participant.validator_participant_id`.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
 - use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module.
@@ -3109,12 +3109,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - update permission entry:
 
-  - `applicant_perm.vp_state`: PENDING.
-  - `applicant_perm.vp_last_state_change`: current timestamp.
-  - `applicant_perm.deposit`: `applicant_perm.deposit` + `validation_trust_deposit_in_native_denom`.
-  - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
-  - `applicant_perm.modified`: `now`
+  - `applicant_participant.vp_state`: PENDING.
+  - `applicant_participant.vp_last_state_change`: current timestamp.
+  - `applicant_participant.deposit`: `applicant_participant.deposit` + `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.vp_current_fees` (number): `validation_fees_in_denom`.
+  - `applicant_participant.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.modified`: `now`
 
 #### [MOD-PP-MSG-3] Set Permission VP to Validated
 
@@ -3146,78 +3146,78 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- Load `Permission` entry `validator_perm` from `applicant_perm_validator_perm_id`.
+- Load `Permission` entry `applicant_participant` from `id`. If no entry found, abort.
+- Load `Permission` entry `validator_participant` from `applicant_participant_validator_participant_id`.
 - Authorization:
 
 either (executed by any operator of corporation):
 [[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetPermissionVPtoValidated` message.
 [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetPermissionVPtoValidated` message.
 OR (executed by vs-agent account defined in validator permission):
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `validator_perm`) tuple.
-[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `validator_perm`) tuple.
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `validator_participant`) tuple.
+[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `validator_participant`) tuple.
 else MUST abort.
 
-- `applicant_perm.vp_state` MUST be equal to PENDING, else abort.
-- `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_perm.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_perm.validation_fees`, else abort.
-- `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_perm.issuance_fees` or, else abort.
-- `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_perm.verification_fees`, else abort.
+- `applicant_participant.vp_state` MUST be equal to PENDING, else abort.
+- `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_participant.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_participant.validation_fees`, else abort.
+- `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_participant.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_participant.issuance_fees` or, else abort.
+- `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_participant.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_participant.verification_fees`, else abort.
 - `vp_summary_digest` (string) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest. Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
-- Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
-- Load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`.
+- Load `CredentialSchema` `cs` from `applicant_participant.schema_id`.
+- Load `Permission` `validator_participant` from `applicant_participant.validator_participant_id`.
 
 - `issuance_fee_discount` : (number) (*mandatory*):
-  - if `applicant_perm.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_perm.issuance_fee_discount` else MUST abort.
+  - if `applicant_participant.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_participant.issuance_fee_discount` else MUST abort.
   - if `cs.issuer_onboarding_mode` is set to GRANTOR_VALIDATION_PROCESS:
-    - if `applicant_perm.type` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-    - if `applicant_perm.type` == ISSUER: if `validator_perm.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_perm.issuance_fee_discount` (100% discount) inclusive.
+    - if `applicant_participant.role` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+    - if `applicant_participant.role` == ISSUER: if `validator_participant.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_participant.issuance_fee_discount` (100% discount) inclusive.
   - if `cs.issuer_onboarding_mode` is set to ECOSYSTEM_VALIDATION_PROCESS:
-    - if `applicant_perm.type` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+    - if `applicant_participant.role` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
   - else MUST abort.
 
 - `verification_fee_discount` : (number) (*mandatory*):
-  - if `applicant_perm.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_perm.verification_fee_discount` else MUST abort.
+  - if `applicant_participant.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_participant.verification_fee_discount` else MUST abort.
   - if `cs.verifier_onboarding_mode` is set to GRANTOR_VALIDATION_PROCESS:
-    - if `applicant_perm.type` == VERIFIER_GRANTOR: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-    - if `applicant_perm.type` == VERIFIER: if `validator_perm.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_perm.verification_fee_discount` (100% discount) inclusive.
+    - if `applicant_participant.role` == VERIFIER_GRANTOR: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+    - if `applicant_participant.role` == VERIFIER: if `validator_participant.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_participant.verification_fee_discount` (100% discount) inclusive.
   - if `cs.verifier_onboarding_mode` is set to ECOSYSTEM_VALIDATION_PROCESS:
-    - if `applicant_perm.type` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+    - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
   - else MUST abort.
 
 Calculation of `vp_exp`, the validation process expiration timestamp, required to verify provided `effective_until`:
 
-- let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_perm.type` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_perm.type` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_perm.type` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_perm.type` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_perm.type` is HOLDER).
+- let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_participant.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_participant.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_participant.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_participant.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_participant.role` is HOLDER).
 
 - if `validity_period` is NULL:  `vp_exp` = NULL.
-- else if `applicant_perm.vp_exp` is null, `vp_exp` =  timestamp of now() plus `validity_period`.
-- else `vp_exp` =  `applicant_perm.vp_exp` plus `validity_period`
+- else if `applicant_participant.vp_exp` is null, `vp_exp` =  timestamp of now() plus `validity_period`.
+- else `vp_exp` =  `applicant_participant.vp_exp` plus `validity_period`
 
 Now, let's verify `effective_until`:
 
 - if `effective_until` is NULL, no issue.
-- else if `applicant_perm.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
-- else `effective_until` MUST be greater than `applicant_perm.effective_until` AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
+- else if `applicant_participant.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
+- else `effective_until` MUST be greater than `applicant_participant.effective_until` AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
 
 ###### [MOD-PP-MSG-3-2-2] Set Permission VP to Validated validator perms
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]].
-- `corporation` running the method MUST be `validator_perm.corporation`.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active permission]].
+- `corporation` running the method MUST be `validator_participant.corporation`.
 
-If `validator_perm` is not a [[ ref: active permission]] (expired, revoked, slashed...) then applicant MUST start a new validation process.
+If `validator_participant` is not a [[ ref: active permission]] (expired, revoked, slashed...) then applicant MUST start a new validation process.
 
 ###### [MOD-PP-MSG-3-2-3] Set Permission VP to Validated fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
-- if `applicant_perm.vp_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_perm.vp_current_deposit` available in [[ref: native denom]] on its account for paying the trust deposit.
+- if `applicant_participant.vp_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.vp_current_deposit` available in [[ref: native denom]] on its account for paying the trust deposit.
 
 ###### [MOD-PP-MSG-3-2-4] Set Permission VP to Validated overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. That should not occur in this method, but better do the check anyway.
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. That should not occur in this method, but better do the check anyway.
 
-Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `corporation`.
+Find all [[ref: active permissions]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_participant_id`, `corporation`.
 
-for each `Permission` entry `p` from `perms[]`:
+for each `Permission` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
@@ -3231,63 +3231,63 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Load `Permission` entry `applicant_perm` from `id`.
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
+- Load `Permission` entry `applicant_participant` from `id`.
+- Load `Permission` entry `validator_participant` from `applicant_participant.validator_participant_id`.
 - define `now` timestamp of now().
 
 Calculate `vp_exp`:
 
-- Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
-- let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_perm.type` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_perm.type` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_perm.type` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_perm.type` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_perm.type` is HOLDER).
+- Load `CredentialSchema` `cs` from `applicant_participant.schema_id`.
+- let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_participant.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_participant.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_participant.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_participant.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_participant.role` is HOLDER).
 
 - if `validity_period` is NULL:  `vp_exp` = NULL.
-- else if `applicant_perm.vp_exp` is null, `vp_exp` =  timestamp of now() plus `validity_period`.
-- else `vp_exp` =  `applicant_perm.vp_exp` plus `validity_period`.
+- else if `applicant_participant.vp_exp` is null, `vp_exp` =  timestamp of now() plus `validity_period`.
+- else `vp_exp` =  `applicant_participant.vp_exp` plus `validity_period`.
 
 Change value of provided `effective_until` if needed, and abort if needed:
 
 - if provided  `effective_until` is NULL:
   - change value of provided `effective_until` to `vp_exp`.
 
-- else if `applicant_perm.effective_until` is NULL:
+- else if `applicant_participant.effective_until` is NULL:
   - verify that provided `effective_until` is greater than `now` else MUST abort
   - if `vp_exp` is not null, verify that provided `effective_until` is lower or equal to `vp_exp` else MUST abort
 
 - else:
-  - `effective_until` MUST be greater than `applicant_perm.effective_until` else MUST abort
+  - `effective_until` MUST be greater than `applicant_participant.effective_until` else MUST abort
   - if `vp_exp` is not null, verify that provided `effective_until` is lower or equal to `vp_exp` else MUST abort.
 
 Fees and Trust Deposits:
 
-- transfer the full amount `applicant_perm.vp_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to validator `corporation` [[ref: account]] `validator_perm.corporation`;
-- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_perm.vp_current_deposit` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `applicant_perm.vp_current_deposit`.
+- transfer the full amount `applicant_participant.vp_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to validator `corporation` [[ref: account]] `validator_participant.corporation`;
+- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_participant.vp_current_deposit` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_participant.vp_validator_deposit` to `applicant_participant.vp_validator_deposit` + `applicant_participant.vp_current_deposit`.
 
-> Important: if `applicant_perm.vp_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_perm.vp_current_deposit` available for paying the trust deposit.
+> Important: if `applicant_participant.vp_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.vp_current_deposit` available for paying the trust deposit.
 
-Update `Permission` `applicant_perm`:
+Update `Permission` `applicant_participant`:
 
-- set `applicant_perm.modified` to `now`.
-- set `applicant_perm.vp_state` to VALIDATED.
-- set `applicant_perm.vp_last_state_change` to `now`.
-- set `applicant_perm.vp_current_fees` to 0;
-- set `applicant_perm.vp_current_deposit` to 0;
-- set `applicant_perm.vp_summary_digest` to `vp_summary_digest`.
-- set `applicant_perm.vp_exp` to `vp_exp`.
-- set `applicant_perm.effective_until` to `effective_until`.
-- if `applicant_perm.effective_from` IS NULL (first time method is called for this perm, and thus we are not in a renewal):
-  - set `applicant_perm.validation_fees` to `validation_fees`;
-  - set `applicant_perm.issuance_fees` to `issuance_fees`;
-  - set `applicant_perm.verification_fees` to `verification_fees`;
-  - set `applicant_perm.effective_from` to `now`.
-  - set `applicant_perm.issuance_fee_discount` to `issuance_fee_discount`.
-  - set `applicant_perm.verification_fee_discount` to `verification_fee_discount`.
+- set `applicant_participant.modified` to `now`.
+- set `applicant_participant.vp_state` to VALIDATED.
+- set `applicant_participant.vp_last_state_change` to `now`.
+- set `applicant_participant.vp_current_fees` to 0;
+- set `applicant_participant.vp_current_deposit` to 0;
+- set `applicant_participant.vp_summary_digest` to `vp_summary_digest`.
+- set `applicant_participant.vp_exp` to `vp_exp`.
+- set `applicant_participant.effective_until` to `effective_until`.
+- if `applicant_participant.effective_from` IS NULL (first time method is called for this perm, and thus we are not in a renewal):
+  - set `applicant_participant.validation_fees` to `validation_fees`;
+  - set `applicant_participant.issuance_fees` to `issuance_fees`;
+  - set `applicant_participant.verification_fees` to `verification_fees`;
+  - set `applicant_participant.effective_from` to `now`.
+  - set `applicant_participant.issuance_fee_discount` to `issuance_fee_discount`.
+  - set `applicant_participant.verification_fee_discount` to `verification_fee_discount`.
 
 Activate VS Operator Authorization, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
 
-- `perm_id`: `applicant_perm.id`
-- `new_expiration`: `applicant_perm.effective_until`
+- `participant_id`: `applicant_participant.id`
+- `new_expiration`: `applicant_participant.effective_until`
 
-This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-permission-vp) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its `expiration` is updated from `now` (disabled) to `applicant_perm.effective_until`, and the on-chain `FeeGrant` for the containing VSOA is granted for the first time (or refreshed) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
+This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-permission-vp) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its `expiration` is updated from `now` (disabled) to `applicant_participant.effective_until`, and the on-chain `FeeGrant` for the containing VSOA is granted for the first time (or refreshed) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 
 #### [MOD-PP-MSG-4] Void
 
@@ -3317,10 +3317,10 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` with this id. It MUST exist.
-- `corporation` running the [[ref: transaction]] MUST be `applicant_perm.corporation`.
-- `applicant_perm.vp_state` MUST be PENDING.
-- if `applicant_perm.deposit` has been slashed and not repaid, MUST abort
+- Load `Permission` entry `applicant_participant` with this id. It MUST exist.
+- `corporation` running the [[ref: transaction]] MUST be `applicant_participant.corporation`.
+- `applicant_participant.vp_state` MUST be PENDING.
+- if `applicant_participant.deposit` has been slashed and not repaid, MUST abort
 
 ###### [MOD-PP-MSG-6-2-2] Cancel Permission VP Last Request fee checks
 
@@ -3332,21 +3332,21 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Load `Permission` entry `applicant_perm` with `id`. It MUST exist.
+- Load `Permission` entry `applicant_participant` with `id`. It MUST exist.
 - define `now`: current timestamp.
 
-- set `applicant_perm.modified` to `now`.
-- if `applicant_perm.vp_exp` is null (validation never completed), set `applicant_perm.vp_state` to TERMINATED, else set `applicant_perm.vp_state` to VALIDATED.
-- set `applicant_perm.vp_last_state_change` to `now`.
-- if `applicant_perm.vp_current_fees` > 0:
-  - transfer `applicant_perm.vp_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_perm.corporation`.
-  - set `applicant_perm.vp_current_fees` to 0;
+- set `applicant_participant.modified` to `now`.
+- if `applicant_participant.vp_exp` is null (validation never completed), set `applicant_participant.vp_state` to TERMINATED, else set `applicant_participant.vp_state` to VALIDATED.
+- set `applicant_participant.vp_last_state_change` to `now`.
+- if `applicant_participant.vp_current_fees` > 0:
+  - transfer `applicant_participant.vp_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_participant.corporation`.
+  - set `applicant_participant.vp_current_fees` to 0;
 
-- if `applicant_perm.vp_current_deposit` > 0:
-  - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_perm.corporation` by `applicant_perm.vp_current_deposit`
-  - set `applicant_perm.vp_current_deposit` to 0.
+- if `applicant_participant.vp_current_deposit` > 0:
+  - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_participant.corporation` by `applicant_participant.vp_current_deposit`
+  - set `applicant_participant.vp_current_deposit` to 0.
 
-If `applicant_perm.vp_state` was set to TERMINATED (i.e. `applicant_perm.vp_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-permission-vp). The call is a no-op if no record exists. If `applicant_perm.vp_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
+If `applicant_participant.vp_state` was set to TERMINATED (i.e. `applicant_participant.vp_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-permission-vp). The call is a no-op if no record exists. If `applicant_participant.vp_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
 
 #### [MOD-PP-MSG-7] Create Root Permission
 
@@ -3408,8 +3408,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
 - The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
-- The related `TrustRegistry` entry `tr` is loaded from `cs.tr_id`.
-- `corporation` executing the method MUST be `tr.corporation`.
+- The related `TrustRegistry` entry `tr` is loaded from `cs.ecosystem_id`.
+- `corporation` executing the method MUST be `ecosystem.corporation`.
 - else MUST abort.
 
 ###### [MOD-PP-MSG-7-2-3] Create Root Permission fee checks
@@ -3420,11 +3420,11 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 We want to make sure that 2 permissions cannot be active at the same time. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-permission) to set or adjust the `effective_until` value.
 
-Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `corporation`.
+Find all [[ref: active permissions]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `corporation`.
 
-> Note: unlike overlap checks from other methods, here we do not need to check for `validator_perm_id`, as for ECOSYSTEM type permissions it is NULL.
+> Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM type permissions it is NULL.
 
-for each `Permission` entry `p` from `perms[]`:
+for each `Permission` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
@@ -3442,35 +3442,35 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 A new entry `Permission` `perm` MUST be created:
 
-- `perm.id`: auto-incremented uint64.
-- `perm.schema_id`: `schema_id`.
-- `perm.modified` to `now`.
-- `perm.type`: ECOSYSTEM.
-- `perm.did`: `did`.
-- `perm.corporation`: `corporation`.
-- `perm.vs_operator`: `vs_operator`.
-- `perm.created`: `now`
-- `perm.effective_from`: `effective_from`
-- `perm.effective_until`: `effective_until`
-- `perm.validation_fees`: `validation_fees`
-- `perm.issuance_fees`: `issuance_fees`
-- `perm.verification_fees`: `verification_fees`
-- `perm.deposit`: 0
+- `participant.id`: auto-incremented uint64.
+- `participant.schema_id`: `schema_id`.
+- `participant.modified` to `now`.
+- `participant.role`: ECOSYSTEM.
+- `participant.did`: `did`.
+- `participant.corporation`: `corporation`.
+- `participant.vs_operator`: `vs_operator`.
+- `participant.created`: `now`
+- `participant.effective_from`: `effective_from`
+- `participant.effective_until`: `effective_until`
+- `participant.validation_fees`: `validation_fees`
+- `participant.issuance_fees`: `issuance_fees`
+- `participant.verification_fees`: `verification_fees`
+- `participant.deposit`: 0
 
 If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
 - `corporation`: `corporation`
 - `vs_operator`: `vs_operator`
 - `record`:
-  - `record.perm_id`: `perm.id`
+  - `record.participant_id`: `participant.id`
   - `record.msg_types`: `vs_operator_authz_msg_types`
   - `record.spend_limit`: `vs_operator_authz_spend_limit`
   - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
   - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
-  - `record.expiration`: `perm.effective_until`
+  - `record.expiration`: `participant.effective_until`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: like [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-permission), the record is created with `expiration = perm.effective_until` and is therefore immediately active. If `with_feegrant` is true and `perm.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
+> Note: like [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-permission), the record is created with `expiration = participant.effective_until` and is therefore immediately active. If `with_feegrant` is true and `participant.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
 #### [MOD-PP-MSG-8] Adjust Permission
 
@@ -3478,8 +3478,8 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 This method can be called:
 
-- by `perm.corporation`, if permission is of type ECOSYSTEM.
-- by `perm.corporation`, if it is a self-created permission (schema configuration is open)
+- by `participant.corporation`, if permission is of type ECOSYSTEM.
+- by `participant.corporation`, if it is a self-created permission (schema configuration is open)
 - by a `corporation` of a validator permission (if permission is managed by a VP).
 
 ##### [MOD-PP-MSG-8-1] Adjust Permission parameters
@@ -3501,9 +3501,9 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `applicant_perm` MUST be a [[ref: active permission]]
-- `applicant_perm.effective_until` MUST be greater than now().
+- Load `Permission` entry `applicant_participant` from `id`. If no entry found, abort.
+- `applicant_participant` MUST be a [[ref: active permission]]
+- `applicant_participant.effective_until` MUST be greater than now().
 - else MUST abort.
 
 > Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null,  which was not the case in spec v3.
@@ -3512,16 +3512,16 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 1. ECOSYSTEM permissions
 
-- if `applicant_perm.validator_perm_id` is null and `applicant_perm.type` is ECOSYSTEM, `corporation` running the method MUST be `applicant_perm.corporation`.
+- if `applicant_participant.validator_participant_id` is null and `applicant_participant.role` is ECOSYSTEM, `corporation` running the method MUST be `applicant_participant.corporation`.
 
 2. Self-created permissions
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]] of type ECOSYSTEM. `corporation` running the method MUST be `applicant_perm.corporation`.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active permission]] of type ECOSYSTEM. `corporation` running the method MUST be `applicant_participant.corporation`.
 
 3. VP managed permissions
 
-- `effective_until` MUST be lower or equal to `applicant_perm.vp_exp` else MUST abort.
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]]. `corporation` running the method MUST be `validator_perm.corporation`.
+- `effective_until` MUST be lower or equal to `applicant_participant.vp_exp` else MUST abort.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active permission]]. `corporation` running the method MUST be `validator_participant.corporation`.
 
 ###### [MOD-PP-MSG-8-2-3] Adjust Permission fee checks
 
@@ -3529,11 +3529,11 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 
 ###### [MOD-PP-MSG-8-2-4] Adjust Permission overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-permission) to set or adjust the `effective_until` value.
 
-Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `corporation`.
+Find all [[ref: active permissions]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_participant_id`, `corporation`.
 
-for each `Permission` entry `p` from `perms[]`:
+for each `Permission` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
@@ -3549,18 +3549,18 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- Load `Permission` entry `applicant_perm` from `id`.
-- set `applicant_perm.effective_until` to `effective_until`
-- set `applicant_perm.adjusted` to `now`
-- set `applicant_perm.modified` to `now`
+- Load `Permission` entry `applicant_participant` from `id`.
+- set `applicant_participant.effective_until` to `effective_until`
+- set `applicant_participant.adjusted` to `now`
+- set `applicant_participant.modified` to `now`
 
 
 Synchronise VS Operator Authorization expiration, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
 
-- `perm_id`: `applicant_perm.id`
-- `new_expiration`: `applicant_perm.effective_until`
+- `participant_id`: `applicant_participant.id`
+- `new_expiration`: `applicant_participant.effective_until`
 
-This call is a no-op if no record exists for `applicant_perm.id`. If a record exists, its `expiration` is updated and the on-chain `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Adjust Permission does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-permission-vp) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-permission)). Adjust also cannot create a record that does not already exist.
+This call is a no-op if no record exists for `applicant_participant.id`. If a record exists, its `expiration` is updated and the on-chain `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Adjust Permission does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-permission-vp) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-permission)). Adjust also cannot create a record that does not already exist.
 
 #### [MOD-PP-MSG-9] Revoke Permission
 
@@ -3590,8 +3590,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `applicant_perm` MUST be a [[ref: active permission]]
+- Load `Permission` entry `applicant_participant` from `id`. If no entry found, abort.
+- `applicant_participant` MUST be a [[ref: active permission]]
 
 ###### [MOD-PP-MSG-9-2-2] Revoke Permission advanced checks
 
@@ -3599,23 +3599,23 @@ Either Option #1, #2 or #3 MUST return true, else abort.
 
 *Option #1*: executed by a validator ancestor
 
-if `applicant_perm.validator_perm_id` is defined:
+if `applicant_participant.validator_participant_id` is defined:
 
-- set `validator_perm` = `applicant_perm`
-- while `validator_perm.validator_perm_id` is defined, 
-  - load `validator_perm` from `validator_perm.validator_perm_id`.
-  - if `validator_perm` is a [[ref: active permission]] and `validator_perm.corporation` is who is running the method, => return true.
+- set `validator_participant` = `applicant_participant`
+- while `validator_participant.validator_participant_id` is defined, 
+  - load `validator_participant` from `validator_participant.validator_participant_id`.
+  - if `validator_participant` is a [[ref: active permission]] and `validator_participant.corporation` is who is running the method, => return true.
 - end
 - return false.
 
 *Option #2*: executed by `TrustRegistry` controller
 
-- load `CredentialSchema` `cs` from `applicant_perm.schema_id`
-- load `TrustRegistry` `tr` from `cs.tr_id`
-- if `corporation` running the method is `tr.corporation`, return true.
+- load `CredentialSchema` `cs` from `applicant_participant.schema_id`
+- load `TrustRegistry` `tr` from `cs.ecosystem_id`
+- if `corporation` running the method is `ecosystem.corporation`, return true.
 - else return false.
 
-*Option #3*: executed by `applicant_perm.corporation`: return true.
+*Option #3*: executed by `applicant_participant.corporation`: return true.
 
 Example:
 
@@ -3685,11 +3685,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- Load `Permission` entry `applicant_perm` from `id`.
-- set `applicant_perm.revoked` to `now`
-- set `applicant_perm.modified` to `now`
+- Load `Permission` entry `applicant_participant` from `id`.
+- set `applicant_participant.revoked` to `now`
+- set `applicant_participant.modified` to `now`
 
-Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
+Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
 
 #### [MOD-PP-MSG-10] Create or Update Permission Session
 
@@ -3700,16 +3700,16 @@ Any credential exchange that requires issuer or verifier to pay fees, register a
 If the peer wants to issue a credential, the `agent`, the Verifiable User Agent or Verifiable Service that receive the request MUST send to peer:
 
 - a `uuid` for session identification;
-- *optional*: the `agent_perm_id` permission id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
-- *optional*: the `wallet_agent_perm_id` permission id of the agent wallet that will store the credential. If this is the same software than the agent, then it should be equal to `agent_perm_id`. It MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: the `agent_participant_id` permission id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: the `wallet_agent_participant_id` permission id of the agent wallet that will store the credential. If this is the same software than the agent, then it should be equal to `agent_participant_id`. It MUST NOT be set if peer is a **Verifiable Service**.
 
 If the peer wants to verify a credential, agent must send to peer:
 
 - a `uuid` for session identification;
-- *optional*: the `agent_perm_id` permission id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
-- *optional*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_perm_ids, uint64: wallet_agent_perm_id>. wallet_agent_perm_id MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: the `agent_participant_id` permission id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_participant_ids, uint64: wallet_agent_participant_id>. wallet_agent_participant_id MUST NOT be set if peer is a **Verifiable Service**.
 
-In case peer is a **Verifiable Service** and illegaly set `agent_perm_id` and/or `wallet_agent_perm_id`, the other end MUST refuse the request.
+In case peer is a **Verifiable Service** and illegaly set `agent_participant_id` and/or `wallet_agent_participant_id`, the other end MUST refuse the request.
 
 `payer` MUST create a Permission Session using the above information, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
 
@@ -3721,7 +3721,7 @@ participant "VPR" as vpr
 
 
 Issued <-- Issuer: I want to issue a credential from schema id ... to you
-Issued --> Issuer: Here is the session uuid and the wallet_agent_perm_id
+Issued --> Issuer: Here is the session uuid and the wallet_agent_participant_id
 Issuer --> vpr: create session
 Issued <-- Issuer: session created, you can verify
 Issued --> vpr: getSession(uuid)
@@ -3741,10 +3741,10 @@ An [[ref: account]] that would like to create or update a `PermissionSession` en
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uuid) (*mandatory*): id of the `PermissionSession`.
-- `issuer_perm_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the issuance of a credential.
-- `verifier_perm_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
-- `agent_perm_id` (uint64) (*optional*): the agent credential issuer permission id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
-- `wallet_agent_perm_id` (uint64) (*optional*): the wallet credential issuer permission id of the VUA where the credential will be or is stored. Can be the same perm than `agent_perm_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
+- `issuer_participant_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the issuance of a credential.
+- `verifier_participant_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
+- `agent_participant_id` (uint64) (*optional*): the agent credential issuer permission id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
+- `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer permission id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `digest` (string) (*optional*): digest derived from an issued or verified credential.
 
 ##### [MOD-PP-MSG-10-2] Create or Update Permission Session precondition checks
@@ -3755,45 +3755,45 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uuid. If an entry `existing_entry` with `id` already exist, then  `existing_entry.corporation` MUST be equal to `corporation` AND `existing_entry.vs_operator` MUST be equal to `operator`, else abort.
 
-if `issuer_perm_id` is null AND `verifier_perm_id` is null, MUST abort.
+if `issuer_participant_id` is null AND `verifier_participant_id` is null, MUST abort.
 
-- define `issuer_perm` as null.
-- define `verifier_perm` as null.
+- define `issuer_participant` as null.
+- define `verifier_participant` as null.
 
-if `issuer_perm_id` is not null:
+if `issuer_participant_id` is not null:
 
-- Load `issuer_perm` from `issuer_perm_id`.
-- if `issuer_perm.type` is not ISSUER, abort.
-- if `issuer_perm` is not a [[ref: active permission]], abort.
-- if `issuer_perm.vs_operator` is not equal to `operator`, abort.
-- if `issuer_perm.corporation` is not equal to `corporation`, abort.
+- Load `issuer_participant` from `issuer_participant_id`.
+- if `issuer_participant.role` is not ISSUER, abort.
+- if `issuer_participant` is not a [[ref: active permission]], abort.
+- if `issuer_participant.vs_operator` is not equal to `operator`, abort.
+- if `issuer_participant.corporation` is not equal to `corporation`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
 
-if `verifier_perm_id` is not null:
+if `verifier_participant_id` is not null:
 
-- Load `verifier_perm` from `verifier_perm_id`.
-- if `verifier_perm.type` is not VERIFIER, abort.
-- if `verifier_perm` is not a [[ref: active permission]], abort.
-- if `verifier_perm.vs_operator` is not equal to `operator`, abort.
-- if `verifier_perm.corporation` is not equal to `corporation`, abort.
+- Load `verifier_participant` from `verifier_participant_id`.
+- if `verifier_participant.role` is not VERIFIER, abort.
+- if `verifier_participant` is not a [[ref: active permission]], abort.
+- if `verifier_participant.vs_operator` is not equal to `operator`, abort.
+- if `verifier_participant.corporation` is not equal to `corporation`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
 
-Define the **primary permission** `perm`: if `verifier_perm` is not null, `perm` = `verifier_perm` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_perm` (the caller is the `vs_operator` of the issuer).
+Define the **primary permission** `perm`: if `verifier_participant` is not null, `perm` = `verifier_participant` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_participant` (the caller is the `vs_operator` of the issuer).
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 
 agent:
 
-- Load `agent_perm` from `agent_perm_id`.
-- if `agent_perm.type` is not ISSUER, abort.
-- if `agent_perm` is not a [[ref: active permission]], abort.
+- Load `agent_participant` from `agent_participant_id`.
+- if `agent_participant.role` is not ISSUER, abort.
+- if `agent_participant` is not a [[ref: active permission]], abort.
 
 wallet_agent:
 
-- Load `wallet_agent_perm` from `wallet_agent_perm_id`.
-- if `wallet_agent_perm.type` is not ISSUER, abort.
-- if `wallet_agent_perm` is not a [[ref: active permission]], abort.
+- Load `wallet_agent_participant` from `wallet_agent_participant_id`.
+- if `wallet_agent_participant.role` is not ISSUER, abort.
+- if `wallet_agent_participant` is not a [[ref: active permission]], abort.
 
 :::warning
 we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.
@@ -3801,26 +3801,26 @@ we might want to check that credential schema of agent and wallet_agent perms is
 
 ###### [MOD-PP-MSG-10-3] Create or Update Permission Session fee checks
 
-- Load `CredentialSchema` entry `cs` from `issuer_perm.schema_id` if `issuer_perm` is not null, else from `verifier_perm.schema_id`.
+- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` if `issuer_participant` is not null, else from `verifier_participant.schema_id`.
 - Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]].
 
 For trust fees, `corporation` account MUST have sufficient available balance as explained below.
 
 **Step 1: Calculate total beneficiary fees in credential schema pricing asset**
 
-Use "Find Beneficiaries" query method to get the set of beneficiary permissions `found_perm_set` (all ancestors in the permission tree).
+Use "Find Beneficiaries" query method to get the set of beneficiary permissions `found_participant_set` (all ancestors in the permission tree).
 
 - define `total_beneficiary_fees` = 0
 
-If **Credential Issuance** (`issuer_perm` is NOT null):
+If **Credential Issuance** (`issuer_participant` is NOT null):
 
-- for each `perm` in `found_perm_set`:
-  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.issuance_fees` × (1 - `issuer_perm.issuance_fee_discount`)
+- for each `perm` in `found_participant_set`:
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.issuance_fees` × (1 - `issuer_participant.issuance_fee_discount`)
 
-If **Credential Verification** (`verifier_perm` is NOT null):
+If **Credential Verification** (`verifier_participant` is NOT null):
 
-- for each `perm` in `found_perm_set`:
-  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.verification_fees` × (1 - `verifier_perm.verification_fee_discount`)
+- for each `perm` in `found_participant_set`:
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.verification_fees` × (1 - `verifier_participant.verification_fee_discount`)
 
 > Note: `total_beneficiary_fees` is expressed in the credential schema pricing asset `(cs.pricing_asset_type, cs.pricing_asset)`.
 
@@ -3865,11 +3865,11 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-if `agent_perm_id` is set:
+if `agent_participant_id` is set:
 
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-if `wallet_agent_perm_id` is set:
+if `wallet_agent_participant_id` is set:
 
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
@@ -3890,11 +3890,11 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-if `agent_perm_id` is set:
+if `agent_participant_id` is set:
 
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-if `wallet_agent_perm_id` is set:
+if `wallet_agent_participant_id` is set:
 
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
@@ -3915,11 +3915,11 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-if `agent_perm_id` is set:
+if `agent_participant_id` is set:
 
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-if `wallet_agent_perm_id` is set:
+if `wallet_agent_participant_id` is set:
 
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
@@ -3941,11 +3941,11 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = 0 (FIAT payments are managed off-chain)
 
-if `agent_perm_id` is set:
+if `agent_participant_id` is set:
 
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-if `wallet_agent_perm_id` is set:
+if `wallet_agent_participant_id` is set:
 
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
@@ -3965,9 +3965,9 @@ Required balance check:
 If all precondition checks passed, method is executed.
 
 - Load all permissions as in basic checks.
-- Load `CredentialSchema` entry `cs` from `issuer_perm.schema_id` if `issuer_perm` is not null, else from `verifier_perm.schema_id`.
+- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` if `issuer_participant` is not null, else from `verifier_participant.schema_id`.
 - define `now`: current timestamp.
-- use "Find Beneficiaries" to build `found_perm_set`.
+- use "Find Beneficiaries" to build `found_participant_set`.
 
 > Note: All funds are transferred from the `corporation` account executing the method. The steps below describe what each recipient must receive. Implementation details (batching, order of transfers) are left to the implementer.
 
@@ -3982,22 +3982,22 @@ Initialize accumulators for agent rewards:
 
 Determine the operation type and applicable discount:
 
-- If **Credential Issuance** (`issuer_perm` is NOT null):
+- If **Credential Issuance** (`issuer_participant` is NOT null):
   - `fee_field` = `issuance_fees`
-  - `discount` = `issuer_perm.issuance_fee_discount`
-  - `payer_perm` = `issuer_perm`
+  - `discount` = `issuer_participant.issuance_fee_discount`
+  - `payer_participant` = `issuer_participant`
 
-- Else if **Credential Verification** (`verifier_perm` is NOT null):
+- Else if **Credential Verification** (`verifier_participant` is NOT null):
   - `fee_field` = `verification_fees`
-  - `discount` = `verifier_perm.verification_fee_discount`
-  - `payer_perm` = `verifier_perm`
+  - `discount` = `verifier_participant.verification_fee_discount`
+  - `payer_participant` = `verifier_participant`
 
-**For each beneficiary permission `perm` in `found_perm_set`:**
+**For each beneficiary permission `perm` in `found_participant_set`:**
 
-If `perm.[fee_field]` > 0:
+If `participant.[fee_field]` > 0:
 
 1. Calculate the discounted fee for this beneficiary:
-   - `beneficiary_fee_in_pricing_asset` = `perm.[fee_field]` × (1 - `discount`)
+   - `beneficiary_fee_in_pricing_asset` = `participant.[fee_field]` × (1 - `discount`)
 
 2. Calculate amounts based on pricing configuration (same logic as fee checks):
 
@@ -4008,10 +4008,10 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-  if `agent_perm_id` is set:
+  if `agent_participant_id` is set:
     - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-  if `wallet_agent_perm_id` is set:
+  if `wallet_agent_participant_id` is set:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
   
@@ -4022,10 +4022,10 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-  if `agent_perm_id` is set:
+  if `agent_participant_id` is set:
     - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-  if `wallet_agent_perm_id` is set:
+  if `wallet_agent_participant_id` is set:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
    **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
@@ -4035,10 +4035,10 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `beneficiary_fee_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`) *(in `<arbitrary_denom>`)*
 
-  if `agent_perm_id` is set:
+  if `agent_participant_id` is set:
     - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-  if `wallet_agent_perm_id` is set:
+  if `wallet_agent_participant_id` is set:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
 
@@ -4049,17 +4049,17 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = 0 *(FIAT payments are managed off-chain)*
 
-  if `agent_perm_id` is set:
+  if `agent_participant_id` is set:
     - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-  if `wallet_agent_perm_id` is set:
+  if `wallet_agent_participant_id` is set:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
 3. Execute transfers and deposits for this beneficiary:
 
-   - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `perm.corporation` (in the appropriate denom).
-   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `perm.corporation` by `payee_trust_deposit`. Increase `perm.deposit` by the same value.
-   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `corporation` (payer) by `payer_trust_deposit`. Increase `payer_perm.deposit` by the same value.
+   - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `participant.corporation` (in the appropriate denom).
+   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `participant.corporation` by `payee_trust_deposit`. Increase `participant.deposit` by the same value.
+   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `corporation` (payer) by `payer_trust_deposit`. Increase `payer_participant.deposit` by the same value.
 
 4. Accumulate agent rewards:
 
@@ -4074,21 +4074,21 @@ After processing all beneficiaries, distribute accumulated rewards to agents.
 
 **User Agent Reward:**
 
-If `agent_perm_id` is set AND `accumulated_user_agent_reward` > 0:
+If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0:
 
 - `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
-- Transfer `agent_fees_to_account` to `agent_perm.corporation` in [[ref: native denom]].
-- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `agent_perm.corporation` by `agent_trust_deposit`. Increase `agent_perm.deposit` by the same value.
+- Transfer `agent_fees_to_account` to `agent_participant.corporation` in [[ref: native denom]].
+- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `agent_participant.corporation` by `agent_trust_deposit`. Increase `agent_participant.deposit` by the same value.
 
 **Wallet Agent Reward:**
 
-If `wallet_agent_perm_id` is set AND `accumulated_wallet_agent_reward` > 0:
+If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 0:
 
 - `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
-- Transfer `wallet_agent_fees_to_account` to `wallet_agent_perm.corporation` in [[ref: native denom]].
-- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `wallet_agent_perm.corporation` by `wallet_agent_trust_deposit`. Increase `wallet_agent_perm.deposit` by the same value.
+- Transfer `wallet_agent_fees_to_account` to `wallet_agent_participant.corporation` in [[ref: native denom]].
+- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `wallet_agent_participant.corporation` by `wallet_agent_trust_deposit`. Increase `wallet_agent_participant.deposit` by the same value.
 
 ---
 
@@ -4099,10 +4099,10 @@ If `wallet_agent_perm_id` is set AND `accumulated_wallet_agent_reward` > 0:
 Create a `PermissionSessionRecord` `cspsr`:
 
 - `cspsr.created`: `now`
-- `cspsr.issuer_perm_id`: `issuer_perm_id`
-- `cspsr.verifier_perm_id`: `verifier_perm_id`
-- `cspsr.agent_perm_id`: `agent_perm_id`
-- `cspsr.wallet_agent_perm_id`: `wallet_agent_perm_id`
+- `cspsr.issuer_participant_id`: `issuer_participant_id`
+- `cspsr.verifier_participant_id`: `verifier_participant_id`
+- `cspsr.agent_participant_id`: `agent_participant_id`
+- `cspsr.wallet_agent_participant_id`: `wallet_agent_participant_id`
 
 If new, create entry `PermissionSession` `session`:
 
@@ -4121,7 +4121,7 @@ then, add the `cspsr` to `session.session_records`
 if current transaction if for issuance of a credential, persist the digest SRI by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest).
 
 :::warning
-`session.authz[]` can contain null `issuer_perm_id` OR `verifier_perm_id`
+`session.authz[]` can contain null `issuer_participant_id` OR `verifier_participant_id`
 :::
 
 #### [MOD-PP-MSG-11] Update Permission Module Parameters
@@ -4182,8 +4182,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `amount` MUST be lower or equal to `applicant_perm.deposit` else MUST abort.
+- Load `Permission` entry `applicant_participant` from `id`. If no entry found, abort.
+- `amount` MUST be lower or equal to `applicant_participant.deposit` else MUST abort.
 
 :::note
 Even if the permission has expired or is revoked, it is still possible to slash it.
@@ -4195,20 +4195,20 @@ Either Option #1, or #2 MUST return true, else abort.
 
 *Option #1*: executed by a validator ancestor
 
-if `applicant_perm.validator_perm_id` is defined:
+if `applicant_participant.validator_participant_id` is defined:
 
-- set `validator_perm` = `applicant_perm`
-- while `validator_perm.validator_perm_id` is defined, 
-  - load `validator_perm` from `validator_perm.validator_perm_id`.
-  - if `validator_perm` is a [[ref: active permission]] and `validator_perm.corporation` is who is running the method, => return true.
+- set `validator_participant` = `applicant_participant`
+- while `validator_participant.validator_participant_id` is defined, 
+  - load `validator_participant` from `validator_participant.validator_participant_id`.
+  - if `validator_participant` is a [[ref: active permission]] and `validator_participant.corporation` is who is running the method, => return true.
 - end
 - return false.
 
 *Option #2*: executed by `TrustRegistry` controller
 
-- load `CredentialSchema` `cs` from `applicant_perm.schema_id`
-- load `TrustRegistry` `tr` from `cs.tr_id`
-- if `corporation` running the method is `tr.corporation`, return true.
+- load `CredentialSchema` `cs` from `applicant_participant.schema_id`
+- load `TrustRegistry` `tr` from `cs.ecosystem_id`
+- if `corporation` running the method is `ecosystem.corporation`, return true.
 - else return false.
 
 ###### [MOD-PP-MSG-12-2-3] Slash Permission Trust Deposit fee checks
@@ -4223,15 +4223,15 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- Load `Permission` entry `applicant_perm` from `id`.
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
-- set `applicant_perm.slashed` to `now`
-- set `applicant_perm.modified` to `now`
-- set `applicant_perm.slashed_deposit` to `applicant_perm.slashed_deposit` + `amount`
+- Load `Permission` entry `applicant_participant` from `id`.
+- Load `Permission` entry `validator_participant` from `applicant_participant.validator_participant_id`.
+- set `applicant_participant.slashed` to `now`
+- set `applicant_participant.modified` to `now`
+- set `applicant_participant.slashed_deposit` to `applicant_participant.slashed_deposit` + `amount`
 
-use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_perm.corporation`.
+use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_participant.corporation`.
 
-Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
+Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
 
 #### [MOD-PP-MSG-13] Repay Permission Slashed Trust Deposit
 
@@ -4257,13 +4257,13 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- if `applicant_perm.corporation` is not equal to `corporation`, abort.
+- Load `Permission` entry `applicant_participant` from `id`. If no entry found, abort.
+- if `applicant_participant.corporation` is not equal to `corporation`, abort.
 
 ###### [MOD-PP-MSG-13-2-2] Repay Permission Slashed Trust Deposit fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- `corporation` MUST have at least `applicant_perm.slashed_deposit` in its account balance, else [[ref: transaction]] MUST abort.
+- `corporation` MUST have at least `applicant_participant.slashed_deposit` in its account balance, else [[ref: transaction]] MUST abort.
 
 ##### [MOD-PP-MSG-13-3] Repay Permission Slashed Trust Deposit execution
 
@@ -4273,12 +4273,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `applicant_perm.slashed_deposit` to trust deposit of `applicant_perm.corporation`.
+use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `applicant_participant.slashed_deposit` to trust deposit of `applicant_participant.corporation`.
 
-- Load `Permission` entry `applicant_perm` from `id`.
-- set `applicant_perm.repaid` to `now`
-- set `applicant_perm.modified` to `now`
-- set `applicant_perm.repaid_deposit` to `applicant_perm.slashed_deposit`.
+- Load `Permission` entry `applicant_participant` from `id`.
+- set `applicant_participant.repaid` to `now`
+- set `applicant_participant.modified` to `now`
+- set `applicant_participant.repaid_deposit` to `applicant_participant.slashed_deposit`.
 
 #### [MOD-PP-MSG-14] Self Create Permission
 
@@ -4295,7 +4295,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `type` (PermissionType) (*mandatory*): ISSUER or VERIFIER.
-- `validator_perm_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]].
+- `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]].
 - `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
@@ -4327,21 +4327,21 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-Load `Permission` `validator_perm` from `validator_perm_id`.
+Load `Permission` `validator_participant` from `validator_participant_id`.
 
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `type` (PermissionType) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
-- `validator_perm_id` (uint64) (*mandatory*): `validator_perm` MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]].
+- `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]].
 - `vs_operator` (account) (*optional*): no check required.
 - `did`, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `effective_from` MUST be in the future AND
-  - MUST be greater or equal to `validator_perm.effective_from` AND
-  - if `validator_perm.effective_until` is not null, MUST be lower than `validator_perm.effective_until`
+  - MUST be greater or equal to `validator_participant.effective_from` AND
+  - if `validator_participant.effective_until` is not null, MUST be lower than `validator_participant.effective_until`
 - `effective_until`:
-  - if null, `validator_perm.effective_until` MUST be NULL
-  - else if not null, must be greater than `effective_from` AND if `validator_perm.effective_until` is not null, MUST be lower or equal to `validator_perm.effective_until`
+  - if null, `validator_participant.effective_until` MUST be NULL
+  - else if not null, must be greater than `effective_from` AND if `validator_participant.effective_until` is not null, MUST be lower or equal to `validator_participant.effective_until`
 - `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
 - `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-14-1](#mod-pp-msg-14-1-self-create-permission-parameters).
@@ -4350,7 +4350,7 @@ Load `Permission` `validator_perm` from `validator_perm_id`.
 
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
-- The related `CredentialSchema` entry is loaded with `validator_perm.schema_id`, and will be named `cs` in this section.
+- The related `CredentialSchema` entry is loaded with `validator_participant.schema_id`, and will be named `cs` in this section.
 - if `type` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
 - if `type` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is not equal to OPEN, MUST abort.
 - if `type` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
@@ -4362,11 +4362,11 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PP-MSG-14-2-4] Self Create Permission overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-permission) to set or adjust the `effective_until` value.
 
-Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `cs.id`, `type`, `validator_perm_id`, `corporation`.
+Find all [[ref: active permissions]] `participants[]` (not revoked, not slashed, not repaid) for `cs.id`, `type`, `validator_participant_id`, `corporation`.
 
-for each `Permission` entry `p` from `perms[]`:
+for each `Permission` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
@@ -4381,46 +4381,46 @@ If all precondition checks passed, method is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-- Load `Permission` `validator_perm` from `validator_perm_id`.
+- Load `Permission` `validator_participant` from `validator_participant_id`.
 
 A new entry `Permission` `perm` MUST be created:
 
-- `perm.id`: auto-incremented uint64.
-- `perm.validator_perm_id`: `validator_perm_id`
-- `perm.schema_id`: `validator_perm.schema_id`
-- `perm.modified` to `now`.
-- `perm.type`: `type`.
-- `perm.did`: `did`.
-- `perm.corporation`: `corporation`.
-- `perm.vs_operator`: `vs_operator`.
-- `perm.created`: `now`
-- `perm.effective_from`: `effective_from`
-- `perm.effective_until`: `effective_until`
-- `perm.validation_fees`: `validation_fees` if specified and `type` is ISSUER, else 0.
-- `perm.issuance_fees`: 0
-- `perm.verification_fees`: `verification_fees` if specified and `type` is ISSUER, else 0.
-- `perm.deposit`: 0
+- `participant.id`: auto-incremented uint64.
+- `participant.validator_participant_id`: `validator_participant_id`
+- `participant.schema_id`: `validator_participant.schema_id`
+- `participant.modified` to `now`.
+- `participant.role`: `type`.
+- `participant.did`: `did`.
+- `participant.corporation`: `corporation`.
+- `participant.vs_operator`: `vs_operator`.
+- `participant.created`: `now`
+- `participant.effective_from`: `effective_from`
+- `participant.effective_until`: `effective_until`
+- `participant.validation_fees`: `validation_fees` if specified and `type` is ISSUER, else 0.
+- `participant.issuance_fees`: 0
+- `participant.verification_fees`: `verification_fees` if specified and `type` is ISSUER, else 0.
+- `participant.deposit`: 0
 
 If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
 - `corporation`: `corporation`
 - `vs_operator`: `vs_operator`
 - `record`:
-  - `record.perm_id`: `perm.id`
+  - `record.participant_id`: `participant.id`
   - `record.msg_types`: `vs_operator_authz_msg_types`
   - `record.spend_limit`: `vs_operator_authz_spend_limit`
   - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
   - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
-  - `record.expiration`: `perm.effective_until`
+  - `record.expiration`: `participant.effective_until`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: unlike [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-permission-vp), the record is created with `expiration = perm.effective_until` and is therefore immediately active. If `with_feegrant` is true and `perm.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
+> Note: unlike [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-permission-vp), the record is created with `expiration = participant.effective_until` and is therefore immediately active. If `with_feegrant` is true and `participant.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
 #### [MOD-PP-MSG-15] Trigger Resolver
 
 This method CAN be executed by:
 
-- the `vs_operator` of the permission, acting on behalf of `perm.corporation`; or
+- the `vs_operator` of the permission, acting on behalf of `participant.corporation`; or
 - any ancestor validator of the permission in the permission tree (from the direct parent up to the root permission). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` defined in `v`, or by any `operator` authorized by `v.corporation` for this message type.
 
 This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the `did` registered in the permission. Typical use cases include:
@@ -4450,7 +4450,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `id` MUST be a valid uint64.
 - Load `Permission` entry `perm` from `id`. If no entry found, abort.
 - `perm` MUST be an [[ref: active permission]], else abort.
-- `perm.did` MUST NOT be null, else abort.
+- `participant.did` MUST NOT be null, else abort.
 
 ###### [MOD-PP-MSG-15-2-2] Trigger Resolver authorization checks
 
@@ -4458,8 +4458,8 @@ At least one of the two authorization paths below MUST pass, else [[ref: transac
 
 *Path 1 — vs_operator of the target permission*
 
-- `corporation` MUST be equal to `perm.corporation`.
-- `operator` MUST be equal to `perm.vs_operator`.
+- `corporation` MUST be equal to `participant.corporation`.
+- `operator` MUST be equal to `participant.vs_operator`.
 - [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 - [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 
@@ -4468,8 +4468,8 @@ At least one of the two authorization paths below MUST pass, else [[ref: transac
 The target `perm` itself is excluded from this walk; only its ancestors (from the direct parent up to the root) are considered. Walk the tree:
 
 - set `v` = `perm`.
-- while `v.validator_perm_id` is defined and != `perm.id` :
-  - load `v` from `v.validator_perm_id`.
+- while `v.validator_participant_id` is defined and != `participant.id` :
+  - load `v` from `v.validator_participant_id`.
   - if `v` is not an [[ref: active permission]], continue with the next iteration.
   - if corporation != v.corporation, continue with the next iteration.
   - if [AUTHZ-CHECK-1](#authz-check-1-operator-authorization-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver`, then authorization is granted => match.
@@ -4486,9 +4486,9 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 This method does not modify the state of the [[ref: VPR]]. It MUST emit an event signaling that a trust resolution has been triggered for `perm`. The event MUST include at least:
 
-- `perm_id`: equal to `id`.
+- `participant_id`: equal to `id`.
 
-> Note: the identity of the signers (`corporation`, `operator`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `Permission` entry queried by `perm_id` to resolve `did`, `corporation`, `vs_operator`, and ancestor chain without duplicating them in the event payload.
+> Note: the identity of the signers (`corporation`, `operator`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `Permission` entry queried by `participant_id` to resolve `did`, `corporation`, `vs_operator`, and ancestor chain without duplicating them in the event payload.
 
 #### [MOD-PP-QRY-1] List Permissions
 
@@ -4508,7 +4508,7 @@ Generic query used for (at least):
 - `schema_id` (number) (*optional*): the schema id.
 - `grantee` (account) (*optional*): the grantee account.
 - `did` (string) (*optional*): the did the permission refers to.
-- `perm_id` (number) (*optional*): limit to permissions where the `validator_perm_id` is `perm_id`.
+- `participant_id` (number) (*optional*): limit to permissions where the `validator_participant_id` is `participant_id`.
 - `type` (PermissionType) (*optional*): if we want to limit to a specific permission type.
 - `only_valid` (boolean) (*optional*): if set to true, only return active permissions.
 - `only_slashed` (boolean) (*optional*): if set to true, only return slashed permissions.
@@ -4554,22 +4554,22 @@ Obsoleted by [MOD-PP-QRY-1].
 
 Anyone can execute this method.
 
-To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches `issuer_perm` and `verifier_perm`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_perm` is null, `issuer_perm` is never added to the set. If `verifier_perm` is NOT null, `issuer_perm` is added to the set if it exists but `verifier_perm` is not added to the set.
+To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches `issuer_participant` and `verifier_participant`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_participant` is null, `issuer_participant` is never added to the set. If `verifier_participant` is NOT null, `issuer_participant` is added to the set if it exists but `verifier_participant` is not added to the set.
 
-Example 1: `verifier_perm`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
+Example 1: `verifier_participant`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
 
 ```plantuml
 
 @startuml
 scale max 800 width
 object "ECOSYSTEM executor ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "ISSUER_GRANTOR executor ancestor perm" as ig #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "ISSUER executor perm" as i #7677ed {
-  don't add me to found_perm_set
+  don't add me to found_participant_set
 }
 
 ig --> tr
@@ -4578,17 +4578,17 @@ i --> ig
 
 ```
 
-Example 2: `verifier_perm`: is not set: it's a credential offer. Schema configured to NOT have Issuer Grantors.
+Example 2: `verifier_participant`: is not set: it's a credential offer. Schema configured to NOT have Issuer Grantors.
 
 ```plantuml
 
 @startuml
 scale max 800 width
 object "ECOSYSTEM executor ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "ISSUER executor perm" as i #7677ed {
-  don't add me to found_perm_set
+  don't add me to found_participant_set
 }
 
 
@@ -4597,27 +4597,27 @@ i --> tr
 
 ```
 
-Example 3: `verifier_perm` is set, it's a presentation request. Schema configured to have Verifier and Issuer Grantors.
+Example 3: `verifier_participant` is set, it's a presentation request. Schema configured to have Verifier and Issuer Grantors.
 
 ```plantuml
 
 @startuml
 scale max 800 width
 object "ECOSYSTEM beneficiary ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "ISSUER_GRANTOR beneficiary ancestor perm" as ig #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "ISSUER beneficiary perm" as i #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 
 object "VERIFIER_GRANTOR executor ancestor perm" as vg #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "VERIFIER executor perm" as v #7677ed {
-  don't add me to found_perm_set
+  don't add me to found_participant_set
 }
 
 ig --> tr
@@ -4631,39 +4631,39 @@ v --> vg
 
 ##### [MOD-PP-QRY-4-1] Find Beneficiaries parameters
 
-- `issuer_perm_id` (uint64) (*optional*): id of issuer permission.
-- `verifier_perm_id` (uint64) (*optional*): id of verifier permission.
+- `issuer_participant_id` (uint64) (*optional*): id of issuer permission.
+- `verifier_participant_id` (uint64) (*optional*): id of verifier permission.
 
 ##### [MOD-PP-QRY-4-2] Find Beneficiaries checks
 
-- if `issuer_perm_id` and `verifier_perm_id` are unset then MUST abort.
-- if `issuer_perm_id` is specified, load `issuer_perm` from `issuer_perm_id`, Permission MUST exist and MUST be a [[ref: active permission]].
-- if `verifier_perm_id` is specified, load `verifier_perm` from `verifier_perm_id`, Permission MUST exist and MUST be a [[ref: active permission]].
+- if `issuer_participant_id` and `verifier_participant_id` are unset then MUST abort.
+- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`, Permission MUST exist and MUST be a [[ref: active permission]].
+- if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Permission MUST exist and MUST be a [[ref: active permission]].
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
 Example: Let's build the set. Revoked and slashed permissions will not be added to the set. Expired permissions, if not revoked/slashed, will be considered.
 
-- create Set `found_perm_set`.
+- create Set `found_participant_set`.
 
-- define permission `current_perm` as null.
+- define permission `current_participant` as null.
 
-- load perms `issuer_perm` and optional `verifier_perm` as specified in basic checks above.
+- load perms `issuer_participant` and optional `verifier_participant` as specified in basic checks above.
 
-if `issuer_perm` is not null:
+if `issuer_participant` is not null:
 
-- set `current_perm` = `issuer_perm`
-- while `current_perm.validator_perm_id` is not null:
-  - current_perm = load(`current_perm.validator_perm_id`)
-  - if `current_perm.revoked` is NULL AND `current_perm.slashed` is NULL, Add `current_perm` to `found_perm_set`.
+- set `current_participant` = `issuer_participant`
+- while `current_participant.validator_participant_id` is not null:
+  - current_participant = load(`current_participant.validator_participant_id`)
+  - if `current_participant.revoked` is NULL AND `current_participant.slashed` is NULL, Add `current_participant` to `found_participant_set`.
 
-Additionally, if `verifier_perm` is not null:
+Additionally, if `verifier_participant` is not null:
 
-- if `issuer_perm` is not null, add `issuer_perm` to `found_perm_set`
-- set `current_perm` = `verifier_perm`
-- while `current_perm.validator_perm_id` != null:
-  - current_perm = load(`current_perm.validator_perm_id`)
-  - if `current_perm.revoked` is NULL AND `current_perm.slashed` is NULL, Add `current_perm` to `found_perm_set`.
+- if `issuer_participant` is not null, add `issuer_participant` to `found_participant_set`
+- set `current_participant` = `verifier_participant`
+- while `current_participant.validator_participant_id` != null:
+  - current_participant = load(`current_participant.validator_participant_id`)
+  - if `current_participant.revoked` is NULL AND `current_participant.slashed` is NULL, Add `current_participant` to `found_participant_set`.
 
 return `found_perms`.
 
@@ -4758,12 +4758,12 @@ participant "Verifiable Public Registry" as VPR #3fbdb6
 
 ApplicantAccount --> VPR: Start Permission VP
 VPR <-- VPR: create permission entry.
-ApplicantAccount <-- VPR: permission entry created,\nassigned perm.validator_perm_id from ISSUER_GRANTOR permissions.
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validator_perm.did\nby creating a DIDComm connection
+ApplicantAccount <-- VPR: permission entry created,\nassigned participant.validator_participant_id from ISSUER_GRANTOR permissions.
+ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validator_participant.did\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
-ApplicantBrowser --> ValidatorVS: I want to proceed with perm.id=...
-ValidatorVS --> ValidatorVS: load perm with id=...\nand verify the associated perm.validator_perm_id is referring to me
-ApplicantBrowser <-- ValidatorVS: request proof of control\nof perm.applicant account (blind sign)
+ApplicantBrowser --> ValidatorVS: I want to proceed with participant.id=...
+ValidatorVS --> ValidatorVS: load perm with id=...\nand verify the associated participant.validator_participant_id is referring to me
+ApplicantBrowser <-- ValidatorVS: request proof of control\nof participant.applicant account (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proof of account
 ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof validation entry, I trust you.
 ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
@@ -5312,7 +5312,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - Check if a **VS Operator Authorization** exists for `corporation` and `grantee`. If this is the case, MUST abort.
 
 ::: warning
-An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for `perm.corporation` and `perm.vs_operator`. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
+An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for `participant.corporation` and `participant.vs_operator`. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
 :::
 
 ##### [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks
@@ -5392,7 +5392,7 @@ This method does NOT read `Permission` state. All authorization configuration is
 If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `corporation` and `vs_operator` MUST NOT be null.
-- `record.perm_id` MUST NOT match an existing `PermissionAuthorizationRecord` anywhere in the store (each record is globally unique by `perm_id`).
+- `record.participant_id` MUST NOT match an existing `PermissionAuthorizationRecord` anywhere in the store (each record is globally unique by `participant_id`).
 - `record.msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
 - No `OperatorAuthorization` `oauthz` where `oauthz.corporation` = `corporation` and `oauthz.operator` = `vs_operator` MUST exist.
 - No other `VSOperatorAuthorization` `vsoauthz'` where `vsoauthz'.vs_operator` = `vs_operator` AND `vsoauthz'.corporation` != `corporation` MUST exist. In other words, a vs-agent VPR account cannot be controlled by multiple corporations.
@@ -5439,19 +5439,19 @@ This method can only be called directly by the following Permission module metho
 - [Revoke Permission](#mod-pp-msg-9-revoke-permission)
 - [Slash Permission Trust Deposit](#mod-pp-msg-12-slash-permission-trust-deposit)
 
-It removes the unique [PermissionAuthorizationRecord](#permissionauthorizationrecord) identified by `perm_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no such record exists.
+It removes the unique [PermissionAuthorizationRecord](#permissionauthorizationrecord) identified by `participant_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no such record exists.
 
 This method does NOT read `Permission` state.
 
 ##### [MOD-DE-MSG-6-1] Revoke VS Operator Authorization method parameters
 
-- `perm_id` (uint64) (*mandatory*): id of the permission whose authorization record must be removed.
+- `participant_id` (uint64) (*mandatory*): id of the permission whose authorization record must be removed.
 
 ##### [MOD-DE-MSG-6-2] Revoke VS Operator Authorization basic checks
 
-- `perm_id` MUST be a valid uint64.
+- `participant_id` MUST be a valid uint64.
 
-> Note: absence of a record for `perm_id` is NOT an error. The method is a no-op in that case (the permission was never VS-operator-authorized, or was already revoked).
+> Note: absence of a record for `participant_id` is NOT an error. The method is a no-op in that case (the permission was never VS-operator-authorized, or was already revoked).
 
 ##### [MOD-DE-MSG-6-3] Revoke VS Operator Authorization fee checks
 
@@ -5459,7 +5459,7 @@ This method does NOT read `Permission` state.
 
 ##### [MOD-DE-MSG-6-4] Revoke VS Operator Authorization execution of the method
 
-- Locate the unique `PermissionAuthorizationRecord` `record` with `record.perm_id = perm_id`. If none exists, EXIT (no-op).
+- Locate the unique `PermissionAuthorizationRecord` `record` with `record.participant_id = participant_id`. If none exists, EXIT (no-op).
 - Let `vsoa` = the `VSOperatorAuthorization` that contains `record`.
 - Remove `record` from `vsoa.records`.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
@@ -5472,21 +5472,21 @@ This method can only be called directly by the following Permission module metho
 - [Set Permission VP to Validated](#mod-pp-msg-3-set-permission-vp-to-validated)
 - [Adjust Permission](#mod-pp-msg-8-adjust-permission)
 
-It updates the `expiration` of the unique record identified by `perm_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no record exists for `perm_id`.
+It updates the `expiration` of the unique record identified by `participant_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no record exists for `participant_id`.
 
 This method does NOT read `Permission` state; the caller supplies the new expiration value directly.
 
 ##### [MOD-DE-MSG-9-1] Update VS Operator Authorization Expiration method parameters
 
-- `perm_id` (uint64) (*mandatory*): id of the permission whose authorization record's `expiration` must be updated.
+- `participant_id` (uint64) (*mandatory*): id of the permission whose authorization record's `expiration` must be updated.
 - `new_expiration` (timestamp) (*mandatory*): the new value of `record.expiration`.
 
 ##### [MOD-DE-MSG-9-2] Update VS Operator Authorization Expiration basic checks
 
-- `perm_id` MUST be a valid uint64.
+- `participant_id` MUST be a valid uint64.
 - `new_expiration` MUST be a valid timestamp.
 
-> Note: absence of a record for `perm_id` is NOT an error. The method is a no-op in that case (the permission does not enable VS operator authorization).
+> Note: absence of a record for `participant_id` is NOT an error. The method is a no-op in that case (the permission does not enable VS operator authorization).
 
 ##### [MOD-DE-MSG-9-3] Update VS Operator Authorization Expiration fee checks
 
@@ -5494,7 +5494,7 @@ This method does NOT read `Permission` state; the caller supplies the new expira
 
 ##### [MOD-DE-MSG-9-4] Update VS Operator Authorization Expiration execution of the method
 
-- Locate the unique `PermissionAuthorizationRecord` `record` with `record.perm_id = perm_id`. If none exists, EXIT (no-op).
+- Locate the unique `PermissionAuthorizationRecord` `record` with `record.participant_id = participant_id`. If none exists, EXIT (no-op).
 - Set `record.expiration = new_expiration`.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for the VSOA containing `record`.
 
