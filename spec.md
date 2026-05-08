@@ -1428,13 +1428,13 @@ A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries 
 A `ParticipantAuthorizationRecord` carries the per-permission authorization configuration that was previously stored on `Participant.vs_operator_authz_*` fields. Each record is globally unique by `participant_id`: for any `Participant.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `participant_id` via a direct lookup.
 
 - `participant_id` (uint64) (*mandatory*): id of the `Participant` this authorization record applies to. Globally unique across all `ParticipantAuthorizationRecord` entries.
-- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `participant_id`. Declared by the applicant at record creation time (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). Frozen after creation.
+- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `participant_id`. Declared by the applicant at record creation time (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). Frozen after creation.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this permission, as a direct consequence of executing authorized messages.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
 - `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
 - `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this permission, through an on-chain `FeeGrant`.
-- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp) (disabled until validation) and to `Participant.effective_until` at [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-vp-to-validated) / [[MOD-PP-MSG-8]](#mod-pp-msg-8-adjust-participant) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant).
+- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (disabled until validation) and to `Participant.effective_until` at [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) / [[MOD-PP-MSG-8]](#mod-pp-msg-8-adjust-participant) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant).
 - `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this permission.
 
 ### ExchangeRate
@@ -1706,7 +1706,7 @@ If the transaction fees are paid by the `corporation` account (via fee grant) in
 
 A second authorization grant mode exists for vs-agents. It is used when a corporation delegates a specific permission (and a specific set of message types, scoped to that permission) to a `vs_operator` account. The authorization model differs from other delegable messages: it relies on [VSOperatorAuthorization](#vsoperatorauthorization) / [ParticipantAuthorizationRecord](#participantauthorizationrecord) instead of `OperatorAuthorization`.
 
-> Note: the set of messages a `vs_operator` is authorized to execute in the context of a permission is declared by the applicant at permission creation time (see [[MOD-PP-MSG-1-1]](#mod-pp-msg-1-1-start-participant-vp-parameters) and [[MOD-PP-MSG-14-1]](#mod-pp-msg-14-1-self-create-participant-parameters)) and stored in `record.msg_types`. It is frozen for the lifetime of the record and can only be changed by revoking the permission and starting a new one.
+> Note: the set of messages a `vs_operator` is authorized to execute in the context of a permission is declared by the applicant at permission creation time (see [[MOD-PP-MSG-1-1]](#mod-pp-msg-1-1-start-participant-op-parameters) and [[MOD-PP-MSG-14-1]](#mod-pp-msg-14-1-self-create-participant-parameters)) and stored in `record.msg_types`. It is frozen for the lifetime of the record and can only be changed by revoking the permission and starting a new one.
 
 Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission id** `participant_id` (determined by the calling method), and the current message type `msg_type`:
 
@@ -1733,7 +1733,7 @@ If the [[ref: transaction]] fees are paid by the `corporation` account (via fee 
 
 A corporation group `corporationABC` wants to authorize an operator account `accountABC` to execute the  
 [`mod-pp-msg-10-create-or-update-participant-session`](#mod-pp-msg-10-create-or-update-participant-session),
-[`mod-pp-msg-3-set-participant-vp-to-validated`](#mod-pp-msg-3-set-participant-vp-to-validated), and
+[`mod-pp-msg-3-set-participant-op-to-validated`](#mod-pp-msg-3-set-participant-op-to-validated), and
 [`mod-pp-msg-15-trigger-resolver`](#mod-pp-msg-15-trigger-resolver)
  messages.
 
@@ -1743,7 +1743,7 @@ To achieve this, `corporationABC` MUST:
 
 - create an **authorization** from `corporationABC` to `accountABC` for the  
   [`mod-pp-msg-10-create-or-update-participant-session`](#mod-pp-msg-10-create-or-update-participant-session),
-[`mod-pp-msg-3-set-participant-vp-to-validated`](#mod-pp-msg-3-set-participant-vp-to-validated), and
+[`mod-pp-msg-3-set-participant-op-to-validated`](#mod-pp-msg-3-set-participant-op-to-validated), and
 [`mod-pp-msg-15-trigger-resolver`](#mod-pp-msg-15-trigger-resolver) message types, optionally enabling an associated fee grant.
 
 As a result, `accountABC` is authorized to:
@@ -1777,10 +1777,10 @@ As a result, `accountABC` is authorized to:
 |                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-CS-QRY-4]](#mod-cs-qry-4-list-module-parameters)   |N/A  |
 |                  | Get Schema Authorization Policy                         | /cs/v1/sap/get         | Query | [[MOD-CS-QRY-5]](#mod-cs-qry-5-get-schema-authorization-policy) | N/A |
 |                  | List Schema Authorization Policies                      | /cs/v1/sap/list        | Query | [[MOD-CS-QRY-6]](#mod-cs-qry-6-list-schema-authorization-policies) | N/A |
-| Participant                    | Start Participant VP                     |     N/A (Tx)                       | Msg    | [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp)    |corporation + operator |
-|                                | Renew a Participant VP                   |       N/A (Tx)                     | Msg    | [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-vp)    |corporation + operator |
-|                                | Set Participant VP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-vp-to-validated)    |corporation + operator |
-|                                | Cancel Participant VP Last Request       |         N/A (Tx)                    | Msg    | [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-vp-last-request)    |corporation + operator |
+| Participant                    | Start Participant OP                     |     N/A (Tx)                       | Msg    | [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op)    |corporation + operator |
+|                                | Renew a Participant OP                   |       N/A (Tx)                     | Msg    | [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)    |corporation + operator |
+|                                | Set Participant OP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)    |corporation + operator |
+|                                | Cancel Participant OP Last Request       |         N/A (Tx)                    | Msg    | [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)    |corporation + operator |
 |                                | Create Root Participant                  |         N/A (Tx)                | Msg    | [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant)   |corporation + operator |
 |                                | Adjust Participant                       |         N/A (Tx)            | Msg    | [[MOD-PP-MSG-8]](#mod-pp-msg-8-adjust-participant)  |corporation + operator |
 |                                | Revoke Participant                       |          N/A (Tx)              | Msg    | [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)  |corporation + operator |
@@ -2790,11 +2790,11 @@ Some special unexpected situation may arise and must be mitigated. Examples:
 - if selected validator permission is revoked while applicant's validation is in PENDING state: Applicant CAN cancel the onboarding process [MOD-PP-MSG-6].
 - if selected validator permission is revoked while applicant is in VALIDATED state: Applicant CAN renew the onboarding process by choosing a new validator [MOD-PP-MSG-2].
 
-#### [MOD-PP-MSG-1] Start Participant VP
+#### [MOD-PP-MSG-1] Start Participant OP
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-##### [MOD-PP-MSG-1-1] Start Participant VP parameters
+##### [MOD-PP-MSG-1-1] Start Participant OP parameters
 
 An Applicant that would like to start a permission onboarding process MUST execute this method by specifying:
 
@@ -2830,11 +2830,11 @@ Permitted message types to be set in `vs_operator_authz_msg_types` depends on `t
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
-##### [MOD-PP-MSG-1-2] Start Participant VP precondition checks
+##### [MOD-PP-MSG-1-2] Start Participant OP precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PP-MSG-1-2-1] Start Participant VP basic checks
+###### [MOD-PP-MSG-1-2-1] Start Participant OP basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -2842,18 +2842,18 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `type` (ParticipantRole) (*mandatory*) MUST be a valid ParticipantRole: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
-- `validator_participant_id` (uint64) (*mandatory*): see [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-participant-vp-permission-checks).
+- `validator_participant_id` (uint64) (*mandatory*): see [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-participant-op-permission-checks).
 - `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-vp-parameters).
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-op-parameters).
 
 :::note
 A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the onboarding process is REQUIRED or not.
 :::
 
-###### [MOD-PP-MSG-1-2-2] Start Participant VP permission checks
+###### [MOD-PP-MSG-1-2-2] Start Participant OP permission checks
 
 - Load `Participant` entry `validator_participant` from `validator_participant_id`. It MUST be a [[ref: active participant]] else transaction MUST abort.
 - Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`. It MUST exist.
@@ -2894,7 +2894,7 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 At the end, if a [[ref: active participant]] `validator_participant` is not found, [[ref: transaction]] MUST abort.
 
-###### [MOD-PP-MSG-1-2-3] Start Participant VP fee checks
+###### [MOD-PP-MSG-1-2-3] Start Participant OP fee checks
 
 - Load `Participant` entry `validator_participant` from `validator_participant_id`.
 - Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`.
@@ -2933,7 +2933,7 @@ else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin 
 Trust deposit MUST always be paid in [[ref: native denom]]
 :::
 
-###### [MOD-PP-MSG-1-2-4] Start Participant VP overlap checks
+###### [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks
 
 We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different VP with differents validators for the same `schema_id`, `type`.
 
@@ -2943,7 +2943,7 @@ if size of `participants[]` > 0, it means there is already an existing onboardin
 
 > note: this check was not present in v3.
 
-##### [MOD-PP-MSG-1-3] Start Participant VP execution
+##### [MOD-PP-MSG-1-3] Start Participant OP execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -2991,7 +2991,7 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
   - `record.expiration`: `now`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: the record is created with `expiration = now` so authorization is **not yet active**. [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) will reject any attempt to use it until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-vp-to-validated) updates `expiration` to `applicant_participant.effective_until`. No on-chain `FeeGrant` object is created at this stage even if `with_feegrant` is true (the recompute subroutine in [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) requires `expiration > now`).
+> Note: the record is created with `expiration = now` so authorization is **not yet active**. [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) will reject any attempt to use it until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) updates `expiration` to `applicant_participant.effective_until`. No on-chain `FeeGrant` object is created at this stage even if `with_feegrant` is true (the recompute subroutine in [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) requires `expiration > now`).
 
 #### Connecting to the VS of the Validator
 
@@ -3018,7 +3018,7 @@ The [[ref: validator]] may compile a summary file of the onboarding process, doc
 
 For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_participant.vp_summary_digest`.
 
-#### [MOD-PP-MSG-2] Renew Participant VP
+#### [MOD-PP-MSG-2] Renew Participant OP
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
@@ -3030,17 +3030,17 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - Renewal does not allow changing the `participant.validation_fees`, `participant.issuance_fees`, `participant.verification_fees`. To change these values, applicant MUST start a new onboarding process.
 - if permission is revoked, slashed, or repaid, method MUST fail.
 
-##### [MOD-PP-MSG-2-1] Renew Participant VP parameters
+##### [MOD-PP-MSG-2-1] Renew Participant OP parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission for which applicant would like to renew the onboarding process;
 
-##### [MOD-PP-MSG-2-2] Renew Participant VP precondition checks
+##### [MOD-PP-MSG-2-2] Renew Participant OP precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PP-MSG-2-2-1] Renew Participant VP basic checks
+###### [MOD-PP-MSG-2-2-1] Renew Participant OP basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3049,12 +3049,12 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64 and a permission entry with the same id MUST exist.
 
-###### [MOD-PP-MSG-2-2-2] Renew Participant VP permission checks
+###### [MOD-PP-MSG-2-2-2] Renew Participant OP permission checks
 
 - Load `Participant` entry `applicant_participant`. `corporation` running the operation MUST be `applicant_participant.corporation`, else MUST abort. `applicant_participant` MUST be a [[ref: active participant]].
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: active participant]], else MUST abort.
 
-###### [MOD-PP-MSG-2-2-3] Renew Participant VP fee checks
+###### [MOD-PP-MSG-2-2-3] Renew Participant OP fee checks
 
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
 - Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`.
@@ -3093,7 +3093,7 @@ else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin 
 Trust deposit MUST always be paid in [[ref: native denom]]
 :::
 
-###### [MOD-PP-MSG-2-3] Renew Participant VP execution
+###### [MOD-PP-MSG-2-3] Renew Participant OP execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -3117,11 +3117,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
   - `applicant_participant.modified`: `now`
 
-#### [MOD-PP-MSG-3] Set Participant VP to Validated
+#### [MOD-PP-MSG-3] Set Participant OP to Validated
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-##### [MOD-PP-MSG-3-1] Set Participant VP to Validated parameters
+##### [MOD-PP-MSG-3-1] Set Participant OP to Validated parameters
 
 An [[ref: account]] that would like to set a validation entry to VALIDATED MUST execute this method by specifying:
 
@@ -3136,11 +3136,11 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_ONBOARDING_PROCESS mode) or an ISSUER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_ONBOARDING_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
-##### [MOD-PP-MSG-3-2] Set Participant VP to Validated precondition checks
+##### [MOD-PP-MSG-3-2] Set Participant OP to Validated precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PP-MSG-3-2-1] Set Participant VP to Validated basic checks
+###### [MOD-PP-MSG-3-2-1] Set Participant OP to Validated basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3200,19 +3200,19 @@ Now, let's verify `effective_until`:
 - else if `applicant_participant.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
 - else `effective_until` MUST be greater than `applicant_participant.effective_until` AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
 
-###### [MOD-PP-MSG-3-2-2] Set Participant VP to Validated validator perms
+###### [MOD-PP-MSG-3-2-2] Set Participant OP to Validated validator perms
 
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]].
 - `corporation` running the method MUST be `validator_participant.corporation`.
 
 If `validator_participant` is not a [[ref: active participant]] (expired, revoked, slashed...) then applicant MUST start a new onboarding process.
 
-###### [MOD-PP-MSG-3-2-3] Set Participant VP to Validated fee checks
+###### [MOD-PP-MSG-3-2-3] Set Participant OP to Validated fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 - if `applicant_participant.vp_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.vp_current_deposit` available in [[ref: native denom]] on its account for paying the trust deposit.
 
-###### [MOD-PP-MSG-3-2-4] Set Participant VP to Validated overlap checks
+###### [MOD-PP-MSG-3-2-4] Set Participant OP to Validated overlap checks
 
 We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. That should not occur in this method, but better do the check anyway.
 
@@ -3226,7 +3226,7 @@ for each `Participant` entry `p` from `participants[]`:
 
 > note: this check was not present in v3.
 
-##### [MOD-PP-MSG-3-3] Set Participant VP to Validated execution
+##### [MOD-PP-MSG-3-3] Set Participant OP to Validated execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -3288,29 +3288,29 @@ Activate VS Operator Authorization, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-
 - `participant_id`: `applicant_participant.id`
 - `new_expiration`: `applicant_participant.effective_until`
 
-This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its `expiration` is updated from `now` (disabled) to `applicant_participant.effective_until`, and the on-chain `FeeGrant` for the containing VSOA is granted for the first time (or refreshed) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
+This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its `expiration` is updated from `now` (disabled) to `applicant_participant.effective_until`, and the on-chain `FeeGrant` for the containing VSOA is granted for the first time (or refreshed) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 
 #### [MOD-PP-MSG-4] Void
 
 #### [MOD-PP-MSG-5] Void
 
-#### [MOD-PP-MSG-6] Cancel Participant VP Last Request
+#### [MOD-PP-MSG-6] Cancel Participant OP Last Request
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 At any time, [[ref: applicant]] of a permission onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and escrewed [[ref: trust fees]] are refunded. If `vp_exp` is not null, `vp_state` is set back to VALIDATED, else `vp_state` is set to TERMINATED.
 
-##### [MOD-PP-MSG-6-1] Cancel Participant VP Last Request parameters
+##### [MOD-PP-MSG-6-1] Cancel Participant OP Last Request parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry;
 
-##### [MOD-PP-MSG-6-2] Cancel Participant VP Last Request precondition checks
+##### [MOD-PP-MSG-6-2] Cancel Participant OP Last Request precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PP-MSG-6-2-1] Cancel Participant VP Last Request basic checks
+###### [MOD-PP-MSG-6-2-1] Cancel Participant OP Last Request basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3323,11 +3323,11 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `applicant_participant.vp_state` MUST be PENDING.
 - if `applicant_participant.deposit` has been slashed and not repaid, MUST abort
 
-###### [MOD-PP-MSG-6-2-2] Cancel Participant VP Last Request fee checks
+###### [MOD-PP-MSG-6-2-2] Cancel Participant OP Last Request fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-PP-MSG-6-3] Cancel Participant VP Last Request execution
+##### [MOD-PP-MSG-6-3] Cancel Participant OP Last Request execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -3347,7 +3347,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_participant.corporation` by `applicant_participant.vp_current_deposit`
   - set `applicant_participant.vp_current_deposit` to 0.
 
-If `applicant_participant.vp_state` was set to TERMINATED (i.e. `applicant_participant.vp_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp). The call is a no-op if no record exists. If `applicant_participant.vp_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
+If `applicant_participant.vp_state` was set to TERMINATED (i.e. `applicant_participant.vp_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The call is a no-op if no record exists. If `applicant_participant.vp_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
 
 #### [MOD-PP-MSG-7] Create Root Participant
 
@@ -3561,7 +3561,7 @@ Synchronise VS Operator Authorization expiration, if any. Call [[MOD-DE-MSG-9]](
 - `participant_id`: `applicant_participant.id`
 - `new_expiration`: `applicant_participant.effective_until`
 
-This call is a no-op if no record exists for `applicant_participant.id`. If a record exists, its `expiration` is updated and the on-chain `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Adjust Participant does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). Adjust also cannot create a record that does not already exist.
+This call is a no-op if no record exists for `applicant_participant.id`. If a record exists, its `expiration` is updated and the on-chain `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Adjust Participant does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). Adjust also cannot create a record that does not already exist.
 
 #### [MOD-PP-MSG-9] Revoke Participant
 
@@ -4415,7 +4415,7 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
   - `record.expiration`: `participant.effective_until`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: unlike [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-vp), the record is created with `expiration = participant.effective_until` and is therefore immediately active. If `with_feegrant` is true and `participant.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
+> Note: unlike [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), the record is created with `expiration = participant.effective_until` and is therefore immediately active. If `with_feegrant` is true and `participant.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
 #### [MOD-PP-MSG-15] Trigger Resolver
 
@@ -4757,7 +4757,7 @@ actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
 
 participant "Verifiable Public Registry" as VPR #3fbdb6
 
-ApplicantAccount --> VPR: Start Participant VP
+ApplicantAccount --> VPR: Start Participant OP
 VPR <-- VPR: create permission entry.
 ApplicantAccount <-- VPR: permission entry created,\nassigned participant.validator_participant_id from ISSUER_GRANTOR permissions.
 ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validator_participant.did\nby creating a DIDComm connection
@@ -4778,7 +4778,7 @@ ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by fil
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
 note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
 ApplicantBrowser <-- ValidatorVS: Your are a legitimate issuer. I'll now create an ISSUER permission for your account and DID.
-ValidatorAccount --> VPR #3fbdb6: Set Participant VP to Validated\nset validation.state to VALIDATED\n.
+ValidatorAccount --> VPR #3fbdb6: Set Participant OP to Validated\nset validation.state to VALIDATED\n.
 VPR --> ValidatorAccount: Receive trust fees.
 ApplicantBrowser <-- ValidatorVS: notify permission added for your DID.\nDID can now issue credentials of this schema.
 ```
@@ -5375,7 +5375,7 @@ MUST abort if one of these conditions fails:
 
 This method can only be called directly by the following Participant module methods, with no signer check:
 
-- [Start Participant VP](#mod-pp-msg-1-start-participant-vp)
+- [Start Participant OP](#mod-pp-msg-1-start-participant-op)
 - [Self Create Participant](#mod-pp-msg-14-self-create-participant)
 
 It creates a new [ParticipantAuthorizationRecord](#participantauthorizationrecord) inside `VSOperatorAuthorization[corporation, vs_operator]` and, if the record enables a fee grant and its `expiration` is in the future, synchronises the on-chain `FeeGrant` for the containing VSOA.
@@ -5436,7 +5436,7 @@ This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-o
 
 This method can only be called directly by the following Participant module methods, with no signer check:
 
-- [Cancel Participant VP Last Request](#mod-pp-msg-6-cancel-participant-vp-last-request) (only when the cancellation terminates the permission)
+- [Cancel Participant OP Last Request](#mod-pp-msg-6-cancel-participant-op-last-request) (only when the cancellation terminates the permission)
 - [Revoke Participant](#mod-pp-msg-9-revoke-participant)
 - [Slash Participant Trust Deposit](#mod-pp-msg-12-slash-participant-trust-deposit)
 
@@ -5470,7 +5470,7 @@ This method does NOT read `Participant` state.
 
 This method can only be called directly by the following Participant module methods, with no signer check:
 
-- [Set Participant VP to Validated](#mod-pp-msg-3-set-participant-vp-to-validated)
+- [Set Participant OP to Validated](#mod-pp-msg-3-set-participant-op-to-validated)
 - [Adjust Participant](#mod-pp-msg-8-adjust-participant)
 
 It updates the `expiration` of the unique record identified by `participant_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no record exists for `participant_id`.
