@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft19](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft20](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -2758,7 +2758,7 @@ issuer --> holder: granted schema permission
 
 The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running an Onboarding Process (or by any account: - for `ISSUER` permissions if issuer_onboarding_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_onboarding_mode is equal to `OPEN`).
 
-A Onboarding Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: corporation]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional validation fees plus transaction fees.
+An Onboarding Process (OP) is a process which involves an [[ref: applicant]] (which is the [[ref: corporation]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional validation fees plus transaction fees.
 
 Validation is used by [[ref: applicants]] that want to:
 
@@ -2935,7 +2935,7 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 
 ###### [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks
 
-We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different VP with differents validators for the same `schema_id`, `type`.
+We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different OP with differents validators for the same `schema_id`, `type`.
 
 Find all permission `participants[]` for `schema_id`, `type`, `validator_participant_id`, `corporation` with op_state = VALIDATED or PENDING.
 
@@ -3481,7 +3481,7 @@ This method can be called:
 
 - by `participant.corporation`, if permission is of type ECOSYSTEM.
 - by `participant.corporation`, if it is a self-created permission (schema configuration is open)
-- by a `corporation` of a validator permission (if permission is managed by a VP).
+- by a `corporation` of a validator permission (if permission is managed by an OP).
 
 ##### [MOD-PP-MSG-8-1] Adjust Participant parameters
 
@@ -3519,7 +3519,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]] of type ECOSYSTEM. `corporation` running the method MUST be `applicant_participant.corporation`.
 
-3. VP managed permissions
+3. OP managed permissions
 
 - `effective_until` MUST be lower or equal to `applicant_participant.op_exp` else MUST abort.
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]]. `corporation` running the method MUST be `validator_participant.corporation`.
