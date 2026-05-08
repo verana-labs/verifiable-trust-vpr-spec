@@ -50,12 +50,12 @@ Before exploring this spec, it is highly recommended to **first read** the [Veri
 
 *This section is non-normative.*
 
-An ecosystem is an approved list of recognized ecosystem participants, such as ecosystem operators, credential [[ref: issuers]] and [[ref: verifiers]] that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
+An ecosystem is an approved list of recognized participants, such as ecosystem operators, credential [[ref: issuers]] and [[ref: verifiers]], that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
 
 An ecosystem typically expose APIs that are consumed by services that would like to [[ref: query]] its database, and take decisions based on the returned result:
 
 - can [[ref: participant]] #1 issue credential for `schema` ABC of `ecosystem` E1?
-- can [[ref: participant]] #2 request credential presentation of credential issued by `issuer` DEF from `schema` GHI of `ecosystem` E2, for `jurisdiction` France in `context` CONTEXT?
+- can [[ref: participant]] #2 request credential presentation of credential issued by `issuer` DEF from `schema` GHI of `ecosystem` E2 in `context` CONTEXT?
 
 ### What is a Verifiable Public Registry?
 
@@ -64,10 +64,11 @@ An ecosystem typically expose APIs that are consumed by services that would like
 A Verifiable Public Registry (VPR) is a “registry of registries”, a public service that provides foundational infrastructure for decentralized trust ecosystems. It offers:
 
 - ecosystem management:  
-  ecosystems can create and manage their own ecosystems, each with:
-  - defined [[ref: credential schemas]]
-  - assigned roles for [[ref: issuers]], [[ref: verifiers]], and [[ref: grantors]] (ecosystem operators)
+  - governance framework publication and versionning
+  - [[ref: credential schemas]] publication
+  - participant onboarding
   - custom business models and permission policies
+  - and more.
 
 - query API for trust resolution:  
   A standardized API used by [[ref: verifiable services]] (VSs) and [[ref: verifiable user agents]] (VUAs) to perform trust resolution, enabling them to query registry data and validate roles and permissions in real time.
@@ -215,16 +216,16 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A fake denom that is not usable as a token (cannot be transferred, or used for paying in transactions). Trust unit is used to define fees in Permissions. Fees defined in trust units are automatically converted to [[ref: native denom]] when a transaction is executed, using an exchange rate `TU/[[ref: native denom]]`. Trust unit is used to compensate [[ref: native denom]] fluctuation.
 
 [[def:ecosystem, ecosystems]]
-~ An approved list of [[ref: issuers]] and [[ref: verifiers]] that are authorized to issue/verify certain credentials in an ecosystem.
+~ An approved list of [[ref: participants]] that are authorized to issue/verify certain credentials in an ecosystem.
 
 [[def: URI, URIs]]
 ~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
 
-[[def: active permission, active permissions]]:
-~ A credential schema permission of a given type, which effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
+[[def: active participant, active participants]]:
+~ A participant of a given role, which effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
 
-[[def: future permission, future permissions]]:
-~ A credential schema permission of a given type, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.
+[[def: future participant, future participants]]:
+~ A participant of a given role, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.
 
 [[def: validation process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
@@ -2854,7 +2855,7 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 ###### [MOD-PP-MSG-1-2-2] Start Participant VP permission checks
 
-- Load `Participant` entry `validator_participant` from `validator_participant_id`. It MUST be a [[ref: active permission]] else transaction MUST abort.
+- Load `Participant` entry `validator_participant` from `validator_participant_id`. It MUST be a [[ref: active participant]] else transaction MUST abort.
 - Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`. It MUST exist.
 
 - if `type` (ParticipantRole) is equal to ISSUER:
@@ -2891,7 +2892,7 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
   
   - else abort.
 
-At the end, if a [[ ref: active permission]] `validator_participant` is not found, [[ref: transaction]] MUST abort.
+At the end, if a [[ref: active participant]] `validator_participant` is not found, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PP-MSG-1-2-3] Start Participant VP fee checks
 
@@ -3050,8 +3051,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PP-MSG-2-2-2] Renew Participant VP permission checks
 
-- Load `Participant` entry `applicant_participant`. `corporation` running the operation MUST be `applicant_participant.corporation`, else MUST abort. `applicant_participant` MUST be a [[ref: active permission]].
-- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: active permission]], else MUST abort.
+- Load `Participant` entry `applicant_participant`. `corporation` running the operation MUST be `applicant_participant.corporation`, else MUST abort. `applicant_participant` MUST be a [[ref: active participant]].
+- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: active participant]], else MUST abort.
 
 ###### [MOD-PP-MSG-2-2-3] Renew Participant VP fee checks
 
@@ -3201,10 +3202,10 @@ Now, let's verify `effective_until`:
 
 ###### [MOD-PP-MSG-3-2-2] Set Participant VP to Validated validator perms
 
-- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active permission]].
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]].
 - `corporation` running the method MUST be `validator_participant.corporation`.
 
-If `validator_participant` is not a [[ ref: active permission]] (expired, revoked, slashed...) then applicant MUST start a new validation process.
+If `validator_participant` is not a [[ref: active participant]] (expired, revoked, slashed...) then applicant MUST start a new validation process.
 
 ###### [MOD-PP-MSG-3-2-3] Set Participant VP to Validated fee checks
 
@@ -3215,7 +3216,7 @@ If `validator_participant` is not a [[ ref: active permission]] (expired, revoke
 
 We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. That should not occur in this method, but better do the check anyway.
 
-Find all [[ref: active permissions]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_participant_id`, `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_participant_id`, `corporation`.
 
 for each `Participant` entry `p` from `participants[]`:
 
@@ -3420,7 +3421,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 We want to make sure that 2 permissions cannot be active at the same time. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-participant) to set or adjust the `effective_until` value.
 
-Find all [[ref: active permissions]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `corporation`.
 
 > Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM type permissions it is NULL.
 
@@ -3502,7 +3503,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `applicant_participant` MUST be a [[ref: active permission]]
+- `applicant_participant` MUST be a [[ref: active participant]]
 - `applicant_participant.effective_until` MUST be greater than now().
 - else MUST abort.
 
@@ -3516,12 +3517,12 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 2. Self-created permissions
 
-- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active permission]] of type ECOSYSTEM. `corporation` running the method MUST be `applicant_participant.corporation`.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]] of type ECOSYSTEM. `corporation` running the method MUST be `applicant_participant.corporation`.
 
 3. VP managed permissions
 
 - `effective_until` MUST be lower or equal to `applicant_participant.vp_exp` else MUST abort.
-- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active permission]]. `corporation` running the method MUST be `validator_participant.corporation`.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]]. `corporation` running the method MUST be `validator_participant.corporation`.
 
 ###### [MOD-PP-MSG-8-2-3] Adjust Participant fee checks
 
@@ -3531,7 +3532,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 
 We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-participant) to set or adjust the `effective_until` value.
 
-Find all [[ref: active permissions]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_participant_id`, `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_participant_id`, `corporation`.
 
 for each `Participant` entry `p` from `participants[]`:
 
@@ -3591,7 +3592,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `applicant_participant` MUST be a [[ref: active permission]]
+- `applicant_participant` MUST be a [[ref: active participant]]
 
 ###### [MOD-PP-MSG-9-2-2] Revoke Participant advanced checks
 
@@ -3604,7 +3605,7 @@ if `applicant_participant.validator_participant_id` is defined:
 - set `validator_participant` = `applicant_participant`
 - while `validator_participant.validator_participant_id` is defined, 
   - load `validator_participant` from `validator_participant.validator_participant_id`.
-  - if `validator_participant` is a [[ref: active permission]] and `validator_participant.corporation` is who is running the method, => return true.
+  - if `validator_participant` is a [[ref: active participant]] and `validator_participant.corporation` is who is running the method, => return true.
 - end
 - return false.
 
@@ -3621,9 +3622,9 @@ Example:
 
 In the following permission tree, "Verifier E" permission can be revoked:
 
-- by "Verifier E", if the corresponding permission is a [[ref: active permission]];
-- by "Verifier Grantor D", if the corresponding permission is a [[ref: active permission]];
-- by "Ecosystem A", if the corresponding root permission is a [[ref: active permission]];
+- by "Verifier E", if the corresponding permission is a [[ref: active participant]];
+- by "Verifier Grantor D", if the corresponding permission is a [[ref: active participant]];
+- by "Ecosystem A", if the corresponding root permission is a [[ref: active participant]];
 - by the `Ecosystem` object controller, obtained by resolving perm => credential schema => ecosystem.
 
 ```plantuml
@@ -3764,7 +3765,7 @@ if `issuer_participant_id` is not null:
 
 - Load `issuer_participant` from `issuer_participant_id`.
 - if `issuer_participant.role` is not ISSUER, abort.
-- if `issuer_participant` is not a [[ref: active permission]], abort.
+- if `issuer_participant` is not a [[ref: active participant]], abort.
 - if `issuer_participant.vs_operator` is not equal to `operator`, abort.
 - if `issuer_participant.corporation` is not equal to `corporation`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
@@ -3773,7 +3774,7 @@ if `verifier_participant_id` is not null:
 
 - Load `verifier_participant` from `verifier_participant_id`.
 - if `verifier_participant.role` is not VERIFIER, abort.
-- if `verifier_participant` is not a [[ref: active permission]], abort.
+- if `verifier_participant` is not a [[ref: active participant]], abort.
 - if `verifier_participant.vs_operator` is not equal to `operator`, abort.
 - if `verifier_participant.corporation` is not equal to `corporation`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
@@ -3787,13 +3788,13 @@ agent:
 
 - Load `agent_participant` from `agent_participant_id`.
 - if `agent_participant.role` is not ISSUER, abort.
-- if `agent_participant` is not a [[ref: active permission]], abort.
+- if `agent_participant` is not a [[ref: active participant]], abort.
 
 wallet_agent:
 
 - Load `wallet_agent_participant` from `wallet_agent_participant_id`.
 - if `wallet_agent_participant.role` is not ISSUER, abort.
-- if `wallet_agent_participant` is not a [[ref: active permission]], abort.
+- if `wallet_agent_participant` is not a [[ref: active participant]], abort.
 
 :::warning
 we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.
@@ -4200,7 +4201,7 @@ if `applicant_participant.validator_participant_id` is defined:
 - set `validator_participant` = `applicant_participant`
 - while `validator_participant.validator_participant_id` is defined, 
   - load `validator_participant` from `validator_participant.validator_participant_id`.
-  - if `validator_participant` is a [[ref: active permission]] and `validator_participant.corporation` is who is running the method, => return true.
+  - if `validator_participant` is a [[ref: active participant]] and `validator_participant.corporation` is who is running the method, => return true.
 - end
 - return false.
 
@@ -4295,7 +4296,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `type` (ParticipantRole) (*mandatory*): ISSUER or VERIFIER.
-- `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]].
+- `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
@@ -4333,7 +4334,7 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `type` (ParticipantRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
-- `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]].
+- `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): no check required.
 - `did`, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `effective_from` MUST be in the future AND
@@ -4364,7 +4365,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-participant) to set or adjust the `effective_until` value.
 
-Find all [[ref: active permissions]] `participants[]` (not revoked, not slashed, not repaid) for `cs.id`, `type`, `validator_participant_id`, `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `cs.id`, `type`, `validator_participant_id`, `corporation`.
 
 for each `Participant` entry `p` from `participants[]`:
 
@@ -4449,7 +4450,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `perm` from `id`. If no entry found, abort.
-- `perm` MUST be an [[ref: active permission]], else abort.
+- `perm` MUST be an [[ref: active participant]], else abort.
 - `participant.did` MUST NOT be null, else abort.
 
 ###### [MOD-PP-MSG-15-2-2] Trigger Resolver authorization checks
@@ -4470,7 +4471,7 @@ The target `perm` itself is excluded from this walk; only its ancestors (from th
 - set `v` = `perm`.
 - while `v.validator_participant_id` is defined and != `participant.id` :
   - load `v` from `v.validator_participant_id`.
-  - if `v` is not an [[ref: active permission]], continue with the next iteration.
+  - if `v` is not an [[ref: active participant]], continue with the next iteration.
   - if corporation != v.corporation, continue with the next iteration.
   - if [AUTHZ-CHECK-1](#authz-check-1-operator-authorization-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver`, then authorization is granted => match.
 
@@ -4500,7 +4501,7 @@ Generic query used for (at least):
 - for a given validator, get PENDING validation processes;
 - find all permissions of a given grantee;
 - find all permissions of a given did;
-- find all ISSUER_GRANTOR active permission, so that I can apply to an ISSUER permission;
+- find all ISSUER_GRANTOR active participants, so that I can apply to an ISSUER permission;
 ...
 
 ##### [MOD-PP-QRY-1-1] List Participants parameters
@@ -4510,7 +4511,7 @@ Generic query used for (at least):
 - `did` (string) (*optional*): the did the permission refers to.
 - `participant_id` (number) (*optional*): limit to permissions where the `validator_participant_id` is `participant_id`.
 - `type` (ParticipantRole) (*optional*): if we want to limit to a specific permission type.
-- `only_valid` (boolean) (*optional*): if set to true, only return active permissions.
+- `only_valid` (boolean) (*optional*): if set to true, only return active participants.
 - `only_slashed` (boolean) (*optional*): if set to true, only return slashed permissions.
 - `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed permissions.
 - `modified_after` (timestamp) (*optional*): limit to permissions modified after (or equal to) `modified_after`.
@@ -4637,8 +4638,8 @@ v --> vg
 ##### [MOD-PP-QRY-4-2] Find Beneficiaries checks
 
 - if `issuer_participant_id` and `verifier_participant_id` are unset then MUST abort.
-- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`, Participant MUST exist and MUST be a [[ref: active permission]].
-- if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Participant MUST exist and MUST be a [[ref: active permission]].
+- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`, Participant MUST exist and MUST be a [[ref: active participant]].
+- if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Participant MUST exist and MUST be a [[ref: active participant]].
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
