@@ -965,16 +965,22 @@ verifiera --> verifiertd:  \t+11.4 TUs
 
 *This section is non-normative.*
 
-A [[ref: governance framework]] must define the governance rules that apply to a [[ref: VPR]].
+The governance of a [[ref: VPR]] is **layered**. Three independent [[ref: governance framework]] tiers cohabit on the registry:
 
-A designated [[ref: governance authority]] is responsible for **enforcing these rules** and, when necessary, **applying financial sanctions** to participants who violate the rules.
+- the **VPR-level governance framework**, which defines the global rules for operating the registry itself;
+- one or more **[[ref: corporation governance framework]]s** (CGFs) — one per [[ref: corporation]] registered in the VPR;
+- one or more **[[ref: ecosystem governance framework]]s** (EGFs) — one per [[ref: ecosystem]] hosted on the VPR.
+
+Each tier has its own designated [[ref: governance authority]], responsible for **enforcing its rules** and, when necessary, **applying financial sanctions** (such as [[ref: trust deposit]] slashing) to participants who violate them.
 
 :::note
-**Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: VPR]] [[ref: governance framework]].
+**Corporation Governance Frameworks (CGFs)** and **Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: VPR]] [[ref: governance framework]].
 
-While the **VPR governance framework** defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each **ecosystem** must define its own **EGF** to govern roles, permissions, credential policies, and compliance within its specific domain.
+- The **VPR governance framework** defines the global rules for operating the [[ref: VPR]] itself (e.g., trust deposits, fee distribution, slashing conditions, [[ref: corporation]] registration).
+- Each **[[ref: corporation]]** publishes its own **[[ref: corporation governance framework]]** (CGF) to govern the corporation as a VPR-level entity: its lifecycle, the scope of authority delegated to its `operator` accounts (via `OperatorAuthorization`), its membership and voting rules (managed by the underlying Cosmos SDK [[ref: group]]), and its obligations toward the VPR.
+- Each **[[ref: ecosystem]]** publishes its own **[[ref: ecosystem governance framework]]** (EGF) to govern roles, `Participant` lifecycle, credential schemas, onboarding policies, and compliance within that ecosystem.
 
-This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.
+This **three-tier separation** ensures that corporations and ecosystems remain autonomous and can tailor governance to their respective needs, without being constrained by the global rules of the VPR.
 :::
 
 ## Data model
