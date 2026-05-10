@@ -1183,7 +1183,7 @@ entity "TrustDeposit" as td {
   slash_count: number
 }
 
-group --o fg: grantor
+corp --o fg: grantor
 account --o fg: grantee
 fg "1" --- "0..n" da: spend_limit
 fg "1" --- "0..n" da: remaining_spend
@@ -1198,10 +1198,10 @@ xr --- "1..n" account: update_whitelist
 
 cs o-- pricingassettype: pricing_asset_type 
 
-group --o oauthz: corporation
+corp --o oauthz: corporation
 account --o oauthz: operator
 
-group --o vsoauthz: corporation
+corp --o vsoauthz: corporation
 account --o vsoauthz: vs_operator
 vsoauthz "1" --- "1..n" par: records
 par o-- csp: participant_id
@@ -1240,16 +1240,16 @@ gfv "1" --- "1..n" gfd: documents
 
 group "1" --- "1" corp
 
-group --o tr: corporation
-group --o csp: corporation
-group --o csps: corporation
+corp --o tr: corporation
+corp --o csp: corporation
+corp --o csps: corporation
 
 account --o csp: vs_operator
 
 csps o-- account: vs_operator
 
 valstate --o csp: op_state
-group  --o td: corporation
+corp --o td: corporation
 
 @enduml
 
