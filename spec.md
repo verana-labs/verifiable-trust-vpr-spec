@@ -1797,6 +1797,13 @@ As a result, `accountABC` is authorized to:
 
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      | Signers |
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
+| Corporation               | Create New Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)   | corporation + operator |
+|                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + operator |
+|                                | Archive Corporation                          | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-archive-corporation)   | corporation + operator |
+|                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-4]](#mod-co-msg-4-update-module-parameters)   | governance proposal |
+|                                | Get Corporation                              | /co/v1/get                       | Query  | [[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)   | N/A |
+|                                | List Corporations                            | /co/v1/list                      | Query  | [[MOD-CO-QRY-2]](#mod-co-qry-2-list-corporations)   | N/A |
+|                                | List Corporation Module Parameters           | /co/v1/params                    | Query  | [[MOD-CO-QRY-3]](#mod-co-qry-3-list-module-parameters)   | N/A |
 | Ecosystem                 | Create an Ecosystem                 |    N/A (Tx)                    | Msg    | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-new-ecosystem)   | corporation + operator |
 |                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)   |corporation + operator |
 |                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem)   |corporation + operator |
@@ -1869,6 +1876,265 @@ As a result, `accountABC` is authorized to:
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
 :::
+
+### Corporation Module
+
+This module manages [[ref: corporation]] entries — the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A `Corporation` entry MUST exist before its underlying group can be referenced as the `corporation` (Corporation) in any other VPR Create-* method (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
+
+#### [MOD-CO-MSG-1] Create New Corporation
+
+Any authorized `operator` CAN execute this method on behalf of a Cosmos SDK [[ref: group]] to register a new `Corporation` entry for that group.
+
+##### [MOD-CO-MSG-1-1] Create New Corporation parameters
+
+An authorized `operator` that would like to register a Cosmos SDK [[ref: group]] as a `Corporation` MUST call this method by specifying:
+
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed. For this method specifically, the `id` of `corporation` refers to the id of the underlying Cosmos SDK [[ref: group]] that wants to register itself — no `Corporation` entry exists for that id yet.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `did` (string) (*mandatory*): the DID of the Corporation.
+- `aka` (string) (*optional*): optional additional URI of this Corporation.
+- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
+- `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
+- `doc_digest_sri` (string) (*mandatory*): digest_sri of the v1 [[ref: CGF]] document.
+
+Provided document MUST be of the same language as the primary `language` of the Corporation.
+
+##### [MOD-CO-MSG-1-2] Create New Corporation precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CO-MSG-1-2-1] Create New Corporation basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `corporation` (Corporation): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- A `Corporation` entry with `id` equal to the id of the signing group MUST NOT exist; if one exists, method MUST abort (a group MAY register itself as a `Corporation` at most once).
+- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `aka` (string) (*optional*): if specified, MUST be an [[ref: URI]].
+- `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
+- `doc_url` (string) (*mandatory*): MUST be a valid URL.
+- `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
+
+###### [MOD-CO-MSG-1-2-2] Create New Corporation fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-CO-MSG-1-3] Create New Corporation execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- create and persist a new `Corporation` entry `co`:
+
+- `co.id`: id of the signing Cosmos SDK [[ref: group]] (1:1)
+- `co.did`: `did`
+- `co.created`: current timestamp
+- `co.modified`: `co.created`
+- `co.archived`: null
+- `co.aka`: `aka`
+- `co.language`: `language`
+- `co.active_version`: 1
+
+- create and persist a new `GovernanceFrameworkVersion` entry `gfv`:
+
+- `gfv.id`: auto-incremented uint64
+- `gfv.ecosystem_id`: null
+- `gfv.corporation_id`: `co.id`
+- `gfv.created`: current timestamp
+- `gfv.version`: 1
+- `gfv.active_since`: current timestamp
+
+- create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
+
+- `gfd.id`: auto-incremented uint64
+- `gfd.gfv_id`: `gfv.id`
+- `gfd.created`: current timestamp
+- `gfd.language`: `language`
+- `gfd.url`: `doc_url`
+- `gfd.digest_sri`: `doc_digest_sri`
+
+> Subsequent governance framework documents and version activations for this `Corporation` MUST be managed through [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version).
+
+#### [MOD-CO-MSG-2] Update Corporation
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-CO-MSG-2-1] Update Corporation parameters
+
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `did` (string) (*mandatory*): the new DID of the Corporation.
+- `aka` (string) (*optional*): optional additional URI of this Corporation. If null, it means replace existing value with null.
+- `language` (string) (*mandatory*): primary language tag of this Corporation.
+
+##### [MOD-CO-MSG-2-2] Update Corporation precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CO-MSG-2-2-1] Update Corporation basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `corporation` (Corporation): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- A `Corporation` entry `co` with `co.id` equal to the id of the signing `corporation` MUST exist; if none exists, method MUST abort.
+- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `aka` (string) (*optional*): if specified, MUST be an [[ref: URI]] or null.
+- `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
+
+###### [MOD-CO-MSG-2-2-2] Update Corporation fee checks
+
+Fee payer MUST have available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+
+##### [MOD-CO-MSG-2-3] Update Corporation execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- load `Corporation` entry `co` from the id of the signing `corporation` and set:
+
+- `co.did`: `did`
+- `co.aka`: `aka`
+- `co.language`: `language`
+- `co.modified`: current timestamp
+
+#### [MOD-CO-MSG-3] Archive Corporation
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-CO-MSG-3-1] Archive Corporation parameters
+
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `archive` (boolean) (*mandatory*): true means archive, false means unarchive.
+
+##### [MOD-CO-MSG-3-2] Archive Corporation precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-CO-MSG-3-2-1] Archive Corporation basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `corporation` (Corporation): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- load `Corporation` `co` from the id of the signing `corporation`. If none exists, MUST abort.
+- `archive` (boolean) (*mandatory*) MUST be a boolean.
+  - If `archive` is true and `co.archived` is not null, MUST abort as `Corporation` is already archived.
+  - If `archive` is false and `co.archived` is null, MUST abort as `Corporation` is already not archived.
+
+###### [MOD-CO-MSG-3-2-2] Archive Corporation fee checks
+
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+
+##### [MOD-CO-MSG-3-3] Archive Corporation execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- update `Corporation` entry `co`:
+- if `archive` is true: set `co.archived` to current timestamp.
+- if `archive` is false: set `co.archived` to null.
+- `co.modified`: current timestamp
+
+#### [MOD-CO-MSG-4] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-CO-MSG-4-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-CO-MSG-4-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-CO-MSG-4-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
+
+###### [MOD-CO-MSG-4-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution.
+
+##### [MOD-CO-MSG-4-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
+#### [MOD-CO-QRY-1] Get Corporation
+
+Anyone CAN execute this method.
+
+##### [MOD-CO-QRY-1-1] Get Corporation query parameters
+
+- `id` (uint64) (*mandatory*): the id of the Corporation.
+- `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
+
+##### [MOD-CO-QRY-1-2] Get Corporation query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `id` (uint64) (*mandatory*): MUST be a valid uint64.
+
+##### [MOD-CO-QRY-1-3] Get Corporation execution
+
+Return found `Corporation` entry (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
+
+#### [MOD-CO-QRY-2] List Corporations
+
+##### [MOD-CO-QRY-2-1] List Corporations query parameters
+
+The following parameters are optional:
+
+- `modified_after` (timestamp) (*optional*): if specified, returns only `Corporation` entries with `Corporation.modified` greater than `modified_after`.
+- `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
+- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
+
+##### [MOD-CO-QRY-2-2] List Corporations query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
+
+##### [MOD-CO-QRY-2-3] List Corporations execution
+
+If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned. If `modified_after` is specified, order by `modified` desc.
+
+#### [MOD-CO-QRY-3] List Module Parameters
+
+Anyone CAN run this [[ref: query]].
+
+##### [MOD-CO-QRY-3-3] List Module Parameters execution
+
+Return the list of parameters of this module as a json file:
+
+```json
+{
+  "params": {
+    "key1": "value1",
+    "key2": "value2",
+    ...
+    ...
+  }
+}
+```
 
 ### Ecosystem Module
 
