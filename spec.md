@@ -329,28 +329,28 @@ scale max 800 width
 package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
-        type: ECOSYSTEM (Root)
+        role: ECOSYSTEM (Root)
         did:example:ecosystemA
     }
     object "Issuer Grantor B" as ig {
-        type: ISSUER_GRANTOR
+        role: ISSUER_GRANTOR
         did:example:igB
     }
     object "Issuer C" as issuer #7677ed  {
-        type: ISSUER
+        role: ISSUER
         did:example:iC
     }
     object "Verifier Grantor D" as vg {
-        type: VERIFIER_GRANTOR
+        role: VERIFIER_GRANTOR
         did:example:vgD
     }
     object "Verifier E" as verifier #00b0f0 {
-        type: VERIFIER
+        role: VERIFIER
         did:example:vE
     }
 
     object "Holder Z " as holder #FFB073 {
-        type: HOLDER
+        role: HOLDER
     }
 }
 
@@ -469,7 +469,7 @@ package "Pay per validation Fee Structure" as cs {
     }
 
     object "Holder Z - Credential Schema Participant" as holder #FFB073 {
-        type: HOLDER
+        role: HOLDER
     }
 }
 
@@ -965,22 +965,16 @@ verifiera --> verifiertd:  \t+11.4 TUs
 
 *This section is non-normative.*
 
-The governance of a [[ref: VPR]] is **layered**. Three independent [[ref: governance framework]] tiers cohabit on the registry:
+A [[ref: governance framework]] must define the governance rules that apply to a [[ref: VPR]].
 
-- the **VPR-level governance framework**, which defines the global rules for operating the registry itself;
-- one or more **[[ref: corporation governance framework]]s** (CGFs) — one per [[ref: corporation]] registered in the VPR;
-- one or more **[[ref: ecosystem governance framework]]s** (EGFs) — one per [[ref: ecosystem]] hosted on the VPR.
-
-Each tier has its own designated [[ref: governance authority]], responsible for **enforcing its rules** and, when necessary, **applying financial sanctions** (such as [[ref: trust deposit]] slashing) to participants who violate them.
+A designated [[ref: governance authority]] is responsible for **enforcing these rules** and, when necessary, **applying financial sanctions** to participants who violate the rules.
 
 :::note
-**Corporation Governance Frameworks (CGFs)** and **Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: VPR]] [[ref: governance framework]].
+**Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: VPR]] [[ref: governance framework]].
 
-- The **VPR governance framework** defines the global rules for operating the [[ref: VPR]] itself (e.g., trust deposits, fee distribution, slashing conditions, [[ref: corporation]] registration).
-- Each **[[ref: corporation]]** publishes its own **[[ref: corporation governance framework]]** (CGF) to govern the corporation as a VPR-level entity: its lifecycle, the scope of authority delegated to its `operator` accounts (via `OperatorAuthorization`), its membership and voting rules (managed by the underlying Cosmos SDK [[ref: group]]), and its obligations toward the VPR.
-- Each **[[ref: ecosystem]]** publishes its own **[[ref: ecosystem governance framework]]** (EGF) to govern roles, `Participant` lifecycle, credential schemas, onboarding policies, and compliance within that ecosystem.
+While the **VPR governance framework** defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each **ecosystem** must define its own **EGF** to govern roles, permissions, credential policies, and compliance within its specific domain.
 
-This **three-tier separation** ensures that corporations and ecosystems remain autonomous and can tailor governance to their respective needs, without being constrained by the global rules of the VPR.
+This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.
 :::
 
 ## Data model
@@ -1282,7 +1276,7 @@ csp "1" --- "0..n" da: vs_operator_fee_spend_limit
 
 
 tr "1" --- "0..n" gfv: versions (ecosystem_id)
-corp "1" --- "0..n" gfv: versions (corporation)
+corp "1" --- "0..n" gfv: versions (corporation_id)
 gfv "1" --- "1..n" gfd: documents
 
 group "1" --- "1" corp
@@ -1332,17 +1326,17 @@ A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]]
 
 ### GovernanceFrameworkVersion
 
-A `GovernanceFrameworkVersion` represents a single version of either an [[ref: EGF]] or a [[ref: CGF]]. Its owning subject is identified by exactly one of `ecosystem_id` or `corporation` (XOR).
+A `GovernanceFrameworkVersion` represents a single version of either an [[ref: EGF]] or a [[ref: CGF]]. Its owning subject is identified by exactly one of `ecosystem_id` or `corporation_id` (XOR).
 
 `GovernanceFrameworkVersion`:
 
 - `id` (uint64) (*mandatory*): the id of the GFV.
-- `ecosystem_id` (uint64) (*conditional*): the id of the [[ref: ecosystem]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `corporation` is null.
-- `corporation` (group) (*conditional*): the [[ref: corporation]] that controls this `GovernanceFrameworkVersion` entry, identified by its underlying [[ref: group]]. MUST be set if `ecosystem_id` is null.
+- `ecosystem_id` (uint64) (*conditional*): the id of the [[ref: ecosystem]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `corporation_id` is null.
+- `corporation_id` (uint64) (*conditional*): the id of the [[ref: corporation]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `ecosystem_id` is null.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkVersion has been created.
 - `version` (int) (*mandatory*): version of this GF. MUST Starts with 1.
 
-> Constraint: exactly one of `ecosystem_id` and `corporation` MUST be set.
+> Constraint: exactly one of `ecosystem_id` and `corporation_id` MUST be set.
 
 ### GovernanceFrameworkDocument
 
@@ -1400,7 +1394,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 - `id` (uint64) (*mandatory*): the id of the participant.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
-- `type` (ParticipantRole): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER
+- `role` (ParticipantRole): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER
 - `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]].
 - `corporation` (group) (*mandatory*): [[ref: corporation]] that owns this permission.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account. This is the account that will have the right to create or update permission sessions.
@@ -1987,7 +1981,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.ecosystem_id`: null
-- `gfv.corporation`: the signing [[ref: group]] (i.e., the key of `co`)
+- `gfv.corporation_id`: id of the signing [[ref: group]] (i.e., the key of `co`)
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
@@ -2241,7 +2235,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.ecosystem_id`: `ecosystem.id`
-- `gfv.corporation`: null
+- `gfv.corporation_id`: null
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
@@ -2436,7 +2430,7 @@ Return the list of the existing parameters and their values.
 
 ### Governance Framework Module
 
-This module handles [[ref: governance framework]] documents and version activation for both [[ref: ecosystems]] and [[ref: corporations]]. Methods are polymorphic over the owning subject: every message specifies exactly one of `ecosystem_id` or `subject_corporation` to designate whose governance framework is being modified.
+This module handles [[ref: governance framework]] documents and version activation for both [[ref: ecosystems]] and [[ref: corporations]]. Methods are polymorphic over the owning subject: every message specifies exactly one of `ecosystem_id` or `corporation_id` to designate whose governance framework is being modified.
 
 The initial `GovernanceFrameworkVersion` and its first `GovernanceFrameworkDocument` are created atomically by [Create New Ecosystem](#mod-es-msg-1-create-new-ecosystem) (and, by parallel construction, by [Create New Corporation](#mod-co-msg-1-create-new-corporation)). After that, subsequent versions and documents are added through this module.
 
@@ -2448,8 +2442,8 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `ecosystem_id` (uint64) (*conditional*): id of the target [[ref: ecosystem]] whose governance framework will be modified. MUST be set if `subject_corporation` is null.
-- `subject_corporation` (group) (*conditional*): the target [[ref: corporation]] whose governance framework will be modified, identified by its underlying [[ref: group]]. MUST be set if `ecosystem_id` is null.
+- `ecosystem_id` (uint64) (*conditional*): id of the target [[ref: ecosystem]] whose governance framework will be modified. MUST be set if `corporation_id` is null.
+- `corporation_id` (uint64) (*conditional*): id of the target [[ref: corporation]] whose governance framework will be modified. MUST be set if `ecosystem_id` is null.
 - `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the governance framework document.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
@@ -2468,11 +2462,11 @@ if a mandatory parameter is not present, method MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- Exactly one of `ecosystem_id` and `subject_corporation` MUST be set; if both are set or both are null, method MUST abort.
+- Exactly one of `ecosystem_id` and `corporation_id` MUST be set; if both are set or both are null, method MUST abort.
 - Define `subject` as:
   - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation` MUST be equal to the `corporation` executing the method.
-  - if `subject_corporation` is set: the `Corporation` entry whose underlying [[ref: group]] is `subject_corporation`. The entry MUST exist, and `subject_corporation` MUST be equal to the signing `corporation` (a Corporation may only edit its own governance framework).
-- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` whose owner matches `subject` (i.e., `gfv.ecosystem_id = ecosystem_id` if subject is an Ecosystem, else `gfv.corporation = subject_corporation`) and `gfv.version = version`, OR `version` MUST be exactly equal to the biggest `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries owned by `subject`. `version` MUST be greater than `subject.active_version`.
+  - if `corporation_id` is set: the `Corporation` entry keyed by `corporation_id` (i.e., the Corporation whose underlying [[ref: group]] has id `corporation_id`). The entry MUST exist, and `corporation_id` MUST equal the [[ref: group]] id of the signing `corporation` (a Corporation may only edit its own governance framework).
+- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` whose owner matches `subject` (i.e., `gfv.ecosystem_id = ecosystem_id` if subject is an Ecosystem, else `gfv.corporation_id = corporation_id`) and `gfv.version = version`, OR `version` MUST be exactly equal to the biggest `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries owned by `subject`. `version` MUST be greater than `subject.active_version`.
 - `doc_language` (string) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
@@ -2490,7 +2484,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if a `GovernanceFrameworkVersion` entry `gfv` matching `subject` and `version` does not exist, create and persist a new one:
   - `gfv.id`: auto-incremented uint64
   - `gfv.ecosystem_id`: `ecosystem_id` (or null if subject is a Corporation)
-  - `gfv.corporation`: `subject_corporation` (or null if subject is an Ecosystem)
+  - `gfv.corporation_id`: `corporation_id` (or null if subject is an Ecosystem)
   - `gfv.created`: current timestamp
   - `gfv.version`: `version`
 
@@ -2514,8 +2508,8 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `ecosystem_id` (uint64) (*conditional*): id of the target [[ref: ecosystem]]. MUST be set if `subject_corporation` is null.
-- `subject_corporation` (group) (*conditional*): the target [[ref: corporation]], identified by its underlying [[ref: group]]. MUST be set if `ecosystem_id` is null.
+- `ecosystem_id` (uint64) (*conditional*): id of the target [[ref: ecosystem]]. MUST be set if `corporation_id` is null.
+- `corporation_id` (uint64) (*conditional*): id of the target [[ref: corporation]]. MUST be set if `ecosystem_id` is null.
 
 ##### [MOD-GF-MSG-2-2] Increase Active Governance Framework Version precondition checks
 
@@ -2528,11 +2522,11 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- Exactly one of `ecosystem_id` and `subject_corporation` MUST be set; if both are set or both are null, method MUST abort.
+- Exactly one of `ecosystem_id` and `corporation_id` MUST be set; if both are set or both are null, method MUST abort.
 - Define `subject` as:
   - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation` MUST be equal to the `corporation` executing the method.
-  - if `subject_corporation` is set: the `Corporation` entry whose underlying [[ref: group]] is `subject_corporation`. The entry MUST exist, and `subject_corporation` MUST be equal to the signing `corporation`.
-- Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` (matching `gfv.ecosystem_id` or `gfv.corporation` as appropriate) whose `gfv.version` is equal to `subject.active_version` + 1. If none is found, transaction MUST abort.
+  - if `corporation_id` is set: the `Corporation` entry keyed by `corporation_id` (i.e., the Corporation whose underlying [[ref: group]] has id `corporation_id`). The entry MUST exist, and `corporation_id` MUST equal the [[ref: group]] id of the signing `corporation`.
+- Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` (matching `gfv.ecosystem_id` or `gfv.corporation_id` as appropriate) whose `gfv.version` is equal to `subject.active_version` + 1. If none is found, transaction MUST abort.
 - Find a `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `subject.language`. If no document is found (and thus no document exists for the default language of this version for this subject), transaction MUST abort.
 
 ###### [MOD-GF-MSG-2-2-2] Increase Active Governance Framework Version fee checks
@@ -2569,7 +2563,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-GF-QRY-1-3] Get Governance Framework Version execution
 
-Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id` or `corporation`) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
+Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id` or `corporation_id`) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
 
 #### [MOD-GF-QRY-2] List Governance Framework Versions
 
@@ -2577,10 +2571,10 @@ Anyone CAN execute this method.
 
 ##### [MOD-GF-QRY-2-1] List Governance Framework Versions query parameters
 
-Exactly one of `ecosystem_id` and `corporation` MUST be set:
+Exactly one of `ecosystem_id` and `corporation_id` MUST be set:
 
-- `ecosystem_id` (uint64) (*conditional*): filter by ecosystem. MUST be set if `corporation` is null.
-- `corporation` (group) (*conditional*): filter by corporation (identified by its underlying [[ref: group]]). MUST be set if `ecosystem_id` is null.
+- `ecosystem_id` (uint64) (*conditional*): filter by ecosystem. MUST be set if `corporation_id` is null.
+- `corporation_id` (uint64) (*conditional*): filter by corporation. MUST be set if `ecosystem_id` is null.
 - `active_only` (boolean) (*optional*): if true, return only the entry corresponding to the subject's `active_version`.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
@@ -2589,7 +2583,7 @@ Exactly one of `ecosystem_id` and `corporation` MUST be set:
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
-- Exactly one of `ecosystem_id` and `corporation` MUST be set.
+- Exactly one of `ecosystem_id` and `corporation_id` MUST be set.
 - `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
 
 ##### [MOD-GF-QRY-2-3] List Governance Framework Versions execution
@@ -3132,27 +3126,27 @@ scale max 800 width
 package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
-        type: ECOSYSTEM (Root)
+        role: ECOSYSTEM (Root)
         did:example:trA
     }
     object "Issuer Grantor B" as ig {
-        type: ISSUER_GRANTOR
+        role: ISSUER_GRANTOR
         did:example:igB
     }
     object "Issuer C" as issuer #7677ed  {
-        type: ISSUER
+        role: ISSUER
         did:example:iC
     }
     object "Verifier Grantor D" as vg {
-        type: VERIFIER_GRANTOR
+        role: VERIFIER_GRANTOR
         did:example:vgD
     }
     object "Verifier E" as verifier #00b0f0 {
-        type: VERIFIER
+        role: VERIFIER
         did:example:vE
     }
     object "Holder Z " as holder #FFB073 {
-        type: HOLDER
+        role: HOLDER
     }
 }
 
@@ -3218,7 +3212,7 @@ An Applicant that would like to start a permission onboarding process MUST execu
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_operator` (account) (*optional*): the account of the Veriable Service we want to authorize to create permission sessions linked to this permission. If not specified, Verifiable Service will not be able to use the payment delegation feature. **Required** to use the payment delegation feature.
-- `type` (ParticipantRole) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
+- `role` (ParticipantRole) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
 - `validator_participant_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
@@ -3233,7 +3227,7 @@ The following VS Operator Authorization parameters are **optional** and collecti
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
 - `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
 
-Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`.
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`.
 
 |Participant role|Permitted Messages|
 |-|-|
@@ -3258,7 +3252,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `type` (ParticipantRole) (*mandatory*) MUST be a valid ParticipantRole: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
+- `role` (ParticipantRole) (*mandatory*) MUST be a valid ParticipantRole: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
 - `validator_participant_id` (uint64) (*mandatory*): see [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-participant-op-permission-checks).
 - `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
@@ -3275,7 +3269,7 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 - Load `Participant` entry `validator_participant` from `validator_participant_id`. It MUST be a [[ref: active participant]] else transaction MUST abort.
 - Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`. It MUST exist.
 
-- if `type` (ParticipantRole) is equal to ISSUER:
+- if `role` (ParticipantRole) is equal to ISSUER:
 
   - if `cs.issuer_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be ISSUER_GRANTOR, else MUST abort.
   
@@ -3283,13 +3277,13 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
   - else MUST abort.
 
-- else if `type` (ParticipantRole) is equal to ISSUER_GRANTOR:
+- else if `role` (ParticipantRole) is equal to ISSUER_GRANTOR:
 
   - if `cs.issuer_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS:  `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
   
   - else abort.
 
-- else if `type` (ParticipantRole) is equal to VERIFIER:
+- else if `role` (ParticipantRole) is equal to VERIFIER:
 
   - if `cs.verifier_onboarding_mode` is equal to GRANTOR: `validator_participant.role` MUST be VERIFIER_GRANTOR, else MUST abort.
   
@@ -3297,13 +3291,13 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
   - else abort.
 
-- else if `type` (ParticipantRole) is equal to VERIFIER_GRANTOR:
+- else if `role` (ParticipantRole) is equal to VERIFIER_GRANTOR:
 
   - if `cs.verifier_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
   
   - else abort.
 
-- else if `type` (ParticipantRole) is equal to HOLDER:
+- else if `role` (ParticipantRole) is equal to HOLDER:
 
   - if `cs.holder_onboarding_mode` is equal to ISSUER_ONBOARDING_PROCESS: `validator_participant.role` MUST be ISSUER, else MUST abort.
   
@@ -3352,9 +3346,9 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 
 ###### [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks
 
-We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different OP with differents validators for the same `schema_id`, `type`.
+We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different OP with differents validators for the same `schema_id`, `role`.
 
-Find all permission `participants[]` for `schema_id`, `type`, `validator_participant_id`, `corporation` with op_state = VALIDATED or PENDING.
+Find all permission `participants[]` for `schema_id`, `role`, `validator_participant_id`, `corporation` with op_state = VALIDATED or PENDING.
 
 if size of `participants[]` > 0, it means there is already an existing onboarding process in this context, so MUST abort.
 
@@ -3380,7 +3374,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.schema_id` = `validator_participant.schema_id`
   - `applicant_participant.corporation`: `corporation`.
   - `applicant_participant.vs_operator`: `vs_operator`.
-  - `applicant_participant.role`: `type`.
+  - `applicant_participant.role`: `role`.
   - `applicant_participant.created`: `now`
   - `applicant_participant.modified`: `now`
   - `applicant_participant.deposit`: `validation_trust_deposit_in_native_denom`.
@@ -3580,7 +3574,7 @@ else MUST abort.
 - `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_participant.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_participant.validation_fees`, else abort.
 - `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_participant.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_participant.issuance_fees` or, else abort.
 - `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_participant.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_participant.verification_fees`, else abort.
-- `op_summary_digest` (string) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest. Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
+- `op_summary_digest` (string) (*optional*): MUST be null if `validation.role` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest. Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
 - Load `CredentialSchema` `cs` from `applicant_participant.schema_id`.
 - Load `Participant` `validator_participant` from `applicant_participant.validator_participant_id`.
@@ -3633,7 +3627,7 @@ If `validator_participant` is not a [[ref: active participant]] (expired, revoke
 
 We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. That should not occur in this method, but better do the check anyway.
 
-Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_participant_id`, `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation`.
 
 for each `Participant` entry `p` from `participants[]`:
 
@@ -3795,7 +3789,7 @@ The following VS Operator Authorization parameters are **optional** and collecti
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
 - `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
 
-Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`. Since [Create Root Participant](#mod-pp-msg-7-create-root-participant) always creates an ECOSYSTEM permission, only the following is allowed:
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`. Since [Create Root Participant](#mod-pp-msg-7-create-root-participant) always creates an ECOSYSTEM permission, only the following is allowed:
 
 |Participant role|Permitted Messages|
 |-|-|
@@ -3949,7 +3943,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 
 We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-participant) to set or adjust the `effective_until` value.
 
-Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_participant_id`, `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation`.
 
 for each `Participant` entry `p` from `participants[]`:
 
@@ -4052,28 +4046,28 @@ scale max 800 width
 package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
-        type: ECOSYSTEM (Root)
+        role: ECOSYSTEM (Root)
         did:example:ecosystemA
     }
     object "Issuer Grantor B" as ig {
-        type: ISSUER_GRANTOR
+        role: ISSUER_GRANTOR
         did:example:igB
     }
     object "Issuer C" as issuer #7677ed  {
-        type: ISSUER
+        role: ISSUER
         did:example:iC
     }
     object "Verifier Grantor D" as vg {
-        type: VERIFIER_GRANTOR
+        role: VERIFIER_GRANTOR
         did:example:vgD
     }
     object "Verifier E" as verifier #00b0f0 {
-        type: VERIFIER
+        role: VERIFIER
         did:example:vE
     }
 
     object "Holder Z " as holder #FFB073 {
-        type: HOLDER
+        role: HOLDER
     }
 }
 
@@ -4712,7 +4706,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `type` (ParticipantRole) (*mandatory*): ISSUER or VERIFIER.
+- `role` (ParticipantRole) (*mandatory*): ISSUER or VERIFIER.
 - `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
@@ -4729,7 +4723,7 @@ The following VS Operator Authorization parameters are **optional** and collecti
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
 - `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
 
-Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`.
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`.
 
 |Participant role|Permitted Messages|
 |-|-|
@@ -4750,7 +4744,7 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `type` (ParticipantRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
+- `role` (ParticipantRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
 - `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): no check required.
 - `did`, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
@@ -4769,10 +4763,10 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
 - The related `CredentialSchema` entry is loaded with `validator_participant.schema_id`, and will be named `cs` in this section.
-- if `type` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
-- if `type` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is not equal to OPEN, MUST abort.
-- if `type` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
-- if `type` is equal to VERIFIER and `verification_fees` is specified and different than 0, MUST abort.
+- if `role` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
+- if `role` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is not equal to OPEN, MUST abort.
+- if `role` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
+- if `role` is equal to VERIFIER and `verification_fees` is specified and different than 0, MUST abort.
 
 ###### [MOD-PP-MSG-14-2-3] Self Create Participant fee checks
 
@@ -4782,7 +4776,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-participant) to set or adjust the `effective_until` value.
 
-Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `cs.id`, `type`, `validator_participant_id`, `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `cs.id`, `role`, `validator_participant_id`, `corporation`.
 
 for each `Participant` entry `p` from `participants[]`:
 
@@ -4807,16 +4801,16 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.validator_participant_id`: `validator_participant_id`
 - `participant.schema_id`: `validator_participant.schema_id`
 - `participant.modified` to `now`.
-- `participant.role`: `type`.
+- `participant.role`: `role`.
 - `participant.did`: `did`.
 - `participant.corporation`: `corporation`.
 - `participant.vs_operator`: `vs_operator`.
 - `participant.created`: `now`
 - `participant.effective_from`: `effective_from`
 - `participant.effective_until`: `effective_until`
-- `participant.validation_fees`: `validation_fees` if specified and `type` is ISSUER, else 0.
+- `participant.validation_fees`: `validation_fees` if specified and `role` is ISSUER, else 0.
 - `participant.issuance_fees`: 0
-- `participant.verification_fees`: `verification_fees` if specified and `type` is ISSUER, else 0.
+- `participant.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
 - `participant.deposit`: 0
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
@@ -4927,7 +4921,7 @@ Generic query used for (at least):
 - `grantee` (account) (*optional*): the grantee account.
 - `did` (string) (*optional*): the did the permission refers to.
 - `participant_id` (number) (*optional*): limit to permissions where the `validator_participant_id` is `participant_id`.
-- `type` (ParticipantRole) (*optional*): if we want to limit to a specific permission type.
+- `role` (ParticipantRole) (*optional*): if we want to limit to a specific `Participant` role.
 - `only_valid` (boolean) (*optional*): if set to true, only return active participants.
 - `only_slashed` (boolean) (*optional*): if set to true, only return slashed permissions.
 - `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed permissions.
