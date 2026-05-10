@@ -278,7 +278,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 *This section is non-normative.*
 
-In an [[ref: VPR]], any [[ref: corporation]] can create a `Ecosystem` entry that represents a [[ref: ecosystem]] of an ecosystem. Each `Ecosystem` entry must provide, at a minimum:
+In an [[ref: VPR]], any [[ref: corporation]] can create an `Ecosystem` entry to represent an [[ref: ecosystem]] it controls. Each `Ecosystem` entry MUST provide, at a minimum:
 
 - an ecosystem controlled resolvable [[ref: DID]];
 - one or more [[ref: ecosystem governance framework]] document(s);
@@ -301,25 +301,25 @@ object "Ecosystem" as tra #3fbdb6 {
 
 ```
 
-### Credential Schemas and Permissions
+### Credential Schemas and Participants
 
 *This section is non-normative.*
 
-[[ref: Credential schemas]] are created and managed by ecosystem corporation ([[ref: ecosystems]]). Each [[ref: Credential schema]] includes, at a minimum:
+[[ref: Credential schemas]] are created and managed by [[ref: ecosystems]] (i.e., by the [[ref: corporation]] controlling each [[ref: ecosystem]]). Each [[ref: Credential schema]] includes, at a minimum:
 
-- A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]]
-- A **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
-  - `OPEN`: `ISSUER` permissions can be self-created by anyone.
-  - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the ecosystem corporation through the execution of an Onboarding Process.
-  - `GRANTOR_ONBOARDING_PROCESS`: `ISSUER` permissions are granted by one or several [[ref: issuer grantor]](s) (ecosystem operator(s) responsible for selecting issuers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]] through the execution of an Onboarding Process.
-- A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` permissions are granted. Modes include:
-  - `OPEN`: `VERIFIER` permissions can be created by anyone.
-  - `ECOSYSTEM_ONBOARDING_PROCESS`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Ecosystem corporation through the execution of an Onboarding Process.
-  - `GRANTOR_ONBOARDING_PROCESS`: `VERIFIER` permissions are granted by one or several [[ref: verifier grantor]](s) (ecosystem operator(s) responsible for selecting verifiers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]], through the execution of an Onboarding Process.
-- An **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` permissions are granted. Modes include:
-  - `ISSUER_ONBOARDING_PROCESS`: `HOLDER` permissions are granted directly by issuers to holder through the execution of an Onboarding Process.
-  - `PERMISSIONLESS`: holder that want to obtain credentials from an issuer do not require a permission in the VPR.
-- A **Participant tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
+- A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
+- An **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` `Participant` entries are created. Modes include:
+  - `OPEN`: `ISSUER` Participants can be self-created by any [[ref: corporation]].
+  - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Participants are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
+  - `GRANTOR_ONBOARDING_PROCESS`: `ISSUER` Participants are created by one or several [[ref: issuer grantor]](s) — ecosystem operators responsible for onboarding issuers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
+- A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` `Participant` entries are created. Modes include:
+  - `OPEN`: `VERIFIER` Participants can be self-created by any [[ref: corporation]].
+  - `ECOSYSTEM_ONBOARDING_PROCESS`: `VERIFIER` Participants are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
+  - `GRANTOR_ONBOARDING_PROCESS`: `VERIFIER` Participants are created by one or several [[ref: verifier grantor]](s) — ecosystem operators responsible for onboarding verifiers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
+- A **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` `Participant` entries are created. Modes include:
+  - `ISSUER_ONBOARDING_PROCESS`: `HOLDER` Participants are created directly by [[ref: issuers]] for holders, through an [[ref: onboarding process]].
+  - `PERMISSIONLESS`: a holder that wants to obtain credentials from an [[ref: issuer]] does not require a `Participant` entry in the VPR.
+- A **Participant tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each `Participant` entry in the tree can define business rules; see [Business Models](#business-models) below.
 
 ```plantuml
 
@@ -329,40 +329,40 @@ scale max 800 width
 package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
-        permissionType: ECOSYSTEM (Root)
+        type: ECOSYSTEM (Root)
         did:example:ecosystemA
     }
     object "Issuer Grantor B" as ig {
-        permissionType: ISSUER_GRANTOR
+        type: ISSUER_GRANTOR
         did:example:igB
     }
     object "Issuer C" as issuer #7677ed  {
-        permissionType: ISSUER
+        type: ISSUER
         did:example:iC
     }
     object "Verifier Grantor D" as vg {
-        permissionType: VERIFIER_GRANTOR
+        type: VERIFIER_GRANTOR
         did:example:vgD
     }
     object "Verifier E" as verifier #00b0f0 {
-        permissionType: VERIFIER
+        type: VERIFIER
         did:example:vE
     }
 
     object "Holder Z " as holder #FFB073 {
-        permissionType: HOLDER
+        type: HOLDER
     }
 }
 
 
 
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
+tr --> ig : creates schema participant
+ig --> issuer : creates schema participant
 
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
+tr --> vg : creates schema participant
+vg --> verifier : creates schema participant
 
-issuer --> holder: granted schema permission
+issuer --> holder: creates schema participant
 
 @enduml
 
@@ -372,12 +372,12 @@ Participant roles are defined in the table below:
 
 | **Participant Role**   | **Description**                                                  |
 |-----------------------|------------------------------------------------------------------|
-| **Ecosystem**    | Create and control ecosystems and credential Schemas. Recognize other participants by granting permission(s) to them.        |
-| **Issuer Grantor**    | Ecosystem operator that grants Issuer permissions to candidate issuers.                   |
-| **Verifier Grantor**  | Ecosystem operator that grants Verifier permissions to candidate verifiers.               |
+| **Ecosystem**    | Create and control [[ref: ecosystems]] and credential schemas. Recognize other participants by validating them onto the schema (creating their `Participant` entries).        |
+| **Issuer Grantor**    | Ecosystem operator that creates `ISSUER` `Participant` entries for candidate issuers.                   |
+| **Verifier Grantor**  | Ecosystem operator that creates `VERIFIER` `Participant` entries for candidate verifiers.               |
 | **Issuer**            | Can issue credentials of this schema.                            |
 | **Verifier**          | Can request presentation of credentials of this schema.          |
-| **Holder**            | Holds a credential. Holder permission provide credential status (active, revoked...)  |
+| **Holder**            | Holds a credential. `HOLDER` `Participant` entries carry credential status (active, revoked, ...). |
 
 Example of a Json Schema credential schema:
 
@@ -430,16 +430,16 @@ Example of a Json Schema credential schema:
 
 To participate in an [[ref: ecosystem]] and assume a role associated with a specific [[ref: credential schema]]:
 
-- if schema is `OPEN` for issuance and/or verification: an entity must have an [[ref: account]] in the [[ref: VPR]] and self-create its permission.
+- if the schema is `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and self-create its `Participant` entry.
 
-- if schema is not `OPEN` for issuance and/or verification: an entity must have an [[ref: account]] in the [[ref: VPR]] and complete a [[ref: onboarding process]] to obtain the required permission.
+- if the schema is not `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and complete an [[ref: onboarding process]] to obtain its `Participant` entry.
 
 The [[ref: onboarding process]] involves two parties:
 
-- The [[ref: applicant]] — the entity requesting permission for a credential schema within the ecosystem.  
-- The [[ref: validator]] — an entity that already holds permission for the same credential schema and has been delegated authority to validate applicants and issue permissions.
+- The [[ref: applicant]] — the [[ref: corporation]] requesting a `Participant` entry for a credential schema within the ecosystem.
+- The [[ref: validator]] — a corporation that already holds a `Participant` entry for the same credential schema and has been delegated authority to validate applicants and create new `Participant` entries.
 
-Running an onboarding process **typically involves the payment of [[ref: trust fees]]**. [[ref: Trust fee]] amount to be paid by the [[ref: applicant]] is defined in the permission of the [[ref: validator]] involved in the [[ref: onboarding process]]:
+Running an [[ref: onboarding process]] **typically involves the payment of [[ref: trust fees]]**. The [[ref: trust fee]] amount to be paid by the [[ref: applicant]] is defined in the [[ref: validator]]'s `Participant` entry:
 
 ```plantuml
 
@@ -469,27 +469,87 @@ package "Pay per validation Fee Structure" as cs {
     }
 
     object "Holder Z - Credential Schema Participant" as holder #FFB073 {
-        permissionType: HOLDER
+        type: HOLDER
     }
 }
 
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
-issuer --> holder: granted schema permission
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
+tr --> ig : creates schema participant
+ig --> issuer : creates schema participant
+issuer --> holder: creates schema participant
+tr --> vg : creates schema participant
+vg --> verifier : creates schema participant
 
 @enduml
 
 ```
 
+### Corporation
+
+*This section is non-normative.*
+
+A [[ref: corporation]] is the VPR-level entity that represents an organisation acting in the registry. It extends a Cosmos SDK [[ref: group]] (whose members and policies are managed by the group module) with VPR-specific attributes: a [[ref: DID]], a [[ref: corporation governance framework]] (CGF), and lifecycle metadata. A `Corporation` entry has no `id` of its own — it is keyed by its underlying [[ref: group]] (1:1).
+
+A corporation interacts with the VPR in two complementary ways:
+
+- as the **controller** of zero or more [[ref: ecosystems]] — i.e., the corporation owns the corresponding `Ecosystem` entries. The controlling corporation manages each ecosystem's [[ref: EGF]], its [[ref: credential schemas]], and the root `ECOSYSTEM` `Participant` entries of those schemas.
+- as the **owner of zero or more `Participant` entries** in zero or more [[ref: ecosystems]] — i.e., the corporation acts as `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `HOLDER`, or root `ECOSYSTEM` for [[ref: credential schemas]] of those ecosystems.
+
+The two roles are **independent**: a corporation MAY control no ecosystem at all and only hold `Participant` entries in third-party ecosystems; or it MAY control several ecosystems and additionally hold `Participant` entries in others; or any combination of the two.
+
+```plantuml
+
+@startuml
+scale max 800 width
+
+object "Corporation X" as corpX #FFD580 {
+  did:example:corpX
+}
+
+' Ecosystems controlled by Corporation X
+object "Ecosystem A" as eA #3fbdb6 {
+  did:example:eA
+}
+object "Ecosystem B" as eB #3fbdb6 {
+  did:example:eB
+}
+
+' Ecosystems where Corporation X is just a participant
+object "Ecosystem C" as eC #3fbdb6 {
+  did:example:eC
+}
+object "Ecosystem D" as eD #3fbdb6 {
+  did:example:eD
+}
+
+' Corporation X's Participant entries
+object "ISSUER Participant\n(Ecosystem C, Schema #1)" as pC #7677ed
+object "VERIFIER Participant\n(Ecosystem D, Schema #1)" as pD #00b0f0
+object "HOLDER Participant\n(Ecosystem A, Schema #2)" as pA #FFB073
+
+corpX --> eA : controls
+corpX --> eB : controls
+
+corpX --> pC : owns
+corpX --> pD : owns
+corpX --> pA : owns
+
+pC ..> eC : in
+pD ..> eD : in
+pA ..> eA : in
+
+@enduml
+
+```
+
+The same `Corporation` entry is the single entry point for the corporation's governance (the CGF), authorization delegation (via `OperatorAuthorization` to one or more `operator` accounts), and trust-deposit accounting (`TrustDeposit`). See the [Corporation Module](#corporation-module) for the methods that manage `Corporation` entries.
+
 ### DID Indexing
 
 *This section is non-normative.*
 
-The Participant registry is a can be used by crawlers to index the metadata associated with [[ref: verifiable services]].
+The `Participant` registry CAN be used by crawlers to index the metadata associated with [[ref: verifiable services]].
 
-Search engines can iterate over the permissions, and index [[ref: VSs]] by resolving the service identifier (at the moment a [[ref: DID]], that could be extended in the future), verify if service is a [[ref: verifiable service]], and in such a case extracting their verifiable metadata, such as [[ref: linked-vp]] presented credentials.
+Search engines can iterate over `Participant` entries and index [[ref: VSs]] by resolving the service identifier (currently a [[ref: DID]], extensible in the future), verify whether the service is a [[ref: verifiable service]], and in that case extract its verifiable metadata, such as [[ref: linked-vp]] presented credentials.
 
 The index is particularly important for [[ref: verifiable user agents]], such as social browsers, CDN enabled browsers... However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
 
@@ -721,11 +781,11 @@ package "Ecosystem #A - Credential Schema #1" as cs {
 
 
 
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
+tr --> ig : creates schema participant
+ig --> issuer : creates schema participant
 
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
+tr --> vg : creates schema participant
+vg --> verifier : creates schema participant
 
 @enduml
 
@@ -3082,39 +3142,39 @@ scale max 800 width
 package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
-        permissionType: ECOSYSTEM (Root)
+        type: ECOSYSTEM (Root)
         did:example:trA
     }
     object "Issuer Grantor B" as ig {
-        permissionType: ISSUER_GRANTOR
+        type: ISSUER_GRANTOR
         did:example:igB
     }
     object "Issuer C" as issuer #7677ed  {
-        permissionType: ISSUER
+        type: ISSUER
         did:example:iC
     }
     object "Verifier Grantor D" as vg {
-        permissionType: VERIFIER_GRANTOR
+        type: VERIFIER_GRANTOR
         did:example:vgD
     }
     object "Verifier E" as verifier #00b0f0 {
-        permissionType: VERIFIER
+        type: VERIFIER
         did:example:vE
     }
     object "Holder Z " as holder #FFB073 {
-        permissionType: HOLDER
+        type: HOLDER
     }
 }
 
 
 
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
+tr --> ig : creates schema participant
+ig --> issuer : creates schema participant
 
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
+tr --> vg : creates schema participant
+vg --> verifier : creates schema participant
 
-issuer --> holder: granted schema permission
+issuer --> holder: creates schema participant
 
 @enduml
 
@@ -4002,40 +4062,40 @@ scale max 800 width
 package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
-        permissionType: ECOSYSTEM (Root)
+        type: ECOSYSTEM (Root)
         did:example:ecosystemA
     }
     object "Issuer Grantor B" as ig {
-        permissionType: ISSUER_GRANTOR
+        type: ISSUER_GRANTOR
         did:example:igB
     }
     object "Issuer C" as issuer #7677ed  {
-        permissionType: ISSUER
+        type: ISSUER
         did:example:iC
     }
     object "Verifier Grantor D" as vg {
-        permissionType: VERIFIER_GRANTOR
+        type: VERIFIER_GRANTOR
         did:example:vgD
     }
     object "Verifier E" as verifier #00b0f0 {
-        permissionType: VERIFIER
+        type: VERIFIER
         did:example:vE
     }
 
     object "Holder Z " as holder #FFB073 {
-        permissionType: HOLDER
+        type: HOLDER
     }
 }
 
 
 
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
+tr --> ig : creates schema participant
+ig --> issuer : creates schema participant
 
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
+tr --> vg : creates schema participant
+vg --> verifier : creates schema participant
 
-issuer --> holder: granted schema permission
+issuer --> holder: creates schema participant
 
 @enduml
 
