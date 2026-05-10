@@ -951,7 +951,6 @@ entity "Ecosystem" as tr {
   +created: timestamp
   +modified: timestamp
   +archived: timestamp
-  +aka: string
   +active_version: int
   +language: string
 }
@@ -962,7 +961,6 @@ entity "Corporation" as corp {
   +created: timestamp
   +modified: timestamp
   +archived: timestamp
-  +aka: string
   +active_version: int
   +language: string
 }
@@ -1255,20 +1253,6 @@ corp --o td: corporation
 
 ```
 
-### Ecosystem
-
-`Ecosystem`:
-
-- `id` (uint64) (*mandatory*): the id of the ecosystem.
-- `did` (string) (*mandatory*): the did of the ecosystem.
-- `corporation` (Corporation) (*mandatory*): [[ref: corporation]] that controls this entry.
-- `created` (timestamp) (*mandatory*): timestamp this Ecosystem has been created.
-- `modified` (timestamp) (*mandatory*): timestamp this Ecosystem has been modified.
-- `archived` (timestamp) (*mandatory*): timestamp this Ecosystem has been archived.
-- `aka` (string) (*optional*): optional additional URI of this ecosystem.
-- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
-- `active_version` (int): (*mandatory*) active governance framework version.
-
 ### Corporation
 
 A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
@@ -1280,11 +1264,23 @@ A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]]
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
 - `archived` (timestamp) (*optional*): timestamp this Corporation has been archived.
-- `aka` (string) (*optional*): optional additional URI of this Corporation.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `active_version` (int) (*mandatory*): active [[ref: CGF]] version.
 
 > Note: members and policies of a Corporation are managed by the underlying Cosmos SDK group module. The Corporation entry adds VPR-level attributes only (DID, governance framework, lifecycle).
+
+### Ecosystem
+
+`Ecosystem`:
+
+- `id` (uint64) (*mandatory*): the id of the ecosystem.
+- `did` (string) (*mandatory*): the did of the ecosystem.
+- `corporation` (Corporation) (*mandatory*): [[ref: corporation]] that controls this entry.
+- `created` (timestamp) (*mandatory*): timestamp this Ecosystem has been created.
+- `modified` (timestamp) (*mandatory*): timestamp this Ecosystem has been modified.
+- `archived` (timestamp) (*mandatory*): timestamp this Ecosystem has been archived.
+- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
+- `active_version` (int): (*mandatory*) active governance framework version.
 
 ### GovernanceFrameworkVersion
 
@@ -1555,7 +1551,6 @@ Get an `Ecosystem`
 "ecosystem": {
   {
     "active_version": 0,
-    "aka": "string",
     "corporation": "string",
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
@@ -1589,7 +1584,6 @@ Get an `Ecosystem`
 "ecosystems": [ {
   {
     "active_version": 0,
-    "aka": "string",
     "corporation": "string",
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
@@ -1618,7 +1612,6 @@ Get an `Ecosystem`
     ]  
   }, {
     "active_version": 0,
-    "aka": "string",
     "corporation": "string",
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
@@ -1900,7 +1893,6 @@ An authorized `operator` that would like to register a Cosmos SDK [[ref: group]]
 - `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed. For this method specifically, the `id` of `corporation` refers to the id of the underlying Cosmos SDK [[ref: group]] that wants to register itself — no `Corporation` entry exists for that id yet.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `did` (string) (*mandatory*): the DID of the Corporation.
-- `aka` (string) (*optional*): optional additional URI of this Corporation.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the v1 [[ref: CGF]] document.
@@ -1920,7 +1912,6 @@ If any of these precondition checks fail, method MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - A `Corporation` entry with `id` equal to the id of the signing group MUST NOT exist; if one exists, method MUST abort (a group MAY register itself as a `Corporation` at most once).
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `aka` (string) (*optional*): if specified, MUST be an [[ref: URI]].
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
@@ -1942,7 +1933,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `co.created`: current timestamp
 - `co.modified`: `co.created`
 - `co.archived`: null
-- `co.aka`: `aka`
 - `co.language`: `language`
 - `co.active_version`: 1
 
@@ -1975,7 +1965,6 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `did` (string) (*mandatory*): the new DID of the Corporation.
-- `aka` (string) (*optional*): optional additional URI of this Corporation. If null, it means replace existing value with null.
 - `language` (string) (*mandatory*): primary language tag of this Corporation.
 
 ##### [MOD-CO-MSG-2-2] Update Corporation precondition checks
@@ -1991,7 +1980,6 @@ If any of these precondition checks fail, method MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - A `Corporation` entry `co` with `co.id` equal to the id of the signing `corporation` MUST exist; if none exists, method MUST abort.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `aka` (string) (*optional*): if specified, MUST be an [[ref: URI]] or null.
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 
 ###### [MOD-CO-MSG-2-2-2] Update Corporation fee checks
@@ -2007,7 +1995,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - load `Corporation` entry `co` from the id of the signing `corporation` and set:
 
 - `co.did`: `did`
-- `co.aka`: `aka`
 - `co.language`: `language`
 - `co.modified`: current timestamp
 
@@ -2157,7 +2144,6 @@ An authorized `operator` that would like to create a [[ref: ecosystem]] MUST cal
 - `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `did` (string) (*mandatory*): the did of the ecosystem that is creating the ecosystem.
-- `aka` (string) (*optional*): optional additional URI of this ecosystem.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
@@ -2176,7 +2162,6 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `aka` (string) (*optional*): optional additional URI of this ecosystem. MUST be an [[ref: URI]].
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL .
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
@@ -2202,7 +2187,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `ecosystem.corporation`: `corporation`
 - `ecosystem.created`: current timestamp
 - `ecosystem.modified`: `ecosystem.created`
-- `ecosystem.aka`: `aka`
 - `ecosystem.language`: `language`
 - `ecosystem.active_version`: 1
 
@@ -2236,7 +2220,6 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
 - `did` (string) (*mandatory*): the did of the ecosystem.
-- `aka` (string) (*optional*): optional additional URI of this ecosystem. If null, it means replace existing value with null.
 
 ##### [MOD-ES-MSG-2-2] Update Ecosystem precondition checks
 
@@ -2251,7 +2234,6 @@ If any of these precondition checks fail, method MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `Ecosystem` entry `tr` with id `id` MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry `tr`.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `aka` (string) (*optional*): optional additional URI of this ecosystem. MUST be an [[ref: URI]] or null.
 
 ###### [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks
 
@@ -2266,7 +2248,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - load `Ecosystem` entry `tr` from `id` and set:
 
 - `ecosystem.did`: `did`
-- `ecosystem.aka`: `aka`
 - `ecosystem.modified`: current timestamp
 
 #### [MOD-ES-MSG-3] Archive Ecosystem
