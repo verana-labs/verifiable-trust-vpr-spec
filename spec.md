@@ -956,7 +956,6 @@ entity "Ecosystem" as tr {
 }
 
 entity "Corporation" as corp {
-  *id: uint64
   +did: string
   +created: timestamp
   +modified: timestamp
@@ -1259,7 +1258,6 @@ A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]]
 
 `Corporation`:
 
-- `id` (uint64) (*mandatory*): the id of the Corporation. MUST be equal to the id of the underlying Cosmos SDK [[ref: group]] that this Corporation extends (1:1).
 - `did` (string) (*mandatory*): the DID of the Corporation.
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
@@ -1267,7 +1265,7 @@ A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]]
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `active_version` (int) (*mandatory*): active [[ref: CGF]] version.
 
-> Note: members and policies of a Corporation are managed by the underlying Cosmos SDK group module. The Corporation entry adds VPR-level attributes only (DID, governance framework, lifecycle).
+> Note: a Corporation entry has no `id` of its own. Its primary key is the underlying Cosmos SDK [[ref: group]] (1:1, see the `group --- corp` link in the diagram above): a Corporation entry is created, looked up, and referenced by the id of the group it extends. Members and policies of a Corporation are managed by the underlying Cosmos SDK group module; the Corporation entry adds VPR-level attributes only (DID, governance framework, lifecycle).
 
 ### Ecosystem
 
@@ -1766,7 +1764,7 @@ If the [[ref: transaction]] fees are paid by the `corporation` account (via fee 
 
 ##### [AUTHZ-CHECK-5] Corporation Registration check
 
-A `Corporation` entry with `id` equal to the id of the signing `corporation` MUST exist. If none exists, the [[ref: transaction]] MUST abort with an error indicating that the underlying [[ref: group]] has not yet been registered as a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
+A `Corporation` entry MUST exist for the signing `corporation` (i.e., keyed by its underlying Cosmos SDK [[ref: group]]). If none exists, the [[ref: transaction]] MUST abort with an error indicating that the underlying [[ref: group]] has not yet been registered as a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
 
 > Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation), whose explicit purpose is to register a Cosmos SDK [[ref: group]] as a new `Corporation`. That method enforces the inverse precondition (the entry MUST NOT yet exist) in its own basic checks.
 
@@ -1890,7 +1888,7 @@ Any authorized `operator` CAN execute this method on behalf of a Cosmos SDK [[re
 
 An authorized `operator` that would like to register a Cosmos SDK [[ref: group]] as a `Corporation` MUST call this method by specifying:
 
-- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed. For this method specifically, the `id` of `corporation` refers to the id of the underlying Cosmos SDK [[ref: group]] that wants to register itself — no `Corporation` entry exists for that id yet.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed. For this method specifically, the underlying Cosmos SDK [[ref: group]] of `corporation` is the group that wants to register itself — no `Corporation` entry exists for that group yet.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `did` (string) (*mandatory*): the DID of the Corporation.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
@@ -1910,7 +1908,7 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- A `Corporation` entry with `id` equal to the id of the signing group MUST NOT exist; if one exists, method MUST abort (a group MAY register itself as a `Corporation` at most once).
+- A `Corporation` entry for the signing [[ref: group]] MUST NOT exist; if one exists, method MUST abort (a group MAY register itself as a `Corporation` at most once).
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
@@ -1926,9 +1924,8 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- create and persist a new `Corporation` entry `co`:
+- create and persist a new `Corporation` entry `co` keyed by the signing Cosmos SDK [[ref: group]] (1:1):
 
-- `co.id`: id of the signing Cosmos SDK [[ref: group]] (1:1)
 - `co.did`: `did`
 - `co.created`: current timestamp
 - `co.modified`: `co.created`
@@ -1940,7 +1937,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.ecosystem_id`: null
-- `gfv.corporation_id`: `co.id`
+- `gfv.corporation_id`: id of the signing [[ref: group]] (i.e., the key of `co`)
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
@@ -1978,7 +1975,7 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- A `Corporation` entry `co` with `co.id` equal to the id of the signing `corporation` MUST exist; if none exists, method MUST abort.
+- A `Corporation` entry `co` for the signing `corporation` MUST exist; if none exists, method MUST abort.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 
@@ -1992,7 +1989,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- load `Corporation` entry `co` from the id of the signing `corporation` and set:
+- load `Corporation` entry `co` for the signing `corporation` and set:
 
 - `co.did`: `did`
 - `co.language`: `language`
@@ -2077,7 +2074,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-CO-QRY-1-1] Get Corporation query parameters
 
-- `id` (uint64) (*mandatory*): the id of the Corporation.
+- `id` (uint64) (*mandatory*): the id of the Cosmos SDK [[ref: group]] that the target `Corporation` entry extends (a `Corporation` has no `id` of its own; its primary key is the underlying group).
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
 
@@ -2424,7 +2421,7 @@ if a mandatory parameter is not present, method MUST abort.
 - Exactly one of `ecosystem_id` and `corporation_id` MUST be set; if both are set or both are null, method MUST abort.
 - Define `subject` as:
   - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation` MUST be equal to the `corporation` executing the method.
-  - if `corporation_id` is set: the `Corporation` entry with this id. The entry MUST exist and `corporation_id` MUST be equal to the id of the `corporation` executing the method (a Corporation may only edit its own governance framework).
+  - if `corporation_id` is set: the `Corporation` entry keyed by `corporation_id` (i.e., the Corporation whose underlying [[ref: group]] has id `corporation_id`). The entry MUST exist, and `corporation_id` MUST equal the [[ref: group]] id of the signing `corporation` (a Corporation may only edit its own governance framework).
 - `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` whose owner matches `subject` (i.e., `gfv.ecosystem_id = ecosystem_id` if subject is an Ecosystem, else `gfv.corporation_id = corporation_id`) and `gfv.version = version`, OR `version` MUST be exactly equal to the biggest `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries owned by `subject`. `version` MUST be greater than `subject.active_version`.
 - `doc_language` (string) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
@@ -2484,7 +2481,7 @@ If any of these precondition checks fail, method MUST abort.
 - Exactly one of `ecosystem_id` and `corporation_id` MUST be set; if both are set or both are null, method MUST abort.
 - Define `subject` as:
   - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation` MUST be equal to the `corporation` executing the method.
-  - if `corporation_id` is set: the `Corporation` entry with this id. The entry MUST exist and `corporation_id` MUST be equal to the id of the `corporation` executing the method.
+  - if `corporation_id` is set: the `Corporation` entry keyed by `corporation_id` (i.e., the Corporation whose underlying [[ref: group]] has id `corporation_id`). The entry MUST exist, and `corporation_id` MUST equal the [[ref: group]] id of the signing `corporation`.
 - Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` (matching `gfv.ecosystem_id` or `gfv.corporation_id` as appropriate) whose `gfv.version` is equal to `subject.active_version` + 1. If none is found, transaction MUST abort.
 - Find a `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `subject.language`. If no document is found (and thus no document exists for the default language of this version for this subject), transaction MUST abort.
 
@@ -3123,24 +3120,24 @@ issuer --> holder: granted schema permission
 
 ```
 
-The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running an Onboarding Process (or by any account: - for `ISSUER` permissions if issuer_onboarding_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_onboarding_mode is equal to `OPEN`).
+The ECOSYSTEM type participants are created by the Credential Schema owner. All other participants are created by running an Onboarding Process (or by any account: - for `ISSUER` permissions if issuer_onboarding_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_onboarding_mode is equal to `OPEN`).
 
-An Onboarding Process (OP) is a process which involves an [[ref: applicant]] (which is the [[ref: corporation]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional validation fees plus transaction fees.
+An Onboarding Process (OP) is a process which involves an [[ref: applicant]] (which is the [[ref: corporation]] of a given Participant entry), and a [[ref: validator]] Participant, and optional validation fees plus transaction fees.
 
-Validation is used by [[ref: applicants]] that want to:
+Onboarding is used by [[ref: applicants]] that want to:
 
 - be an [[ref: issuer]] of a specific [[ref: credential schema]];
 - be a [[ref: verifier]] of a specific [[ref: credential schema]];
 - be an [[ref: issuer grantor]] of a specific [[ref: credential schema]];
 - be a [[ref: verifier grantor]] of a specific [[ref: credential schema]];
 - get issued a credential of a specific [[ref: credential schema]];
-- obtain a HOLDER permission from a issuer of a specific [[ref: credential schema]] and get issued a verifiable credential of this schema (HOLDER permission provide credential status (revoked, etc...));
+- obtain a HOLDER participant entry from a issuer of a specific [[ref: credential schema]] and get issued a verifiable credential of this schema (HOLDER participant provide credential status (revoked, etc...));
 
 In all cases, the process is very similar. Example execution of an onboarding process:
 
-1. Applicant starts an onboarding process by running the [start new validation] [[ref: transaction]]. Onboarding process may be subject to paying validation fees, as defined by validator.
+1. Applicant starts an onboarding process by running the [start new validation] [[ref: transaction]]. Onboarding process may be subject to paying validation fees, as defined in validator Participant entry.
 2. Onboarding process requires that [[ref: applicant]] connects to a validation [[ref: VS]] identified by its [[ref: DID]], and execute a some validation steps, required for the onboarding process to conclude.
-3. If [[ref: applicant]] qualifies, [[ref: validator]] updates the validation entry by running the [set to validated] [[ref: transaction]], and [[ref: applicant]] is granted new permissions, and/or gets issued a credential.
+3. If [[ref: applicant]] qualifies, [[ref: validator]] updates the participant entry by running the [set to validated] [[ref: transaction]], and [[ref: applicant]] is granted new permissions, and/or gets issued a credential.
 
 Validation is valid for a specific period, for example 365 days, as configured in the [[ref: credential schema]] for credential schema related validations, or set by ecosystem for user-agent validation.
 
@@ -3154,8 +3151,8 @@ At any time, [[ref: applicant]] can cancel the onboarding process.
 
 Some special unexpected situation may arise and must be mitigated. Examples:
 
-- if selected validator permission is revoked while applicant's validation is in PENDING state: Applicant CAN cancel the onboarding process [MOD-PP-MSG-6].
-- if selected validator permission is revoked while applicant is in VALIDATED state: Applicant CAN renew the onboarding process by choosing a new validator [MOD-PP-MSG-2].
+- if selected validator Participant entry is revoked while applicant's validation is in PENDING state: Applicant CAN cancel the onboarding process [MOD-PP-MSG-6].
+- if selected validator Participant entry is revoked while applicant is in VALIDATED state: Applicant CAN renew the onboarding process by choosing a new validator [MOD-PP-MSG-2].
 
 #### [MOD-PP-MSG-1] Start Participant OP
 
