@@ -1771,6 +1771,14 @@ If the [[ref: transaction]] fees are paid by the `corporation` account (via fee 
 2. The cycle / expiration check from [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 4 has already been performed against the same `record`; `record.remaining_fee_spend` is therefore current.
 3. If `record.fee_spend_limit` is set, `record.remaining_fee_spend` MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from `record.remaining_fee_spend` (per matching `denom` entry).
 
+##### [AUTHZ-CHECK-5] Corporation Registration check
+
+A `Corporation` entry with `id` equal to the id of the signing `corporation` MUST exist. If none exists, the [[ref: transaction]] MUST abort with an error indicating that the underlying [[ref: group]] has not yet been registered as a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
+
+> Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation), whose explicit purpose is to register a Cosmos SDK [[ref: group]] as a new `Corporation`. That method enforces the inverse precondition (the entry MUST NOT yet exist) in its own basic checks.
+
+This check applies to every delegable message that invokes [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks). As a result, all Create-* methods (and every other delegable Msg) implicitly require the signing `corporation` to be a registered `Corporation`.
+
 #### Example
 
 A corporation group `corporationABC` wants to authorize an operator account `accountABC` to execute the  
