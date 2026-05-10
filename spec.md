@@ -1798,9 +1798,9 @@ As a result, `accountABC` is authorized to:
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      | Signers |
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
 | Ecosystem                 | Create an Ecosystem                 |    N/A (Tx)                    | Msg    | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-new-ecosystem)   | corporation + operator |
-|                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-ecosystem)   |corporation + operator |
-|                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-5]](#mod-es-msg-5-archive-ecosystem)   |corporation + operator |
-|                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-6]](#mod-es-msg-6-update-module-parameters)   |governance proposal |
+|                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)   |corporation + operator |
+|                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem)   |corporation + operator |
+|                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters)   |governance proposal |
 |                                | Get Ecosystem                      | /es/v1/get                  | Query  | [[MOD-ES-QRY-1]](#mod-es-qry-1-get-ecosystem)   |N/A |
 |                                | List Ecosystems                   | /es/v1/list                 | Query  | [[MOD-ES-QRY-2]](#mod-es-qry-2-list-ecosystems)   |N/A |
 |                                | List Ecosystem Module Parameters               | /es/v1/params                 | Query  | [[MOD-ES-QRY-3]](#mod-es-qry-3-list-module-parameters)   |N/A |
@@ -1952,11 +1952,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 > Subsequent governance framework documents and version activations for this ecosystem MUST be managed through [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version).
 
-#### [MOD-ES-MSG-4] Update Ecosystem
+#### [MOD-ES-MSG-2] Update Ecosystem
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-##### [MOD-ES-MSG-4-1] Update Ecosystem parameters
+##### [MOD-ES-MSG-2-1] Update Ecosystem parameters
 
 - `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
@@ -1964,11 +1964,11 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - `did` (string) (*mandatory*): the did of the ecosystem.
 - `aka` (string) (*optional*): optional additional URI of this ecosystem. If null, it means replace existing value with null.
 
-##### [MOD-ES-MSG-4-2] Update Ecosystem precondition checks
+##### [MOD-ES-MSG-2-2] Update Ecosystem precondition checks
 
 If any of these precondition checks fail, method MUST abort.
 
-###### [MOD-ES-MSG-4-2-1] Update Ecosystem basic checks
+###### [MOD-ES-MSG-2-2-1] Update Ecosystem basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
 
@@ -1979,11 +1979,11 @@ If any of these precondition checks fail, method MUST abort.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `aka` (string) (*optional*): optional additional URI of this ecosystem. MUST be an [[ref: URI]] or null.
 
-###### [MOD-ES-MSG-4-2-2] Update Ecosystem fee checks
+###### [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks
 
 Fee payer must have available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
 
-##### [MOD-ES-MSG-4-3] Update Ecosystem execution
+##### [MOD-ES-MSG-2-3] Update Ecosystem execution
 
 If all precondition checks passed, method is executed.
 
@@ -1995,22 +1995,22 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `ecosystem.aka`: `aka`
 - `ecosystem.modified`: current timestamp
 
-#### [MOD-ES-MSG-5] Archive Ecosystem
+#### [MOD-ES-MSG-3] Archive Ecosystem
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-##### [MOD-ES-MSG-5-1] Archive Ecosystem parameters
+##### [MOD-ES-MSG-3-1] Archive Ecosystem parameters
 
 - `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*) id of the ecosystem (*mandatory*);
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
 
-##### [MOD-ES-MSG-5-2] Archive Ecosystem precondition checks
+##### [MOD-ES-MSG-3-2] Archive Ecosystem precondition checks
 
 If any of these precondition checks fail, method MUST abort.
 
-###### [MOD-ES-MSG-5-2-1] Archive Ecosystem basic checks
+###### [MOD-ES-MSG-3-2-1] Archive Ecosystem basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
 
@@ -2022,11 +2022,11 @@ If any of these precondition checks fail, method MUST abort.
   - If `archive` is true and `ecosystem.archived` is not null, MUST abort as `Ecosystem` is already archived.
   - If `archive` is false and `ecosystem.archived` is null, MUST abort as `Ecosystem` is already not archived.
 
-###### [MOD-ES-MSG-5-2-2] Archive Ecosystem fee checks
+###### [MOD-ES-MSG-3-2-2] Archive Ecosystem fee checks
 
 Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
 
-##### [MOD-ES-MSG-5-3] Archive Ecosystem execution
+##### [MOD-ES-MSG-3-3] Archive Ecosystem execution
 
 If all precondition checks passed, method is executed.
 
@@ -2037,29 +2037,29 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if `archived` is false: set `ecosystem.archived` to null.
 - `ecosystem.modified`: current timestamp
 
-#### [MOD-ES-MSG-6] Update Module Parameters
+#### [MOD-ES-MSG-4] Update Module Parameters
 
 Update Module Parameters.
 
 Can only be executed through a governance proposal.
 
-##### [MOD-ES-MSG-6-1] Update Module Parameters parameters
+##### [MOD-ES-MSG-4-1] Update Module Parameters parameters
 
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
-##### [MOD-ES-MSG-6-2] Update Module Parameters precondition checks
+##### [MOD-ES-MSG-4-2] Update Module Parameters precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-ES-MSG-6-2-1] Update Module Parameters basic checks
+###### [MOD-ES-MSG-4-2-1] Update Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
 
-###### [MOD-ES-MSG-6-2-2] Update Module Parameters fee checks
+###### [MOD-ES-MSG-4-2-2] Update Module Parameters fee checks
 
 provided transaction fees MUST be sufficient for execution
 
-##### [MOD-ES-MSG-6-3] Update Module Parameters execution
+##### [MOD-ES-MSG-4-3] Update Module Parameters execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
