@@ -1261,7 +1261,7 @@ group  --o td: corporation
 
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
 - `did` (string) (*mandatory*): the did of the ecosystem.
-- `corporation` (group) (*mandatory*): [[ref: group]] that controls this entry.
+- `corporation` (Corporation) (*mandatory*): [[ref: corporation]] that controls this entry.
 - `created` (timestamp) (*mandatory*): timestamp this Ecosystem has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Ecosystem has been modified.
 - `archived` (timestamp) (*mandatory*): timestamp this Ecosystem has been archived.
@@ -1358,7 +1358,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `type` (ParticipantRole): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER
 - `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]].
-- `corporation` (group) (*mandatory*): [[ref: group]] that owns this permission.
+- `corporation` (Corporation) (*mandatory*): [[ref: corporation]] that owns this permission.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account. This is the account that will have the right to create or update permission sessions.
 - `created` (timestamp) (*mandatory*): timestamp this `Participant` has been created.
 - `adjusted` (timestamp) (*mandatory*): timestamp this `Participant` has been adjusted.
@@ -1392,7 +1392,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 `ParticipantSession`:
 
 - `id` (uuid) (*mandatory*): session uuid.
-- `corporation` (group) (*mandatory*): corporation that controls the entry.
+- `corporation` (Corporation) (*mandatory*): corporation that controls the entry.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account that controls the entry (agent crypto account).
 - `created` (timestamp) (*mandatory*): timestamp this ParticipantSession has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this ParticipantSession has been modified.
@@ -1413,7 +1413,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 `TrustDeposit`:
 
 - `share` (number) (*mandatory*): share of the module total deposit.
-- `corporation` (group) (*mandatory*) (key): the [[ref: group]]
+- `corporation` (Corporation) (*mandatory*) (key): the [[ref: corporation]]
 - `deposit` (number) (*mandatory*): amount of deposit in `denom`.
 - `refunded` (number) (*mandatory*): amount of refunded trust deposit, in `denom`. Refunded trust deposit is reused as funding for the next trust deposit spending before drawing additional funds from the corporation account.
 - `slashed_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
@@ -1434,7 +1434,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### OperatorAuthorization
 
-- `corporation` (group) (*mandatory*): the corporation group granting the authorization.
+- `corporation` (Corporation) (*mandatory*): the [[ref: corporation]] granting the authorization.
 - `operator` (account) (*mandatory*): the operator account receiving the authorization.
 - `msg_types` (msg_type[]) (*mandatory*): list of module message types this authorization applies to.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the grantee is allowed to spend
@@ -1449,7 +1449,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `FeeGrant`:
 
-- `grantor` (group) (*mandatory*): the corporation group granting the fee allowance.
+- `grantor` (Corporation) (*mandatory*): the [[ref: corporation]] granting the fee allowance.
 - `grantee` (account) (*mandatory*): the account that receives the fee grant from `grantor`.
 - `msg_types` (msg_type[]) (*mandatory*): list of VPR delegable message types for which the fee allowance applies.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of fees that can be spent using this grant.
@@ -1461,7 +1461,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. It is keyed by the `(corporation, vs_operator)` pair. The entry exists if, and only if, it has at least one record.
 
-- `corporation` (group) (*mandatory*): the corporation group granting the authorization.
+- `corporation` (Corporation) (*mandatory*): the [[ref: corporation]] granting the authorization.
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization.
 - `records` (ParticipantAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation`.
 
@@ -1669,7 +1669,7 @@ Delegable messages are defined as messages that can be executed by an `operator`
 
 Such messages conceptually involve **two roles**:
 
-- `corporation` (group):  
+- `corporation` (Corporation):  
   The `group` that owns the created or manipulated resource.  
   The corporation is represented in the Msg through an authorization granted to an `operator` account.
 
@@ -1698,7 +1698,7 @@ It is entirely up to the `corporation` group to decide **which accounts may exec
 
 Some module messages specify only a `corporation`:
 
-- `corporation` (group):  
+- `corporation` (Corporation):  
   The `group` that owns the manipulated resource.
 
 Such messages **cannot be delegated** and MUST be executed exclusively through a **group proposal**.
@@ -1878,7 +1878,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An authorized `operator` that would like to create a [[ref: ecosystem]] MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `did` (string) (*mandatory*): the did of the ecosystem that is creating the ecosystem.
 - `aka` (string) (*optional*): optional additional URI of this ecosystem.
@@ -1896,7 +1896,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
@@ -1953,7 +1953,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-ES-MSG-2-1] Add Governance Framework Document parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
 - `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the [[ref: EGF]] document, provided by the [[ref: EGA]].
@@ -1971,7 +1971,7 @@ If any of these precondition checks fail, method MUST abort.
 
 if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `Ecosystem` entry with this id MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry.
@@ -2013,7 +2013,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-ES-MSG-3-1] Increase Active Governance Framework Version parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
 
@@ -2025,7 +2025,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `Ecosystem` entry with this id MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry.
@@ -2050,7 +2050,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-ES-MSG-4-1] Update Ecosystem parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
 - `did` (string) (*mandatory*): the did of the ecosystem.
@@ -2064,7 +2064,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `Ecosystem` entry `tr` with id `id` MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry `tr`.
@@ -2093,7 +2093,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-ES-MSG-5-1] Archive Ecosystem parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*) id of the ecosystem (*mandatory*);
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
@@ -2106,7 +2106,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - load `Ecosystem` `tr` from `id`. `ecosystem.corporation` MUST be the corporation executing the method, else MUST abort.
@@ -2183,7 +2183,7 @@ return found `Ecosystem` entry (if any), as well as *all its nested* `Governance
 
 The following parameters are optional:
 
-- `corporation` (group) (*optional*): if specified, filter by corporation.
+- `corporation` (Corporation) (*optional*): if specified, filter by corporation.
 - `modified_after` (timestamp) (*optional*): if specified, returns only `Ecosystem` entries with `Ecosystem.modified` greater than `modified`.
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
@@ -2234,7 +2234,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An [[ref: account]] that would like to create a [[ref: credential schema]] MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` id of the ecosystem (*mandatory*);
 - `json_schema` the [[ref: Json Schema]] of the credential (*mandatory*).
@@ -2258,7 +2258,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `ecosystem_id` MUST represent an existing `Ecosystem` entry `tr` and `ecosystem.corporation` MUST be the `corporation` executing the method.
@@ -2324,7 +2324,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An [[ref: account]] that would like to update a [[ref: credential schema]] MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` id of the credential schema (*mandatory*);
 - `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
@@ -2343,7 +2343,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
@@ -2381,7 +2381,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An [[ref: account]] that would like to archive or unarchive a [[ref: credential schema]] MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*) id of the credential schema (*mandatory*);
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
@@ -2394,7 +2394,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
@@ -2462,7 +2462,7 @@ Accordingly, if a credential schema defines one or more active policies for the 
 
 ##### [MOD-CS-MSG-5-1] Create Schema Authorization Policy parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
 - `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
@@ -2476,7 +2476,7 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-CS-MSG-5-2-1] Create Schema Authorization Policy basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `corporation`.
@@ -2519,7 +2519,7 @@ This message activates the current draft `SchemaAuthorizationPolicy` for the giv
 
 ##### [MOD-CS-MSG-6-1] Increase Active Schema Authorization Policy Version parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
 - `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
@@ -2531,7 +2531,7 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-CS-MSG-6-2-1] Basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `corporation`.
@@ -2562,7 +2562,7 @@ This message revokes a previously enabled `SchemaAuthorizationPolicy` version. R
 
 ##### [MOD-CS-MSG-7-1] Revoke Schema Authorization Policy parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
 - `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
@@ -2575,7 +2575,7 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-CS-MSG-7-2-1] Basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - a policy MUST exist for `(schema_id, role, version)`.
@@ -2840,7 +2840,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An Applicant that would like to start a permission onboarding process MUST execute this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_operator` (account) (*optional*): the account of the Veriable Service we want to authorize to create permission sessions linked to this permission. If not specified, Verifiable Service will not be able to use the payment delegation feature. **Required** to use the payment delegation feature.
 - `type` (ParticipantRole) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
@@ -2880,7 +2880,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `type` (ParticipantRole) (*mandatory*) MUST be a valid ParticipantRole: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
@@ -3074,7 +3074,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-PP-MSG-2-1] Renew Participant OP parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission for which applicant would like to renew the onboarding process;
 
@@ -3086,7 +3086,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64 and a permission entry with the same id MUST exist.
@@ -3167,7 +3167,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An [[ref: account]] that would like to set a validation entry to VALIDATED MUST execute this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the onboarding process;
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit should been set for this permission or if we want it to be aligned with the onboarding process expiration timestamp calculated by this method.
@@ -3186,7 +3186,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
@@ -3344,7 +3344,7 @@ At any time, [[ref: applicant]] of a permission onboarding process may request c
 
 ##### [MOD-PP-MSG-6-1] Cancel Participant OP Last Request parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry;
 
@@ -3356,7 +3356,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
@@ -3401,7 +3401,7 @@ This method is used by controller authorities of Ecosystems. When they create a 
 
 An [[ref: account]] that would like to create a `Participant` entry MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
 - `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this permission. **Required** for payment delegation.
@@ -3434,7 +3434,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
@@ -3527,7 +3527,7 @@ This method can be called:
 
 ##### [MOD-PP-MSG-8-1] Adjust Participant parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission;
 - `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Participant` will be effective.
@@ -3540,7 +3540,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
@@ -3617,7 +3617,7 @@ This method can only be called:
 
 ##### [MOD-PP-MSG-9-1] Revoke Participant parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission;
 
@@ -3629,7 +3629,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
@@ -3781,7 +3781,7 @@ See [[ref: VT spec]].
 
 An [[ref: account]] that would like to create or update a `ParticipantSession` entry MUST send a Msg by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uuid) (*mandatory*): id of the `ParticipantSession`.
 - `issuer_participant_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the issuance of a credential.
@@ -3794,7 +3794,7 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uuid. If an entry `existing_entry` with `id` already exist, then  `existing_entry.corporation` MUST be equal to `corporation` AND `existing_entry.vs_operator` MUST be equal to `operator`, else abort.
 
@@ -4208,7 +4208,7 @@ This method can only be called by either:
 
 ##### [MOD-PP-MSG-12-1] Slash Participant Trust Deposit parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission;
 - `amount` (number) (*mandatory*): the amount to slash
@@ -4221,7 +4221,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
@@ -4284,7 +4284,7 @@ Nevertheless, to get a new permission for a given ecosystem, it is needed, using
 
 ##### [MOD-PP-MSG-13-1] Repay Participant Slashed Trust Deposit parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission
 
@@ -4296,7 +4296,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
@@ -4335,7 +4335,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 
 ##### [MOD-PP-MSG-14-1] Self Create Participant parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `type` (ParticipantRole) (*mandatory*): ISSUER or VERIFIER.
 - `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
@@ -4372,7 +4372,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 Load `Participant` `validator_participant` from `validator_participant_id`.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `type` (ParticipantRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
@@ -4476,7 +4476,7 @@ The method does not modify the [[ref: VPR]] state; it only emits an event that o
 
 ##### [MOD-PP-MSG-15-1] Trigger Resolver parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission for which a trust resolution must be triggered.
 
@@ -4488,7 +4488,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `perm` from `id`. If no entry found, abort.
@@ -4914,7 +4914,7 @@ Only the modules that require trust deposit manipulation CAN call this method. I
 
 ##### [MOD-TD-MSG-1-1] Adjust Trust Deposit method parameters
 
-- `corporation` (group) (*mandatory*): corporation owner of the [[ref: trust deposit]] we want to adjust.
+- `corporation` (Corporation) (*mandatory*): corporation owner of the [[ref: trust deposit]] we want to adjust.
 - `augend` (number) (*mandatory*): value to add to the deposit, in [[ref: denom]].
 
 ##### [MOD-TD-MSG-1-2] Adjust Trust Deposit precondition checks
@@ -5007,12 +5007,12 @@ If `claimable_yield` is positive, it can be claimed.
 
 ##### [MOD-TD-MSG-2-1] Reclaim Trust Deposit Yield method parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 
 ##### [MOD-TD-MSG-2-2] Reclaim Trust Deposit Yield precondition checks
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 
@@ -5083,7 +5083,7 @@ This method is for network governance authority slash. For ecosystem slash, see 
 
 ##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
 
-- `corporation` (group) (*mandatory*): corporation we want to slash.
+- `corporation` (Corporation) (*mandatory*): corporation we want to slash.
 - `amount` (number) (*mandatory*): value to slash, in [[ref: denom]].
 
 ##### [MOD-TD-MSG-5-2] Slash Trust Deposit precondition checks
@@ -5122,7 +5122,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-TD-MSG-6-1] Repay Slashed Trust Deposit method parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `amount` (number) (*mandatory*): value to repay, in [[ref: denom]].
 
@@ -5134,7 +5134,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `amount` must be > 0.
@@ -5169,7 +5169,7 @@ Make sure to **properly protect access to the execution of this method** else it
 
 ##### [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters
 
-- `corporation` (group) (*mandatory*): corporation of the [[ref: trust deposit]] we want to burn.
+- `corporation` (Corporation) (*mandatory*): corporation of the [[ref: trust deposit]] we want to burn.
 - `amount` (number) (*mandatory*): value to burn, in [[ref: denom]].
 
 :::warning
@@ -5256,7 +5256,7 @@ This method can only be called directly by the following methods:
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
-- `corporation` (group) (*mandatory*): the corporation that grants the fees.
+- `corporation` (Corporation) (*mandatory*): the corporation that grants the fees.
 - `grantee` (account) (*mandatory*): the account that receives the fee grant from `corporation`.
 - `msg_types` (Msg[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
 - `expiration` (timestamp) (*optional*): when the grant expires.
@@ -5301,14 +5301,14 @@ This method can only be called directly by the following methods:
 
 ##### [MOD-DE-MSG-2-1] Revoke Allowance method parameters
 
-- `corporation` (group) (*mandatory*): the corporation.
+- `corporation` (Corporation) (*mandatory*): the corporation.
 - `grantee` (account) (*mandatory*): the grantee we want to revoke.
 
 ##### [MOD-DE-MSG-2-2] Revoke Fee Allowance basic checks
 
 MUST abort if one of these conditions fails:
 
-- `corporation` (group) (*mandatory*): MUST be specified.
+- `corporation` (Corporation) (*mandatory*): MUST be specified.
 - `grantee` (account) (*mandatory*): MUST be specified.
 
 ##### [MOD-DE-MSG-2-3] Revoke Fee Allowance fee checks
@@ -5326,7 +5326,7 @@ If FeeGrant entry for this (`corporation`, `grantee`) exist, delete it, else do 
 
 ##### [MOD-DE-MSG-3-1] Grant Operator Authorization method parameters
 
-- `corporation` (group) (*mandatory*): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation) (*mandatory*): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account) (*optional*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `grantee` (account) (*mandatory*): the account that receives the authorization from `corporation`.
 - `msg_types` (Msg[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
@@ -5341,7 +5341,7 @@ If FeeGrant entry for this (`corporation`, `grantee`) exist, delete it, else do 
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `CreateOrUpdateParticipantSession` which is not allowed.
@@ -5391,7 +5391,7 @@ else if `with_feegrant` is true:
 
 ##### [MOD-DE-MSG-4-1] Revoke Operator Authorization method parameters
 
-- `corporation` (group) (*mandatory*): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation) (*mandatory*): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `grantee` (account) (*mandatory*): the account that will be revoked its authorization`.
 
@@ -5399,7 +5399,7 @@ else if `with_feegrant` is true:
 
 MUST abort if one of these conditions fails:
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - An Authorization entry MUST exist for this (`corporation`, `grantee`)
@@ -5426,7 +5426,7 @@ This method does NOT read `Participant` state. All authorization configuration i
 
 ##### [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters
 
-- `corporation` (group) (*mandatory*): the corporation delegating the authorization.
+- `corporation` (Corporation) (*mandatory*): the corporation delegating the authorization.
 - `vs_operator` (account) (*mandatory*): the account receiving the authorization.
 - `record` ([ParticipantAuthorizationRecord](#participantauthorizationrecord)) (*mandatory*): the full record to store.
 
@@ -5547,7 +5547,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-DE-QRY-1-1] List Operator Authorizations parameters
 
-- `corporation` (group) (*optional*): filter by the corporation group that granted the authorization.
+- `corporation` (Corporation) (*optional*): filter by the corporation group that granted the authorization.
 - `operator` (account) (*optional*): filter by the operator account that received the authorization.
 - `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
 
@@ -5569,7 +5569,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-DE-QRY-2-1] List VS Operator Authorizations parameters
 
-- `corporation` (group) (*optional*): filter by the corporation group that granted the authorization.
+- `corporation` (Corporation) (*optional*): filter by the corporation group that granted the authorization.
 - `vs_operator` (account) (*optional*): filter by the VS operator account that received the authorization.
 - `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
 
@@ -5592,7 +5592,7 @@ Return a list of `VSOperatorAuthorization` entries matching the filter criteria,
 
 ##### [MOD-DI-MSG-1-1] Store Digest method parameters
 
-- `corporation` (group) (*mandatory*): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (Corporation) (*mandatory*): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `digest` (string) (*mandatory*): digest to store.
 
@@ -5604,7 +5604,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (Corporation): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - if `digest` is not present, abort.
