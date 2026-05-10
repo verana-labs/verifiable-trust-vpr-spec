@@ -483,11 +483,11 @@ vg --> verifier : creates schema participant
 
 ```
 
-### Corporation
+### Corporation Management
 
 *This section is non-normative.*
 
-A [[ref: corporation]] is the VPR-level entity that represents an organisation acting in the registry. It extends a Cosmos SDK [[ref: group]] (whose members and policies are managed by the group module) with VPR-specific attributes: a [[ref: DID]], a [[ref: corporation governance framework]] (CGF), and lifecycle metadata. A `Corporation` entry has no `id` of its own — it is keyed by its underlying [[ref: group]] (1:1).
+A [[ref: corporation]] is the VPR-level entity that represents an authority acting in the registry. It extends a Cosmos SDK [[ref: group]] (whose members and policies are managed by the group module) with VPR-specific attributes: a [[ref: DID]], a [[ref: corporation governance framework]] (CGF), and lifecycle metadata. A `Corporation` entry has no `id` of its own — it is keyed by its underlying [[ref: group]] (1:1).
 
 A corporation interacts with the VPR in two complementary ways:
 
@@ -581,7 +581,7 @@ user <|-- browser : show result
 
 *This section is non-normative.*
 
-In a [[ref: VPR]], each [[ref: account]] is associated with a [[ref: trust deposit]].
+In a [[ref: VPR]], each [[ref: corporation]] is associated with a [[ref: trust deposit]].
 
 This [[ref: trust deposit]] is automatically funded through transactions involving **trust operations**, such as:
 
@@ -589,7 +589,7 @@ This [[ref: trust deposit]] is automatically funded through transactions involvi
 
 The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
 
-- The more you use the [[ref: VPR]], the more your [[ref: trust deposit]] grows.
+- The more a [[ref: corporation]] uses the [[ref: VPR]], the more its [[ref: trust deposit]] grows.
 - Trust deposits **generate yield**: block execution fees are distributed not only to network validators, but also to **trust deposit holders**.
 - **network-level penalties**: If a participant violates the [[ref: governance framework]] of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority.
 - **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), their **ecosystem-specific trust deposit can be slashed** by the corresponding ecosystem governance authority.
@@ -600,26 +600,11 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
 
-#### Object creation
+#### Onboarding Process Trust Fees
 
 *This section is non-normative.*
 
-The following operations **only require payment of network fees** (no trust deposit is involved):
-
-- **Ecosystems**: requires paying only [[ref: network fees]]  
-- **Credential Schemas**: requires paying only [[ref: network fees]]  
-
-
-- Updating the **governance framework documents** of an ecosystem ecosystem  
-- Updating a Credential Schema
-- Updating an Ecosystem
-- ...
-
-#### Onboarding process trust fees
-
-*This section is non-normative.*
-
-We've explained in the [Credential Schemas and Permissions](#credential-schemas-and-permissions) section above what is an onboarding process.
+We've explained in the [Credential Schemas and Participants](#credential-schemas-and-participants) section above what is an onboarding process.
 
 The table below summarizes the possible combinations of applicants and validators:
 
@@ -637,10 +622,9 @@ The table below summarizes the possible combinations of applicants and validator
 - (4): if *verifier onboarding mode* is set to ECOSYSTEM_ONBOARDING_PROCESS.
 - (5): if *holder onboarding mode* is set to ISSUER_ONBOARDING_PROCESS.
 
-
 Onboarding process is started by the applicant.
 
-*Example of a candidate [[ref: issuer]] ([[ref: applicant]]) that would like to be granted an ISSUER permission for a credential schema of an ecosystem, by a [[ref: validator]] that has a ISSUER_GRANTOR permission:*
+*Example of a candidate [[ref: issuer]] ([[ref: applicant]]) that would like to obtain an `ISSUER` `Participant` entry for a credential schema of an ecosystem, validated by a [[ref: validator]] that holds an `ISSUER_GRANTOR` `Participant` entry:*
 
 ```plantuml
 scale max 800 width
@@ -652,36 +636,36 @@ actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
 
 participant "Verifiable Public Registry" as VPR #3fbdb6
 
-ApplicantAccount --> VPR: create new validation with Validator 
-VPR <-- VPR: create validation entry.
-ApplicantAccount <-- VPR: validation entry created
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validation.perm\nby creating a DIDComm connection
+ApplicantAccount --> VPR: start onboarding process with Validator
+VPR <-- VPR: create applicant Participant entry\n(op_state = PENDING)
+ApplicantAccount <-- VPR: applicant Participant entry created
+ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in\napplicant_participant.validator_participant\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
-ApplicantBrowser --> ValidatorVS: I want to proceed with validation.id=...
-ValidatorVS --> ValidatorVS: load validation with id=...\nand verify the associated validation.perm is referring to me
-ApplicantBrowser <-- ValidatorVS: request proof of control\nof validation.applicant account (blind sign)
+ApplicantBrowser --> ValidatorVS: I want to proceed with applicant_participant.id=...
+ValidatorVS --> ValidatorVS: load applicant Participant with this id\nand verify validator_participant_id refers to me
+ApplicantBrowser <-- ValidatorVS: request proof of control\nof applicant_participant.corporation account (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proof of operator account
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are the operator\nof validation entry, I trust you.
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are an operator\nof the applicant Participant, I trust you.
 ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
 ApplicantBrowser --> ValidatorVS: send DID
 ValidatorVS --> ValidatorVS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be registered in the ISSUER permission (blind sign)
+ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be registered on your `ISSUER` `Participant` entry (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proofs
 ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of this DID, I trust you.
 note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
 ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
 note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorVS: Your are a legitimate candidate. I'll now create an ISSUER permission for your account and DID.
-ValidatorAccount --> VPR #3fbdb6: set validation.state to VALIDATED\ncreate permission(s) for applicant.
+ApplicantBrowser <-- ValidatorVS: You are a legitimate candidate. I'll now finalize your `ISSUER` `Participant` entry.
+ValidatorAccount --> VPR #3fbdb6: set applicant_participant.op_state to VALIDATED\n(finalize the `ISSUER` `Participant` entry)
 VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify ISSUER permission created for your account and DID.\nDID can now issue credentials of this schema.
+ApplicantBrowser <-- ValidatorVS: notify `ISSUER` `Participant` entry validated for your corporation and DID.\nDID can now issue credentials of this schema.
 ```
 
-The **total fees** paid by the applicant consists of:
+The **total fees** paid by the applicant consist of:
 
-- The validation [[ref: trust fees]] defined in the permission of the validator participating in the onboarding process, **plus**
-- An additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant’s trust deposit** when the onboarding process begins.
+- The validation [[ref: trust fees]] defined in the validator's `Participant` entry (the one acting as the validator in the onboarding process), **plus**
+- an additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant's [[ref: trust deposit]]** when the onboarding process begins, **plus**
 - [[ref: network fees]] (not part of the escrowed amount).
 
 Example, using 20% for `trust_deposit_rate`:
