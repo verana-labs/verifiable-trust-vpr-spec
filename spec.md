@@ -2074,7 +2074,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-CO-QRY-1-1] Get Corporation query parameters
 
-- `id` (uint64) (*mandatory*): the id of the Cosmos SDK [[ref: group]] that the target `Corporation` entry extends (a `Corporation` has no `id` of its own; its primary key is the underlying group).
+- `corporation` (group) (*mandatory*): the [[ref: corporation]] to fetch (i.e., the underlying Cosmos SDK [[ref: group]] whose `Corporation` entry is keyed by it).
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
 
@@ -2082,11 +2082,11 @@ Anyone CAN execute this method.
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
-- `id` (uint64) (*mandatory*): MUST be a valid uint64.
+- `corporation` (group) (*mandatory*): MUST be a valid group id.
 
 ##### [MOD-CO-QRY-1-3] Get Corporation execution
 
-Return found `Corporation` entry (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
+Return the `Corporation` entry keyed by `corporation` (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
 
 #### [MOD-CO-QRY-2] List Corporations
 
