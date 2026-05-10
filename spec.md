@@ -124,7 +124,13 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A [[ref: account]] that starts a [[ref: onboarding process]].
 
 [[def: corporation, corporations]]:
-~ An [[ref: group]] which is the owner of a specific resource in an [[ref: VPR]].
+~ A legal/organizational entity that controls Participants in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` extends a Cosmos SDK [[ref: group]] with VPR-level attributes (DID, governance framework, lifecycle).
+
+[[def: corporation governance framework, CGF]]:
+~ The governance framework (GF) of a [[ref: corporation]].
+
+[[def: corporation governance authority, CGA]]:
+~ The governance authority (GA) of a [[ref: corporation]].
 
 [[def: credential schema, credential schemas]]:
 ~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
@@ -168,7 +174,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: ecosystem]].
 
 [[def: group, groups]]:
-~ A [[ref: verifiable public registry]] group.
+~ The underlying Cosmos SDK group primitive that a [[ref: corporation]] extends. Members and policies are managed by the group module; VPR-level attributes (DID, governance framework, lifecycle) live on the corresponding [[ref: corporation]] entry.
 
 [[def: holder, holders]]:
 ~ A role an entity might perform by possessing one or more verifiable credentials and generating verifiable presentations from them. A holder is often, but not always, a [[ref: subject]] of the verifiable credentials they are holding. Holders store their credentials in credential repositories. Example holders include organizations, persons, things.
@@ -950,6 +956,17 @@ entity "Ecosystem" as tr {
   +language: string
 }
 
+entity "Corporation" as corp {
+  *id: uint64
+  +did: string
+  +created: timestamp
+  +modified: timestamp
+  +archived: timestamp
+  +aka: string
+  +active_version: int
+  +language: string
+}
+
 entity "GovernanceFrameworkVersion" as gfv {
   *id: uint64
   +created: timestamp
@@ -1220,6 +1237,8 @@ csp "1" --- "0..n" da: vs_operator_fee_spend_limit
 tr "1" --- "1..n" gfv: versions 
 gfv "1" --- "1..n" gfd: documents 
 
+group "1" --- "1" corp
+
 group --o tr: corporation
 group --o csp: corporation
 group --o csps: corporation
@@ -1248,6 +1267,23 @@ group  --o td: corporation
 - `aka` (string) (*optional*): optional additional URI of this ecosystem.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
 - `active_version` (int): (*mandatory*) active governance framework version.
+
+### Corporation
+
+A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
+
+`Corporation`:
+
+- `id` (uint64) (*mandatory*): the id of the Corporation. MUST be equal to the id of the underlying Cosmos SDK [[ref: group]] that this Corporation extends (1:1).
+- `did` (string) (*mandatory*): the DID of the Corporation.
+- `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
+- `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
+- `archived` (timestamp) (*optional*): timestamp this Corporation has been archived.
+- `aka` (string) (*optional*): optional additional URI of this Corporation.
+- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
+- `active_version` (int) (*mandatory*): active [[ref: CGF]] version.
+
+> Note: members and policies of a Corporation are managed by the underlying Cosmos SDK group module. The Corporation entry adds VPR-level attributes only (DID, governance framework, lifecycle).
 
 ### GovernanceFrameworkVersion
 
@@ -5701,7 +5737,7 @@ Create `ExchangeRate` entry `xr`:
 
 #### [MOD-XR-MSG-2] Update Exchange Rate
 
-The **Update Exchange Rate** method allows an operator authorized by network governance (via an [[ref: ExchangeRateAuthorization]]) to push a fresh `rate` for a given `ExchangeRate` entry.
+The **Update Exchange Rate** method allows an operator authorized by network governance (via an `ExchangeRateAuthorization`) to push a fresh `rate` for a given `ExchangeRate` entry.
 
 - Only the `operator` designated in an `ExchangeRateAuthorization` matching the target `ExchangeRate` CAN execute this method.
 
