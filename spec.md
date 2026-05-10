@@ -1234,8 +1234,9 @@ csp "1" --- "0..n" da: vs_operator_spend_limit
 csp "1" --- "0..n" da: vs_operator_fee_spend_limit
 
 
-tr "1" --- "1..n" gfv: versions 
-gfv "1" --- "1..n" gfd: documents 
+tr "1" --- "0..n" gfv: versions (ecosystem_id)
+corp "1" --- "0..n" gfv: versions (corporation_id)
+gfv "1" --- "1..n" gfd: documents
 
 group "1" --- "1" corp
 
@@ -1287,21 +1288,26 @@ A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]]
 
 ### GovernanceFrameworkVersion
 
+A `GovernanceFrameworkVersion` represents a single version of either an [[ref: EGF]] or a [[ref: CGF]]. Its owning subject is identified by exactly one of `ecosystem_id` or `corporation_id` (XOR).
+
 `GovernanceFrameworkVersion`:
 
-- `id` (uint64) (*mandatory*): the id of the schema.
-- `ecosystem_id` (uint64) (*mandatory*): the id of the ecosystem that controls this `GovernanceFrameworkVersion` entry.
+- `id` (uint64) (*mandatory*): the id of the GFV.
+- `ecosystem_id` (uint64) (*conditional*): the id of the [[ref: ecosystem]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `corporation_id` is null.
+- `corporation_id` (uint64) (*conditional*): the id of the [[ref: corporation]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `ecosystem_id` is null.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkVersion has been created.
 - `version` (int) (*mandatory*): version of this GF. MUST Starts with 1.
+
+> Constraint: exactly one of `ecosystem_id` and `corporation_id` MUST be set.
 
 ### GovernanceFrameworkDocument
 
 `GovernanceFrameworkDocument`
 
-- `id` (uint64) (*mandatory*): the id of the schema.
+- `id` (uint64) (*mandatory*): the id of the GFD.
 - `gfv_id` (uint64) (*mandatory*): the id of the `GovernanceFrameworkVersion` entry.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkDocument has been created.
-- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
+- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this governance framework document.
 - `url` (string) (*mandatory*): URL where the document is published.
 - `digest_sri` (string) (*mandatory*): digest_sri of the document.
 
