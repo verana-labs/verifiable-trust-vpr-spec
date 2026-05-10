@@ -1798,14 +1798,16 @@ As a result, `accountABC` is authorized to:
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      | Signers |
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
 | Ecosystem                 | Create an Ecosystem                 |    N/A (Tx)                    | Msg    | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-new-ecosystem)   | corporation + operator |
-|                                | Add Governance Framework Document       |     N/A (Tx)                      | Msg    | [[MOD-ES-MSG-2]](#mod-es-msg-2-add-governance-framework-document)   |corporation + operator |
-|                                | Increase Active Governance Framework Version |      N/A (Tx)                   | Msg    | [[MOD-ES-MSG-3]](#mod-es-msg-3-increase-active-governance-framework-version)   |corporation + operator |
 |                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-ecosystem)   |corporation + operator |
 |                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-5]](#mod-es-msg-5-archive-ecosystem)   |corporation + operator |
 |                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-6]](#mod-es-msg-6-update-module-parameters)   |governance proposal |
 |                                | Get Ecosystem                      | /es/v1/get                  | Query  | [[MOD-ES-QRY-1]](#mod-es-qry-1-get-ecosystem)   |N/A |
 |                                | List Ecosystems                   | /es/v1/list                 | Query  | [[MOD-ES-QRY-2]](#mod-es-qry-2-list-ecosystems)   |N/A |
 |                                | List Ecosystem Module Parameters               | /es/v1/params                 | Query  | [[MOD-ES-QRY-3]](#mod-es-qry-3-list-module-parameters)   |N/A |
+| Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation + operator |
+|                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + operator |
+|                                | Get Governance Framework Version             | /gf/v1/get                       | Query  | [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version)   | N/A |
+|                                | List Governance Framework Versions           | /gf/v1/list                      | Query  | [[MOD-GF-QRY-2]](#mod-gf-qry-2-list-governance-framework-versions)   | N/A |
 | Credential Schema              | Create a Credential Schema              |       N/A (Tx)                   | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |corporation + operator |
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation + operator |
 |                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |corporation + operator |
@@ -1934,6 +1936,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.ecosystem_id`: `ecosystem.id`
+- `gfv.corporation_id`: null
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
@@ -1947,102 +1950,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `gfd.url`: `doc_url`
 - `gfd.digest_sri`: `doc_digest_sri`
 
-#### [MOD-ES-MSG-2] Add Governance Framework Document
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-##### [MOD-ES-MSG-2-1] Add Governance Framework Document parameters
-
-- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): the id of the ecosystem.
-- `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the [[ref: EGF]] document, provided by the [[ref: EGA]].
-- `doc_url` (string) (*mandatory*): URL where the document is published.
-- `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
-- `version` (int) (*mandatory*): targeted version.
-
-If for a given language, a document already exists, the execution of this transaction will replace the corresponding entry. Else, a new entry is created. It is only possible to edit future versions. Active version cannot be modified.
-
-##### [MOD-ES-MSG-2-2] Add Governance Framework Document precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-ES-MSG-2-2-1] Add Governance Framework Document basic checks
-
-if a mandatory parameter is not present, method MUST abort.
-
-- `corporation` (Corporation): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` (uint64) (*mandatory*): a `Ecosystem` entry with this id MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry.
-- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` where `gfv.ecosystem_id` is equal to `id` and `gfv.version` = `version`, or `version` MUST be exactly equal to the biggest found `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries found for this `gfv.ecosystem_id` equal to `id`. `version` MUST be greater than the `ecosystem.active_version`.
-- `doc_language` (string) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
-- `doc_url` (string) (*mandatory*): MUST be a valid URL.
-- `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
-
-###### [MOD-ES-MSG-2-2-2] Add Governance Framework Document fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-ES-MSG-2-3] Add Governance Framework Document execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or create a new `GovernanceFrameworkVersion` `gfv` if required:
-
-- `gfv.id`: auto-incremented uint64
-- `gfv.ecosystem_id`: `id`
-- `gfv.created`: current timestamp
-- `gfv.version`: `version`
-- `gfv.active_since`: null
-
-- create and persist or (replace if already exist) a `GovernanceFrameworkDocument` entry `gfd`:
-
-- `gfd.id`: auto-incremented uint64
-- `gfd.gfv_id`: `gfv.id`
-- `gfd.created`: current timestamp
-- `gfd.language`: `doc_language`
-- `gfd.url`: `doc_url`
-- `gfd.digest_sri`: `doc_digest_sri`
-
-#### [MOD-ES-MSG-3] Increase Active Governance Framework Version
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-##### [MOD-ES-MSG-3-1] Increase Active Governance Framework Version parameters
-
-- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): the id of the ecosystem.
-
-##### [MOD-ES-MSG-3-2] Increase Active Governance Framework Version precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-ES-MSG-3-2-1] Increase Active Governance Framework Version basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-
-- `corporation` (Corporation): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` (uint64) (*mandatory*): a `Ecosystem` entry with this id MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry.
-- load `Ecosystem` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `ecosystem.active_version` + 1. If none is found, transaction MUST abort.
-- find `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `ecosystem.language`. If no document is found (and thus no document exist for the default language of this version for this ecosystem), transaction MUST abort.
-
-###### [MOD-ES-MSG-3-2-2] Increase Active Governance Framework Version fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-ES-MSG-3-3] Increase Active Governance Framework Version execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- load `Ecosystem` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `ecosystem.active_version` + 1. If none is found, transaction MUST abort. Else, update `ecosystem.active_version` to `ecosystem.active_version` + 1. Set `ecosystem.modified` to current timestamp, and set `gfv.active_since` to current timestamp and persist changes.
+> Subsequent governance framework documents and version activations for this ecosystem MUST be managed through [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version).
 
 #### [MOD-ES-MSG-4] Update Ecosystem
 
@@ -2223,6 +2131,168 @@ Return the list of the existing parameters and their values.
   }
 }
 ```
+
+### Governance Framework Module
+
+This module handles [[ref: governance framework]] documents and version activation for both [[ref: ecosystems]] and [[ref: corporations]]. Methods are polymorphic over the owning subject: every message specifies exactly one of `ecosystem_id` or `corporation_id` to designate whose governance framework is being modified.
+
+The initial `GovernanceFrameworkVersion` and its first `GovernanceFrameworkDocument` are created atomically by [Create New Ecosystem](#mod-es-msg-1-create-new-ecosystem) (and, by parallel construction, by [Create New Corporation](#mod-co-msg-1-create-new-corporation)). After that, subsequent versions and documents are added through this module.
+
+#### [MOD-GF-MSG-1] Add Governance Framework Document
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-GF-MSG-1-1] Add Governance Framework Document parameters
+
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `ecosystem_id` (uint64) (*conditional*): id of the target [[ref: ecosystem]] whose governance framework will be modified. MUST be set if `corporation_id` is null.
+- `corporation_id` (uint64) (*conditional*): id of the target [[ref: corporation]] whose governance framework will be modified. MUST be set if `ecosystem_id` is null.
+- `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the governance framework document.
+- `doc_url` (string) (*mandatory*): URL where the document is published.
+- `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
+- `version` (int) (*mandatory*): targeted version.
+
+If for a given language, a document already exists, the execution of this transaction will replace the corresponding entry. Else, a new entry is created. It is only possible to edit future versions. Active version cannot be modified.
+
+##### [MOD-GF-MSG-1-2] Add Governance Framework Document precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-GF-MSG-1-2-1] Add Governance Framework Document basic checks
+
+if a mandatory parameter is not present, method MUST abort.
+
+- `corporation` (Corporation): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- Exactly one of `ecosystem_id` and `corporation_id` MUST be set; if both are set or both are null, method MUST abort.
+- Define `subject` as:
+  - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation` MUST be equal to the `corporation` executing the method.
+  - if `corporation_id` is set: the `Corporation` entry with this id. The entry MUST exist and `corporation_id` MUST be equal to the id of the `corporation` executing the method (a Corporation may only edit its own governance framework).
+- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` whose owner matches `subject` (i.e., `gfv.ecosystem_id = ecosystem_id` if subject is an Ecosystem, else `gfv.corporation_id = corporation_id`) and `gfv.version = version`, OR `version` MUST be exactly equal to the biggest `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries owned by `subject`. `version` MUST be greater than `subject.active_version`.
+- `doc_language` (string) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
+- `doc_url` (string) (*mandatory*): MUST be a valid URL.
+- `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
+
+###### [MOD-GF-MSG-1-2-2] Add Governance Framework Document fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-GF-MSG-1-3] Add Governance Framework Document execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- if a `GovernanceFrameworkVersion` entry `gfv` matching `subject` and `version` does not exist, create and persist a new one:
+  - `gfv.id`: auto-incremented uint64
+  - `gfv.ecosystem_id`: `ecosystem_id` (or null if subject is a Corporation)
+  - `gfv.corporation_id`: `corporation_id` (or null if subject is an Ecosystem)
+  - `gfv.created`: current timestamp
+  - `gfv.version`: `version`
+
+- if a `GovernanceFrameworkDocument` entry `gfd` exists with `gfd.gfv_id = gfv.id` and `gfd.language = doc_language`, update it:
+  - `gfd.url`: `doc_url`
+  - `gfd.digest_sri`: `doc_digest_sri`
+
+- else, create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
+  - `gfd.id`: auto-incremented uint64
+  - `gfd.gfv_id`: `gfv.id`
+  - `gfd.created`: current timestamp
+  - `gfd.language`: `doc_language`
+  - `gfd.url`: `doc_url`
+  - `gfd.digest_sri`: `doc_digest_sri`
+
+#### [MOD-GF-MSG-2] Increase Active Governance Framework Version
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-GF-MSG-2-1] Increase Active Governance Framework Version parameters
+
+- `corporation` (Corporation): (Signer) the signing corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `ecosystem_id` (uint64) (*conditional*): id of the target [[ref: ecosystem]]. MUST be set if `corporation_id` is null.
+- `corporation_id` (uint64) (*conditional*): id of the target [[ref: corporation]]. MUST be set if `ecosystem_id` is null.
+
+##### [MOD-GF-MSG-2-2] Increase Active Governance Framework Version precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-GF-MSG-2-2-1] Increase Active Governance Framework Version basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `corporation` (Corporation): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- Exactly one of `ecosystem_id` and `corporation_id` MUST be set; if both are set or both are null, method MUST abort.
+- Define `subject` as:
+  - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation` MUST be equal to the `corporation` executing the method.
+  - if `corporation_id` is set: the `Corporation` entry with this id. The entry MUST exist and `corporation_id` MUST be equal to the id of the `corporation` executing the method.
+- Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` (matching `gfv.ecosystem_id` or `gfv.corporation_id` as appropriate) whose `gfv.version` is equal to `subject.active_version` + 1. If none is found, transaction MUST abort.
+- Find a `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `subject.language`. If no document is found (and thus no document exists for the default language of this version for this subject), transaction MUST abort.
+
+###### [MOD-GF-MSG-2-2-2] Increase Active Governance Framework Version fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-GF-MSG-2-3] Increase Active Governance Framework Version execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- Load `subject` (`Ecosystem` or `Corporation` as identified above).
+- Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` whose `gfv.version` is equal to `subject.active_version` + 1.
+- Update `subject.active_version` to `subject.active_version` + 1.
+- Set `subject.modified` to current timestamp.
+- Set `gfv.active_since` to current timestamp.
+- Persist changes.
+
+#### [MOD-GF-QRY-1] Get Governance Framework Version
+
+Anyone CAN execute this method.
+
+##### [MOD-GF-QRY-1-1] Get Governance Framework Version query parameters
+
+- `id` (uint64) (*mandatory*): the id of the `GovernanceFrameworkVersion`.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`. If not set, return all documents of all languages.
+
+##### [MOD-GF-QRY-1-2] Get Governance Framework Version query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `id` (uint64) (*mandatory*): MUST be a valid uint64.
+
+##### [MOD-GF-QRY-1-3] Get Governance Framework Version execution
+
+Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id` or `corporation_id`) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
+
+#### [MOD-GF-QRY-2] List Governance Framework Versions
+
+Anyone CAN execute this method.
+
+##### [MOD-GF-QRY-2-1] List Governance Framework Versions query parameters
+
+Exactly one of `ecosystem_id` and `corporation_id` MUST be set:
+
+- `ecosystem_id` (uint64) (*conditional*): filter by ecosystem. MUST be set if `corporation_id` is null.
+- `corporation_id` (uint64) (*conditional*): filter by corporation. MUST be set if `ecosystem_id` is null.
+- `active_only` (boolean) (*optional*): if true, return only the entry corresponding to the subject's `active_version`.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
+- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
+
+##### [MOD-GF-QRY-2-2] List Governance Framework Versions query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- Exactly one of `ecosystem_id` and `corporation_id` MUST be set.
+- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
+
+##### [MOD-GF-QRY-2-3] List Governance Framework Versions execution
+
+Return the list of `GovernanceFrameworkVersion` entries matching the filter, with their nested `GovernanceFrameworkDocument` entries (filtered as above). Entries MUST be ordered by ascending `version`.
 
 ### Credential Schema Module
 
