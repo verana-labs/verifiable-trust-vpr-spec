@@ -3120,39 +3120,42 @@ issuer --> holder: granted schema permission
 
 ```
 
-The ECOSYSTEM type participants are created by the Credential Schema owner. All other participants are created by running an Onboarding Process (or by any account: - for `ISSUER` permissions if issuer_onboarding_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_onboarding_mode is equal to `OPEN`).
+`ECOSYSTEM` Participants are created directly by the [[ref: credential schema]] owner. All other Participants are created by running an [[ref: onboarding process]] — except for permissions whose onboarding mode is `OPEN`, which any account CAN create directly:
 
-An Onboarding Process (OP) is a process which involves an [[ref: applicant]] (which is the [[ref: corporation]] of a given Participant entry), and a [[ref: validator]] Participant, and optional validation fees plus transaction fees.
+- `ISSUER` permissions when `issuer_onboarding_mode` is `OPEN`;
+- `VERIFIER` permissions when `verifier_onboarding_mode` is `OPEN`.
 
-Onboarding is used by [[ref: applicants]] that want to:
+An [[ref: onboarding process]] (OP) involves an [[ref: applicant]] (the [[ref: corporation]] of a given Participant entry) and a [[ref: validator]] Participant. It MAY require the applicant to pay `validation_fees` in addition to [[ref: transaction fees]].
+
+An [[ref: onboarding process]] is run by [[ref: applicants]] that want to:
 
 - be an [[ref: issuer]] of a specific [[ref: credential schema]];
 - be a [[ref: verifier]] of a specific [[ref: credential schema]];
 - be an [[ref: issuer grantor]] of a specific [[ref: credential schema]];
 - be a [[ref: verifier grantor]] of a specific [[ref: credential schema]];
 - get issued a credential of a specific [[ref: credential schema]];
-- obtain a HOLDER participant entry from a issuer of a specific [[ref: credential schema]] and get issued a verifiable credential of this schema (HOLDER participant provide credential status (revoked, etc...));
+- obtain a `HOLDER` Participant entry from an [[ref: issuer]] of a specific [[ref: credential schema]] and be issued a verifiable credential of that schema (the `HOLDER` Participant entry carries credential status — revoked, etc.).
 
-In all cases, the process is very similar. Example execution of an onboarding process:
+In all cases, the process is very similar. Example execution of an [[ref: onboarding process]]:
 
-1. Applicant starts an onboarding process by running the [start new validation] [[ref: transaction]]. Onboarding process may be subject to paying validation fees, as defined in validator Participant entry.
-2. Onboarding process requires that [[ref: applicant]] connects to a validation [[ref: VS]] identified by its [[ref: DID]], and execute a some validation steps, required for the onboarding process to conclude.
-3. If [[ref: applicant]] qualifies, [[ref: validator]] updates the participant entry by running the [set to validated] [[ref: transaction]], and [[ref: applicant]] is granted new permissions, and/or gets issued a credential.
+1. The [[ref: applicant]] starts an [[ref: onboarding process]] by running [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The process MAY be subject to paying `validation_fees`, as defined in the [[ref: validator]]'s Participant entry.
+2. The [[ref: applicant]] connects to the [[ref: validator]]'s [[ref: VS]] (identified by its [[ref: DID]]) and executes the validation steps required for the [[ref: onboarding process]] to conclude.
+3. If the [[ref: applicant]] qualifies, the [[ref: validator]] runs [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) to update the Participant entry; the [[ref: applicant]] is then granted the new permissions and/or issued a credential.
 
-Validation is valid for a specific period, for example 365 days, as configured in the [[ref: credential schema]] for credential schema related validations, or set by ecosystem for user-agent validation.
+Once in the `VALIDATED` state, a Participant entry remains valid for a specific period (e.g., 365 days), configured in the [[ref: credential schema]] for credential-schema-related onboarding, or set by the [[ref: ecosystem]] for user-agent onboarding.
 
 :::note
-In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the [[ref: applicant]] must provide updated information to the [[ref: validator]] before attribute expiration, in order to get issued an updated new permission and/or an updated credential.
+Even when the Participant entry remains in the `VALIDATED` state for the configured period, the resulting permission or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the [[ref: applicant]] MUST provide updated information to the [[ref: validator]] before attribute expiration in order to be issued an updated permission and/or credential.
 :::
 
-If validation is set to expire, [[ref: applicant]] that wishes to extend the expiration timestamp must renew its validation.
+If the `VALIDATED` state is set to expire, an [[ref: applicant]] that wishes to extend the expiration timestamp MUST renew its [[ref: onboarding process]] (see [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)).
 
-At any time, [[ref: applicant]] can cancel the onboarding process.
+At any time, the [[ref: applicant]] CAN cancel the [[ref: onboarding process]] (see [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)).
 
-Some special unexpected situation may arise and must be mitigated. Examples:
+Some unexpected situations may arise and MUST be mitigated. Examples:
 
-- if selected validator Participant entry is revoked while applicant's validation is in PENDING state: Applicant CAN cancel the onboarding process [MOD-PP-MSG-6].
-- if selected validator Participant entry is revoked while applicant is in VALIDATED state: Applicant CAN renew the onboarding process by choosing a new validator [MOD-PP-MSG-2].
+- if the selected [[ref: validator]] Participant entry is revoked while the [[ref: applicant]] is in `PENDING` state: applicant CAN cancel the [[ref: onboarding process]] (see [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request));
+- if the selected [[ref: validator]] Participant entry is revoked while the [[ref: applicant]] is in `VALIDATED` state: applicant CAN renew the [[ref: onboarding process]] by choosing a new validator (see [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)).
 
 #### [MOD-PP-MSG-1] Start Participant OP
 
