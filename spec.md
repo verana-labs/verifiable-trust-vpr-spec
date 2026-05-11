@@ -2011,7 +2011,8 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `did` (string) (*mandatory*): the new DID of the Corporation.
-- `language` (string) (*mandatory*): primary language tag of this Corporation.
+
+> Note: `language` is set at creation time by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation) and is **immutable** thereafter; it cannot be updated through this method.
 
 ##### [MOD-CO-MSG-2-2] Update Corporation precondition checks
 
@@ -2026,7 +2027,6 @@ If any of these precondition checks fail, method MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - A `Corporation` entry `co` for the signing `corporation` MUST exist; if none exists, method MUST abort.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 
 ###### [MOD-CO-MSG-2-2-2] Update Corporation fee checks
 
@@ -2041,7 +2041,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - load `Corporation` entry `co` for the signing `corporation` and set:
 
 - `co.did`: `did`
-- `co.language`: `language`
 - `co.modified`: current timestamp
 
 #### [MOD-CO-MSG-3] Archive Corporation
