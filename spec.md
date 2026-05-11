@@ -63,6 +63,12 @@ An ecosystem typically expose APIs that are consumed by services that would like
 
 A Verifiable Public Registry (VPR) is a “registry of registries”, a public service that provides foundational infrastructure for decentralized trust ecosystems. It offers:
 
+- [[ref: corporation]] lifecycle and directory:
+  - corporation onboarding, with associated [[ref: DID]] and [[ref: corporation governance framework]] publication
+  - multi-member governance via a Cosmos SDK [[ref: group]] (members, voting policy, threshold)
+  - a public corporation directory queryable by indexers, [[ref: verifiable services]], and [[ref: verifiable user agents]]
+  - corporations are the foundational actors of the VPR: they control [[ref: participants]] and may themselves control [[ref: ecosystems]].
+
 - ecosystem management:  
   - governance framework publication and versionning
   - [[ref: credential schemas]] publication
@@ -351,6 +357,7 @@ package "Example Credential Schema Participant Tree" as cs {
 
     object "Holder Z " as holder #FFB073 {
         role: HOLDER
+        did:example:vZ
     }
 }
 
