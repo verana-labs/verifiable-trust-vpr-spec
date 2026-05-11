@@ -558,7 +558,7 @@ The `Participant` registry CAN be used by crawlers to index the metadata associa
 
 Search engines can iterate over `Participant` entries and index [[ref: VSs]] by resolving the service identifier (currently a [[ref: DID]], extensible in the future), verify whether the service is a [[ref: verifiable service]], and in that case extract its verifiable metadata, such as [[ref: linked-vp]] presented credentials.
 
-The index is particularly important for [[ref: verifiable user agents]], such as social browsers, CDN enabled browsers... However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
+The index is particularly important for [[ref: verifiable user agents]], such as social browsers, CDN enabled browser, or any service or AI agent that wants to search for a specific service and connect to it. However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
 
 
 ```plantuml
@@ -590,9 +590,7 @@ user <|-- browser : show result
 
 In a [[ref: VPR]], each [[ref: corporation]] is associated with a [[ref: trust deposit]].
 
-This [[ref: trust deposit]] is automatically funded through transactions involving **trust operations**, such as:
-
-- Paying trust fees between participants when enforcing ecosystem governance rules for services, credential issuance, or presentation...
+This [[ref: trust deposit]] is automatically funded through transactions involving **trust operations**, such as onboarding processes, credential issuance, or presentation...
 
 The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
 
@@ -784,7 +782,7 @@ vg --> verifier : creates schema participant
 
 [[ref: Corporations]] acting as **issuers** or **verifiers** for a given credential schema **may be required to pay trust fees** based on the schema's configuration and `Participant` tree.
 
-If trust fee payment is required, the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**.
+If trust fee payment is required, the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**, else HOLDER agent will not accept the operation.
 
 Key Points for "Pay-Per" Business Models
 
@@ -793,8 +791,8 @@ Key Points for "Pay-Per" Business Models
 - In such cases, an `ISSUER` (or `VERIFIER`) `Participant` **must pay**:
   - the corresponding **issuance** (or **verification**) trust fees for each involved `Participant` entry along the `Participant` tree;
   - an additional amount equal to the `trust_deposit_rate` of the calculated trust fees, allocated to the **payer's [[ref: trust deposit]]**;
-  - an amount equal to `wallet_user_agent_reward_rate` of the calculated trust fees, used to **reward the Wallet User Agent**;
-  - an amount equal to `user_agent_reward_rate` of the calculated trust fees, used to **reward the User Agent**.
+  - (optional) an amount equal to `wallet_user_agent_reward_rate` of the calculated trust fees, used to **reward the Wallet User Agent**;
+  - (optional) an amount equal to `user_agent_reward_rate` of the calculated trust fees, used to **reward the User Agent**.
 
 Fee Distribution Model
 
@@ -804,7 +802,7 @@ Trust fees are **consistently distributed** across participants:
 - The remaining portion is **transferred directly to the participant’s wallet**.
 
 :::note
-**Wallet User Agents** and **User Agents** that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment.  
+Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment.  
 If not, they **must reject** the issuance or verification request.
 
 Note: The **User Agent** and **Wallet User Agent** may refer to the same implementation.
@@ -974,7 +972,7 @@ verifiera --> verifiertd:  \t+11.4 TUs
 
 A [[ref: governance framework]] must define the governance rules that apply to a [[ref: VPR]].
 
-A designated [[ref: governance authority]] is responsible for **enforcing these rules** and, when necessary, **applying financial sanctions** to participants who violate the rules.
+A designated [[ref: governance authority]] (aka a council) is responsible for **enforcing these rules** and, when necessary, **applying financial sanctions** to participants who violate the rules.
 
 :::note
 **Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: VPR]] [[ref: governance framework]].
@@ -1698,7 +1696,7 @@ For Msg methods, all precondition checks MUST be verified first for accepting th
 A VPR implementation MUST implement all the following requirements.
 
 :::note
-The relative REST path is the path suffix. Implementer can set any prefix, like https://example/verana/es/v1/get.
+The relative REST path is the path suffix. Implementer can set any prefix, like https://example/verana/ec/v1/get.
 :::
 
 ### Authorization and Fee Grants
@@ -1743,17 +1741,17 @@ Some module messages specify only a `corporation`:
 - `corporation` (group):  
   The `group` that owns the manipulated resource.
 
-Such messages **cannot be delegated** and MUST be executed exclusively through a **group proposal**.
+Such messages **cannot be delegated** and MUST be executed exclusively through a **corporation proposal**.
 
 #### Governance-Signed Module Messages
 
-Some module messages can be executed **only through a governance proposal**.
+Some module messages can be executed **only through a VPR council governance proposal**.
 
 These messages do not support delegation and are not executable by accounts, whether directly or via group authorization.
 
 #### Fee Grants
 
-A `corporation` group MAY allow its `operator`s to pay **network transaction fees** using the `corporation`’s funds.
+A `corporation` MAY allow its `operator`s to pay **network transaction fees** using the `corporation`’s funds.
 
 Fee grants are **not created directly**.  
 They are created, updated, and revoked **exclusively by Authorization module messages**.  
@@ -1858,9 +1856,9 @@ As a result, `accountABC` is authorized to:
 |                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)   |corporation + operator |
 |                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem)   |corporation + operator |
 |                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters)   |governance proposal |
-|                                | Get Ecosystem                      | /es/v1/get                  | Query  | [[MOD-ES-QRY-1]](#mod-es-qry-1-get-ecosystem)   |N/A |
-|                                | List Ecosystems                   | /es/v1/list                 | Query  | [[MOD-ES-QRY-2]](#mod-es-qry-2-list-ecosystems)   |N/A |
-|                                | List Ecosystem Module Parameters               | /es/v1/params                 | Query  | [[MOD-ES-QRY-3]](#mod-es-qry-3-list-module-parameters)   |N/A |
+|                                | Get Ecosystem                      | /ec/v1/get                  | Query  | [[MOD-ES-QRY-1]](#mod-es-qry-1-get-ecosystem)   |N/A |
+|                                | List Ecosystems                   | /ec/v1/list                 | Query  | [[MOD-ES-QRY-2]](#mod-es-qry-2-list-ecosystems)   |N/A |
+|                                | List Ecosystem Module Parameters               | /ec/v1/params                 | Query  | [[MOD-ES-QRY-3]](#mod-es-qry-3-list-module-parameters)   |N/A |
 | Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation + operator |
 |                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + operator |
 |                                | Get Governance Framework Version             | /gf/v1/get                       | Query  | [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version)   | N/A |
