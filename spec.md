@@ -2225,7 +2225,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- create and persist a new `Ecosystem` entry `tr`:
+- create and persist a new `Ecosystem` entry `ecosystem`:
 
 - `ecosystem.id` : auto-incremented uint64
 - `ecosystem.did`: `did`
@@ -2277,7 +2277,7 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` (uint64) (*mandatory*): a `Ecosystem` entry `tr` with id `id` MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry `tr`.
+- `id` (uint64) (*mandatory*): a `Ecosystem` entry `ecosystem` with id `id` MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry `ecosystem`.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
 ###### [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks
@@ -2290,7 +2290,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- load `Ecosystem` entry `tr` from `id` and set:
+- load `Ecosystem` entry `ecosystem` from `id` and set:
 
 - `ecosystem.did`: `did`
 - `ecosystem.modified`: current timestamp
@@ -2317,7 +2317,7 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- load `Ecosystem` `tr` from `id`. `ecosystem.corporation` MUST be the corporation executing the method, else MUST abort.
+- load `Ecosystem` `ecosystem` from `id`. `ecosystem.corporation` MUST be the corporation executing the method, else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean.
   - If `archive` is true and `ecosystem.archived` is not null, MUST abort as `Ecosystem` is already archived.
   - If `archive` is false and `ecosystem.archived` is null, MUST abort as `Ecosystem` is already not archived.
@@ -2332,7 +2332,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- update `Ecosystem` entry `tr` with `ecosystem.id` equal to `id`:
+- update `Ecosystem` entry `ecosystem` with `ecosystem.id` equal to `id`:
 - if `archived` is true: set `ecosystem.archived` to current timestamp.
 - if `archived` is false: set `ecosystem.archived` to null.
 - `ecosystem.modified`: current timestamp
@@ -2489,6 +2489,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `gfv.corporation`: the signing `corporation` (or null if subject is an Ecosystem)
   - `gfv.created`: current timestamp
   - `gfv.version`: `version`
+  - `gfv.active_since`: null
 
 - if a `GovernanceFrameworkDocument` entry `gfd` exists with `gfd.gfv_id = gfv.id` and `gfd.language = doc_language`, update it:
   - `gfd.url`: `doc_url`
@@ -2627,7 +2628,7 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `ecosystem_id` MUST represent an existing `Ecosystem` entry `tr` and `ecosystem.corporation` MUST be the `corporation` executing the method.
+- `ecosystem_id` MUST represent an existing `Ecosystem` entry `ecosystem` and `ecosystem.corporation` MUST be the `corporation` executing the method.
 - `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] is ignored and will be replaced during execution by the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
@@ -2713,7 +2714,7 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
-- load `Ecosystem` `tr` from `cs.ecosystem_id`. `ecosystem.corporation` MUST be the `corporation` executing the method, else MUST abort.
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation` MUST be the `corporation` executing the method, else MUST abort.
 - `issuer_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
 - `issuer_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
@@ -2764,7 +2765,7 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
-- load `Ecosystem` `tr` from `cs.ecosystem_id`. `ecosystem.corporation` MUST be the `corporation` executing the method, else MUST abort.
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation` MUST be the `corporation` executing the method, else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean. 
   - If `archive` is true and `cs.archived` is not null, MUST abort as Credential Schema is already archived.
   - If `archive` is false and `cs.archived` is null, MUST abort as Credential Schema is already not archived.
@@ -3820,7 +3821,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
 - The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
-- The related `Ecosystem` entry `tr` is loaded from `cs.ecosystem_id`.
+- The related `Ecosystem` entry `ecosystem` is loaded from `cs.ecosystem_id`.
 - `corporation` executing the method MUST be `ecosystem.corporation`.
 - else MUST abort.
 
@@ -4023,7 +4024,7 @@ if `applicant_participant.validator_participant_id` is defined:
 *Option #2*: executed by `Ecosystem` controller
 
 - load `CredentialSchema` `cs` from `applicant_participant.schema_id`
-- load `Ecosystem` `tr` from `cs.ecosystem_id`
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`
 - if `corporation` running the method is `ecosystem.corporation`, return true.
 - else return false.
 
@@ -4619,7 +4620,7 @@ if `applicant_participant.validator_participant_id` is defined:
 *Option #2*: executed by `Ecosystem` controller
 
 - load `CredentialSchema` `cs` from `applicant_participant.schema_id`
-- load `Ecosystem` `tr` from `cs.ecosystem_id`
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`
 - if `corporation` running the method is `ecosystem.corporation`, return true.
 - else return false.
 
