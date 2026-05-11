@@ -1514,7 +1514,7 @@ A `ParticipantAuthorizationRecord` carries the per-permission authorization conf
 - `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
 - `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
 - `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this permission, through an on-chain `FeeGrant`.
-- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (disabled until validation) and to `Participant.effective_until` at [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) / [[MOD-PP-MSG-8]](#mod-pp-msg-8-adjust-participant) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant).
+- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (disabled until validation) and to `Participant.effective_until` at [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) / [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant).
 - `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this permission.
 
 ### ExchangeRate
@@ -1876,7 +1876,7 @@ As a result, `accountABC` is authorized to:
 |                                | Set Participant OP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)    |corporation + operator |
 |                                | Cancel Participant OP Last Request       |         N/A (Tx)                    | Msg    | [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)    |corporation + operator |
 |                                | Create Root Participant                  |         N/A (Tx)                | Msg    | [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant)   |corporation + operator |
-|                                | Adjust Participant                       |         N/A (Tx)            | Msg    | [[MOD-PP-MSG-8]](#mod-pp-msg-8-adjust-participant)  |corporation + operator |
+|                                | Set Participant Effective Until                       |         N/A (Tx)            | Msg    | [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until)  |corporation + operator |
 |                                | Revoke Participant                       |          N/A (Tx)              | Msg    | [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)  |corporation + operator |
 |                                | Create or update Participant Session     |           N/A (Tx)              | Msg    | [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)  |corporation + operator |
 |                                | Update Participant Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-PP-MSG-11]](#mod-pp-msg-11-update-participant-module-parameters) |governance proposal |
@@ -3211,10 +3211,10 @@ An Applicant that would like to start a permission onboarding process MUST execu
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_operator` (account) (*optional*): the account of the Veriable Service we want to authorize to create permission sessions linked to this permission. If not specified, Verifiable Service will not be able to use the payment delegation feature. **Required** to use the payment delegation feature.
-- `role` (ParticipantRole) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
-- `validator_participant_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
-- `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
+- `vs_operator` (account) (*optional*): the account of the Veriable Service we want to authorize to create participant sessions linked to this participant. If not specified, Verifiable Service will not be able to use the payment delegation feature. **Required** to use the payment delegation feature.
+- `role` (ParticipantRole) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the Participant role that the applicant would like to get;
+- `validator_participant_id` (uint64) (*mandatory*): the [[ref: validator]] participant (parent participant in the tree), chosen by the applicant.
+- `validation_fees` (number) (*optional*): Requested validation_fees for this participant (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
 - `did` (string) (*required*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
@@ -3574,7 +3574,7 @@ else MUST abort.
 - `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_participant.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_participant.validation_fees`, else abort.
 - `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_participant.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_participant.issuance_fees` or, else abort.
 - `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_participant.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_participant.verification_fees`, else abort.
-- `op_summary_digest` (string) (*optional*): MUST be null if `validation.role` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest. Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
+- `op_summary_digest` (string) (*optional*): MUST be a valid digest. Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
 - Load `CredentialSchema` `cs` from `applicant_participant.schema_id`.
 - Load `Participant` `validator_participant` from `applicant_participant.validator_participant_id`.
@@ -3830,7 +3830,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PP-MSG-7-2-4] Create Root Participant overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-participant) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
 Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `corporation`.
 
@@ -3884,7 +3884,7 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
 
 > Note: like [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant), the record is created with `expiration = participant.effective_until` and is therefore immediately active. If `with_feegrant` is true and `participant.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
-#### [MOD-PP-MSG-8] Adjust Participant
+#### [MOD-PP-MSG-8] Set Participant Effective Until
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
@@ -3894,18 +3894,18 @@ This method can be called:
 - by `participant.corporation`, if it is a self-created permission (schema configuration is open)
 - by a `corporation` of a validator permission (if permission is managed by an OP).
 
-##### [MOD-PP-MSG-8-1] Adjust Participant parameters
+##### [MOD-PP-MSG-8-1] Set Participant Effective Until parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the permission;
 - `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Participant` will be effective.
 
-##### [MOD-PP-MSG-8-2] Adjust Participant precondition checks
+##### [MOD-PP-MSG-8-2] Set Participant Effective Until precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PP-MSG-8-2-1] Adjust Participant basic checks
+###### [MOD-PP-MSG-8-2-1] Set Participant Effective Until basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3920,7 +3920,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 > Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null,  which was not the case in spec v3.
 
-###### [MOD-PP-MSG-8-2-2] Adjust Participant advanced checks
+###### [MOD-PP-MSG-8-2-2] Set Participant Effective Until advanced checks
 
 1. ECOSYSTEM permissions
 
@@ -3935,13 +3935,13 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `effective_until` MUST be lower or equal to `applicant_participant.op_exp` else MUST abort.
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]]. `corporation` running the method MUST be `validator_participant.corporation`.
 
-###### [MOD-PP-MSG-8-2-3] Adjust Participant fee checks
+###### [MOD-PP-MSG-8-2-3] Set Participant Effective Until fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-###### [MOD-PP-MSG-8-2-4] Adjust Participant overlap checks
+###### [MOD-PP-MSG-8-2-4] Set Participant Effective Until overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-participant) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
 Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation`.
 
@@ -3953,7 +3953,7 @@ for each `Participant` entry `p` from `participants[]`:
 
 > note: this check was not present in v3.
 
-##### [MOD-PP-MSG-8-3] Adjust Participant execution
+##### [MOD-PP-MSG-8-3] Set Participant Effective Until execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -3972,7 +3972,7 @@ Synchronise VS Operator Authorization expiration, if any. Call [[MOD-DE-MSG-9]](
 - `participant_id`: `applicant_participant.id`
 - `new_expiration`: `applicant_participant.effective_until`
 
-This call is a no-op if no record exists for `applicant_participant.id`. If a record exists, its `expiration` is updated and the on-chain `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Adjust Participant does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). Adjust also cannot create a record that does not already exist.
+This call is a no-op if no record exists for `applicant_participant.id`. If a record exists, its `expiration` is updated and the on-chain `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Set Participant Effective Until does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). This method also cannot create a record that does not already exist.
 
 #### [MOD-PP-MSG-9] Revoke Participant
 
@@ -4774,7 +4774,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PP-MSG-14-2-4] Self Create Participant overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-pp-msg-8-adjust-participant) to set or adjust the `effective_until` value.
+We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
 Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `cs.id`, `role`, `validator_participant_id`, `corporation`.
 
@@ -5882,7 +5882,7 @@ This method does NOT read `Participant` state.
 This method can only be called directly by the following Participant module methods, with no signer check:
 
 - [Set Participant OP to Validated](#mod-pp-msg-3-set-participant-op-to-validated)
-- [Adjust Participant](#mod-pp-msg-8-adjust-participant)
+- [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until)
 
 It updates the `expiration` of the unique record identified by `participant_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no record exists for `participant_id`.
 
