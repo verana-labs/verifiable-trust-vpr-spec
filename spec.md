@@ -135,8 +135,8 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: credential schema, credential schemas]]:
 ~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
 
-[[def: credential schema permission, credential schema permissions, CSP]]:
-~ A permission, linked to a [[ref: credential schema]], that represent, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], or [[ref: verifier grantor]] of a [[ref: credential schema]].
+[[def: credential schema participant, credential schema participants, CSP]]:
+~ A `Participant` entry, linked to a [[ref: credential schema]], that represents, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], or [[ref: verifier grantor]] of a [[ref: credential schema]].
 
 [[def: decentralized identifier, DID, DIDs]]:
 ~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]].
@@ -1420,8 +1420,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `op_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon onboarding process completion, in [[ref: denom]].
 - `op_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
 - `op_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_ONBOARDING_PROCESS mode) or an ISSUER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_ONBOARDING_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 > Note: VS operator authorization settings (spend limits, feegrant, expiration, authorized message types) are no longer stored on `Participant`. They live in `ParticipantAuthorizationRecord` entries inside [VSOperatorAuthorization](#vsoperatorauthorization), keyed by `Participant.id`. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
@@ -1509,13 +1509,13 @@ A `ParticipantAuthorizationRecord` carries the per-permission authorization conf
 
 - `participant_id` (uint64) (*mandatory*): id of the `Participant` this authorization record applies to. Globally unique across all `ParticipantAuthorizationRecord` entries.
 - `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `participant_id`. Declared by the applicant at record creation time (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). Frozen after creation.
-- `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this permission, as a direct consequence of executing authorized messages.
+- `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this `Participant` entry, as a direct consequence of executing authorized messages.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
-- `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
+- `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this `Participant` entry.
 - `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
-- `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this permission, through an on-chain `FeeGrant`.
+- `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this `Participant` entry, through an on-chain `FeeGrant`.
 - `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (disabled until validation) and to `Participant.effective_until` at [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) / [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant).
-- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this permission.
+- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this `Participant` entry.
 
 ### ExchangeRate
 
@@ -3184,12 +3184,12 @@ In all cases, the process is very similar. Example execution of an [[ref: onboar
 
 1. The [[ref: applicant]] starts an [[ref: onboarding process]] by running [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The process MAY be subject to paying `validation_fees`, as defined in the [[ref: validator]]'s Participant entry.
 2. The [[ref: applicant]] connects to the [[ref: validator]]'s [[ref: VS]] (identified by its [[ref: DID]]) and executes the validation steps required for the [[ref: onboarding process]] to conclude.
-3. If the [[ref: applicant]] qualifies, the [[ref: validator]] runs [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) to update the Participant entry; the [[ref: applicant]] is then granted the new permissions and/or issued a credential.
+3. If the [[ref: applicant]] qualifies, the [[ref: validator]] runs [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) to update the Participant entry; the [[ref: applicant]] is then granted the new `Participant` entries and/or issued a credential.
 
 Once in the `VALIDATED` state, a Participant entry remains valid for a specific period (e.g., 365 days), configured in the [[ref: credential schema]] for credential-schema-related onboarding, or set by the [[ref: ecosystem]] for user-agent onboarding.
 
 :::note
-Even when the Participant entry remains in the `VALIDATED` state for the configured period, the resulting permission or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the [[ref: applicant]] MUST provide updated information to the [[ref: validator]] before attribute expiration in order to be issued an updated permission and/or credential.
+Even when the Participant entry remains in the `VALIDATED` state for the configured period, the resulting `Participant` entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the [[ref: applicant]] MUST provide updated information to the [[ref: validator]] before attribute expiration in order to be issued an updated `Participant` entry and/or credential.
 :::
 
 If the `VALIDATED` state is set to expire, an [[ref: applicant]] that wishes to extend the expiration timestamp MUST renew its [[ref: onboarding process]] (see [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)).
@@ -3207,7 +3207,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-PP-MSG-1-1] Start Participant OP parameters
 
-An Applicant that would like to start a permission onboarding process MUST execute this method by specifying:
+An Applicant that would like to start an onboarding process MUST execute this method by specifying:
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
@@ -3215,17 +3215,17 @@ An Applicant that would like to start a permission onboarding process MUST execu
 - `role` (ParticipantRole) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the Participant role that the applicant would like to get;
 - `validator_participant_id` (uint64) (*mandatory*): the [[ref: validator]] participant (parent participant in the tree), chosen by the applicant.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this participant (can be modified by validator).
-- `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
-- `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
+- `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
+- `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
 - `did` (string) (*required*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
-The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) that will be created for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode (the corporation signs and pays for its own permission-related transactions directly). VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) that will be created for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode (the corporation signs and pays for its own `Participant`-related transactions directly). VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
 
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
-- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this `Participant` entry. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this `Participant` entry as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this `Participant` entry.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this `Participant` entry.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this `Participant` entry.
 
 Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`.
 
@@ -3254,9 +3254,9 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `role` (ParticipantRole) (*mandatory*) MUST be a valid ParticipantRole: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
 - `validator_participant_id` (uint64) (*mandatory*): see [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-participant-op-permission-checks).
-- `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
-- `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
-- `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
+- `validation_fees` (number) (*optional*): Requested validation_fees for this `Participant` entry (can be modified by validator).
+- `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
+- `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-op-parameters).
 
@@ -3348,7 +3348,7 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 
 We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different OP with differents validators for the same `schema_id`, `role`.
 
-Find all permission `participants[]` for `schema_id`, `role`, `validator_participant_id`, `corporation` with op_state = VALIDATED or PENDING.
+Find all `Participant` entries `participants[]` for `schema_id`, `role`, `validator_participant_id`, `corporation` with op_state = VALIDATED or PENDING.
 
 if size of `participants[]` > 0, it means there is already an existing onboarding process in this context, so MUST abort.
 
@@ -3368,7 +3368,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- create an persist a new permission entry `applicant_participant`:
+- create an persist a new `Participant` entry `applicant_participant`:
 
   - `applicant_participant.id`: auto-incremented uint64.
   - `applicant_participant.schema_id` = `validator_participant.schema_id`
@@ -3414,16 +3414,16 @@ During an onboarding process, if the associated `validator_participant` includes
 
 Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by the [[ref: validator]] to complete one or more of the following tasks:
 
-1. **Prove control** over the `vs_operator` [[ref: account]] specifid in the permission (e.g., via blind signature or cryptographic challenge).
+1. **Prove control** over the `vs_operator` [[ref: account]] specified in the `Participant` entry (e.g., via blind signature or cryptographic challenge).
 2. **Provide requested information**, such as filling out forms, submitting documents, or other forms of disclosure as required by the validation [[ref: VS]].
-3. If the requested permission includes a [[ref: VS]] DID, the [[ref: applicant]] should prove control over the corresponding [[ref: DID]] to the validator's [[ref: VS]].
+3. If the requested `Participant` entry includes a [[ref: VS]] DID, the [[ref: applicant]] should prove control over the corresponding [[ref: DID]] to the validator's [[ref: VS]].
 
-Once the [[ref: validator]] determines that the process is complete, they may terminate the onboarding process and create the permission accordingly. This permission configuration usually include:
+Once the [[ref: validator]] determines that the process is complete, they may terminate the onboarding process and create the `Participant` entry accordingly. This `Participant`-entry configuration usually includes:
 
 - `validation_fees`  
 - `issuance_fees`  
 - `verification_fees`  
-- `permission expiration`
+- `Participant` expiration
 
 The [[ref: validator]] may compile a summary file of the onboarding process, documenting exchanged data, proofs, and decisions, and share it with the [[ref: applicant]] via the [[ref: VS]] connection or another secure channel.
 
@@ -3435,17 +3435,17 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 *This section is non-normative.*
 
-- Requesting a renewal has no effect on permission expiration or issued credentials.
+- Requesting a renewal has no effect on `Participant` expiration or issued credentials.
 - Renewal is only possible with the same validator.
-- If validator permission is not valid anymore, applicant MUST perform a new onboarding process with another validator.
+- If validator `Participant` is not valid anymore, applicant MUST perform a new onboarding process with another validator.
 - Renewal does not allow changing the `participant.validation_fees`, `participant.issuance_fees`, `participant.verification_fees`. To change these values, applicant MUST start a new onboarding process.
-- if permission is revoked, slashed, or repaid, method MUST fail.
+- if `applicant_participant` is revoked, slashed, or repaid, method MUST fail.
 
 ##### [MOD-PP-MSG-2-1] Renew Participant OP parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission for which applicant would like to renew the onboarding process;
+- `id` (uint64) (*mandatory*): id of the `Participant` entry for which applicant would like to renew the onboarding process;
 
 ##### [MOD-PP-MSG-2-2] Renew Participant OP precondition checks
 
@@ -3458,7 +3458,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` MUST be a valid uint64 and a permission entry with the same id MUST exist.
+- `id` MUST be a valid uint64 and a `Participant` entry with the same id MUST exist.
 
 ###### [MOD-PP-MSG-2-2-2] Renew Participant OP permission checks
 
@@ -3519,7 +3519,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- update permission entry:
+- update `Participant` entry:
 
   - `applicant_participant.op_state`: PENDING.
   - `applicant_participant.op_last_state_change`: current timestamp.
@@ -3539,13 +3539,13 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the onboarding process;
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit should been set for this permission or if we want it to be aligned with the onboarding process expiration timestamp calculated by this method.
-- `validation_fees` (number) (*mandatory*): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
-- `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
-- `verification_fees` (number) (*mandatory*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit should been set for this `Participant` entry or if we want it to be aligned with the onboarding process expiration timestamp calculated by this method.
+- `validation_fees` (number) (*mandatory*): Agreed validation_fees for this `Participant` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
+- `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this `Participant` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
+- `verification_fees` (number) (*mandatory*): Agreed verification_fees for this `Participant` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `op_summary_digest` (string) (*optional*): an optional digest, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_ONBOARDING_PROCESS mode) or an ISSUER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_ONBOARDING_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 ##### [MOD-PP-MSG-3-2] Set Participant OP to Validated precondition checks
 
@@ -3565,7 +3565,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 either (executed by any operator of corporation):
 [[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetParticipantOPtoValidated` message.
 [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetParticipantOPtoValidated` message.
-OR (executed by vs-agent account defined in validator permission):
+OR (executed by vs-agent account defined in validator `Participant`):
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `validator_participant`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `validator_participant`) tuple.
 else MUST abort.
@@ -3625,7 +3625,7 @@ If `validator_participant` is not a [[ref: active participant]] (expired, revoke
 
 ###### [MOD-PP-MSG-3-2-4] Set Participant OP to Validated overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. That should not occur in this method, but better do the check anyway.
+We want to make sure that 2 `Participant` entries cannot be active at the same time for the same `validator_participant_id`. That should not occur in this method, but better do the check anyway.
 
 Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation`.
 
@@ -3633,7 +3633,7 @@ for each `Participant` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
 
 > note: this check was not present in v3.
 
@@ -3709,7 +3709,7 @@ This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-At any time, [[ref: applicant]] of a permission onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and escrewed [[ref: trust fees]] are refunded. If `op_exp` is not null, `op_state` is set back to VALIDATED, else `op_state` is set to TERMINATED.
+At any time, [[ref: applicant]] of an onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and escrewed [[ref: trust fees]] are refunded. If `op_exp` is not null, `op_state` is set back to VALIDATED, else `op_state` is set to TERMINATED.
 
 ##### [MOD-PP-MSG-6-1] Cancel Participant OP Last Request parameters
 
@@ -3764,7 +3764,7 @@ If `applicant_participant.op_state` was set to TERMINATED (i.e. `applicant_parti
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-This method is used by controller authorities of Ecosystems. When they create a Credential Schema, they need to create (a) permission(s) of type ECOSYSTEM so that other participants can run onboarding processes (if schema mode is ECOSYSTEM) or self create their permissions (schema mode set to OPEN).
+This method is used by controller authorities of Ecosystems. When they create a Credential Schema, they need to create (a) `Participant` entry(ies) of role ECOSYSTEM so that other participants can run onboarding processes (if schema mode is ECOSYSTEM) or self create their `Participant` entries (schema mode set to OPEN).
 
 ##### [MOD-PP-MSG-7-1] Create Root Participant parameters
 
@@ -3773,7 +3773,7 @@ An [[ref: account]] that would like to create a `Participant` entry MUST call th
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
-- `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this permission. **Required** for payment delegation.
+- `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this `Participant` entry. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS.
 - `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
@@ -3781,15 +3781,15 @@ An [[ref: account]] that would like to create a `Participant` entry MUST call th
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
 
-The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
 
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
-- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this `Participant` entry. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this `Participant` entry as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this `Participant` entry.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this `Participant` entry.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this `Participant` entry.
 
-Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`. Since [Create Root Participant](#mod-pp-msg-7-create-root-participant) always creates an ECOSYSTEM permission, only the following is allowed:
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`. Since [Create Root Participant](#mod-pp-msg-7-create-root-participant) always creates an ECOSYSTEM `Participant` entry, only the following is allowed:
 
 |Participant role|Permitted Messages|
 |-|-|
@@ -3830,17 +3830,17 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PP-MSG-7-2-4] Create Root Participant overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
+We want to make sure that 2 `Participant` entries cannot be active at the same time. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
 Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `corporation`.
 
-> Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM type permissions it is NULL.
+> Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM-role `Participant` entries it is NULL.
 
 for each `Participant` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
 
 > note: this check was not present in v3.
 
@@ -3890,15 +3890,15 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 This method can be called:
 
-- by `participant.corporation`, if permission is of type ECOSYSTEM.
-- by `participant.corporation`, if it is a self-created permission (schema configuration is open)
-- by a `corporation` of a validator permission (if permission is managed by an OP).
+- by `participant.corporation`, if the `Participant` entry has role ECOSYSTEM.
+- by `participant.corporation`, if it is a self-created `Participant` entry (schema configuration is open).
+- by a `corporation` of a validator `Participant`, if the `Participant` entry is managed by an OP.
 
 ##### [MOD-PP-MSG-8-1] Set Participant Effective Until parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission;
+- `id` (uint64) (*mandatory*): id of the `Participant` entry;
 - `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Participant` will be effective.
 
 ##### [MOD-PP-MSG-8-2] Set Participant Effective Until precondition checks
@@ -3922,15 +3922,15 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PP-MSG-8-2-2] Set Participant Effective Until advanced checks
 
-1. ECOSYSTEM permissions
+1. ECOSYSTEM `Participant` entries
 
 - if `applicant_participant.validator_participant_id` is null and `applicant_participant.role` is ECOSYSTEM, `corporation` running the method MUST be `applicant_participant.corporation`.
 
-2. Self-created permissions
+2. Self-created `Participant` entries
 
-- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]] of type ECOSYSTEM. `corporation` running the method MUST be `applicant_participant.corporation`.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]] of role ECOSYSTEM. `corporation` running the method MUST be `applicant_participant.corporation`.
 
-3. OP managed permissions
+3. OP-managed `Participant` entries
 
 - `effective_until` MUST be lower or equal to `applicant_participant.op_exp` else MUST abort.
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]]. `corporation` running the method MUST be `validator_participant.corporation`.
@@ -3941,7 +3941,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 
 ###### [MOD-PP-MSG-8-2-4] Set Participant Effective Until overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
+We want to make sure that 2 `Participant` entries cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
 Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation`.
 
@@ -3949,7 +3949,7 @@ for each `Participant` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
 
 > note: this check was not present in v3.
 
@@ -3980,7 +3980,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 This method can only be called:
 
-- by an ancestor (`corporation` of a validator in the permission branch until the root permission (GRANTOR, ECOSYSTEM, OPEN schema mode)).
+- by an ancestor (`corporation` of a validator in the `Participant` branch until the root `Participant` entry (GRANTOR, ECOSYSTEM, OPEN schema mode)).
 - by the grantee `corporation` (OPEN, GRANTOR, ECOSYSTEM schema mode).
 - by the `Ecosystem` `corporation` (owner of the credential schema).
 
@@ -3988,7 +3988,7 @@ This method can only be called:
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission;
+- `id` (uint64) (*mandatory*): id of the `Participant` entry;
 
 ##### [MOD-PP-MSG-9-2] Revoke Participant precondition checks
 
@@ -4031,11 +4031,11 @@ if `applicant_participant.validator_participant_id` is defined:
 
 Example:
 
-In the following permission tree, "Verifier E" permission can be revoked:
+In the following `Participant` tree, the "Verifier E" `Participant` entry can be revoked:
 
-- by "Verifier E", if the corresponding permission is a [[ref: active participant]];
-- by "Verifier Grantor D", if the corresponding permission is a [[ref: active participant]];
-- by "Ecosystem A", if the corresponding root permission is a [[ref: active participant]];
+- by "Verifier E", if the corresponding `Participant` entry is a [[ref: active participant]];
+- by "Verifier Grantor D", if the corresponding `Participant` entry is a [[ref: active participant]];
+- by "Ecosystem A", if the corresponding root `Participant` entry is a [[ref: active participant]];
 - by the `Ecosystem` object controller, obtained by resolving perm => credential schema => ecosystem.
 
 ```plantuml
@@ -4101,7 +4101,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_participant.revoked` to `now`
 - set `applicant_participant.modified` to `now`
 
-Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
+Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
 
 #### [MOD-PP-MSG-10] Create or Update Participant Session
 
@@ -4112,13 +4112,13 @@ Any credential exchange that requires issuer or verifier to pay fees, register a
 If the peer wants to issue a credential, the `agent`, the Verifiable User Agent or Verifiable Service that receive the request MUST send to peer:
 
 - a `uuid` for session identification;
-- *optional*: the `agent_participant_id` permission id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
-- *optional*: the `wallet_agent_participant_id` permission id of the agent wallet that will store the credential. If this is the same software than the agent, then it should be equal to `agent_participant_id`. It MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: the `agent_participant_id` `Participant` id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: the `wallet_agent_participant_id` `Participant` id of the agent wallet that will store the credential. If this is the same software than the agent, then it should be equal to `agent_participant_id`. It MUST NOT be set if peer is a **Verifiable Service**.
 
 If the peer wants to verify a credential, agent must send to peer:
 
 - a `uuid` for session identification;
-- *optional*: the `agent_participant_id` permission id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: the `agent_participant_id` `Participant` id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
 - *optional*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_participant_ids, uint64: wallet_agent_participant_id>. wallet_agent_participant_id MUST NOT be set if peer is a **Verifiable Service**.
 
 In case peer is a **Verifiable Service** and illegaly set `agent_participant_id` and/or `wallet_agent_participant_id`, the other end MUST refuse the request.
@@ -4155,8 +4155,8 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 - `id` (uuid) (*mandatory*): id of the `ParticipantSession`.
 - `issuer_participant_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the issuance of a credential.
 - `verifier_participant_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
-- `agent_participant_id` (uint64) (*optional*): the agent credential issuer permission id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
-- `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer permission id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
+- `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
+- `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `digest` (string) (*optional*): digest derived from an issued or verified credential.
 
 ##### [MOD-PP-MSG-10-2] Create or Update Participant Session precondition checks
@@ -4190,7 +4190,7 @@ if `verifier_participant_id` is not null:
 - if `verifier_participant.corporation` is not equal to `corporation`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
 
-Define the **primary permission** `perm`: if `verifier_participant` is not null, `perm` = `verifier_participant` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_participant` (the caller is the `vs_operator` of the issuer).
+Define the **primary `Participant`** `perm`: if `verifier_participant` is not null, `perm` = `verifier_participant` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_participant` (the caller is the `vs_operator` of the issuer).
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
@@ -4208,7 +4208,7 @@ wallet_agent:
 - if `wallet_agent_participant` is not a [[ref: active participant]], abort.
 
 :::warning
-we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.
+we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a `Participant` entry that is not controlled by its owner.
 :::
 
 ###### [MOD-PP-MSG-10-3] Create or Update Participant Session fee checks
@@ -4220,7 +4220,7 @@ For trust fees, `corporation` account MUST have sufficient available balance as 
 
 **Step 1: Calculate total beneficiary fees in credential schema pricing asset**
 
-Use "Find Beneficiaries" query method to get the set of beneficiary permissions `found_participant_set` (all ancestors in the permission tree).
+Use "Find Beneficiaries" query method to get the set of beneficiary `Participant` entries `found_participant_set` (all ancestors in the `Participant` tree).
 
 - define `total_beneficiary_fees` = 0
 
@@ -4376,7 +4376,7 @@ Required balance check:
 
 If all precondition checks passed, method is executed.
 
-- Load all permissions as in basic checks.
+- Load all `Participant` entries as in basic checks.
 - Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` if `issuer_participant` is not null, else from `verifier_participant.schema_id`.
 - define `now`: current timestamp.
 - use "Find Beneficiaries" to build `found_participant_set`.
@@ -4404,7 +4404,7 @@ Determine the operation type and applicable discount:
   - `discount` = `verifier_participant.verification_fee_discount`
   - `payer_participant` = `verifier_participant`
 
-**For each beneficiary permission `perm` in `found_participant_set`:**
+**For each beneficiary `Participant` `perm` in `found_participant_set`:**
 
 If `participant.[fee_field]` > 0:
 
@@ -4572,14 +4572,14 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 This method can only be called by either:
 
-- a `corporation` ancestor validator of this permission;
+- a `corporation` ancestor validator of this `Participant` entry;
 - the `corporation` controller of the `Ecosystem` object, owner of the corresponding credential schema.
 
 ##### [MOD-PP-MSG-12-1] Slash Participant Trust Deposit parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission;
+- `id` (uint64) (*mandatory*): id of the `Participant` entry;
 - `amount` (number) (*mandatory*): the amount to slash
 
 ##### [MOD-PP-MSG-12-2] Slash Participant Trust Deposit precondition checks
@@ -4598,7 +4598,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `amount` MUST be lower or equal to `applicant_participant.deposit` else MUST abort.
 
 :::note
-Even if the permission has expired or is revoked, it is still possible to slash it.
+Even if the `Participant` entry has expired or is revoked, it is still possible to slash it.
 :::
 
 ###### [MOD-PP-MSG-12-2-2] Slash Participant Trust Deposit validator perms
@@ -4643,19 +4643,19 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_participant.corporation`.
 
-Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
+Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
 
 #### [MOD-PP-MSG-13] Repay Participant Slashed Trust Deposit
 
-This method can only be called by the `corporation` that want to repay the deposit of a slashed perm they own. This won't make the perm re-usable: it will be needed for the `corporation` associated to this permission to request a new permission, as slashed permissions cannot be revived (same happen for revoked, etc...).
+This method can only be called by the `corporation` that wants to repay the deposit of a slashed `Participant` entry they own. This won't make the `Participant` entry re-usable: it will be needed for the `corporation` associated to this `Participant` entry to request a new `Participant` entry, as slashed `Participant` entries cannot be revived (same happens for revoked, etc.).
 
-Nevertheless, to get a new permission for a given ecosystem, it is needed, using this method, to repay the deposit of a slashed permission first.
+Nevertheless, to get a new `Participant` entry for a given ecosystem, it is needed, using this method, to repay the deposit of a slashed `Participant` entry first.
 
 ##### [MOD-PP-MSG-13-1] Repay Participant Slashed Trust Deposit parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission
+- `id` (uint64) (*mandatory*): id of the `Participant` entry
 
 ##### [MOD-PP-MSG-13-2] Repay Participant Slashed Trust Deposit precondition checks
 
@@ -4696,10 +4696,10 @@ use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `appl
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to `OPEN` for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a permission for being issuer or verifier of a given schema.
+This simple `Participant`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Participant` entry if issuance mode (resp. verification mode) is set to `OPEN` for a given schema. As `Participant` entries are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a `Participant` entry for being issuer or verifier of a given schema.
 
 :::note
-Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.
+Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their `Participant` entry may be revoked by ecosystem governance authority and their deposit slashed.
 :::
 
 ##### [MOD-PP-MSG-14-1] Self Create Participant parameters
@@ -4708,20 +4708,20 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `role` (ParticipantRole) (*mandatory*): ISSUER or VERIFIER.
 - `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
-- `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
+- `vs_operator` (account) (*optional*): the account we want to authorize to create `ParticipantSession` entries linked to this `Participant` entry. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
 - `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing an onboarding process to obtain a credential, in the denom specified in the credential schema. Default to 0.
 
-The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
 
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
-- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this `Participant` entry. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this `Participant` entry as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this `Participant` entry.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this `Participant` entry.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this `Participant` entry.
 
 Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`.
 
@@ -4754,8 +4754,8 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
 - `effective_until`:
   - if null, `validator_participant.effective_until` MUST be NULL
   - else if not null, must be greater than `effective_from` AND if `validator_participant.effective_until` is not null, MUST be lower or equal to `validator_participant.effective_until`
-- `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
-- `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
+- `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and the `Participant` entry MUST be an ISSUER.
+- `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and the `Participant` entry MUST be an ISSUER.
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-14-1](#mod-pp-msg-14-1-self-create-participant-parameters).
 
 ###### [MOD-PP-MSG-14-2-2] Self Create Participant permission checks
@@ -4774,7 +4774,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PP-MSG-14-2-4] Self Create Participant overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
+We want to make sure that 2 `Participant` entries cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
 Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `cs.id`, `role`, `validator_participant_id`, `corporation`.
 
@@ -4782,7 +4782,7 @@ for each `Participant` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
 
 > note: this check was not present in v3.
 
@@ -4832,14 +4832,14 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
 
 This method CAN be executed by:
 
-- the `vs_operator` of the permission, acting on behalf of `participant.corporation`; or
-- any ancestor validator of the permission in the permission tree (from the direct parent up to the root permission). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` defined in `v`, or by any `operator` authorized by `v.corporation` for this message type.
+- the `vs_operator` of the `Participant` entry, acting on behalf of `participant.corporation`; or
+- any ancestor validator of the `Participant` entry in the `Participant` tree (from the direct parent up to the root `Participant` entry). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` defined in `v`, or by any `operator` authorized by `v.corporation` for this message type.
 
-This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the `did` registered in the permission. Typical use cases include:
+This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the `did` registered in the `Participant` entry. Typical use cases include:
 
 - a new [[ref: verifiable service]] has been onboarded and its credentials are now present in the DID Document, so trust can be (re-)evaluated;
-- an issuer has revoked a credential issued to a holder: the issuer (acting as the validator of the corresponding HOLDER permission) notifies the trust resolver to re-evaluate trust for the revoked HOLDER permission;
-- an issuer is no longer operating: a parent issuer grantor or root ecosystem permission triggers a re-evaluation.
+- an issuer has revoked a credential issued to a holder: the issuer (acting as the validator of the corresponding HOLDER `Participant` entry) notifies the trust resolver to re-evaluate trust for the revoked HOLDER `Participant` entry;
+- an issuer is no longer operating: a parent issuer grantor or root ecosystem `Participant` entry triggers a re-evaluation.
 
 The method does not modify the [[ref: VPR]] state; it only emits an event that off-chain components MAY consume.
 
@@ -4847,7 +4847,7 @@ The method does not modify the [[ref: VPR]] state; it only emits an event that o
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission for which a trust resolution must be triggered.
+- `id` (uint64) (*mandatory*): id of the `Participant` entry for which a trust resolution must be triggered.
 
 ##### [MOD-PP-MSG-15-2] Trigger Resolver precondition checks
 
@@ -4868,14 +4868,14 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 At least one of the two authorization paths below MUST pass, else [[ref: transaction]] MUST abort.
 
-*Path 1 — vs_operator of the target permission*
+*Path 1 — vs_operator of the target `Participant` entry*
 
 - `corporation` MUST be equal to `participant.corporation`.
 - `operator` MUST be equal to `participant.vs_operator`.
 - [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 - [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 
-*Path 2 — ancestor validator in the permission tree*
+*Path 2 — ancestor validator in the `Participant` tree*
 
 The target `perm` itself is excluded from this walk; only its ancestors (from the direct parent up to the root) are considered. Walk the tree:
 
@@ -4908,25 +4908,25 @@ Anyone CAN execute this method.
 
 Generic query used for (at least):
 
-- find all permissions (all or limit to active) of a given schema;
+- find all `Participant` entries (all or limit to active) of a given schema;
 - for a given validator, get PENDING onboarding processes;
-- find all permissions of a given grantee;
-- find all permissions of a given did;
-- find all ISSUER_GRANTOR active participants, so that I can apply to an ISSUER permission;
+- find all `Participant` entries of a given grantee;
+- find all `Participant` entries of a given did;
+- find all ISSUER_GRANTOR active participants, so that I can apply to an ISSUER `Participant` entry;
 ...
 
 ##### [MOD-PP-QRY-1-1] List Participants parameters
 
 - `schema_id` (number) (*optional*): the schema id.
 - `grantee` (account) (*optional*): the grantee account.
-- `did` (string) (*optional*): the did the permission refers to.
-- `participant_id` (number) (*optional*): limit to permissions where the `validator_participant_id` is `participant_id`.
+- `did` (string) (*optional*): the did the `Participant` entry refers to.
+- `participant_id` (number) (*optional*): limit to `Participant` entries where the `validator_participant_id` is `participant_id`.
 - `role` (ParticipantRole) (*optional*): if we want to limit to a specific `Participant` role.
 - `only_valid` (boolean) (*optional*): if set to true, only return active participants.
-- `only_slashed` (boolean) (*optional*): if set to true, only return slashed permissions.
-- `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed permissions.
-- `modified_after` (timestamp) (*optional*): limit to permissions modified after (or equal to) `modified_after`.
-- `op_state` (OnboardingState) (*optional*): limit to permissions with a `op_state` not null and equal to `op_state`.
+- `only_slashed` (boolean) (*optional*): if set to true, only return slashed `Participant` entries.
+- `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed `Participant` entries.
+- `modified_after` (timestamp) (*optional*): limit to `Participant` entries modified after (or equal to) `modified_after`.
+- `op_state` (OnboardingState) (*optional*): limit to `Participant` entries with a `op_state` not null and equal to `op_state`.
 - `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
 - `when` (timestamp) (*optional*): if set, query *at* `when`, else query *at* now(). Used to query the VPR state at a previous datetime.
 
@@ -4948,7 +4948,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-PP-QRY-2-1] Get Participant parameters
 
-- `id` of the [[ref: credential schema permission]] (*mandatory*);
+- `id` of the [[ref: credential schema participant]] (*mandatory*);
 
 ##### [MOD-PP-QRY-2-2] Get Participant checks
 
@@ -4966,7 +4966,7 @@ Obsoleted by [MOD-PP-QRY-1].
 
 Anyone can execute this method.
 
-To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the ecosystem perm), starting from the 2 branches `issuer_participant` and `verifier_participant`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_participant` is null, `issuer_participant` is never added to the set. If `verifier_participant` is NOT null, `issuer_participant` is added to the set if it exists but `verifier_participant` is not added to the set.
+To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the `Participant` tree (which is the ecosystem perm), starting from the 2 branches `issuer_participant` and `verifier_participant`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_participant` is null, `issuer_participant` is never added to the set. If `verifier_participant` is NOT null, `issuer_participant` is added to the set if it exists but `verifier_participant` is not added to the set.
 
 Example 1: `verifier_participant`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
 
@@ -5043,8 +5043,8 @@ v --> vg
 
 ##### [MOD-PP-QRY-4-1] Find Beneficiaries parameters
 
-- `issuer_participant_id` (uint64) (*optional*): id of issuer permission.
-- `verifier_participant_id` (uint64) (*optional*): id of verifier permission.
+- `issuer_participant_id` (uint64) (*optional*): id of issuer `Participant` entry.
+- `verifier_participant_id` (uint64) (*optional*): id of verifier `Participant` entry.
 
 ##### [MOD-PP-QRY-4-2] Find Beneficiaries checks
 
@@ -5054,11 +5054,11 @@ v --> vg
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
-Example: Let's build the set. Revoked and slashed permissions will not be added to the set. Expired permissions, if not revoked/slashed, will be considered.
+Example: Let's build the set. Revoked and slashed `Participant` entries will not be added to the set. Expired `Participant` entries, if not revoked/slashed, will be considered.
 
 - create Set `found_participant_set`.
 
-- define permission `current_participant` as null.
+- define `current_participant` as null.
 
 - load perms `issuer_participant` and optional `verifier_participant` as specified in basic checks above.
 
@@ -5169,8 +5169,8 @@ actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
 participant "Verifiable Public Registry" as VPR #3fbdb6
 
 ApplicantAccount --> VPR: Start Participant OP
-VPR <-- VPR: create permission entry.
-ApplicantAccount <-- VPR: permission entry created,\nassigned participant.validator_participant_id from ISSUER_GRANTOR permissions.
+VPR <-- VPR: create `Participant` entry.
+ApplicantAccount <-- VPR: `Participant` entry created,\nassigned participant.validator_participant_id from ISSUER_GRANTOR `Participant` entries.
 ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validator_participant.did\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
 ApplicantBrowser --> ValidatorVS: I want to proceed with participant.id=...
@@ -5181,17 +5181,17 @@ ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof val
 ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
 ApplicantBrowser --> ValidatorVS: send DID
 ValidatorVS --> ValidatorVS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be added in an ISSUER permission (blind sign)
+ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be added in an ISSUER `Participant` entry (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proofs
 ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of the DID, I trust you.
 note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
 ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
 note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorVS: Your are a legitimate issuer. I'll now create an ISSUER permission for your account and DID.
+ApplicantBrowser <-- ValidatorVS: Your are a legitimate issuer. I'll now create an ISSUER `Participant` entry for your account and DID.
 ValidatorAccount --> VPR #3fbdb6: Set Participant OP to Validated\nset validation.state to VALIDATED\n.
 VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify permission added for your DID.\nDID can now issue credentials of this schema.
+ApplicantBrowser <-- ValidatorVS: notify `Participant` entry added for your DID.\nDID can now issue credentials of this schema.
 ```
 
 ### Trust deposit module
