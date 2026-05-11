@@ -3285,7 +3285,7 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 - else if `role` (ParticipantRole) is equal to VERIFIER:
 
-  - if `cs.verifier_onboarding_mode` is equal to GRANTOR: `validator_participant.role` MUST be VERIFIER_GRANTOR, else MUST abort.
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be VERIFIER_GRANTOR, else MUST abort.
   
   - else if `cs.verifier_onboarding_mode` is equal to ECOSYSTEM_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
 
