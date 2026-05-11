@@ -85,7 +85,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <p>This specification defines the data model, API, and normative requirements for implementing and interacting with a Verifiable Public Registry.</p>
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:ecosystem">ecosystem</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
-<div id="note-76" class="notice note"><a class="notice-link" href="#note-76">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-1" class="notice note"><a class="notice-link" href="#note-1">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
 <h3 id="what-is-an-ecosystem"><a class="toc-anchor" href="#what-is-an-ecosystem" >§</a> What is an Ecosystem?</h3>
@@ -526,7 +526,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-77" class="notice note"><a class="notice-link" href="#note-77">NOTE</a><p>Agents that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-2" class="notice note"><a class="notice-link" href="#note-2">NOTE</a><p>Agents that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
@@ -538,7 +538,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>A designated <a class="term-reference" href="#term:governance-authority">governance authority</a> (aka a council) is responsible for <strong>enforcing these rules</strong> and, when necessary, <strong>applying financial sanctions</strong> to participants who violate the rules.</p>
-<div id="note-78" class="notice note"><a class="notice-link" href="#note-78">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
+<div id="note-3" class="notice note"><a class="notice-link" href="#note-3">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
 <p>While the <strong>VPR governance framework</strong> defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each <strong>ecosystem</strong> must define its own <strong>EGF</strong> to govern roles, permissions, credential policies, and compliance within its specific domain.</p>
 <p>This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.</p>
 </div>
@@ -546,7 +546,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p>For simplicity, the data model is presented using an <strong>object-relational structure</strong>. However, this representation may not be optimal for all implementation scenarios.</p>
 <p>Implementors are responsible for <strong>adapting the data model</strong> to suit their chosen architecture.<br>
 For example, a <strong>key-value store</strong> may be more appropriate for a <strong>ledger-based implementation</strong> than a relational model.</p>
-<img src="https://www.plantuml.com/plantuml/svg/pLdTRzis47_NNo7ugUtG8js6OV1JlTX9ZRLnOBi1Xc4GQ96ssKgYHbBEnx3_VSUZFYY9Sknb3tk9fRlZVP1tlpig7vGcKXTf4doedrHC4XQcv27y-U8YlETKxuE0PPhhnt0qYuLwL9gbev2eKClmho0Ctt0w3WkUwPz-XBVlg7bLMl9iPrvZoOXcGD8yPM0bpGqr5PHlUOzCPBpdXpuvra2D3amgBh9n2BOCEI7PhY0xLflxk_7qKiXSIA917dsDuHsz_P_uTor0EYDPpAuaITczaD_kx79qTxSz-FRMxwnhb-sOVCRELCH52lpI43tTK2yWe1KoSLyftu5yf2HteswEHJ9gdacoYlSi9VPirEakd7SmNvN88eMMN2UvKWMJqKwIJ0iP7KZ2AQQAVGHFevn9Ba1TLgGRs56xoyRokSjAMsVQE4ryBn9wid3fYCWsWaWAEn71Ni9Hpf6-gCcVWThofRVYhkJqrvGEzLPyH7fVFfSyDb94AQOzQKIIdP1SxzDs2HLfEBBvCodq7YIUCFfRaV3uSIaIXccbI6u1QhvQVPajuU5kjfnVpU7HJSb1HPMI5nGYq2IuCqPVJgiMiuGTn3UZV2DWCSaCZMstpABCLegqRRVX5H1JuZ9je6Q_VCUC4NAHOeIBszaD_5ml9pVhnJ9QtFooc2odyvlhw7Qvk9ojLi2SNIvMlwtMiyy-Tdqq_ln0OuV_t9WljT3KlZHbJzzludQs_0py-UBcKwcqJejNg-clhyD978kYX4fYdq6fYwzI5Bb5KlFKPYwW2Wb0HIkvK5WG83sXVu1fQXVfnvofSLWz_lu7SjX3pcqJQvyuL4vPtxImVDVitMhOy47LffqLjz3yeH9p0BRMaYM3labnOKviCOLlyaOuQbN5iKZkeOgZBMC8dcvc_ziWfomJwIIjJuSIT8yQibDC12Lg7ApJvjOYpyG0pnhSj35Q8gAHyHqrhh_0dyl5tEJhrNooTfsOFSHxw8bi2M206Xwy8z66ADR7k3yBeJra29LrtoESogpA7xv78Ccf1u1mAytkjs6fQWhLFZex2coGCnQh8t72ksBisfmNXhRTsVbfw8m7p_7eCRexsC_M1-dMoM2Yf3oB3EHAYBGLcvbZ8yeEt7R7JQxgFNHhtKd_SY3nWVwB1aVwjL1zQPKGjUzH9Si9fqCOVnR-LwTluuVwKzsHm8o6FORj_R5_5MMvK5oxf3AEoCEomNWuTPThUIlo28wvJmG3q2TDfaOsOVeYPQ0mcNdS07vSI0adtel7OVaNgY9DYOJomMxT7IIh3GIsYbjWuzd8lb3JePiUjj8Lda1C63Ic8_HCqx_C83FvD9zErhEfmIVJmsxmnO_eAwRgUmLajZji5voUbyf7BJZTmjZnGg77b0lgkCCMp_7HgkXl_90QXFR6iNeM17_qm2nOJmZbCEBm758zZC3pnyMdQMU8l4x4XYHtH7AoIPYo0u6zmXbVopjFUHMfVWmuAVx4t8Jf2vzyMK5zb3ogu_hEkCUSgF7PAywvdhrOqxCNenFrQ0cexKE55YDIUoAPCL6mOI7iwqDCuyuZPmazBhP9HFmjakmUSC9QTKGB1I73xHnmh9JewBedIS9qT5pEgSQriJsrfkq77_kjm1fk0lLX-xR8A7FldyCjOh13MCptjKZa-DeaIaSzXBMp-Tkt0gQOSLWcVb0Dz2qwOm5CEgFt8o2_3KSNxzu1SbBp-I1d6OqIdd8z824XPNXcxhCe6mJL-290xa6sNalRur2KexgHHavt28N9h1uVSTeQ5dGcIYjfHD79z-XaRTHEZz7zdckMSAM385O3EbjNTDGQkljfRnDZ_BvMVczhxMl5Ry9irbPtaU7LZSH1HRMA-WvJdu4D3oucvX1C4rA1kQ-OY03vns7xocAYpIicx0PkLKE2eovnZTPKSyfW39KrSqP7RRc76hnWrOVIqboj1DnKn7XaFZ5mfj0NvKPXMoSuOPjgL0KKM4RFdH9zUxvuXMk8FKsyH0mB5gSjySe6tGDhYiOCHMvf3KkU9jKjmbCaQny2J9jdR0-8T0CP4ElwzwoOuvp9He-iKnij3quGxpeT1BhdpcvxmCGnsQZ2Lsvglmxmk_hn1KvnunBpRRjJkRkjkHwMtwLLXH6Dq0WHmiKEKsGkQZGSpC91bchpMcXZAyG16bkRBRXkiUlfl5vjRWk6udfAEoO_m7RZ_rpixpy0" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/pLdTRzis47_NNo7ugUdGejs6OV1JlTX9ZRLnOBi1Xc4GQ96ssKYYHbBEnx3_VSUZFYY9Sknr3tk9fRlZVP1tlpig7vGcKXTf4doedrHC4XQcv37y-Tsxy85JlGy2bcckdyBHB1RgIMcMZaAYGYt3lu8mVCtfE2nufd_w4Tw-e-PLQScpdNcD9IEQ0Kdpb86LD3VKL52-vJqoaV6U7_haM0CrEZ2fkCZ68TWov8HakuBiM6tkxyRJIo5p8Oa6UVGrXdVqzd_YtxK0wOnaCRkI96KFGjxVsUNexcvxyEsjtrdNBjin-OATgOYB5FYb8NgweLv0G2jauhvIlWFvI4dkHjqSYsJKF9Da5UzPIkpPgDDTEEzWlYgHHGejkKvofGecevqacHOoEf24KqmL-mYUHZcJN82wh4WtiADsbutbSvULjiwqSPhuNYJqPE7I4P5j194KTYA2lOIZd2DzKPC_0xNbIs_5NSdfhoaTwgtuYFI-V2vvRAI8KanxqeWaEo6vtgVj4YhIS6JpPrBeFKWyO_It8k7nqr8a3DDAaTm2r7or-Z9RmiFTR3c_ciEZcvA3YYebtr28G9FWpXXzEQrQp19s4FT6-KR0Of8P6jjkcKMPhHHfssx3Ao2cn6NQGCr--OuP8-GYnGWNjxCR-BbUJcxMYsMqkFbbCLbEvpVNqUroSJbRhO0vkroiVbkjPvzzxFfe_Fc1nWx_kJ5VQg6fVMdAdhxVnEri-HduyyNDfr9fdHQlLjDVBy9978kYX4fYdq6fYwzI5Bb5KlFKPYwW2Wb0HIkvK5WG83sZVu1fQXVffvofSLWz_lu7SjXZpcqJQvyuL4vPtxImVDVitMhOy47LffqLjz3yeH9p0BRMaYM3labnOKviCOMlyqOuQbN5iKWUe8gZBMC8dcvc_ziWfomJwIIjJuSIT8yQibDC12Lg7ApJvjOYpyG0pnhSj35Q8gAHyHqrhh_0dyl5tEJhrNooTfsOFSPxw8bi2M206Xwz8z66ADR7k3yBeJra29LrtoESogpA7xv78Ccf1u1mAytkjs6fQWhLFZex2coGCnQh8t72ksBisfmNXhRTsVbfw8m7p_7eCRexsC_MH-dMoM2Yf3oB3EHAYBGLcvbZ8yeEt7R7JQxgFNHhtKd_SY3nWVut3OxqQw7wqYeXQj-ZIfOJJeSm_YpyhqxVnW_rfxeZWHaDUmpR-sF_AifoeRXsIMKSaOTbW_5mwYxNybRa4HnpdmW6e4-QJ8rimlH5oa1XClEu0Voua19El1UFm_8lL4MQ4WdbWzswEqXM6mXi5RV0nhEHVQ6cGpSzRAKhF86OC6XCH-YPfd-PGMRoQJwTh6TJWq-cXztWYn_HLqpLzmh8R7VOBZWzBvMFMd2wXR7ZXKAFAHVKSOSjdkEZLT7V-24r2EsDO_Ki2FxeWLcmdX3AOSJXEQHw687dZujFqyuGUPs83KdkYEHaap1b1m9xXJE-bdUUyYfI_HXmKloPkGdJ5pxvieBwA7bIn_MTSOyvKUEBLvnpFVjcJIzUZ4xKeoMWjWyLMen8xObanaJ1XeMmhmynZJjFd2NqkDWc4V5z9Da3u8IrweWM2aA6spdWM2dHqVL0aeJfwBYSKurhOtjgJTiFFlPRWJNS1Eh3zcsHKURUFuTRn627i9ZlQv78yRL9b8vw26jdypTl14mnux1C_A0Qw5jqnWAOT4RlHq1-4uxUlNqBo4dDvuESPJHAUChrW8I4bE6PkS-YR11Kuui0kKVPUYrjZqDHZkf66ZdT8HGcitfyn6bhMD2PAAsa4KKdtwEJjL4xFKOFUwvPmfKEWbWDw6nTqL5hwEwdlKsCyVjQ-RsjjQyLlmcpMLlTHOPNDn875TKgwZjCVGOsFBYOc4CmJKW5vhvY8WBa7uVjAuk9Dg-Oi1kuLGq9Zhh4DLfJpIc3CLJMp1aTjUKUQl22LHzAItEr4d1J4UEH-SJ0cK9Vb1k5RPtWX6sgKHLGO1azTqhqxVdY5QuXzZJn4Z4iM9osn2iRT0-iAHep5BcbDInvcbIt24-Hh7q8C6rUi3qWqWraGAphtujYZdCc6psoJcsqF3X1lEjq4EYUExlj0HF7PACANxcfVH7WT_NZ2vpYlWZCX-rEsUwsvcvOVfHM5K0qGYE41nSuJ8MvaD5mC0K7MQhDQq6DBGy7PMnXjh2wnQv7ytgrkIeOYkifxPZy07kD_t2nl_y0" alt="uml diagram">
 <h3 id="corporation"><a class="toc-anchor" href="#corporation" >§</a> Corporation</h3>
 <p>A <code>Corporation</code> is the VPR-level entity that extends a Cosmos SDK <a class="term-reference" href="#term:group">group</a> with a DID, a governance framework, and lifecycle attributes. A Corporation may control <a class="term-reference" href="#term:participants">participants</a> in zero or more <a class="term-reference" href="#term:ecosystems">ecosystems</a> and may itself be the controller of zero or more <a class="term-reference" href="#term:ecosystems">ecosystems</a>.</p>
 <p><code>Corporation</code>:</p>
@@ -574,17 +574,17 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>active_version</code> (int): (<em>mandatory</em>) active governance framework version.</li>
 </ul>
 <h3 id="governanceframeworkversion"><a class="toc-anchor" href="#governanceframeworkversion" >§</a> GovernanceFrameworkVersion</h3>
-<p>A <code>GovernanceFrameworkVersion</code> represents a single version of either an <a class="term-reference" href="#term:egf">EGF</a> or a <a class="term-reference" href="#term:cgf">CGF</a>. Its owning subject is identified by exactly one of <code>ecosystem_id</code> or <code>corporation_id</code> (XOR).</p>
+<p>A <code>GovernanceFrameworkVersion</code> represents a single version of either an <a class="term-reference" href="#term:egf">EGF</a> or a <a class="term-reference" href="#term:cgf">CGF</a>. Its owning subject is identified by exactly one of <code>ecosystem_id</code> or <code>corporation</code> (XOR).</p>
 <p><code>GovernanceFrameworkVersion</code>:</p>
 <ul>
 <li><code>id</code> (uint64) (<em>mandatory</em>): the id of the GFV.</li>
-<li><code>ecosystem_id</code> (uint64) (<em>conditional</em>): the id of the <a class="term-reference" href="#term:ecosystem">ecosystem</a> that controls this <code>GovernanceFrameworkVersion</code> entry. MUST be set if <code>corporation_id</code> is null.</li>
-<li><code>corporation_id</code> (uint64) (<em>conditional</em>): the id of the <a class="term-reference" href="#term:corporation">corporation</a> that controls this <code>GovernanceFrameworkVersion</code> entry. MUST be set if <code>ecosystem_id</code> is null.</li>
+<li><code>ecosystem_id</code> (uint64) (<em>conditional</em>): the id of the <a class="term-reference" href="#term:ecosystem">ecosystem</a> that controls this <code>GovernanceFrameworkVersion</code> entry. MUST be set if <code>corporation</code> is null.</li>
+<li><code>corporation</code> (group) (<em>conditional</em>): the <a class="term-reference" href="#term:corporation">corporation</a> that controls this <code>GovernanceFrameworkVersion</code> entry (i.e., the underlying Cosmos SDK <a class="term-reference" href="#term:group">group</a> of the owning <code>Corporation</code>). MUST be set if <code>ecosystem_id</code> is null.</li>
 <li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this GovernanceFrameworkVersion has been created.</li>
 <li><code>version</code> (int) (<em>mandatory</em>): version of this GF. MUST Starts with 1.</li>
 </ul>
 <blockquote>
-<p>Constraint: exactly one of <code>ecosystem_id</code> and <code>corporation_id</code> MUST be set.</p>
+<p>Constraint: exactly one of <code>ecosystem_id</code> and <code>corporation</code> MUST be set.</p>
 </blockquote>
 <h3 id="governanceframeworkdocument"><a class="toc-anchor" href="#governanceframeworkdocument" >§</a> GovernanceFrameworkDocument</h3>
 <p><code>GovernanceFrameworkDocument</code></p>
@@ -908,10 +908,10 @@ as a direct consequence of executing authorized messages.</li>
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-46" class="notice warning"><a class="notice-link" href="#warning-46">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-1" class="notice warning"><a class="notice-link" href="#warning-1">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-79" class="notice note"><a class="notice-link" href="#note-79">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="ec"path-3="v1"path-4="get"href="https://example/verana/ec/v1/get" ><span>https://example/verana/ec/v1/get</span></a>.</p>
+<div id="note-4" class="notice note"><a class="notice-link" href="#note-4">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="ec"path-3="v1"path-4="get"href="https://example/verana/ec/v1/get" ><span>https://example/verana/ec/v1/get</span></a>.</p>
 </div>
 <h3 id="authorization-and-fee-grants"><a class="toc-anchor" href="#authorization-and-fee-grants" >§</a> Authorization and Fee Grants</h3>
 <h4 id="delegable-module-messages"><a class="toc-anchor" href="#delegable-module-messages" >§</a> Delegable Module Messages</h4>
@@ -1668,7 +1668,7 @@ messages.</p>
 </tr>
 </tbody>
 </table>
-<div id="note-80" class="notice note"><a class="notice-link" href="#note-80">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-5" class="notice note"><a class="notice-link" href="#note-5">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="corporation-module"><a class="toc-anchor" href="#corporation-module" >§</a> Corporation Module</h3>
 <p>This module manages <a class="term-reference" href="#term:corporation">corporation</a> entries — the VPR-level entity that extends a Cosmos SDK <a class="term-reference" href="#term:group">group</a> with a DID, a governance framework, and lifecycle attributes. A <code>Corporation</code> entry MUST exist before its underlying group can be referenced as the <code>corporation</code> (group) in any other VPR Create-* method (see <a href="#mod-co-msg-1-create-new-corporation" >[MOD-CO-MSG-1]</a>).</p>
@@ -1754,7 +1754,7 @@ messages.</p>
 <p><code>gfv.ecosystem_id</code>: null</p>
 </li>
 <li>
-<p><code>gfv.corporation_id</code>: id of the signing <a class="term-reference" href="#term:group">group</a> (i.e., the key of <code>co</code>)</p>
+<p><code>gfv.corporation</code>: the signing <code>corporation</code> (i.e., the underlying <a class="term-reference" href="#term:group">group</a> of <code>co</code>)</p>
 </li>
 <li>
 <p><code>gfv.created</code>: current timestamp</p>
@@ -1797,8 +1797,10 @@ messages.</p>
 <li><code>corporation</code> (group): (Signer) the signing corporation on whose behalf this message is executed.</li>
 <li><code>operator</code> (account): (Signer) the account authorized by the <code>corporation</code> to run this Msg.</li>
 <li><code>did</code> (string) (<em>mandatory</em>): the new DID of the Corporation.</li>
-<li><code>language</code> (string) (<em>mandatory</em>): primary language tag of this Corporation.</li>
 </ul>
+<blockquote>
+<p>Note: <code>language</code> is set at creation time by <a href="#mod-co-msg-1-create-new-corporation" >[MOD-CO-MSG-1]</a> and is <strong>immutable</strong> thereafter; it cannot be updated through this method.</p>
+</blockquote>
 <h5 id="mod-co-msg-2-2-update-corporation-precondition-checks"><a class="toc-anchor" href="#mod-co-msg-2-2-update-corporation-precondition-checks" >§</a> [MOD-CO-MSG-2-2] Update Corporation precondition checks</h5>
 <p>If any of these precondition checks fail, method MUST abort.</p>
 <h6 id="mod-co-msg-2-2-1-update-corporation-basic-checks"><a class="toc-anchor" href="#mod-co-msg-2-2-1-update-corporation-basic-checks" >§</a> [MOD-CO-MSG-2-2-1] Update Corporation basic checks</h6>
@@ -1821,9 +1823,6 @@ messages.</p>
 <li>
 <p><code>did</code> (string) (<em>mandatory</em>): MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</p>
 </li>
-<li>
-<p><code>language</code> (string(17)) (<em>mandatory</em>): MUST be a language tag (<a path-0="www.rfc-editor.org"path-1="info"path-2="bcp47"href="https://www.rfc-editor.org/info/bcp47" >BCP 47</a>).</p>
-</li>
 </ul>
 <h6 id="mod-co-msg-2-2-2-update-corporation-fee-checks"><a class="toc-anchor" href="#mod-co-msg-2-2-2-update-corporation-fee-checks" >§</a> [MOD-CO-MSG-2-2-2] Update Corporation fee checks</h6>
 <p>Fee payer MUST have available balance in its <a class="term-reference" href="#term:account">account</a> to cover the required <a class="term-reference" href="#term:transaction-fees">transaction fees</a>.</p>
@@ -1836,9 +1835,6 @@ messages.</p>
 </li>
 <li>
 <p><code>co.did</code>: <code>did</code></p>
-</li>
-<li>
-<p><code>co.language</code>: <code>language</code></p>
 </li>
 <li>
 <p><code>co.modified</code>: current timestamp</p>
@@ -1999,7 +1995,7 @@ messages.</p>
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-81" class="notice note"><a class="notice-link" href="#note-81">NOTE</a><p>It is not a problem if several ecosystems are created with the same ecosystem DID. Identifier of a <code>Ecosystem</code> is its id, and the Verifiable Trust Spec includes the id of the <code>Ecosystem</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
+<div id="note-6" class="notice note"><a class="notice-link" href="#note-6">NOTE</a><p>It is not a problem if several ecosystems are created with the same ecosystem DID. Identifier of a <code>Ecosystem</code> is its id, and the Verifiable Trust Spec includes the id of the <code>Ecosystem</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
 </div>
 <h6 id="mod-es-msg-1-2-2-create-new-ecosystem-fee-checks"><a class="toc-anchor" href="#mod-es-msg-1-2-2-create-new-ecosystem-fee-checks" >§</a> [MOD-ES-MSG-1-2-2] Create New Ecosystem fee checks</h6>
 <p>Fee payer MUST have an available balance to cover the <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -2041,7 +2037,7 @@ messages.</p>
 <p><code>gfv.ecosystem_id</code>: <code>ecosystem.id</code></p>
 </li>
 <li>
-<p><code>gfv.corporation_id</code>: null</p>
+<p><code>gfv.corporation</code>: null</p>
 </li>
 <li>
 <p><code>gfv.created</code>: current timestamp</p>
@@ -2239,7 +2235,7 @@ messages.</p>
 <span class="token punctuation">}</span>
 </code></pre>
 <h3 id="governance-framework-module"><a class="toc-anchor" href="#governance-framework-module" >§</a> Governance Framework Module</h3>
-<p>This module handles <a class="term-reference" href="#term:governance-framework">governance framework</a> documents and version activation for both <a class="term-reference" href="#term:ecosystems">ecosystems</a> and <a class="term-reference" href="#term:corporations">corporations</a>. Methods are polymorphic over the owning subject: every message specifies exactly one of <code>ecosystem_id</code> or <code>corporation_id</code> to designate whose governance framework is being modified.</p>
+<p>This module handles <a class="term-reference" href="#term:governance-framework">governance framework</a> documents and version activation for both <a class="term-reference" href="#term:ecosystems">ecosystems</a> and <a class="term-reference" href="#term:corporations">corporations</a>. Methods are polymorphic over the owning subject: every message takes an optional <code>ecosystem_id</code> parameter to designate whose governance framework is being modified — if set, the target subject is that <code>Ecosystem</code> (and the signing <code>corporation</code> MUST be its controller); if not set, the target subject is the signing <code>corporation</code>’s own <a class="term-reference" href="#term:cgf">CGF</a> (a Corporation may only edit its own CGF, so no extra parameter is needed).</p>
 <p>The initial <code>GovernanceFrameworkVersion</code> and its first <code>GovernanceFrameworkDocument</code> are created atomically by <a href="#mod-es-msg-1-create-new-ecosystem" >Create New Ecosystem</a> (and, by parallel construction, by <a href="#mod-co-msg-1-create-new-corporation" >Create New Corporation</a>). After that, subsequent versions and documents are added through this module.</p>
 <h4 id="mod-gf-msg-1-add-governance-framework-document"><a class="toc-anchor" href="#mod-gf-msg-1-add-governance-framework-document" >§</a> [MOD-GF-MSG-1] Add Governance Framework Document</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of a <code>corporation</code>.</p>
@@ -2247,8 +2243,7 @@ messages.</p>
 <ul>
 <li><code>corporation</code> (group): (Signer) the signing corporation on whose behalf this message is executed.</li>
 <li><code>operator</code> (account): (Signer) the account authorized by the <code>corporation</code> to run this Msg.</li>
-<li><code>ecosystem_id</code> (uint64) (<em>conditional</em>): id of the target <a class="term-reference" href="#term:ecosystem">ecosystem</a> whose governance framework will be modified. MUST be set if <code>corporation_id</code> is null.</li>
-<li><code>corporation_id</code> (uint64) (<em>conditional</em>): id of the target <a class="term-reference" href="#term:corporation">corporation</a> whose governance framework will be modified. MUST be set if <code>ecosystem_id</code> is null.</li>
+<li><code>ecosystem_id</code> (uint64) (<em>optional</em>): id of the target <a class="term-reference" href="#term:ecosystem">ecosystem</a> whose governance framework will be modified. If set, the signing <code>corporation</code> MUST be the controller of the target <code>Ecosystem</code>. If not set, the target subject is the signing <code>corporation</code>’s own <a class="term-reference" href="#term:cgf">CGF</a>.</li>
 <li><code>doc_language</code> (string) (<em>mandatory</em>): language tag (<a path-0="www.rfc-editor.org"path-1="info"path-2="bcp47"href="https://www.rfc-editor.org/info/bcp47" >BCP 47</a>) of the governance framework document.</li>
 <li><code>doc_url</code> (string) (<em>mandatory</em>): URL where the document is published.</li>
 <li><code>doc_digest_sri</code> (string) (<em>mandatory</em>): digest_sri of the document.</li>
@@ -2263,14 +2258,13 @@ messages.</p>
 <li><code>corporation</code> (group): (Signer) signature must be verified.</li>
 <li><code>operator</code> (account): (Signer) signature must be verified.</li>
 <li><a href="#authz-check-common-authorization-and-fee-grant-precondition-checks" >[AUTHZ-CHECK]</a> MUST pass for this (<code>corporation</code>, <code>operator</code>) pair and this message type.</li>
-<li>Exactly one of <code>ecosystem_id</code> and <code>corporation_id</code> MUST be set; if both are set or both are null, method MUST abort.</li>
 <li>Define <code>subject</code> as:
 <ul>
-<li>if <code>ecosystem_id</code> is set: the <code>Ecosystem</code> entry with this id. The entry MUST exist and <code>subject.corporation</code> MUST be equal to the <code>corporation</code> executing the method.</li>
-<li>if <code>corporation_id</code> is set: the <code>Corporation</code> entry keyed by <code>corporation_id</code> (i.e., the Corporation whose underlying <a class="term-reference" href="#term:group">group</a> has id <code>corporation_id</code>). The entry MUST exist, and <code>corporation_id</code> MUST equal the <a class="term-reference" href="#term:group">group</a> id of the signing <code>corporation</code> (a Corporation may only edit its own governance framework).</li>
+<li>if <code>ecosystem_id</code> is set: the <code>Ecosystem</code> entry with this id. The entry MUST exist and <code>subject.corporation</code> MUST be equal to the signing <code>corporation</code>.</li>
+<li>if <code>ecosystem_id</code> is not set: the <code>Corporation</code> entry whose underlying <a class="term-reference" href="#term:group">group</a> is the signing <code>corporation</code>. The entry MUST exist (a Corporation may only edit its own governance framework, so no further check is required).</li>
 </ul>
 </li>
-<li><code>version</code>: there MUST exist a <code>GovernanceFrameworkVersion</code> entry <code>gfv</code> whose owner matches <code>subject</code> (i.e., <code>gfv.ecosystem_id = ecosystem_id</code> if subject is an Ecosystem, else <code>gfv.corporation_id = corporation_id</code>) and <code>gfv.version = version</code>, OR <code>version</code> MUST be exactly equal to the biggest <code>gfv.version</code> + 1 of all <code>GovernanceFrameworkVersion</code> entries owned by <code>subject</code>. <code>version</code> MUST be greater than <code>subject.active_version</code>.</li>
+<li><code>version</code>: there MUST exist a <code>GovernanceFrameworkVersion</code> entry <code>gfv</code> whose owner matches <code>subject</code> (i.e., <code>gfv.ecosystem_id = ecosystem_id</code> if subject is an Ecosystem, else <code>gfv.corporation = corporation</code>) and <code>gfv.version = version</code>, OR <code>version</code> MUST be exactly equal to the biggest <code>gfv.version</code> + 1 of all <code>GovernanceFrameworkVersion</code> entries owned by <code>subject</code>. <code>version</code> MUST be greater than <code>subject.active_version</code>.</li>
 <li><code>doc_language</code> (string) (<em>mandatory</em>): MUST be a language tag (<a path-0="www.rfc-editor.org"path-1="info"path-2="bcp47"href="https://www.rfc-editor.org/info/bcp47" >BCP 47</a>).</li>
 <li><code>doc_url</code> (string) (<em>mandatory</em>): MUST be a valid URL.</li>
 <li><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</li>
@@ -2286,7 +2280,7 @@ messages.</p>
 <ul>
 <li><code>gfv.id</code>: auto-incremented uint64</li>
 <li><code>gfv.ecosystem_id</code>: <code>ecosystem_id</code> (or null if subject is a Corporation)</li>
-<li><code>gfv.corporation_id</code>: <code>corporation_id</code> (or null if subject is an Ecosystem)</li>
+<li><code>gfv.corporation</code>: the signing <code>corporation</code> (or null if subject is an Ecosystem)</li>
 <li><code>gfv.created</code>: current timestamp</li>
 <li><code>gfv.version</code>: <code>version</code></li>
 </ul>
@@ -2316,8 +2310,7 @@ messages.</p>
 <ul>
 <li><code>corporation</code> (group): (Signer) the signing corporation on whose behalf this message is executed.</li>
 <li><code>operator</code> (account): (Signer) the account authorized by the <code>corporation</code> to run this Msg.</li>
-<li><code>ecosystem_id</code> (uint64) (<em>conditional</em>): id of the target <a class="term-reference" href="#term:ecosystem">ecosystem</a>. MUST be set if <code>corporation_id</code> is null.</li>
-<li><code>corporation_id</code> (uint64) (<em>conditional</em>): id of the target <a class="term-reference" href="#term:corporation">corporation</a>. MUST be set if <code>ecosystem_id</code> is null.</li>
+<li><code>ecosystem_id</code> (uint64) (<em>optional</em>): id of the target <a class="term-reference" href="#term:ecosystem">ecosystem</a>. If set, the signing <code>corporation</code> MUST be its controller. If not set, the target subject is the signing <code>corporation</code>’s own <a class="term-reference" href="#term:cgf">CGF</a>.</li>
 </ul>
 <h5 id="mod-gf-msg-2-2-increase-active-governance-framework-version-precondition-checks"><a class="toc-anchor" href="#mod-gf-msg-2-2-increase-active-governance-framework-version-precondition-checks" >§</a> [MOD-GF-MSG-2-2] Increase Active Governance Framework Version precondition checks</h5>
 <p>If any of these precondition checks fail, method MUST abort.</p>
@@ -2336,17 +2329,14 @@ messages.</p>
 <p><a href="#authz-check-common-authorization-and-fee-grant-precondition-checks" >[AUTHZ-CHECK]</a> MUST pass for this (<code>corporation</code>, <code>operator</code>) pair and this message type.</p>
 </li>
 <li>
-<p>Exactly one of <code>ecosystem_id</code> and <code>corporation_id</code> MUST be set; if both are set or both are null, method MUST abort.</p>
-</li>
-<li>
 <p>Define <code>subject</code> as:</p>
 <ul>
-<li>if <code>ecosystem_id</code> is set: the <code>Ecosystem</code> entry with this id. The entry MUST exist and <code>subject.corporation</code> MUST be equal to the <code>corporation</code> executing the method.</li>
-<li>if <code>corporation_id</code> is set: the <code>Corporation</code> entry keyed by <code>corporation_id</code> (i.e., the Corporation whose underlying <a class="term-reference" href="#term:group">group</a> has id <code>corporation_id</code>). The entry MUST exist, and <code>corporation_id</code> MUST equal the <a class="term-reference" href="#term:group">group</a> id of the signing <code>corporation</code>.</li>
+<li>if <code>ecosystem_id</code> is set: the <code>Ecosystem</code> entry with this id. The entry MUST exist and <code>subject.corporation</code> MUST be equal to the signing <code>corporation</code>.</li>
+<li>if <code>ecosystem_id</code> is not set: the <code>Corporation</code> entry whose underlying <a class="term-reference" href="#term:group">group</a> is the signing <code>corporation</code>. The entry MUST exist.</li>
 </ul>
 </li>
 <li>
-<p>Find a <code>GovernanceFrameworkVersion</code> entry <code>gfv</code> owned by <code>subject</code> (matching <code>gfv.ecosystem_id</code> or <code>gfv.corporation_id</code> as appropriate) whose <code>gfv.version</code> is equal to <code>subject.active_version</code> + 1. If none is found, transaction MUST abort.</p>
+<p>Find a <code>GovernanceFrameworkVersion</code> entry <code>gfv</code> owned by <code>subject</code> (matching <code>gfv.ecosystem_id</code> or <code>gfv.corporation</code> as appropriate) whose <code>gfv.version</code> is equal to <code>subject.active_version</code> + 1. If none is found, transaction MUST abort.</p>
 </li>
 <li>
 <p>Find a <code>GovernanceFrameworkDocument</code> <code>gfd</code> for <code>gfd.gfv_id</code> = <code>gfv.id</code> and <code>gfd.language</code> = <code>subject.language</code>. If no document is found (and thus no document exists for the default language of this version for this subject), transaction MUST abort.</p>
@@ -2378,14 +2368,14 @@ messages.</p>
 <li><code>id</code> (uint64) (<em>mandatory</em>): MUST be a valid uint64.</li>
 </ul>
 <h5 id="mod-gf-qry-1-3-get-governance-framework-version-execution"><a class="toc-anchor" href="#mod-gf-qry-1-3-get-governance-framework-version-execution" >§</a> [MOD-GF-QRY-1-3] Get Governance Framework Version execution</h5>
-<p>Return the <code>GovernanceFrameworkVersion</code> entry with <code>id</code>, including its owning subject reference (<code>ecosystem_id</code> or <code>corporation_id</code>) and its nested <code>GovernanceFrameworkDocument</code> entries (filtered by <code>preferred_language</code> if set).</p>
+<p>Return the <code>GovernanceFrameworkVersion</code> entry with <code>id</code>, including its owning subject reference (<code>ecosystem_id</code> or <code>corporation</code>) and its nested <code>GovernanceFrameworkDocument</code> entries (filtered by <code>preferred_language</code> if set).</p>
 <h4 id="mod-gf-qry-2-list-governance-framework-versions"><a class="toc-anchor" href="#mod-gf-qry-2-list-governance-framework-versions" >§</a> [MOD-GF-QRY-2] List Governance Framework Versions</h4>
 <p>Anyone CAN execute this method.</p>
 <h5 id="mod-gf-qry-2-1-list-governance-framework-versions-query-parameters"><a class="toc-anchor" href="#mod-gf-qry-2-1-list-governance-framework-versions-query-parameters" >§</a> [MOD-GF-QRY-2-1] List Governance Framework Versions query parameters</h5>
-<p>Exactly one of <code>ecosystem_id</code> and <code>corporation_id</code> MUST be set:</p>
+<p>Exactly one of <code>ecosystem_id</code> and <code>corporation</code> MUST be set:</p>
 <ul>
-<li><code>ecosystem_id</code> (uint64) (<em>conditional</em>): filter by ecosystem. MUST be set if <code>corporation_id</code> is null.</li>
-<li><code>corporation_id</code> (uint64) (<em>conditional</em>): filter by corporation. MUST be set if <code>ecosystem_id</code> is null.</li>
+<li><code>ecosystem_id</code> (uint64) (<em>conditional</em>): filter by ecosystem. MUST be set if <code>corporation</code> is null.</li>
+<li><code>corporation</code> (group) (<em>conditional</em>): filter by corporation (the underlying Cosmos SDK <a class="term-reference" href="#term:group">group</a> of the target <code>Corporation</code>). MUST be set if <code>ecosystem_id</code> is null.</li>
 <li><code>active_only</code> (boolean) (<em>optional</em>): if true, return only the entry corresponding to the subject’s <code>active_version</code>.</li>
 <li><code>preferred_language</code> (string) (<em>optional</em>): if set, return only one document per version, preferring <code>preferred_language</code>.</li>
 <li><code>response_max_size</code> (small number) (<em>optional</em>): default to 64. Max 1,024.</li>
@@ -2393,7 +2383,7 @@ messages.</p>
 <h5 id="mod-gf-qry-2-2-list-governance-framework-versions-query-checks"><a class="toc-anchor" href="#mod-gf-qry-2-2-list-governance-framework-versions-query-checks" >§</a> [MOD-GF-QRY-2-2] List Governance Framework Versions query checks</h5>
 <p>If any of these checks fail, <a class="term-reference" href="#term:query">query</a> MUST fail.</p>
 <ul>
-<li>Exactly one of <code>ecosystem_id</code> and <code>corporation_id</code> MUST be set.</li>
+<li>Exactly one of <code>ecosystem_id</code> and <code>corporation</code> MUST be set.</li>
 <li><code>response_max_size</code> must be between 1 and 1,024. Default to 64 if unspecified.</li>
 </ul>
 <h5 id="mod-gf-qry-2-3-list-governance-framework-versions-execution"><a class="toc-anchor" href="#mod-gf-qry-2-3-list-governance-framework-versions-execution" >§</a> [MOD-GF-QRY-2-3] List Governance Framework Versions execution</h5>
@@ -2476,7 +2466,7 @@ messages.</p>
 <p><code>pricing_asset</code> (string) (<em>mandatory</em>): <code>&quot;tu&quot;</code> if <code>pricing_asset_type</code> is set to TU, else examples: COIN: <code>denom</code> <code>&quot;uvna&quot;</code>, <code>&quot;ufoo&quot;</code>, <code>&quot;ibc/3A0F9C2E4E2A9B7D6F...&quot;</code>, <code>&quot;factory/verana1.../ueurv&quot;</code>, FIAT: <code>&quot;EUR&quot;</code>, <code>&quot;GBP&quot;</code>,…</p>
 </li>
 </ul>
-<div id="note-82" class="notice note"><a class="notice-link" href="#note-82">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
+<div id="note-7" class="notice note"><a class="notice-link" href="#note-7">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
 The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
 FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
 FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.</p>
@@ -2509,7 +2499,7 @@ FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on
 </ul>
 </li>
 </ul>
-<div id="note-83" class="notice note"><a class="notice-link" href="#note-83">NOTE</a><p>If needed, depending on configuration mode, Ecosystem controller MAY need to create a ECOSYSTEM <code>Participant</code> so that onboarding processes can be run.</p>
+<div id="note-8" class="notice note"><a class="notice-link" href="#note-8">NOTE</a><p>If needed, depending on configuration mode, Ecosystem controller MAY need to create a ECOSYSTEM <code>Participant</code> so that onboarding processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of a <code>corporation</code>.</p>
@@ -2912,7 +2902,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <h4 id="participant-module-overview"><a class="toc-anchor" href="#participant-module-overview" >§</a> Participant Module Overview</h4>
 <p><em>This section is non-normative.</em></p>
 <p>Participants are linked to a Credential Schema and representable as a tree.</p>
-<img src="https://www.plantuml.com/plantuml/svg/XPDHRu8m483V-oikusLxC24naOM7HKLKacqku4osbwNG4xk1aBOwbyN_lahLRH7nNk3eyNrNUdIbeaAjyenqZtSoeHb2JZTmQzlmoPbQ420bJJveYd3bRsXUwW9F8CEbuZI3A5bWJk590tZ2IxfKC1M8Lq0b91A-2G4THVoEYTA0f91VKc4ElQf22R3QyvZ57Lq9-n15XYxutYHwYQR-0ro7HQ5kZikCCnTD8wuIlUhvzfyba7A50aP2TrC8w5SgdfueWYXwziEtKTXxd4x2MW5F--S5dW6Rn78wZeCCpbZgwLuDV8Q2p_cV_WULPdtQ_ymFWs5mOGVhTD0ayGtya5gs7Tjp-wogNk7N6CP5nZJm5Ih1mcJMSDYtdVO9VZov7-pXMx8bElHaj5ftkrDp8H585KgGPjRAtraZUhqgCsVGM7f0hYyWrmPv_2JDqBrvzuRPOtDv5vUi-kNCzGS0" alt="uml diagram">
+<img src="https://www.plantuml.com/plantuml/svg/XP9TQy8m58RlyoiEzcQx40g27LuCRQrQsEPedR3TZBGvrcojbIHsZk5_NqnKDgpRWP2SdCFxlFdeIqM5sfG5wPzMCgC5GactSEEwyC6PMX8WQvgzqnoX5MvfkTODWK26AyLf0Kcsn9B2enRW6L_JbOAPG6m1bP19-284T5Jf6sPA2sIL_9GAInYO3YN0wInIbdPr9nn2L0Ns80ocoNCo2-_XAgugTNqgCyvwQ8tqb1YO_TqlIYJb1WMCXNPJ2V0DYkTdY2X9diBuTHmF7cRJk170S_yo8B32Dd6yhkSXWmkKPlMWGNoEWY_u3_z3WwdF_S_3E1f5_voWpeT_GK8hVamTrqtTXNiHrOm86mYJgc1Qy0KCO6apPpJoNQzp9Z-PtWqFuZko8phqpsYtR_UlHlGmItFFfqgTazeMZkO9EJp5VjC22UdZYfa_RkTl" alt="uml diagram">
 <p><code>ECOSYSTEM</code> Participants are created directly by the <a class="term-reference" href="#term:credential-schema">credential schema</a> owner. All other Participants are created by running an <a class="term-reference" href="#term:onboarding-process">onboarding process</a> — except when onboarding mode is set to <code>OPEN</code> for ISSUER and/or VERIFIER Participants, which any account CAN create directly:</p>
 <ul>
 <li><code>ISSUER</code> Participants when <code>issuer_onboarding_mode</code> is <code>OPEN</code>;</li>
@@ -2935,7 +2925,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li>If the <a class="term-reference" href="#term:applicant">applicant</a> qualifies, the <a class="term-reference" href="#term:validator">validator</a> runs <a href="#mod-pp-msg-3-set-participant-op-to-validated" >[MOD-PP-MSG-3]</a> to update the Participant entry; the <a class="term-reference" href="#term:applicant">applicant</a> is then granted the new <code>Participant</code> entries and/or issued a credential.</li>
 </ol>
 <p>Once in the <code>VALIDATED</code> state, a Participant entry remains valid for a specific period (e.g., 365 days), configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential-schema-related onboarding, or set by the <a class="term-reference" href="#term:ecosystem">ecosystem</a> for user-agent onboarding.</p>
-<div id="note-84" class="notice note"><a class="notice-link" href="#note-84">NOTE</a><p>Even when the Participant entry remains in the <code>VALIDATED</code> state for the configured period, the resulting <code>Participant</code> entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the <a class="term-reference" href="#term:applicant">applicant</a> MUST provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration in order to be issued an updated <code>Participant</code> entry and/or credential.</p>
+<div id="note-9" class="notice note"><a class="notice-link" href="#note-9">NOTE</a><p>Even when the Participant entry remains in the <code>VALIDATED</code> state for the configured period, the resulting <code>Participant</code> entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the <a class="term-reference" href="#term:applicant">applicant</a> MUST provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration in order to be issued an updated <code>Participant</code> entry and/or credential.</p>
 </div>
 <p>If the <code>VALIDATED</code> state is set to expire, an <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp MUST renew its <a class="term-reference" href="#term:onboarding-process">onboarding process</a> (see <a href="#mod-pp-msg-2-renew-participant-op" >[MOD-PP-MSG-2]</a>).</p>
 <p>At any time, the <a class="term-reference" href="#term:applicant">applicant</a> CAN cancel the <a class="term-reference" href="#term:onboarding-process">onboarding process</a> (see <a href="#mod-pp-msg-6-cancel-participant-op-last-request" >[MOD-PP-MSG-6]</a>).</p>
@@ -3019,7 +3009,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 <li>VS Operator Authorization parameters: if any of <code>vs_operator_authz_*</code> parameters is provided, <code>vs_operator_authz_msg_types</code> MUST also be provided and <code>vs_operator</code> MUST NOT be null, else abort. If <code>vs_operator_authz_msg_types</code> is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in <a href="#mod-pp-msg-1-1-start-participant-op-parameters" >MOD-PP-MSG-1-1</a>.</li>
 </ul>
-<div id="note-85" class="notice note"><a class="notice-link" href="#note-85">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the onboarding process is REQUIRED or not.</p>
+<div id="note-10" class="notice note"><a class="notice-link" href="#note-10">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the onboarding process is REQUIRED or not.</p>
 </div>
 <h6 id="mod-pp-msg-1-2-2-start-participant-op-permission-checks"><a class="toc-anchor" href="#mod-pp-msg-1-2-2-start-participant-op-permission-checks" >§</a> [MOD-PP-MSG-1-2-2] Start Participant OP permission checks</h6>
 <ul>
@@ -3146,7 +3136,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 </ul>
 </li>
 </ul>
-<div id="note-86" class="notice note"><a class="notice-link" href="#note-86">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
+<div id="note-11" class="notice note"><a class="notice-link" href="#note-11">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
 </div>
 <h6 id="mod-pp-msg-1-2-4-start-participant-op-overlap-checks"><a class="toc-anchor" href="#mod-pp-msg-1-2-4-start-participant-op-overlap-checks" >§</a> [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks</h6>
 <p>We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a <code>corporation</code> from running different OP with differents validators for the same <code>schema_id</code>, <code>role</code>.</p>
@@ -3321,7 +3311,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 </ul>
 </li>
 </ul>
-<div id="note-87" class="notice note"><a class="notice-link" href="#note-87">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
+<div id="note-12" class="notice note"><a class="notice-link" href="#note-12">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
 </div>
 <h6 id="mod-pp-msg-2-3-renew-participant-op-execution"><a class="toc-anchor" href="#mod-pp-msg-2-3-renew-participant-op-execution" >§</a> [MOD-PP-MSG-2-3] Renew Participant OP execution</h6>
 <p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
@@ -4011,7 +4001,7 @@ else MUST abort.</p>
 <li>if <code>wallet_agent_participant.role</code> is not ISSUER, abort.</li>
 <li>if <code>wallet_agent_participant</code> is not a <a class="term-reference" href="#term:active-participant">active participant</a>, abort.</li>
 </ul>
-<div id="warning-47" class="notice warning"><a class="notice-link" href="#warning-47">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a <code>Participant</code> entry that is not controlled by its owner.</p>
+<div id="warning-2" class="notice warning"><a class="notice-link" href="#warning-2">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a <code>Participant</code> entry that is not controlled by its owner.</p>
 </div>
 <h6 id="mod-pp-msg-10-3-create-or-update-participant-session-fee-checks"><a class="toc-anchor" href="#mod-pp-msg-10-3-create-or-update-participant-session-fee-checks" >§</a> [MOD-PP-MSG-10-3] Create or Update Participant Session fee checks</h6>
 <ul>
@@ -4187,7 +4177,7 @@ else MUST abort.</p>
 <li><code>corporation</code> MUST have available balance ≥ <code>total_payer_trust_deposit</code> + <code>total_payees_trust_deposit</code> + <code>total_user_agent_reward</code> + <code>total_wallet_agent_reward</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
 </ul>
 <hr>
-<div id="warning-48" class="notice warning"><a class="notice-link" href="#warning-48">WARNING</a><ul>
+<div id="warning-3" class="notice warning"><a class="notice-link" href="#warning-3">WARNING</a><ul>
 <li>Trust deposits MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
 <li>When paying with COIN ≠ <a class="term-reference" href="#term:native-denom">native denom</a> or with FIAT, payer pays trust deposits on behalf of payees (since payees receive non-native assets that cannot be directly staked).</li>
 </ul>
@@ -4349,7 +4339,7 @@ else MUST abort.</p>
 </ul>
 <p>then, add the <code>cspsr</code> to <code>session.session_records</code></p>
 <p>if current transaction if for issuance of a credential, persist the digest SRI by calling <a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1]</a>.</p>
-<div id="warning-49" class="notice warning"><a class="notice-link" href="#warning-49">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_participant_id</code> OR <code>verifier_participant_id</code></p>
+<div id="warning-4" class="notice warning"><a class="notice-link" href="#warning-4">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_participant_id</code> OR <code>verifier_participant_id</code></p>
 </div>
 <h4 id="mod-pp-msg-11-update-participant-module-parameters"><a class="toc-anchor" href="#mod-pp-msg-11-update-participant-module-parameters" >§</a> [MOD-PP-MSG-11] Update Participant Module Parameters</h4>
 <p>Update Participant Module Parameters.</p>
@@ -4398,7 +4388,7 @@ else MUST abort.</p>
 <li>Load <code>Participant</code> entry <code>applicant_participant</code> from <code>id</code>. If no entry found, abort.</li>
 <li><code>amount</code> MUST be lower or equal to <code>applicant_participant.deposit</code> else MUST abort.</li>
 </ul>
-<div id="note-88" class="notice note"><a class="notice-link" href="#note-88">NOTE</a><p>Even if the <code>Participant</code> entry has expired or is revoked, it is still possible to slash it.</p>
+<div id="note-13" class="notice note"><a class="notice-link" href="#note-13">NOTE</a><p>Even if the <code>Participant</code> entry has expired or is revoked, it is still possible to slash it.</p>
 </div>
 <h6 id="mod-pp-msg-12-2-2-slash-participant-trust-deposit-validator-perms"><a class="toc-anchor" href="#mod-pp-msg-12-2-2-slash-participant-trust-deposit-validator-perms" >§</a> [MOD-PP-MSG-12-2-2] Slash Participant Trust Deposit validator perms</h6>
 <p>Either Option #1, or #2 MUST return true, else abort.</p>
@@ -4491,7 +4481,7 @@ else MUST abort.</p>
 <h4 id="mod-pp-msg-14-self-create-participant"><a class="toc-anchor" href="#mod-pp-msg-14-self-create-participant" >§</a> [MOD-PP-MSG-14] Self Create Participant</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of a <code>corporation</code>.</p>
 <p>This simple <code>Participant</code>-creation method can be used to self-create an ISSUER (resp. VERIFIER) <code>Participant</code> entry if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As <code>Participant</code> entries are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a <code>Participant</code> entry for being issuer or verifier of a given schema.</p>
-<div id="note-89" class="notice note"><a class="notice-link" href="#note-89">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their <code>Participant</code> entry may be revoked by ecosystem governance authority and their deposit slashed.</p>
+<div id="note-14" class="notice note"><a class="notice-link" href="#note-14">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their <code>Participant</code> entry may be revoked by ecosystem governance authority and their deposit slashed.</p>
 </div>
 <h5 id="mod-pp-msg-14-1-self-create-participant-parameters"><a class="toc-anchor" href="#mod-pp-msg-14-1-self-create-participant-parameters" >§</a> [MOD-PP-MSG-14-1] Self Create Participant parameters</h5>
 <ul>
@@ -4801,7 +4791,7 @@ else MUST abort.</p>
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-90" class="notice note"><a class="notice-link" href="#note-90">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-15" class="notice note"><a class="notice-link" href="#note-15">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-pp-qry-5-get-participantsession"><a class="toc-anchor" href="#mod-pp-qry-5-get-participantsession" >§</a> [MOD-PP-QRY-5] Get ParticipantSession</h4>
 <h5 id="mod-pp-qry-5-1-get-participantsession-parameters"><a class="toc-anchor" href="#mod-pp-qry-5-1-get-participantsession-parameters" >§</a> [MOD-PP-QRY-5-1] Get ParticipantSession parameters</h5>
@@ -5181,14 +5171,14 @@ else MUST abort.</p>
 </ul>
 <h4 id="mod-td-msg-7-burn-ecosystem-slashed-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >§</a> [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit</h4>
 <p>Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.</p>
-<div id="warning-50" class="notice warning"><a class="notice-link" href="#warning-50">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
+<div id="warning-5" class="notice warning"><a class="notice-link" href="#warning-5">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
 </div>
 <h5 id="mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters</h5>
 <ul>
 <li><code>corporation</code> (group) (<em>mandatory</em>): corporation of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to burn.</li>
 <li><code>amount</code> (number) (<em>mandatory</em>): value to burn, in <a class="term-reference" href="#term:denom">denom</a>.</li>
 </ul>
-<div id="warning-51" class="notice warning"><a class="notice-link" href="#warning-51">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
+<div id="warning-6" class="notice warning"><a class="notice-link" href="#warning-6">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
 The decision between this method and specifying the amount directly is left to implementers.</p>
 </div>
 <h5 id="mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks</h5>
@@ -5360,7 +5350,7 @@ The decision between this method and specifying the amount directly is left to i
 <p>Check if a <strong>VS Operator Authorization</strong> exists for <code>corporation</code> and <code>grantee</code>. If this is the case, MUST abort.</p>
 </li>
 </ul>
-<div id="warning-52" class="notice warning"><a class="notice-link" href="#warning-52">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>participant.corporation</code> and <code>participant.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+<div id="warning-7" class="notice warning"><a class="notice-link" href="#warning-7">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>participant.corporation</code> and <code>participant.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
 </div>
 <h5 id="mod-de-msg-3-3-grant-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-3-3-grant-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks</h5>
 <ul>
@@ -5437,7 +5427,7 @@ The decision between this method and specifying the amount directly is left to i
 <li>No <code>OperatorAuthorization</code> <code>oauthz</code> where <code>oauthz.corporation</code> = <code>corporation</code> and <code>oauthz.operator</code> = <code>vs_operator</code> MUST exist.</li>
 <li>No other <code>VSOperatorAuthorization</code> <code>vsoauthz'</code> where <code>vsoauthz'.vs_operator</code> = <code>vs_operator</code> AND <code>vsoauthz'.corporation</code> != <code>corporation</code> MUST exist. In other words, a vs-agent VPR account cannot be controlled by multiple corporations.</li>
 </ul>
-<div id="warning-53" class="notice warning"><a class="notice-link" href="#warning-53">WARNING</a><p>A <strong>VS Operator Authorization</strong> record CAN be granted ONLY IF no <strong>OperatorAuthorization</strong> exists for the same <code>(corporation, vs_operator)</code> pair. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+<div id="warning-8" class="notice warning"><a class="notice-link" href="#warning-8">WARNING</a><p>A <strong>VS Operator Authorization</strong> record CAN be granted ONLY IF no <strong>OperatorAuthorization</strong> exists for the same <code>(corporation, vs_operator)</code> pair. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
 </div>
 <h5 id="mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-5-3] Grant VS Operator Authorization fee checks</h5>
 <ul>
@@ -5980,7 +5970,7 @@ rate_scale       = S</p>
 </ul>
 </li>
 </ul>
-<div id="warning-54" class="notice warning"><a class="notice-link" href="#warning-54">WARNING</a><ul>
+<div id="warning-9" class="notice warning"><a class="notice-link" href="#warning-9">WARNING</a><ul>
 <li>Conversions use base units only.</li>
 <li>Integer arithmetic MUST be used.</li>
 <li><code>quote_amount = floor(base_amount × rate / 10^rate_scale)</code>.</li>
