@@ -554,30 +554,77 @@ The same `Corporation` entry is the single entry point for the corporation's gov
 
 *This section is non-normative.*
 
-The `Participant` registry CAN be used by crawlers to index the metadata associated with [[ref: verifiable services]].
+The `Participant` registry is the foundation for building **searchable indexes of [[ref: verifiable services]] and the verifiable metadata they expose**. Crawlers iterate over `Participant` entries, resolve each service identifier (currently a [[ref: DID]], extensible in the future), verify that the service is a [[ref: verifiable service]], and extract its verifiable metadata — most notably the credentials presented through [[ref: linked-vp]] — together with the [[ref: ecosystem]] memberships, [[ref: credential schema]] permissions, and [[ref: trust deposit]] level associated with the controlling [[ref: corporation]].
 
-Search engines can iterate over `Participant` entries and index [[ref: VSs]] by resolving the service identifier (currently a [[ref: DID]], extensible in the future), verify whether the service is a [[ref: verifiable service]], and in that case extract its verifiable metadata, such as [[ref: linked-vp]] presented credentials.
+Unlike a traditional web index, this index is **trust-typed**: every entry carries cryptographically verifiable claims about *what* the service is, *who* operates it, and *under which governance frameworks* it is accredited. This unlocks a class of discovery use cases that traditional search engines cannot serve.
 
-The index is particularly important for [[ref: verifiable user agents]], such as social browsers, CDN enabled browser, or any service or AI agent that wants to search for a specific service and connect to it. However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
+#### AI agent discovery
+
+AI agents are first-class consumers of the index. Before delegating a task or accepting a connection, an agent needs to find counterparts whose **presented credentials match the capabilities required for the interaction**. Querying the index, an AI agent can:
+
+- find [[ref: verifiable services]] qualified for a specific task — for example, a payment processor accredited in a given jurisdiction, a KYC issuer recognized by a target [[ref: ecosystem]], or an MCP-style service whose operator holds a recognized organization credential;
+- discover other AI agents whose credentials prove the right scope, authority, or operator;
+- restrict the search to a specific [[ref: ecosystem]] or to services that comply with a chosen [[ref: credential schema]];
+- rank candidates by [[ref: trust deposit]] size, accreditations held, slashing history, or credential freshness, in order to bias selection toward parties with stronger economic accountability.
+
+Because every indexed claim is anchored in the [[ref: VPR]], an AI agent can verify a counterpart end-to-end *before* initiating the interaction, avoiding spoofed services and unaccredited issuers.
+
+#### Verifiable User Agent content discovery
+
+[[ref: Verifiable user agents]] (VUAs) — such as social browsers, agentic browsers, or CDN-aware clients — use the index to **find content and services that are compatible with the user's context**: the credentials the user holds, the [[ref: ecosystems]] the user trusts, the jurisdictions and languages that apply, and the schemas that the user's wallet can satisfy.
+
+Typical VUA queries include:
+
+- *"Show only services accredited under ecosystem X"* — filter by [[ref: ecosystem]] membership.
+- *"Show services that accept the credentials currently in my wallet"* — match the holder's credentials against each [[ref: VS]]'s expected presentations.
+- *"Show issuers of schema Y operating in jurisdiction Z"* — combine [[ref: credential schema]] permissions with corporation metadata.
+- *"Show services my user has previously interacted with successfully"* — combine the index with the VUA's local history.
+
+The result is a feed of [[ref: VSs]] for which a proof of trust can be displayed to the user *before* connection, in line with the VUA enforcement obligations defined in this spec and in the [[ref: VT Spec]].
+
+#### Other consumers
+
+The same index serves additional consumers:
+
+- **Trust-aware and traditional, form-based search engines**, which can return ordinary links to [[ref: VSs]] enriched with verifiable trust signals (issuer accreditations, [[ref: ecosystem]] memberships, [[ref: trust deposit]] level).
+- **Ecosystem operators and governance authorities**, which use the index to monitor accredited issuers, verifiers, and grantors, observe schema adoption across [[ref: ecosystems]], and detect rogue or expired participants.
+- **Auditors, regulators, and compliance tools**, which rely on the index to map the supply chain of trust behind a given service or credential, and to verify that participants are still in good standing.
+- **Analytics and reputation services**, which combine indexed metadata with on-chain history (trust-deposit movements, slashing events, session volumes) to produce reputational signals at the [[ref: corporation]] level.
+
+#### Indexing pipeline
 
 
 ```plantuml
 
 @startuml
-scale max 800 width
+scale max 1000 width
+
 object "Participant registry" as didd
 object "Crawler" as crawler #3fbdb6
 object "Index" as index #3fbdb6
+
 object "VS #1" as dts1 #7677ed
 object "VS #2" as dts2 #7677ed
+
+object "AI agent" as aiagent #ffb347
 object "VUA" as browser #00b0f0
+object "Search engine" as search #d3d3d3
+object "Governance /\nAudit / Analytics" as gov #f5b7b1
+
 object "User" as user
-didd <|-- crawler : iterate over Participant registry
-crawler --|> dts1 : resolve DID, get linked-vps, index data
-crawler --|> dts2 : resolve DID, get linked-vps, index data
-browser --|> index: query index
-crawler --|> index: create/update index 
-user <|-- browser : show result
+
+didd <|-- crawler : iterate Participant registry
+crawler --|> dts1 : resolve DID, fetch linked-vps,\nindex verifiable metadata
+crawler --|> dts2 : resolve DID, fetch linked-vps,\nindex verifiable metadata
+crawler --|> index : create / update index
+
+aiagent --|> index : query (find counterparts\nby credentials presented)
+browser --|> index : query (find content\ncompatible with user context)
+search --|> index : query (enrich links\nwith trust signals)
+gov --|> index : query (monitor accreditations,\naudit, build reputation)
+
+user <|-- browser : show feed of\nverifiable services
+user <|-- search : show enriched\nsearch results
 @enduml
 
 ```

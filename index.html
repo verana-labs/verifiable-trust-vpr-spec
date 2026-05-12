@@ -85,7 +85,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <p>This specification defines the data model, API, and normative requirements for implementing and interacting with a Verifiable Public Registry.</p>
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:ecosystem">ecosystem</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
-<div id="note-46" class="notice note"><a class="notice-link" href="#note-46">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-121" class="notice note"><a class="notice-link" href="#note-121">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
 <h3 id="what-is-an-ecosystem"><a class="toc-anchor" href="#what-is-an-ecosystem" >§</a> What is an Ecosystem?</h3>
@@ -390,10 +390,37 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <p>The same <code>Corporation</code> entry is the single entry point for the corporation’s governance (the CGF), authorization delegation (via <code>OperatorAuthorization</code> to one or more <code>operator</code> accounts), and trust-deposit accounting (<code>TrustDeposit</code>). See the <a href="#corporation-module" >Corporation Module</a> for the methods that manage <code>Corporation</code> entries.</p>
 <h3 id="did-indexing"><a class="toc-anchor" href="#did-indexing" >§</a> DID Indexing</h3>
 <p><em>This section is non-normative.</em></p>
-<p>The <code>Participant</code> registry CAN be used by crawlers to index the metadata associated with <a class="term-reference" href="#term:verifiable-services">verifiable services</a>.</p>
-<p>Search engines can iterate over <code>Participant</code> entries and index <a class="term-reference" href="#term:vss">VSs</a> by resolving the service identifier (currently a <a class="term-reference" href="#term:did">DID</a>, extensible in the future), verify whether the service is a <a class="term-reference" href="#term:verifiable-service">verifiable service</a>, and in that case extract its verifiable metadata, such as <a class="term-reference" href="#term:linked-vp">linked-vp</a> presented credentials.</p>
-<p>The index is particularly important for <a class="term-reference" href="#term:verifiable-user-agents">verifiable user agents</a>, such as social browsers, CDN enabled browser, or any service or AI agent that wants to search for a specific service and connect to it. However, it can also be leveraged by <strong>traditional, form-based search engines</strong>, which may return simple links for accessing <a class="term-reference" href="#term:vss">VSs</a>.</p>
-<img src="https://www.plantuml.com/plantuml/svg/bP8nQyCm48Lt_OeZNcEgk10NKufBisGhb7INhKkYLh5TwMmda1zVIx8D8LqwwKxVkzDxeDoICDIUDCldofP28vp46PuuXrv9EhAw-CAIOF4-Q5If6b4H63meI-Qo0651AYbdrPiHlKRZGHbgY1xtXIpMisPRIJnxXNBL7V_yW6WLLfDTGPIkqnJb3KucdDpZtQk7XQbxwrxdlE1xFlET7UsrGy6SUNY-nl7iDWD5Q0GXrDtG_XMRJTeulhu4aza0RQqxXCrsiuG34cXLVQECkyOknw1IaBYRJVunEsNoi_u-WvyMpIKqjxj7NXeSmZoqZNIPmZBcieVOqyeCxB7kdPDM4yknalvhXFCN" alt="uml diagram">
+<p>The <code>Participant</code> registry is the foundation for building <strong>searchable indexes of <a class="term-reference" href="#term:verifiable-services">verifiable services</a> and the verifiable metadata they expose</strong>. Crawlers iterate over <code>Participant</code> entries, resolve each service identifier (currently a <a class="term-reference" href="#term:did">DID</a>, extensible in the future), verify that the service is a <a class="term-reference" href="#term:verifiable-service">verifiable service</a>, and extract its verifiable metadata — most notably the credentials presented through <a class="term-reference" href="#term:linked-vp">linked-vp</a> — together with the <a class="term-reference" href="#term:ecosystem">ecosystem</a> memberships, <a class="term-reference" href="#term:credential-schema">credential schema</a> permissions, and <a class="term-reference" href="#term:trust-deposit">trust deposit</a> level associated with the controlling <a class="term-reference" href="#term:corporation">corporation</a>.</p>
+<p>Unlike a traditional web index, this index is <strong>trust-typed</strong>: every entry carries cryptographically verifiable claims about <em>what</em> the service is, <em>who</em> operates it, and <em>under which governance frameworks</em> it is accredited. This unlocks a class of discovery use cases that traditional search engines cannot serve.</p>
+<h4 id="ai-agent-discovery"><a class="toc-anchor" href="#ai-agent-discovery" >§</a> AI agent discovery</h4>
+<p>AI agents are first-class consumers of the index. Before delegating a task or accepting a connection, an agent needs to find counterparts whose <strong>presented credentials match the capabilities required for the interaction</strong>. Querying the index, an AI agent can:</p>
+<ul>
+<li>find <a class="term-reference" href="#term:verifiable-services">verifiable services</a> qualified for a specific task — for example, a payment processor accredited in a given jurisdiction, a KYC issuer recognized by a target <a class="term-reference" href="#term:ecosystem">ecosystem</a>, or an MCP-style service whose operator holds a recognized organization credential;</li>
+<li>discover other AI agents whose credentials prove the right scope, authority, or operator;</li>
+<li>restrict the search to a specific <a class="term-reference" href="#term:ecosystem">ecosystem</a> or to services that comply with a chosen <a class="term-reference" href="#term:credential-schema">credential schema</a>;</li>
+<li>rank candidates by <a class="term-reference" href="#term:trust-deposit">trust deposit</a> size, accreditations held, slashing history, or credential freshness, in order to bias selection toward parties with stronger economic accountability.</li>
+</ul>
+<p>Because every indexed claim is anchored in the <a class="term-reference" href="#term:vpr">VPR</a>, an AI agent can verify a counterpart end-to-end <em>before</em> initiating the interaction, avoiding spoofed services and unaccredited issuers.</p>
+<h4 id="verifiable-user-agent-content-discovery"><a class="toc-anchor" href="#verifiable-user-agent-content-discovery" >§</a> Verifiable User Agent content discovery</h4>
+<p><a class="term-reference" href="#term:verifiable-user-agents">Verifiable user agents</a> (VUAs) — such as social browsers, agentic browsers, or CDN-aware clients — use the index to <strong>find content and services that are compatible with the user’s context</strong>: the credentials the user holds, the <a class="term-reference" href="#term:ecosystems">ecosystems</a> the user trusts, the jurisdictions and languages that apply, and the schemas that the user’s wallet can satisfy.</p>
+<p>Typical VUA queries include:</p>
+<ul>
+<li><em>“Show only services accredited under ecosystem X”</em> — filter by <a class="term-reference" href="#term:ecosystem">ecosystem</a> membership.</li>
+<li><em>“Show services that accept the credentials currently in my wallet”</em> — match the holder’s credentials against each <a class="term-reference" href="#term:vs">VS</a>'s expected presentations.</li>
+<li><em>“Show issuers of schema Y operating in jurisdiction Z”</em> — combine <a class="term-reference" href="#term:credential-schema">credential schema</a> permissions with corporation metadata.</li>
+<li><em>“Show services my user has previously interacted with successfully”</em> — combine the index with the VUA’s local history.</li>
+</ul>
+<p>The result is a feed of <a class="term-reference" href="#term:vss">VSs</a> for which a proof of trust can be displayed to the user <em>before</em> connection, in line with the VUA enforcement obligations defined in this spec and in the <a class="term-reference" href="#term:vt-spec">VT Spec</a>.</p>
+<h4 id="other-consumers"><a class="toc-anchor" href="#other-consumers" >§</a> Other consumers</h4>
+<p>The same index serves additional consumers:</p>
+<ul>
+<li><strong>Trust-aware and traditional, form-based search engines</strong>, which can return ordinary links to <a class="term-reference" href="#term:vss">VSs</a> enriched with verifiable trust signals (issuer accreditations, <a class="term-reference" href="#term:ecosystem">ecosystem</a> memberships, <a class="term-reference" href="#term:trust-deposit">trust deposit</a> level).</li>
+<li><strong>Ecosystem operators and governance authorities</strong>, which use the index to monitor accredited issuers, verifiers, and grantors, observe schema adoption across <a class="term-reference" href="#term:ecosystems">ecosystems</a>, and detect rogue or expired participants.</li>
+<li><strong>Auditors, regulators, and compliance tools</strong>, which rely on the index to map the supply chain of trust behind a given service or credential, and to verify that participants are still in good standing.</li>
+<li><strong>Analytics and reputation services</strong>, which combine indexed metadata with on-chain history (trust-deposit movements, slashing events, session volumes) to produce reputational signals at the <a class="term-reference" href="#term:corporation">corporation</a> level.</li>
+</ul>
+<h4 id="indexing-pipeline"><a class="toc-anchor" href="#indexing-pipeline" >§</a> Indexing pipeline</h4>
+<img src="https://www.plantuml.com/plantuml/svg/hLHDYzim4BthLmoRImCRuYJj1a8f2LqekHMMxSaNsHedqpgIAutp0VlZEv8TxouDFHKVFDPxCtxpdl4wiFRS7cgr7gfGwXhXeCymox8CJcHuhvGhVcB9SFTTM5HIeos3nnq5zfSxq04C6JEmldfzgj4deEng62sgmXGF0sTh3PuJWs8ru0FXnnECPjri3ZCOBH-MIpJluFaLdW_mW6-se7TeEL4qfHf6LLKiFYvVXpnl4bvuTmfHP9OLMPKD-1DgN-u1xOui9cReJaPc4Q-1-CqTqLjjIuHfRZUj8OOfRAokB-9NIAqxTnG1dufbCNkL-Hnwdrefb8esmkUNoMJmRGN4w3KZtF9UNMcJoSkNpgYLWC7LHuJ7xUCzLCYYjoRx2ytas8Jxt7Q6Ys2gI1SnRMHjDEk_fit_txIEjfAzC2upXROniKZdIbqJUiVztQA_m8TAdg5qhHKZ6Z4XvBQun456EaZN0HeHAJMQiRf6-Oz1GhISsz8T6iqK9P-8zoc13ZtpMFL1tng3rbFlWaX9lUpRm11e9uc7iOfHt-eyE4liFEWogYUMrpiRJTJnYxc7egNQYEDDsq5ZfPAgz4LSDrj1sBkJH846N9NRDzOBVAGImvkkVe--gPEE9hVzkHZNrXpK6gr9FuBk_WS0" alt="uml diagram">
 <h3 id="business-models"><a class="toc-anchor" href="#business-models" >§</a> Business models</h3>
 <h4 id="trust-deposit"><a class="toc-anchor" href="#trust-deposit" >§</a> Trust Deposit</h4>
 <p><em>This section is non-normative.</em></p>
@@ -526,7 +553,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-47" class="notice note"><a class="notice-link" href="#note-47">NOTE</a><p>Agents that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-122" class="notice note"><a class="notice-link" href="#note-122">NOTE</a><p>Agents that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
@@ -538,7 +565,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>A designated <a class="term-reference" href="#term:governance-authority">governance authority</a> (aka a council) is responsible for <strong>enforcing these rules</strong> and, when necessary, <strong>applying financial sanctions</strong> to participants who violate the rules.</p>
-<div id="note-48" class="notice note"><a class="notice-link" href="#note-48">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
+<div id="note-123" class="notice note"><a class="notice-link" href="#note-123">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
 <p>While the <strong>VPR governance framework</strong> defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each <strong>ecosystem</strong> must define its own <strong>EGF</strong> to govern roles, permissions, credential policies, and compliance within its specific domain.</p>
 <p>This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.</p>
 </div>
@@ -908,10 +935,10 @@ as a direct consequence of executing authorized messages.</li>
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-28" class="notice warning"><a class="notice-link" href="#warning-28">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-73" class="notice warning"><a class="notice-link" href="#warning-73">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-49" class="notice note"><a class="notice-link" href="#note-49">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="ec"path-3="v1"path-4="get"href="https://example/verana/ec/v1/get" ><span>https://example/verana/ec/v1/get</span></a>.</p>
+<div id="note-124" class="notice note"><a class="notice-link" href="#note-124">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="ec"path-3="v1"path-4="get"href="https://example/verana/ec/v1/get" ><span>https://example/verana/ec/v1/get</span></a>.</p>
 </div>
 <h3 id="authorization-and-fee-grants"><a class="toc-anchor" href="#authorization-and-fee-grants" >§</a> Authorization and Fee Grants</h3>
 <h4 id="delegable-module-messages"><a class="toc-anchor" href="#delegable-module-messages" >§</a> Delegable Module Messages</h4>
@@ -1668,7 +1695,7 @@ messages.</p>
 </tr>
 </tbody>
 </table>
-<div id="note-50" class="notice note"><a class="notice-link" href="#note-50">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-125" class="notice note"><a class="notice-link" href="#note-125">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="corporation-module"><a class="toc-anchor" href="#corporation-module" >§</a> Corporation Module</h3>
 <p>This module manages <a class="term-reference" href="#term:corporation">corporation</a> entries — the VPR-level entity that extends a Cosmos SDK <a class="term-reference" href="#term:group">group</a> with a DID, a governance framework, and lifecycle attributes. A <code>Corporation</code> entry MUST exist before its underlying group can be referenced as the <code>corporation</code> (group) in any other VPR Create-* method (see <a href="#mod-co-msg-1-create-new-corporation" >[MOD-CO-MSG-1]</a>).</p>
@@ -1995,7 +2022,7 @@ messages.</p>
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-51" class="notice note"><a class="notice-link" href="#note-51">NOTE</a><p>It is not a problem if several ecosystems are created with the same ecosystem DID. Identifier of a <code>Ecosystem</code> is its id, and the Verifiable Trust Spec includes the id of the <code>Ecosystem</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
+<div id="note-126" class="notice note"><a class="notice-link" href="#note-126">NOTE</a><p>It is not a problem if several ecosystems are created with the same ecosystem DID. Identifier of a <code>Ecosystem</code> is its id, and the Verifiable Trust Spec includes the id of the <code>Ecosystem</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
 </div>
 <h6 id="mod-es-msg-1-2-2-create-new-ecosystem-fee-checks"><a class="toc-anchor" href="#mod-es-msg-1-2-2-create-new-ecosystem-fee-checks" >§</a> [MOD-ES-MSG-1-2-2] Create New Ecosystem fee checks</h6>
 <p>Fee payer MUST have an available balance to cover the <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -2467,7 +2494,7 @@ messages.</p>
 <p><code>pricing_asset</code> (string) (<em>mandatory</em>): <code>&quot;tu&quot;</code> if <code>pricing_asset_type</code> is set to TU, else examples: COIN: <code>denom</code> <code>&quot;uvna&quot;</code>, <code>&quot;ufoo&quot;</code>, <code>&quot;ibc/3A0F9C2E4E2A9B7D6F...&quot;</code>, <code>&quot;factory/verana1.../ueurv&quot;</code>, FIAT: <code>&quot;EUR&quot;</code>, <code>&quot;GBP&quot;</code>,…</p>
 </li>
 </ul>
-<div id="note-52" class="notice note"><a class="notice-link" href="#note-52">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
+<div id="note-127" class="notice note"><a class="notice-link" href="#note-127">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
 The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
 FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
 FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.</p>
@@ -2500,7 +2527,7 @@ FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on
 </ul>
 </li>
 </ul>
-<div id="note-53" class="notice note"><a class="notice-link" href="#note-53">NOTE</a><p>If needed, depending on configuration mode, Ecosystem controller MAY need to create a ECOSYSTEM <code>Participant</code> so that onboarding processes can be run.</p>
+<div id="note-128" class="notice note"><a class="notice-link" href="#note-128">NOTE</a><p>If needed, depending on configuration mode, Ecosystem controller MAY need to create a ECOSYSTEM <code>Participant</code> so that onboarding processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of a <code>corporation</code>.</p>
@@ -2926,7 +2953,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li>If the <a class="term-reference" href="#term:applicant">applicant</a> qualifies, the <a class="term-reference" href="#term:validator">validator</a> runs <a href="#mod-pp-msg-3-set-participant-op-to-validated" >[MOD-PP-MSG-3]</a> to update the Participant entry; the <a class="term-reference" href="#term:applicant">applicant</a> is then granted the new <code>Participant</code> entries and/or issued a credential.</li>
 </ol>
 <p>Once in the <code>VALIDATED</code> state, a Participant entry remains valid for a specific period (e.g., 365 days), configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential-schema-related onboarding, or set by the <a class="term-reference" href="#term:ecosystem">ecosystem</a> for user-agent onboarding.</p>
-<div id="note-54" class="notice note"><a class="notice-link" href="#note-54">NOTE</a><p>Even when the Participant entry remains in the <code>VALIDATED</code> state for the configured period, the resulting <code>Participant</code> entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the <a class="term-reference" href="#term:applicant">applicant</a> MUST provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration in order to be issued an updated <code>Participant</code> entry and/or credential.</p>
+<div id="note-129" class="notice note"><a class="notice-link" href="#note-129">NOTE</a><p>Even when the Participant entry remains in the <code>VALIDATED</code> state for the configured period, the resulting <code>Participant</code> entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the <a class="term-reference" href="#term:applicant">applicant</a> MUST provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration in order to be issued an updated <code>Participant</code> entry and/or credential.</p>
 </div>
 <p>If the <code>VALIDATED</code> state is set to expire, an <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp MUST renew its <a class="term-reference" href="#term:onboarding-process">onboarding process</a> (see <a href="#mod-pp-msg-2-renew-participant-op" >[MOD-PP-MSG-2]</a>).</p>
 <p>At any time, the <a class="term-reference" href="#term:applicant">applicant</a> CAN cancel the <a class="term-reference" href="#term:onboarding-process">onboarding process</a> (see <a href="#mod-pp-msg-6-cancel-participant-op-last-request" >[MOD-PP-MSG-6]</a>).</p>
@@ -3010,7 +3037,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
 <li>VS Operator Authorization parameters: if any of <code>vs_operator_authz_*</code> parameters is provided, <code>vs_operator_authz_msg_types</code> MUST also be provided and <code>vs_operator</code> MUST NOT be null, else abort. If <code>vs_operator_authz_msg_types</code> is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in <a href="#mod-pp-msg-1-1-start-participant-op-parameters" >MOD-PP-MSG-1-1</a>.</li>
 </ul>
-<div id="note-55" class="notice note"><a class="notice-link" href="#note-55">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the onboarding process is REQUIRED or not.</p>
+<div id="note-130" class="notice note"><a class="notice-link" href="#note-130">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the onboarding process is REQUIRED or not.</p>
 </div>
 <h6 id="mod-pp-msg-1-2-2-start-participant-op-permission-checks"><a class="toc-anchor" href="#mod-pp-msg-1-2-2-start-participant-op-permission-checks" >§</a> [MOD-PP-MSG-1-2-2] Start Participant OP permission checks</h6>
 <ul>
@@ -3137,7 +3164,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 </ul>
 </li>
 </ul>
-<div id="note-56" class="notice note"><a class="notice-link" href="#note-56">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
+<div id="note-131" class="notice note"><a class="notice-link" href="#note-131">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
 </div>
 <h6 id="mod-pp-msg-1-2-4-start-participant-op-overlap-checks"><a class="toc-anchor" href="#mod-pp-msg-1-2-4-start-participant-op-overlap-checks" >§</a> [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks</h6>
 <p>We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a <code>corporation</code> from running different OP with differents validators for the same <code>schema_id</code>, <code>role</code>.</p>
@@ -3312,7 +3339,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 </ul>
 </li>
 </ul>
-<div id="note-57" class="notice note"><a class="notice-link" href="#note-57">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
+<div id="note-132" class="notice note"><a class="notice-link" href="#note-132">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
 </div>
 <h6 id="mod-pp-msg-2-3-renew-participant-op-execution"><a class="toc-anchor" href="#mod-pp-msg-2-3-renew-participant-op-execution" >§</a> [MOD-PP-MSG-2-3] Renew Participant OP execution</h6>
 <p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
@@ -4002,7 +4029,7 @@ else MUST abort.</p>
 <li>if <code>wallet_agent_participant.role</code> is not ISSUER, abort.</li>
 <li>if <code>wallet_agent_participant</code> is not a <a class="term-reference" href="#term:active-participant">active participant</a>, abort.</li>
 </ul>
-<div id="warning-29" class="notice warning"><a class="notice-link" href="#warning-29">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a <code>Participant</code> entry that is not controlled by its owner.</p>
+<div id="warning-74" class="notice warning"><a class="notice-link" href="#warning-74">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a <code>Participant</code> entry that is not controlled by its owner.</p>
 </div>
 <h6 id="mod-pp-msg-10-3-create-or-update-participant-session-fee-checks"><a class="toc-anchor" href="#mod-pp-msg-10-3-create-or-update-participant-session-fee-checks" >§</a> [MOD-PP-MSG-10-3] Create or Update Participant Session fee checks</h6>
 <ul>
@@ -4178,7 +4205,7 @@ else MUST abort.</p>
 <li><code>corporation</code> MUST have available balance ≥ <code>total_payer_trust_deposit</code> + <code>total_payees_trust_deposit</code> + <code>total_user_agent_reward</code> + <code>total_wallet_agent_reward</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
 </ul>
 <hr>
-<div id="warning-30" class="notice warning"><a class="notice-link" href="#warning-30">WARNING</a><ul>
+<div id="warning-75" class="notice warning"><a class="notice-link" href="#warning-75">WARNING</a><ul>
 <li>Trust deposits MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
 <li>When paying with COIN ≠ <a class="term-reference" href="#term:native-denom">native denom</a> or with FIAT, payer pays trust deposits on behalf of payees (since payees receive non-native assets that cannot be directly staked).</li>
 </ul>
@@ -4340,7 +4367,7 @@ else MUST abort.</p>
 </ul>
 <p>then, add the <code>cspsr</code> to <code>session.session_records</code></p>
 <p>if current transaction if for issuance of a credential, persist the digest SRI by calling <a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1]</a>.</p>
-<div id="warning-31" class="notice warning"><a class="notice-link" href="#warning-31">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_participant_id</code> OR <code>verifier_participant_id</code></p>
+<div id="warning-76" class="notice warning"><a class="notice-link" href="#warning-76">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_participant_id</code> OR <code>verifier_participant_id</code></p>
 </div>
 <h4 id="mod-pp-msg-11-update-participant-module-parameters"><a class="toc-anchor" href="#mod-pp-msg-11-update-participant-module-parameters" >§</a> [MOD-PP-MSG-11] Update Participant Module Parameters</h4>
 <p>Update Participant Module Parameters.</p>
@@ -4389,7 +4416,7 @@ else MUST abort.</p>
 <li>Load <code>Participant</code> entry <code>applicant_participant</code> from <code>id</code>. If no entry found, abort.</li>
 <li><code>amount</code> MUST be lower or equal to <code>applicant_participant.deposit</code> else MUST abort.</li>
 </ul>
-<div id="note-58" class="notice note"><a class="notice-link" href="#note-58">NOTE</a><p>Even if the <code>Participant</code> entry has expired or is revoked, it is still possible to slash it.</p>
+<div id="note-133" class="notice note"><a class="notice-link" href="#note-133">NOTE</a><p>Even if the <code>Participant</code> entry has expired or is revoked, it is still possible to slash it.</p>
 </div>
 <h6 id="mod-pp-msg-12-2-2-slash-participant-trust-deposit-validator-perms"><a class="toc-anchor" href="#mod-pp-msg-12-2-2-slash-participant-trust-deposit-validator-perms" >§</a> [MOD-PP-MSG-12-2-2] Slash Participant Trust Deposit validator perms</h6>
 <p>Either Option #1, or #2 MUST return true, else abort.</p>
@@ -4482,7 +4509,7 @@ else MUST abort.</p>
 <h4 id="mod-pp-msg-14-self-create-participant"><a class="toc-anchor" href="#mod-pp-msg-14-self-create-participant" >§</a> [MOD-PP-MSG-14] Self Create Participant</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of a <code>corporation</code>.</p>
 <p>This simple <code>Participant</code>-creation method can be used to self-create an ISSUER (resp. VERIFIER) <code>Participant</code> entry if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As <code>Participant</code> entries are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a <code>Participant</code> entry for being issuer or verifier of a given schema.</p>
-<div id="note-59" class="notice note"><a class="notice-link" href="#note-59">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their <code>Participant</code> entry may be revoked by ecosystem governance authority and their deposit slashed.</p>
+<div id="note-134" class="notice note"><a class="notice-link" href="#note-134">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their <code>Participant</code> entry may be revoked by ecosystem governance authority and their deposit slashed.</p>
 </div>
 <h5 id="mod-pp-msg-14-1-self-create-participant-parameters"><a class="toc-anchor" href="#mod-pp-msg-14-1-self-create-participant-parameters" >§</a> [MOD-PP-MSG-14-1] Self Create Participant parameters</h5>
 <ul>
@@ -4792,7 +4819,7 @@ else MUST abort.</p>
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-60" class="notice note"><a class="notice-link" href="#note-60">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-135" class="notice note"><a class="notice-link" href="#note-135">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-pp-qry-5-get-participantsession"><a class="toc-anchor" href="#mod-pp-qry-5-get-participantsession" >§</a> [MOD-PP-QRY-5] Get ParticipantSession</h4>
 <h5 id="mod-pp-qry-5-1-get-participantsession-parameters"><a class="toc-anchor" href="#mod-pp-qry-5-1-get-participantsession-parameters" >§</a> [MOD-PP-QRY-5-1] Get ParticipantSession parameters</h5>
@@ -5172,14 +5199,14 @@ else MUST abort.</p>
 </ul>
 <h4 id="mod-td-msg-7-burn-ecosystem-slashed-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >§</a> [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit</h4>
 <p>Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.</p>
-<div id="warning-32" class="notice warning"><a class="notice-link" href="#warning-32">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
+<div id="warning-77" class="notice warning"><a class="notice-link" href="#warning-77">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
 </div>
 <h5 id="mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters</h5>
 <ul>
 <li><code>corporation</code> (group) (<em>mandatory</em>): corporation of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to burn.</li>
 <li><code>amount</code> (number) (<em>mandatory</em>): value to burn, in <a class="term-reference" href="#term:denom">denom</a>.</li>
 </ul>
-<div id="warning-33" class="notice warning"><a class="notice-link" href="#warning-33">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
+<div id="warning-78" class="notice warning"><a class="notice-link" href="#warning-78">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
 The decision between this method and specifying the amount directly is left to implementers.</p>
 </div>
 <h5 id="mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks</h5>
@@ -5351,7 +5378,7 @@ The decision between this method and specifying the amount directly is left to i
 <p>Check if a <strong>VS Operator Authorization</strong> exists for <code>corporation</code> and <code>grantee</code>. If this is the case, MUST abort.</p>
 </li>
 </ul>
-<div id="warning-34" class="notice warning"><a class="notice-link" href="#warning-34">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>participant.corporation</code> and <code>participant.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+<div id="warning-79" class="notice warning"><a class="notice-link" href="#warning-79">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>participant.corporation</code> and <code>participant.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
 </div>
 <h5 id="mod-de-msg-3-3-grant-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-3-3-grant-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks</h5>
 <ul>
@@ -5428,7 +5455,7 @@ The decision between this method and specifying the amount directly is left to i
 <li>No <code>OperatorAuthorization</code> <code>oauthz</code> where <code>oauthz.corporation</code> = <code>corporation</code> and <code>oauthz.operator</code> = <code>vs_operator</code> MUST exist.</li>
 <li>No other <code>VSOperatorAuthorization</code> <code>vsoauthz'</code> where <code>vsoauthz'.vs_operator</code> = <code>vs_operator</code> AND <code>vsoauthz'.corporation</code> != <code>corporation</code> MUST exist. In other words, a vs-agent VPR account cannot be controlled by multiple corporations.</li>
 </ul>
-<div id="warning-35" class="notice warning"><a class="notice-link" href="#warning-35">WARNING</a><p>A <strong>VS Operator Authorization</strong> record CAN be granted ONLY IF no <strong>OperatorAuthorization</strong> exists for the same <code>(corporation, vs_operator)</code> pair. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+<div id="warning-80" class="notice warning"><a class="notice-link" href="#warning-80">WARNING</a><p>A <strong>VS Operator Authorization</strong> record CAN be granted ONLY IF no <strong>OperatorAuthorization</strong> exists for the same <code>(corporation, vs_operator)</code> pair. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
 </div>
 <h5 id="mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-5-3] Grant VS Operator Authorization fee checks</h5>
 <ul>
@@ -5971,7 +5998,7 @@ rate_scale       = S</p>
 </ul>
 </li>
 </ul>
-<div id="warning-36" class="notice warning"><a class="notice-link" href="#warning-36">WARNING</a><ul>
+<div id="warning-81" class="notice warning"><a class="notice-link" href="#warning-81">WARNING</a><ul>
 <li>Conversions use base units only.</li>
 <li>Integer arithmetic MUST be used.</li>
 <li><code>quote_amount = floor(base_amount × rate / 10^rate_scale)</code>.</li>
@@ -6081,7 +6108,14 @@ rate_scale       = S</p>
 <li><a href="#ecosystem-management" >Ecosystem Management</a></li>
 <li><a href="#credential-schemas-and-participants" >Credential Schemas and Participants</a></li>
 <li><a href="#corporation-management" >Corporation Management</a></li>
-<li><a href="#did-indexing" >DID Indexing</a></li>
+<li><a href="#did-indexing" >DID Indexing</a>
+<ul>
+<li><a href="#ai-agent-discovery" >AI agent discovery</a></li>
+<li><a href="#verifiable-user-agent-content-discovery" >Verifiable User Agent content discovery</a></li>
+<li><a href="#other-consumers" >Other consumers</a></li>
+<li><a href="#indexing-pipeline" >Indexing pipeline</a></li>
+</ul>
+</li>
 <li><a href="#business-models" >Business models</a>
 <ul>
 <li><a href="#trust-deposit" >Trust Deposit</a></li>
