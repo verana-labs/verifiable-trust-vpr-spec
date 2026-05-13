@@ -1354,7 +1354,7 @@ A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]]
 
 `Corporation`:
 
-- `did` (string) (*mandatory*): the DID of the Corporation.
+- `did` (string) (*mandatory*): the DID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `did` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `did` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-new-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks).
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
 - `archived` (timestamp) (*optional*): timestamp this Corporation has been archived.
@@ -1368,8 +1368,8 @@ A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]]
 `Ecosystem`:
 
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
-- `did` (string) (*mandatory*): the did of the ecosystem.
-- `corporation` (group) (*mandatory*): [[ref: corporation]] that controls this entry.
+- `did` (string) (*mandatory*): the did of the ecosystem. MAY be shared with other `Ecosystem` entries (a single DID MAY be the `did` of several ecosystems); per-Ecosystem DID uniqueness is NOT enforced because the `Ecosystem` identity is its `id`. However, per-Ecosystem `(did, corporation)` consistency IS enforced: at any block height, all `Ecosystem` entries with equal `did` MUST share the same `corporation`. Enforced at create time by [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-new-ecosystem-basic-checks) and at rotation time by [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks).
+- `corporation` (group) (*mandatory*): [[ref: corporation]] that controls this entry. Constrained by the per-Ecosystem `(did, corporation)` consistency invariant above.
 - `created` (timestamp) (*mandatory*): timestamp this Ecosystem has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Ecosystem has been modified.
 - `archived` (timestamp) (*mandatory*): timestamp this Ecosystem has been archived.
@@ -1447,8 +1447,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `id` (uint64) (*mandatory*): the id of the participant.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `role` (ParticipantRole): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER
-- `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]].
-- `corporation` (group) (*mandatory*): [[ref: corporation]] that owns this permission.
+- `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]]. MAY be shared with other `Participant` entries (a single DID MAY be the `did` of several participants); per-Participant DID uniqueness is NOT enforced because the `Participant` identity is its `id`. However, per-Participant `(did, corporation)` consistency IS enforced: at any block height, all `Participant` entries with non-null equal `did` MUST share the same `corporation`. Enforced by the create-time basic checks of [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks), and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks). `Participant.did` is set at create time and is not rotated thereafter.
+- `corporation` (group) (*mandatory*): [[ref: corporation]] that owns this permission. Constrained by the per-Participant `(did, corporation)` consistency invariant above (when `did` is non-null).
 - `vs_operator` (account) (*mandatory*): verifiable service agent account. This is the account that will have the right to create or update permission sessions.
 - `created` (timestamp) (*mandatory*): timestamp this `Participant` has been created.
 - `adjusted` (timestamp) (*mandatory*): timestamp this `Participant` has been adjusted.
@@ -2006,6 +2006,7 @@ If any of these precondition checks fail, method MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - A `Corporation` entry for the signing [[ref: group]] MUST NOT exist; if one exists, method MUST abort (a group MAY register itself as a `Corporation` at most once).
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `did` MUST NOT already be the `did` of any existing `Corporation` entry; if some `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant: a DID is the `did` of at most one `Corporation`).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
@@ -2074,6 +2075,7 @@ If any of these precondition checks fail, method MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - A `Corporation` entry `co` for the signing `corporation` MUST exist; if none exists, method MUST abort.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `did` MUST NOT already be the `did` of any **other** `Corporation` entry (i.e., any `Corporation` entry whose underlying group differs from the signing `corporation`); if some other `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant). Rotating to the same value `co.did` already holds is a no-op and MUST be allowed.
 
 ###### [MOD-CO-MSG-2-2-2] Update Corporation fee checks
 
@@ -2254,12 +2256,13 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Ecosystem `(did, corporation)` consistency invariant: at any block height, all `Ecosystem` entries sharing a `did` are controlled by the same `Corporation`).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL .
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
 :::note
-It is not a problem if several ecosystems are created with the same ecosystem DID. Identifier of a `Ecosystem` is its id, and the Verifiable Trust Spec includes the id of the `Ecosystem` in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.
+Several `Ecosystem` entries MAY share the same ecosystem DID. The identifier of an `Ecosystem` is its `id`, and the Verifiable Trust Spec includes the `id` of the `Ecosystem` in the DID Document. Per-Ecosystem DID uniqueness is therefore NOT required: proof of control of the DID is verified by resolving the DID outside of the context of the VPR. However, **all `Ecosystem` entries sharing the same `did` MUST be controlled by the same `corporation`** — see the basic-check bullet above. Proof of control of the shared DID is, by construction, held by that single controlling `Corporation`, and the corresponding `Corporation` entry (if any whose own `did` equals this value) is unique by the per-Corporation `did` uniqueness invariant (although the Corporation that *owns* the DID per Corp.did and the Corporation that *controls* the Ecosystems claiming it need not coincide).
 :::
 
 ###### [MOD-ES-MSG-1-2-2] Create New Ecosystem fee checks
@@ -2326,6 +2329,7 @@ If any of these precondition checks fail, method MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `Ecosystem` entry `ecosystem` with id `id` MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry `ecosystem`.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if any **other** `Ecosystem` entry (i.e., any `Ecosystem` entry whose `id` differs from the supplied `id`) has `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Ecosystem `(did, corporation)` consistency invariant). Rotating `ecosystem.did` to a value already held by another `Ecosystem` controlled by a different `corporation` is forbidden.
 
 ###### [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks
 
@@ -3306,6 +3310,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if `did` is specified and any existing `Participant` entry has non-null `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Participant `(did, corporation)` consistency invariant: at any block height, all `Participant` entries sharing a non-null `did` are owned by the same `Corporation`).
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-op-parameters).
 
 :::note
@@ -3856,6 +3861,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if `did` is specified and any existing `Participant` entry has non-null `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Participant `(did, corporation)` consistency invariant).
 - `effective_from` must be in the future.
 - `effective_until`, if not null, must be greater than `effective_from`
 - `validation_fees` (number) (*mandatory*): MUST be >= 0.
@@ -4796,6 +4802,7 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
 - `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): no check required.
 - `did`, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if any existing `Participant` entry has non-null `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Participant `(did, corporation)` consistency invariant: at any block height, all `Participant` entries sharing a non-null `did` are owned by the same `Corporation`).
 - `effective_from` MUST be in the future AND
   - MUST be greater or equal to `validator_participant.effective_from` AND
   - if `validator_participant.effective_until` is not null, MUST be lower than `validator_participant.effective_until`

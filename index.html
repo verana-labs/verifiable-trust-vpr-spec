@@ -85,7 +85,7 @@ customElements.define("slide-panels",class extends HTMLElement{static get observ
 <p>This specification defines the data model, API, and normative requirements for implementing and interacting with a Verifiable Public Registry.</p>
 <h2 id="about-this-document"><a class="toc-anchor" href="#about-this-document" >§</a> About this Document</h2>
 <p>In order to fully understand the concepts developed in this document, you should have some basic knowledge of <a class="term-reference" href="#term:did">DID</a>, <a class="term-reference" href="#term:didcomm">DIDComm</a>, <a class="term-reference" href="#term:vs">VS</a>, <a class="term-reference" href="#term:ecosystem">ecosystem</a>, ledger-based applications, and more generally, all terms present in the <a href="#terminology" >Terminology</a> section.</p>
-<div id="note-121" class="notice note"><a class="notice-link" href="#note-121">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
+<div id="note-136" class="notice note"><a class="notice-link" href="#note-136">NOTE</a><p>Before exploring this spec, it is highly recommended to <strong>first read</strong> the <a path-0="verana-labs.github.io"path-1="verifiable-trust-spec"path-2=""href="https://verana-labs.github.io/verifiable-trust-spec/" >Verifiable Trust Spec</a>.</p>
 </div>
 <h2 id="introduction"><a class="toc-anchor" href="#introduction" >§</a> Introduction</h2>
 <h3 id="what-is-an-ecosystem"><a class="toc-anchor" href="#what-is-an-ecosystem" >§</a> What is an Ecosystem?</h3>
@@ -553,7 +553,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 <li>A portion defined by <code>trust_deposit_rate</code> is allocated to the <strong>participant’s trust deposit</strong>.</li>
 <li>The remaining portion is <strong>transferred directly to the participant’s wallet</strong>.</li>
 </ul>
-<div id="note-122" class="notice note"><a class="notice-link" href="#note-122">NOTE</a><p>Agents that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
+<div id="note-137" class="notice note"><a class="notice-link" href="#note-137">NOTE</a><p>Agents that implement the <a class="term-reference" href="#term:vt-spec">VT spec</a> <strong>must verify</strong> that the ISSUER or VERIFIER has fulfilled the required trust fee payment.<br>
 If not, they <strong>must reject</strong> the issuance or verification request.</p>
 <p>Note: The <strong>User Agent</strong> and <strong>Wallet User Agent</strong> may refer to the same implementation.</p>
 </div>
@@ -565,7 +565,7 @@ If not, they <strong>must reject</strong> the issuance or verification request.<
 <p><em>This section is non-normative.</em></p>
 <p>A <a class="term-reference" href="#term:governance-framework">governance framework</a> must define the governance rules that apply to a <a class="term-reference" href="#term:vpr">VPR</a>.</p>
 <p>A designated <a class="term-reference" href="#term:governance-authority">governance authority</a> (aka a council) is responsible for <strong>enforcing these rules</strong> and, when necessary, <strong>applying financial sanctions</strong> to participants who violate the rules.</p>
-<div id="note-123" class="notice note"><a class="notice-link" href="#note-123">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
+<div id="note-138" class="notice note"><a class="notice-link" href="#note-138">NOTE</a><p><strong>Ecosystem Governance Frameworks (EGFs)</strong> operate <strong>independently</strong> from the <a class="term-reference" href="#term:vpr">VPR</a> <a class="term-reference" href="#term:governance-framework">governance framework</a>.</p>
 <p>While the <strong>VPR governance framework</strong> defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each <strong>ecosystem</strong> must define its own <strong>EGF</strong> to govern roles, permissions, credential policies, and compliance within its specific domain.</p>
 <p>This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.</p>
 </div>
@@ -578,7 +578,7 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <p>A <code>Corporation</code> is the VPR-level entity that extends a Cosmos SDK <a class="term-reference" href="#term:group">group</a> with a DID, a governance framework, and lifecycle attributes. A Corporation may control <a class="term-reference" href="#term:participants">participants</a> in zero or more <a class="term-reference" href="#term:ecosystems">ecosystems</a> and may itself be the controller of zero or more <a class="term-reference" href="#term:ecosystems">ecosystems</a>.</p>
 <p><code>Corporation</code>:</p>
 <ul>
-<li><code>did</code> (string) (<em>mandatory</em>): the DID of the Corporation.</li>
+<li><code>did</code> (string) (<em>mandatory</em>): the DID of the Corporation. MUST be <strong>globally unique</strong> across all <code>Corporation</code> entries (per-Corporation <code>did</code> uniqueness invariant): at any block height, no two <code>Corporation</code> entries MAY share the same <code>did</code> value. Enforced at create time by <a href="#mod-co-msg-1-2-1-create-new-corporation-basic-checks" >[MOD-CO-MSG-1-2-1]</a> and at rotation time by <a href="#mod-co-msg-2-2-1-update-corporation-basic-checks" >[MOD-CO-MSG-2-2-1]</a>.</li>
 <li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this Corporation has been created.</li>
 <li><code>modified</code> (timestamp) (<em>mandatory</em>): timestamp this Corporation has been modified.</li>
 <li><code>archived</code> (timestamp) (<em>optional</em>): timestamp this Corporation has been archived.</li>
@@ -592,8 +592,8 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <p><code>Ecosystem</code>:</p>
 <ul>
 <li><code>id</code> (uint64) (<em>mandatory</em>): the id of the ecosystem.</li>
-<li><code>did</code> (string) (<em>mandatory</em>): the did of the ecosystem.</li>
-<li><code>corporation</code> (group) (<em>mandatory</em>): <a class="term-reference" href="#term:corporation">corporation</a> that controls this entry.</li>
+<li><code>did</code> (string) (<em>mandatory</em>): the did of the ecosystem. MAY be shared with other <code>Ecosystem</code> entries (a single DID MAY be the <code>did</code> of several ecosystems); per-Ecosystem DID uniqueness is NOT enforced because the <code>Ecosystem</code> identity is its <code>id</code>. However, per-Ecosystem <code>(did, corporation)</code> consistency IS enforced: at any block height, all <code>Ecosystem</code> entries with equal <code>did</code> MUST share the same <code>corporation</code>. Enforced at create time by <a href="#mod-es-msg-1-2-1-create-new-ecosystem-basic-checks" >[MOD-ES-MSG-1-2-1]</a> and at rotation time by <a href="#mod-es-msg-2-2-1-update-ecosystem-basic-checks" >[MOD-ES-MSG-2-2-1]</a>.</li>
+<li><code>corporation</code> (group) (<em>mandatory</em>): <a class="term-reference" href="#term:corporation">corporation</a> that controls this entry. Constrained by the per-Ecosystem <code>(did, corporation)</code> consistency invariant above.</li>
 <li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this Ecosystem has been created.</li>
 <li><code>modified</code> (timestamp) (<em>mandatory</em>): timestamp this Ecosystem has been modified.</li>
 <li><code>archived</code> (timestamp) (<em>mandatory</em>): timestamp this Ecosystem has been archived.</li>
@@ -665,8 +665,8 @@ For example, a <strong>key-value store</strong> may be more appropriate for a <s
 <li><code>id</code> (uint64) (<em>mandatory</em>): the id of the participant.</li>
 <li><code>schema_id</code> (uint64) (<em>mandatory</em>): the id of the related <code>CredentialSchema</code> entry.</li>
 <li><code>role</code> (ParticipantRole): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER</li>
-<li><code>did</code> (string) (<em>optional</em>): <a class="term-reference" href="#term:did">DID</a> this permission refers to. MUST conform to [<a class="spec-reference" href="#ref:RFC3986">RFC3986</a>].</li>
-<li><code>corporation</code> (group) (<em>mandatory</em>): <a class="term-reference" href="#term:corporation">corporation</a> that owns this permission.</li>
+<li><code>did</code> (string) (<em>optional</em>): <a class="term-reference" href="#term:did">DID</a> this permission refers to. MUST conform to [<a class="spec-reference" href="#ref:RFC3986">RFC3986</a>]. MAY be shared with other <code>Participant</code> entries (a single DID MAY be the <code>did</code> of several participants); per-Participant DID uniqueness is NOT enforced because the <code>Participant</code> identity is its <code>id</code>. However, per-Participant <code>(did, corporation)</code> consistency IS enforced: at any block height, all <code>Participant</code> entries with non-null equal <code>did</code> MUST share the same <code>corporation</code>. Enforced by the create-time basic checks of <a href="#mod-pp-msg-1-2-1-start-participant-op-basic-checks" >[MOD-PP-MSG-1-2-1]</a>, <a href="#mod-pp-msg-7-2-1-create-root-participant-basic-checks" >[MOD-PP-MSG-7-2-1]</a>, and <a href="#mod-pp-msg-14-2-1-self-create-participant-basic-checks" >[MOD-PP-MSG-14-2-1]</a>. <code>Participant.did</code> is set at create time and is not rotated thereafter.</li>
+<li><code>corporation</code> (group) (<em>mandatory</em>): <a class="term-reference" href="#term:corporation">corporation</a> that owns this permission. Constrained by the per-Participant <code>(did, corporation)</code> consistency invariant above (when <code>did</code> is non-null).</li>
 <li><code>vs_operator</code> (account) (<em>mandatory</em>): verifiable service agent account. This is the account that will have the right to create or update permission sessions.</li>
 <li><code>created</code> (timestamp) (<em>mandatory</em>): timestamp this <code>Participant</code> has been created.</li>
 <li><code>adjusted</code> (timestamp) (<em>mandatory</em>): timestamp this <code>Participant</code> has been adjusted.</li>
@@ -935,10 +935,10 @@ as a direct consequence of executing authorized messages.</li>
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span>
 </code></pre>
-<div id="warning-73" class="notice warning"><a class="notice-link" href="#warning-73">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
+<div id="warning-82" class="notice warning"><a class="notice-link" href="#warning-82">WARNING</a><p>For Msg methods, all precondition checks MUST be verified first for accepting the Msg, and MUST be verified <strong>again</strong> upon method execution</p>
 </div>
 <p>A VPR implementation MUST implement all the following requirements.</p>
-<div id="note-124" class="notice note"><a class="notice-link" href="#note-124">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="ec"path-3="v1"path-4="get"href="https://example/verana/ec/v1/get" ><span>https://example/verana/ec/v1/get</span></a>.</p>
+<div id="note-139" class="notice note"><a class="notice-link" href="#note-139">NOTE</a><p>The relative REST path is the path suffix. Implementer can set any prefix, like <a path-0="example"path-1="verana"path-2="ec"path-3="v1"path-4="get"href="https://example/verana/ec/v1/get" ><span>https://example/verana/ec/v1/get</span></a>.</p>
 </div>
 <h3 id="authorization-and-fee-grants"><a class="toc-anchor" href="#authorization-and-fee-grants" >§</a> Authorization and Fee Grants</h3>
 <h4 id="delegable-module-messages"><a class="toc-anchor" href="#delegable-module-messages" >§</a> Delegable Module Messages</h4>
@@ -1695,7 +1695,7 @@ messages.</p>
 </tr>
 </tbody>
 </table>
-<div id="note-125" class="notice note"><a class="notice-link" href="#note-125">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
+<div id="note-140" class="notice note"><a class="notice-link" href="#note-140">NOTE</a><p>Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.</p>
 </div>
 <h3 id="corporation-module"><a class="toc-anchor" href="#corporation-module" >§</a> Corporation Module</h3>
 <p>This module manages <a class="term-reference" href="#term:corporation">corporation</a> entries — the VPR-level entity that extends a Cosmos SDK <a class="term-reference" href="#term:group">group</a> with a DID, a governance framework, and lifecycle attributes. A <code>Corporation</code> entry MUST exist before its underlying group can be referenced as the <code>corporation</code> (group) in any other VPR Create-* method (see <a href="#mod-co-msg-1-create-new-corporation" >[MOD-CO-MSG-1]</a>).</p>
@@ -1733,6 +1733,9 @@ messages.</p>
 </li>
 <li>
 <p><code>did</code> (string) (<em>mandatory</em>): MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</p>
+</li>
+<li>
+<p><code>did</code> MUST NOT already be the <code>did</code> of any existing <code>Corporation</code> entry; if some <code>Corporation</code> entry already holds this <code>did</code>, method MUST abort (per-Corporation <code>did</code> uniqueness invariant: a DID is the <code>did</code> of at most one <code>Corporation</code>).</p>
 </li>
 <li>
 <p><code>language</code> (string(17)) (<em>mandatory</em>): MUST be a language tag (<a path-0="www.rfc-editor.org"path-1="info"path-2="bcp47"href="https://www.rfc-editor.org/info/bcp47" >BCP 47</a>).</p>
@@ -1849,6 +1852,9 @@ messages.</p>
 </li>
 <li>
 <p><code>did</code> (string) (<em>mandatory</em>): MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</p>
+</li>
+<li>
+<p><code>did</code> MUST NOT already be the <code>did</code> of any <strong>other</strong> <code>Corporation</code> entry (i.e., any <code>Corporation</code> entry whose underlying group differs from the signing <code>corporation</code>); if some other <code>Corporation</code> entry already holds this <code>did</code>, method MUST abort (per-Corporation <code>did</code> uniqueness invariant). Rotating to the same value <code>co.did</code> already holds is a no-op and MUST be allowed.</p>
 </li>
 </ul>
 <h6 id="mod-co-msg-2-2-2-update-corporation-fee-checks"><a class="toc-anchor" href="#mod-co-msg-2-2-2-update-corporation-fee-checks" >§</a> [MOD-CO-MSG-2-2-2] Update Corporation fee checks</h6>
@@ -2013,6 +2019,9 @@ messages.</p>
 <p><code>did</code> (string) (<em>mandatory</em>): MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</p>
 </li>
 <li>
+<p>if any existing <code>Ecosystem</code> entry has <code>did</code> equal to the provided <code>did</code>, its <code>corporation</code> MUST equal the signing <code>corporation</code>; else method MUST abort (per-Ecosystem <code>(did, corporation)</code> consistency invariant: at any block height, all <code>Ecosystem</code> entries sharing a <code>did</code> are controlled by the same <code>Corporation</code>).</p>
+</li>
+<li>
 <p><code>language</code> (string(17)) (<em>mandatory</em>): MUST be a language tag (<a path-0="www.rfc-editor.org"path-1="info"path-2="bcp47"href="https://www.rfc-editor.org/info/bcp47" >BCP 47</a>).</p>
 </li>
 <li>
@@ -2022,7 +2031,7 @@ messages.</p>
 <p><code>doc_digest_sri</code> (string) (<em>mandatory</em>): MUST be a valid digest_sri as specified in <a path-0="www.w3.org"path-1="TR"path-2="vc-data-model-2.0"path-3="#integrity-of-related-resources"href="https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources" >integrity of related resources spec</a>. Example: <code>sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26</code>.</p>
 </li>
 </ul>
-<div id="note-126" class="notice note"><a class="notice-link" href="#note-126">NOTE</a><p>It is not a problem if several ecosystems are created with the same ecosystem DID. Identifier of a <code>Ecosystem</code> is its id, and the Verifiable Trust Spec includes the id of the <code>Ecosystem</code> in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.</p>
+<div id="note-141" class="notice note"><a class="notice-link" href="#note-141">NOTE</a><p>Several <code>Ecosystem</code> entries MAY share the same ecosystem DID. The identifier of an <code>Ecosystem</code> is its <code>id</code>, and the Verifiable Trust Spec includes the <code>id</code> of the <code>Ecosystem</code> in the DID Document. Per-Ecosystem DID uniqueness is therefore NOT required: proof of control of the DID is verified by resolving the DID outside of the context of the VPR. However, <strong>all <code>Ecosystem</code> entries sharing the same <code>did</code> MUST be controlled by the same <code>corporation</code></strong> — see the basic-check bullet above. Proof of control of the shared DID is, by construction, held by that single controlling <code>Corporation</code>, and the corresponding <code>Corporation</code> entry (if any whose own <code>did</code> equals this value) is unique by the per-Corporation <code>did</code> uniqueness invariant (although the Corporation that <em>owns</em> the DID per Corp.did and the Corporation that <em>controls</em> the Ecosystems claiming it need not coincide).</p>
 </div>
 <h6 id="mod-es-msg-1-2-2-create-new-ecosystem-fee-checks"><a class="toc-anchor" href="#mod-es-msg-1-2-2-create-new-ecosystem-fee-checks" >§</a> [MOD-ES-MSG-1-2-2] Create New Ecosystem fee checks</h6>
 <p>Fee payer MUST have an available balance to cover the <a class="term-reference" href="#term:estimated-transaction-fees">estimated transaction fees</a>.</p>
@@ -2130,6 +2139,9 @@ messages.</p>
 </li>
 <li>
 <p><code>did</code> (string) (<em>mandatory</em>): MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</p>
+</li>
+<li>
+<p>if any <strong>other</strong> <code>Ecosystem</code> entry (i.e., any <code>Ecosystem</code> entry whose <code>id</code> differs from the supplied <code>id</code>) has <code>did</code> equal to the provided <code>did</code>, its <code>corporation</code> MUST equal the signing <code>corporation</code>; else method MUST abort (per-Ecosystem <code>(did, corporation)</code> consistency invariant). Rotating <code>ecosystem.did</code> to a value already held by another <code>Ecosystem</code> controlled by a different <code>corporation</code> is forbidden.</p>
 </li>
 </ul>
 <h6 id="mod-es-msg-2-2-2-update-ecosystem-fee-checks"><a class="toc-anchor" href="#mod-es-msg-2-2-2-update-ecosystem-fee-checks" >§</a> [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks</h6>
@@ -2494,7 +2506,7 @@ messages.</p>
 <p><code>pricing_asset</code> (string) (<em>mandatory</em>): <code>&quot;tu&quot;</code> if <code>pricing_asset_type</code> is set to TU, else examples: COIN: <code>denom</code> <code>&quot;uvna&quot;</code>, <code>&quot;ufoo&quot;</code>, <code>&quot;ibc/3A0F9C2E4E2A9B7D6F...&quot;</code>, <code>&quot;factory/verana1.../ueurv&quot;</code>, FIAT: <code>&quot;EUR&quot;</code>, <code>&quot;GBP&quot;</code>,…</p>
 </li>
 </ul>
-<div id="note-127" class="notice note"><a class="notice-link" href="#note-127">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
+<div id="note-142" class="notice note"><a class="notice-link" href="#note-142">NOTE</a><p>When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
 The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
 FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
 FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.</p>
@@ -2527,7 +2539,7 @@ FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on
 </ul>
 </li>
 </ul>
-<div id="note-128" class="notice note"><a class="notice-link" href="#note-128">NOTE</a><p>If needed, depending on configuration mode, Ecosystem controller MAY need to create a ECOSYSTEM <code>Participant</code> so that onboarding processes can be run.</p>
+<div id="note-143" class="notice note"><a class="notice-link" href="#note-143">NOTE</a><p>If needed, depending on configuration mode, Ecosystem controller MAY need to create a ECOSYSTEM <code>Participant</code> so that onboarding processes can be run.</p>
 </div>
 <h4 id="mod-cs-msg-2-update-credential-schema"><a class="toc-anchor" href="#mod-cs-msg-2-update-credential-schema" >§</a> [MOD-CS-MSG-2] Update Credential Schema</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of a <code>corporation</code>.</p>
@@ -2953,7 +2965,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li>If the <a class="term-reference" href="#term:applicant">applicant</a> qualifies, the <a class="term-reference" href="#term:validator">validator</a> runs <a href="#mod-pp-msg-3-set-participant-op-to-validated" >[MOD-PP-MSG-3]</a> to update the Participant entry; the <a class="term-reference" href="#term:applicant">applicant</a> is then granted the new <code>Participant</code> entries and/or issued a credential.</li>
 </ol>
 <p>Once in the <code>VALIDATED</code> state, a Participant entry remains valid for a specific period (e.g., 365 days), configured in the <a class="term-reference" href="#term:credential-schema">credential schema</a> for credential-schema-related onboarding, or set by the <a class="term-reference" href="#term:ecosystem">ecosystem</a> for user-agent onboarding.</p>
-<div id="note-129" class="notice note"><a class="notice-link" href="#note-129">NOTE</a><p>Even when the Participant entry remains in the <code>VALIDATED</code> state for the configured period, the resulting <code>Participant</code> entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the <a class="term-reference" href="#term:applicant">applicant</a> MUST provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration in order to be issued an updated <code>Participant</code> entry and/or credential.</p>
+<div id="note-144" class="notice note"><a class="notice-link" href="#note-144">NOTE</a><p>Even when the Participant entry remains in the <code>VALIDATED</code> state for the configured period, the resulting <code>Participant</code> entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the <a class="term-reference" href="#term:applicant">applicant</a> MUST provide updated information to the <a class="term-reference" href="#term:validator">validator</a> before attribute expiration in order to be issued an updated <code>Participant</code> entry and/or credential.</p>
 </div>
 <p>If the <code>VALIDATED</code> state is set to expire, an <a class="term-reference" href="#term:applicant">applicant</a> that wishes to extend the expiration timestamp MUST renew its <a class="term-reference" href="#term:onboarding-process">onboarding process</a> (see <a href="#mod-pp-msg-2-renew-participant-op" >[MOD-PP-MSG-2]</a>).</p>
 <p>At any time, the <a class="term-reference" href="#term:applicant">applicant</a> CAN cancel the <a class="term-reference" href="#term:onboarding-process">onboarding process</a> (see <a href="#mod-pp-msg-6-cancel-participant-op-last-request" >[MOD-PP-MSG-6]</a>).</p>
@@ -3035,9 +3047,10 @@ with a given <code>(schema_id, role)</code> pair.</p>
 <li><code>issuance_fees</code> (number) (<em>optional</em>): Requested issuance_fees for this <code>Participant</code> entry (can be modified by validator).</li>
 <li><code>verification_fees</code> (number) (<em>optional</em>): Requested verification_fees for this <code>Participant</code> entry (can be modified by validator).</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
+<li>if <code>did</code> is specified and any existing <code>Participant</code> entry has non-null <code>did</code> equal to the provided <code>did</code>, its <code>corporation</code> MUST equal the signing <code>corporation</code>; else method MUST abort (per-Participant <code>(did, corporation)</code> consistency invariant: at any block height, all <code>Participant</code> entries sharing a non-null <code>did</code> are owned by the same <code>Corporation</code>).</li>
 <li>VS Operator Authorization parameters: if any of <code>vs_operator_authz_*</code> parameters is provided, <code>vs_operator_authz_msg_types</code> MUST also be provided and <code>vs_operator</code> MUST NOT be null, else abort. If <code>vs_operator_authz_msg_types</code> is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in <a href="#mod-pp-msg-1-1-start-participant-op-parameters" >MOD-PP-MSG-1-1</a>.</li>
 </ul>
-<div id="note-130" class="notice note"><a class="notice-link" href="#note-130">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the onboarding process is REQUIRED or not.</p>
+<div id="note-145" class="notice note"><a class="notice-link" href="#note-145">NOTE</a><p>A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It’s up to the issuer to decide if running the onboarding process is REQUIRED or not.</p>
 </div>
 <h6 id="mod-pp-msg-1-2-2-start-participant-op-permission-checks"><a class="toc-anchor" href="#mod-pp-msg-1-2-2-start-participant-op-permission-checks" >§</a> [MOD-PP-MSG-1-2-2] Start Participant OP permission checks</h6>
 <ul>
@@ -3164,7 +3177,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 </ul>
 </li>
 </ul>
-<div id="note-131" class="notice note"><a class="notice-link" href="#note-131">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
+<div id="note-146" class="notice note"><a class="notice-link" href="#note-146">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
 </div>
 <h6 id="mod-pp-msg-1-2-4-start-participant-op-overlap-checks"><a class="toc-anchor" href="#mod-pp-msg-1-2-4-start-participant-op-overlap-checks" >§</a> [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks</h6>
 <p>We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a <code>corporation</code> from running different OP with differents validators for the same <code>schema_id</code>, <code>role</code>.</p>
@@ -3339,7 +3352,7 @@ with a given <code>(schema_id, role)</code> pair.</p>
 </ul>
 </li>
 </ul>
-<div id="note-132" class="notice note"><a class="notice-link" href="#note-132">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
+<div id="note-147" class="notice note"><a class="notice-link" href="#note-147">NOTE</a><p>Trust deposit MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a></p>
 </div>
 <h6 id="mod-pp-msg-2-3-renew-participant-op-execution"><a class="toc-anchor" href="#mod-pp-msg-2-3-renew-participant-op-execution" >§</a> [MOD-PP-MSG-2-3] Renew Participant OP execution</h6>
 <p>If all precondition checks passed, <a class="term-reference" href="#term:transaction">transaction</a> is executed.</p>
@@ -3709,6 +3722,7 @@ else MUST abort.</p>
 <li><a href="#authz-check-common-authorization-and-fee-grant-precondition-checks" >[AUTHZ-CHECK]</a> MUST pass for this (<code>corporation</code>, <code>operator</code>) pair and this message type.</li>
 <li><code>schema_id</code> MUST be a valid uint64 and a <a class="term-reference" href="#term:credential-schema">credential schema</a> entry with this id MUST exist.</li>
 <li><code>did</code>, if specified, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
+<li>if <code>did</code> is specified and any existing <code>Participant</code> entry has non-null <code>did</code> equal to the provided <code>did</code>, its <code>corporation</code> MUST equal the signing <code>corporation</code>; else method MUST abort (per-Participant <code>(did, corporation)</code> consistency invariant).</li>
 <li><code>effective_from</code> must be in the future.</li>
 <li><code>effective_until</code>, if not null, must be greater than <code>effective_from</code></li>
 <li><code>validation_fees</code> (number) (<em>mandatory</em>): MUST be &gt;= 0.</li>
@@ -4029,7 +4043,7 @@ else MUST abort.</p>
 <li>if <code>wallet_agent_participant.role</code> is not ISSUER, abort.</li>
 <li>if <code>wallet_agent_participant</code> is not a <a class="term-reference" href="#term:active-participant">active participant</a>, abort.</li>
 </ul>
-<div id="warning-74" class="notice warning"><a class="notice-link" href="#warning-74">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a <code>Participant</code> entry that is not controlled by its owner.</p>
+<div id="warning-83" class="notice warning"><a class="notice-link" href="#warning-83">WARNING</a><p>we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a <code>Participant</code> entry that is not controlled by its owner.</p>
 </div>
 <h6 id="mod-pp-msg-10-3-create-or-update-participant-session-fee-checks"><a class="toc-anchor" href="#mod-pp-msg-10-3-create-or-update-participant-session-fee-checks" >§</a> [MOD-PP-MSG-10-3] Create or Update Participant Session fee checks</h6>
 <ul>
@@ -4205,7 +4219,7 @@ else MUST abort.</p>
 <li><code>corporation</code> MUST have available balance ≥ <code>total_payer_trust_deposit</code> + <code>total_payees_trust_deposit</code> + <code>total_user_agent_reward</code> + <code>total_wallet_agent_reward</code> in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
 </ul>
 <hr>
-<div id="warning-75" class="notice warning"><a class="notice-link" href="#warning-75">WARNING</a><ul>
+<div id="warning-84" class="notice warning"><a class="notice-link" href="#warning-84">WARNING</a><ul>
 <li>Trust deposits MUST always be paid in <a class="term-reference" href="#term:native-denom">native denom</a>.</li>
 <li>When paying with COIN ≠ <a class="term-reference" href="#term:native-denom">native denom</a> or with FIAT, payer pays trust deposits on behalf of payees (since payees receive non-native assets that cannot be directly staked).</li>
 </ul>
@@ -4367,7 +4381,7 @@ else MUST abort.</p>
 </ul>
 <p>then, add the <code>cspsr</code> to <code>session.session_records</code></p>
 <p>if current transaction if for issuance of a credential, persist the digest SRI by calling <a href="#mod-di-msg-1-store-digest" >[MOD-DI-MSG-1]</a>.</p>
-<div id="warning-76" class="notice warning"><a class="notice-link" href="#warning-76">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_participant_id</code> OR <code>verifier_participant_id</code></p>
+<div id="warning-85" class="notice warning"><a class="notice-link" href="#warning-85">WARNING</a><p><code>session.authz[]</code> can contain null <code>issuer_participant_id</code> OR <code>verifier_participant_id</code></p>
 </div>
 <h4 id="mod-pp-msg-11-update-participant-module-parameters"><a class="toc-anchor" href="#mod-pp-msg-11-update-participant-module-parameters" >§</a> [MOD-PP-MSG-11] Update Participant Module Parameters</h4>
 <p>Update Participant Module Parameters.</p>
@@ -4416,7 +4430,7 @@ else MUST abort.</p>
 <li>Load <code>Participant</code> entry <code>applicant_participant</code> from <code>id</code>. If no entry found, abort.</li>
 <li><code>amount</code> MUST be lower or equal to <code>applicant_participant.deposit</code> else MUST abort.</li>
 </ul>
-<div id="note-133" class="notice note"><a class="notice-link" href="#note-133">NOTE</a><p>Even if the <code>Participant</code> entry has expired or is revoked, it is still possible to slash it.</p>
+<div id="note-148" class="notice note"><a class="notice-link" href="#note-148">NOTE</a><p>Even if the <code>Participant</code> entry has expired or is revoked, it is still possible to slash it.</p>
 </div>
 <h6 id="mod-pp-msg-12-2-2-slash-participant-trust-deposit-validator-perms"><a class="toc-anchor" href="#mod-pp-msg-12-2-2-slash-participant-trust-deposit-validator-perms" >§</a> [MOD-PP-MSG-12-2-2] Slash Participant Trust Deposit validator perms</h6>
 <p>Either Option #1, or #2 MUST return true, else abort.</p>
@@ -4509,7 +4523,7 @@ else MUST abort.</p>
 <h4 id="mod-pp-msg-14-self-create-participant"><a class="toc-anchor" href="#mod-pp-msg-14-self-create-participant" >§</a> [MOD-PP-MSG-14] Self Create Participant</h4>
 <p>Any authorized <code>operator</code> CAN execute this method on behalf of a <code>corporation</code>.</p>
 <p>This simple <code>Participant</code>-creation method can be used to self-create an ISSUER (resp. VERIFIER) <code>Participant</code> entry if issuance mode (resp. verification mode) is set to <code>OPEN</code> for a given schema. As <code>Participant</code> entries are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a <code>Participant</code> entry for being issuer or verifier of a given schema.</p>
-<div id="note-134" class="notice note"><a class="notice-link" href="#note-134">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their <code>Participant</code> entry may be revoked by ecosystem governance authority and their deposit slashed.</p>
+<div id="note-149" class="notice note"><a class="notice-link" href="#note-149">NOTE</a><p>Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their <code>Participant</code> entry may be revoked by ecosystem governance authority and their deposit slashed.</p>
 </div>
 <h5 id="mod-pp-msg-14-1-self-create-participant-parameters"><a class="toc-anchor" href="#mod-pp-msg-14-1-self-create-participant-parameters" >§</a> [MOD-PP-MSG-14-1] Self Create Participant parameters</h5>
 <ul>
@@ -4568,6 +4582,7 @@ else MUST abort.</p>
 <li><code>validator_participant_id</code> (uint64) (<em>mandatory</em>): <code>validator_participant</code> MUST be an ECOSYSTEM <a class="term-reference" href="#term:active-participant">active participant</a> or <a class="term-reference" href="#term:future-participant">future participant</a>.</li>
 <li><code>vs_operator</code> (account) (<em>optional</em>): no check required.</li>
 <li><code>did</code>, MUST conform to the DID Syntax, as specified [<a class="spec-reference" href="#ref:DID-CORE">DID-CORE</a>].</li>
+<li>if any existing <code>Participant</code> entry has non-null <code>did</code> equal to the provided <code>did</code>, its <code>corporation</code> MUST equal the signing <code>corporation</code>; else method MUST abort (per-Participant <code>(did, corporation)</code> consistency invariant: at any block height, all <code>Participant</code> entries sharing a non-null <code>did</code> are owned by the same <code>Corporation</code>).</li>
 <li><code>effective_from</code> MUST be in the future AND
 <ul>
 <li>MUST be greater or equal to <code>validator_participant.effective_from</code> AND</li>
@@ -4819,7 +4834,7 @@ else MUST abort.</p>
 </li>
 </ul>
 <p>return <code>found_perms</code>.</p>
-<div id="note-135" class="notice note"><a class="notice-link" href="#note-135">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
+<div id="note-150" class="notice note"><a class="notice-link" href="#note-150">NOTE</a><p>This works even is schema is open to any issuer or open to any verifier.</p>
 </div>
 <h4 id="mod-pp-qry-5-get-participantsession"><a class="toc-anchor" href="#mod-pp-qry-5-get-participantsession" >§</a> [MOD-PP-QRY-5] Get ParticipantSession</h4>
 <h5 id="mod-pp-qry-5-1-get-participantsession-parameters"><a class="toc-anchor" href="#mod-pp-qry-5-1-get-participantsession-parameters" >§</a> [MOD-PP-QRY-5-1] Get ParticipantSession parameters</h5>
@@ -5199,14 +5214,14 @@ else MUST abort.</p>
 </ul>
 <h4 id="mod-td-msg-7-burn-ecosystem-slashed-trust-deposit"><a class="toc-anchor" href="#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit" >§</a> [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit</h4>
 <p>Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.</p>
-<div id="warning-77" class="notice warning"><a class="notice-link" href="#warning-77">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
+<div id="warning-86" class="notice warning"><a class="notice-link" href="#warning-86">WARNING</a><p>Make sure to <strong>properly protect access to the execution of this method</strong> else it may lead to very destructive actions.</p>
 </div>
 <h5 id="mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters"><a class="toc-anchor" href="#mod-td-msg-7-1-burn-ecosystem-slashed-trust-deposit-method-parameters" >§</a> [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters</h5>
 <ul>
 <li><code>corporation</code> (group) (<em>mandatory</em>): corporation of the <a class="term-reference" href="#term:trust-deposit">trust deposit</a> we want to burn.</li>
 <li><code>amount</code> (number) (<em>mandatory</em>): value to burn, in <a class="term-reference" href="#term:denom">denom</a>.</li>
 </ul>
-<div id="warning-78" class="notice warning"><a class="notice-link" href="#warning-78">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
+<div id="warning-87" class="notice warning"><a class="notice-link" href="#warning-87">WARNING</a><p><strong>Alternative approach</strong>: For security and consistency, implementers MAY choose to reference the <strong>ID of the slashed permission</strong>, load it and use its defined <code>slashed_deposit</code> value as the slashing amount.
 The decision between this method and specifying the amount directly is left to implementers.</p>
 </div>
 <h5 id="mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks"><a class="toc-anchor" href="#mod-td-msg-7-2-burn-ecosystem-slashed-trust-deposit-precondition-checks" >§</a> [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks</h5>
@@ -5378,7 +5393,7 @@ The decision between this method and specifying the amount directly is left to i
 <p>Check if a <strong>VS Operator Authorization</strong> exists for <code>corporation</code> and <code>grantee</code>. If this is the case, MUST abort.</p>
 </li>
 </ul>
-<div id="warning-79" class="notice warning"><a class="notice-link" href="#warning-79">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>participant.corporation</code> and <code>participant.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+<div id="warning-88" class="notice warning"><a class="notice-link" href="#warning-88">WARNING</a><p>An <strong>Operator Authorization</strong> CAN be granted ONLY IF no <strong>VS Operator Authorization</strong> exists for <code>participant.corporation</code> and <code>participant.vs_operator</code>. <strong>Operator Authorization</strong> and <strong>VS Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
 </div>
 <h5 id="mod-de-msg-3-3-grant-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-3-3-grant-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks</h5>
 <ul>
@@ -5455,7 +5470,7 @@ The decision between this method and specifying the amount directly is left to i
 <li>No <code>OperatorAuthorization</code> <code>oauthz</code> where <code>oauthz.corporation</code> = <code>corporation</code> and <code>oauthz.operator</code> = <code>vs_operator</code> MUST exist.</li>
 <li>No other <code>VSOperatorAuthorization</code> <code>vsoauthz'</code> where <code>vsoauthz'.vs_operator</code> = <code>vs_operator</code> AND <code>vsoauthz'.corporation</code> != <code>corporation</code> MUST exist. In other words, a vs-agent VPR account cannot be controlled by multiple corporations.</li>
 </ul>
-<div id="warning-80" class="notice warning"><a class="notice-link" href="#warning-80">WARNING</a><p>A <strong>VS Operator Authorization</strong> record CAN be granted ONLY IF no <strong>OperatorAuthorization</strong> exists for the same <code>(corporation, vs_operator)</code> pair. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
+<div id="warning-89" class="notice warning"><a class="notice-link" href="#warning-89">WARNING</a><p>A <strong>VS Operator Authorization</strong> record CAN be granted ONLY IF no <strong>OperatorAuthorization</strong> exists for the same <code>(corporation, vs_operator)</code> pair. <strong>VS Operator Authorization</strong> and <strong>Operator Authorization</strong> are mutually exclusive for a given grantee.</p>
 </div>
 <h5 id="mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks"><a class="toc-anchor" href="#mod-de-msg-5-3-grant-vs-operator-authorization-fee-checks" >§</a> [MOD-DE-MSG-5-3] Grant VS Operator Authorization fee checks</h5>
 <ul>
@@ -5998,7 +6013,7 @@ rate_scale       = S</p>
 </ul>
 </li>
 </ul>
-<div id="warning-81" class="notice warning"><a class="notice-link" href="#warning-81">WARNING</a><ul>
+<div id="warning-90" class="notice warning"><a class="notice-link" href="#warning-90">WARNING</a><ul>
 <li>Conversions use base units only.</li>
 <li>Integer arithmetic MUST be used.</li>
 <li><code>quote_amount = floor(base_amount × rate / 10^rate_scale)</code>.</li>
