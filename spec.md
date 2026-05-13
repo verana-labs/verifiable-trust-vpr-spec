@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-draft18](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-draft21](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -28,7 +28,7 @@
 
 Decentralized trust ecosystems need shared infrastructure to answer a fundamental question: who is authorized to issue, verify, or govern credentials in a given context? Without a common registry layer, each ecosystem operates in isolation, trust decisions depend on ad hoc configurations, and there is no interoperable way for Verifiable Services and Verifiable User Agents to resolve the legitimacy of a credential or its issuer.
 
-The **Verifiable Public Registry (VPR)** is a decentralized "registry of registries" that provides this foundational infrastructure. It allows ecosystems to create and manage their own trust registries, define credential schemas with fine-grained permission policies, and assign roles — issuers, verifiers, grantors — through a transparent, on-chain governance model.
+The **Verifiable Public Registry (VPR)** is a decentralized "registry of registries" that provides this foundational infrastructure. It allows ecosystems to create and manage their own ecosystems, define credential schemas with fine-grained permission policies, and assign roles — issuers, verifiers, grantors — through a transparent, on-chain governance model.
 
 The VPR exposes a standardized query API that Verifiable Services and Verifiable User Agents use during trust resolution to confirm, in real time, whether a given participant is authorized to perform a specific action under a specific credential schema. This is what makes the trust in [Verifiable Trust](https://verana-labs.github.io/verifiable-trust-spec/) actually verifiable.
 
@@ -38,7 +38,7 @@ This specification defines the data model, API, and normative requirements for i
 
 ## About this Document
 
-In order to fully understand the concepts developed in this document, you should have some basic knowledge of [[ref:DID]], [[ref:DIDComm]], [[ref:VS]], [[ref:trust registry]], ledger-based applications, and more generally, all terms present in the [Terminology](#terminology) section.
+In order to fully understand the concepts developed in this document, you should have some basic knowledge of [[ref:DID]], [[ref:DIDComm]], [[ref:VS]], [[ref:ecosystem]], ledger-based applications, and more generally, all terms present in the [Terminology](#terminology) section.
 
 :::note
 Before exploring this spec, it is highly recommended to **first read** the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/).
@@ -46,16 +46,16 @@ Before exploring this spec, it is highly recommended to **first read** the [Veri
 
 ## Introduction
 
-### What is a Trust Registry?
+### What is an Ecosystem?
 
 *This section is non-normative.*
 
-A trust registry is an approved list of recognized ecosystem participants, such as trust registry operators, credential [[ref: issuers]] and [[ref: verifiers]] that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
+An ecosystem is an approved list of recognized participants, such as ecosystem operators, credential [[ref: issuers]] and [[ref: verifiers]], that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
 
-A trust registry typically expose APIs that are consumed by services that would like to [[ref: query]] its database, and take decisions based on the returned result:
+An ecosystem typically expose APIs that are consumed by services that would like to [[ref: query]] its database, and take decisions based on the returned result:
 
 - can [[ref: participant]] #1 issue credential for `schema` ABC of `ecosystem` E1?
-- can [[ref: participant]] #2 request credential presentation of credential issued by `issuer` DEF from `schema` GHI of `ecosystem` E2, for `jurisdiction` France in `context` CONTEXT?
+- can [[ref: participant]] #2 request credential presentation of credential issued by `issuer` DEF from `schema` GHI of `ecosystem` E2 in `context` CONTEXT?
 
 ### What is a Verifiable Public Registry?
 
@@ -63,11 +63,18 @@ A trust registry typically expose APIs that are consumed by services that would 
 
 A Verifiable Public Registry (VPR) is a “registry of registries”, a public service that provides foundational infrastructure for decentralized trust ecosystems. It offers:
 
-- trust registry management:  
-  ecosystems can create and manage their own trust registries, each with:
-  - defined [[ref: credential schemas]]
-  - assigned roles for [[ref: issuers]], [[ref: verifiers]], and [[ref: grantors]] (trust registry operators)
+- [[ref: corporation]] lifecycle and directory:
+  - corporation onboarding, with associated [[ref: DID]] and [[ref: corporation governance framework]] publication
+  - multi-member governance via a Cosmos SDK [[ref: group]] (members, voting policy, threshold)
+  - a public corporation directory queryable by indexers, [[ref: verifiable services]], and [[ref: verifiable user agents]]
+  - corporations are the foundational actors of the VPR: they control [[ref: participants]] and may themselves control [[ref: ecosystems]].
+
+- ecosystem management:  
+  - governance framework publication and versionning
+  - [[ref: credential schemas]] publication
+  - participant onboarding
   - custom business models and permission policies
+  - and more.
 
 - query API for trust resolution:  
   A standardized API used by [[ref: verifiable services]] (VSs) and [[ref: verifiable user agents]] (VUAs) to perform trust resolution, enabling them to query registry data and validate roles and permissions in real time.
@@ -79,21 +86,21 @@ scale max 800 width
  
 package "Verifiable Public Registry" as vpr {
 
-    object "Trust Registry of Ecosystem #A" as tra #3fbdb6 {
+    object "Ecosystem #A" as tra #3fbdb6 {
     }
 
-    object "Trust Registry of Ecosystem #B" as trb #3fbdb6 {
-
-    }
-
-    object "Trust Registry of Ecosystem #C" as trc #3fbdb6 {
+    object "Ecosystem #B" as trb #3fbdb6 {
 
     }
 
-    object "Trust Registry of Ecosystem #D" as trd #3fbdb6 {
+    object "Ecosystem #C" as trc #3fbdb6 {
 
     }
-    object "Trust Registry of Ecosystem #E" as tre #3fbdb6 {
+
+    object "Ecosystem #D" as trd #3fbdb6 {
+
+    }
+    object "Ecosystem #E" as tre #3fbdb6 {
 
     }
     
@@ -105,7 +112,7 @@ package "Verifiable Public Registry" as vpr {
 
 ```
 
-Permission directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: verifiable services]], and index them.
+Participant directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: verifiable services]], and index them.
 
 Indexers may expose this data through APIs for querying the indexed services or use it to build a search engine for querying the database of indexed [[ref: verifiable services]].
 
@@ -120,16 +127,22 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A [[ref: verifiable public registry]] account.
 
 [[def: applicant, applicants]]:
-~ A [[ref: account]] that starts a [[ref: validation process]].
+~ A [[ref: account]] that starts a [[ref: onboarding process]].
 
 [[def: corporation, corporations]]:
-~ An [[ref: group]] which is the owner of a specific resource in an [[ref: VPR]].
+~ A legal/organizational entity that controls Participants in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` extends a Cosmos SDK [[ref: group]] with VPR-level attributes (DID, governance framework, lifecycle).
+
+[[def: corporation governance framework, CGF]]:
+~ The governance framework (GF) of a [[ref: corporation]].
+
+[[def: corporation governance authority, CGA]]:
+~ The governance authority (GA) of a [[ref: corporation]].
 
 [[def: credential schema, credential schemas]]:
 ~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
 
-[[def: credential schema permission, credential schema permissions, CSP]]:
-~ A permission, linked to a [[ref: credential schema]], that represent, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], or [[ref: verifier grantor]] of a [[ref: credential schema]].
+[[def: credential schema participant, credential schema participants, CSP]]:
+~ A `Participant` entry, linked to a [[ref: credential schema]], that represents, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], or [[ref: verifier grantor]] of a [[ref: credential schema]].
 
 [[def: decentralized identifier, DID, DIDs]]:
 ~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]].
@@ -164,10 +177,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The governance authority (GA) of a [[ref: VPR]].
 
 [[def: grantor, grantors]]:
-~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: trust registry]].
+~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: ecosystem]].
 
 [[def: group, groups]]:
-~ A [[ref: verifiable public registry]] group.
+~ The underlying Cosmos SDK group primitive that a [[ref: corporation]] extends. Members and policies are managed by the group module; VPR-level attributes (DID, governance framework, lifecycle) live on the corresponding [[ref: corporation]] entry.
 
 [[def: holder, holders]]:
 ~ A role an entity might perform by possessing one or more verifiable credentials and generating verifiable presentations from them. A holder is often, but not always, a [[ref: subject]] of the verifiable credentials they are holding. Holders store their credentials in credential repositories. Example holders include organizations, persons, things.
@@ -176,7 +189,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or an [[ref: issuer grantor]] for issuing credentials of a given [[ref: credential schema]] to [[ref: holders]].
 
 [[def: issuer grantor, issuer grantors]]:
-~ A trust registry operator role an [[ref: entity]] is granted by an [[ref: ecosystem]] for a given [[ref: credential schema]] for adding or revoking issuers.
+~ An ecosystem operator role an [[ref: entity]] is granted by an [[ref: ecosystem]] for a given [[ref: credential schema]] for adding or revoking issuers.
 
 [[def: json schema, json schemas, Json Schema, Json Schemas]]
 ~ a Json Schema, as specified in [https://json-schema.org/specification](https://json-schema.org/specification).
@@ -203,7 +216,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ Fees required, in [[ref: denom]], to execute a [[ref: transaction]] in an [[ref: VPR]].
 
 [[def: trust deposit, trust deposits]]:
-~ A financial deposit that is used as a trust guarantee. For a given [[ref: corporation]], its trust deposit is increased when running validation process (either as an [[ref: applicant]] or as a [[ref: validator]]).
+~ A financial deposit that is used as a trust guarantee. For a given [[ref: corporation]], its trust deposit is increased when running onboarding process (either as an [[ref: applicant]] or as a [[ref: validator]]).
 
 [[def: trust fee, trust fees]]:
 ~ Fees paid by a [[ref: participant]] that are distributed to other [[ref: participants]].
@@ -214,26 +227,26 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: trust unit, trust units, TU, TUs]]:
 ~ A fake denom that is not usable as a token (cannot be transferred, or used for paying in transactions). Trust unit is used to define fees in Permissions. Fees defined in trust units are automatically converted to [[ref: native denom]] when a transaction is executed, using an exchange rate `TU/[[ref: native denom]]`. Trust unit is used to compensate [[ref: native denom]] fluctuation.
 
-[[def:trust registry, trust registries]]
-~ An approved list of [[ref: issuers]] and [[ref: verifiers]] that are authorized to issue/verify certain credentials in an ecosystem.
+[[def:ecosystem, ecosystems]]
+~ An approved list of [[ref: participants]] that are authorized to issue/verify certain credentials in an ecosystem.
 
 [[def: URI, URIs]]
 ~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
 
-[[def: active permission, active permissions]]:
-~ A credential schema permission of a given type, which effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
+[[def: active participant, active participants]]:
+~ A participant of a given role, which effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
 
-[[def: future permission, future permissions]]:
-~ A credential schema permission of a given type, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.
+[[def: future participant, future participants]]:
+~ A participant of a given role, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.
 
-[[def: validation process]]:
+[[def: onboarding process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
 
 [[def: validator]]:
-~ A role an [[ref: entity]] performs by participating in validation processes with [[ref: applicants]] in order to register them as [[ref: issuer]], or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them.
+~ A role an [[ref: entity]] performs by participating in onboarding processes with [[ref: applicants]] in order to register them as [[ref: issuer]], or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them.
 
 [[def: verifiable public registry, VPR, VPRs]]:
-~ a public, normally decentralized, ledger-based network, which provides: trust registry features, that can be used by all its [[ref: participants]]: create trust registries, for each trust registry, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
+~ a public, normally decentralized, ledger-based network, which provides: ecosystem features, that can be used by all its [[ref: participants]]: create ecosystems, for each ecosystem, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
 
 [[def: verifiable service, verifiable services, VS, VSs]]:
 ~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
@@ -248,7 +261,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or a [[ref: verifier grantor]] for verifying credentials of a given [[ref: credential schema]].
 
 [[def: verifier grantor, verifier grantors]]:
-~ A trust registry operator role an [[ref: entity]] is granted by an [[ref: ecosystem]] for a given [[ref: credential schema]] for adding or revoking verifiers.
+~ An ecosystem operator role an [[ref: entity]] is granted by an [[ref: ecosystem]] for a given [[ref: credential schema]] for adding or revoking verifiers.
 
 [[def: verifiable credential, verifiable credentials]]:
 ~ A verifiable credential as defined in [[spec-norm:VC-DATA-MODEL]].
@@ -267,11 +280,11 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 ## Features of a Verifiable Public Registry (VPR)
 
-### Trust Registry Management
+### Ecosystem Management
 
 *This section is non-normative.*
 
-In an [[ref: VPR]], any [[ref: corporation]] can create a `TrustRegistry` entry that represents a [[ref: trust registry]] of an ecosystem. Each `TrustRegistry` entry must provide, at a minimum:
+In an [[ref: VPR]], any [[ref: corporation]] can create an `Ecosystem` entry to represent an [[ref: ecosystem]] it controls. Each `Ecosystem` entry MUST provide, at a minimum:
 
 - an ecosystem controlled resolvable [[ref: DID]];
 - one or more [[ref: ecosystem governance framework]] document(s);
@@ -284,7 +297,7 @@ The Verifiable Public Registry (VPR) is agnostic to the specific DID methods use
 @startuml
 scale max 800 width
  
-object "Trust Registry" as tra #3fbdb6 {
+object "Ecosystem" as tra #3fbdb6 {
     ecosystem did
     ecosystem credential schemas
     ecosystem governance framework docs
@@ -294,68 +307,69 @@ object "Trust Registry" as tra #3fbdb6 {
 
 ```
 
-### Credential Schemas and Permissions
+### Credential Schemas and Participants
 
 *This section is non-normative.*
 
-[[ref: Credential schemas]] are created and managed by trust registry corporation ([[ref: ecosystems]]). Each [[ref: Credential schema]] includes, at a minimum:
+[[ref: Credential schemas]] are created and managed by [[ref: ecosystems]] (i.e., by the [[ref: corporation]] controlling each [[ref: ecosystem]]). Each [[ref: Credential schema]] includes, at a minimum:
 
-- A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]]
-- A **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` permissions are granted. Modes include:
-  - `OPEN`: `ISSUER` permissions can be self-created by anyone.
-  - `ECOSYSTEM_VALIDATION_PROCESS`: `ISSUER` permissions are granted directly by the [[ref: ecosystem]], the trust registry corporation through the execution of a Validation Process.
-  - `GRANTOR_VALIDATION_PROCESS`: `ISSUER` permissions are granted by one or several [[ref: issuer grantor]](s) (trust registry operator(s) responsible for selecting issuers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]] through the execution of a Validation Process.
-- A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` permissions are granted. Modes include:
-  - `OPEN`: `VERIFIER` permissions can be created by anyone.
-  - `ECOSYSTEM_VALIDATION_PROCESS`: `VERIFIER` permissions are granted directly by the [[ref: ecosystem]], the Trust Registry corporation through the execution of a Validation Process.
-  - `GRANTOR_VALIDATION_PROCESS`: `VERIFIER` permissions are granted by one or several [[ref: verifier grantor]](s) (trust registry operator(s) responsible for selecting verifiers for the credential schema of this [[ref: ecosystem]]), selected by the [[ref: ecosystem]], through the execution of a Validation Process.
-- An **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` permissions are granted. Modes include:
-  - `ISSUER_VALIDATION_PROCESS`: `HOLDER` permissions are granted directly by issuers to holder through the execution of a Validation Process.
-  - `PERMISSIONLESS`: holder that want to obtain credentials from an issuer do not require a permission in the VPR.
-- A **Permission tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each created permission in the tree can define business rules, see below [Business Models](#business-models).
+- A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
+- An **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` `Participant` entries are created. Modes include:
+  - `OPEN`: `ISSUER` Participants can be self-created by any [[ref: corporation]].
+  - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Participants are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
+  - `GRANTOR_ONBOARDING_PROCESS`: `ISSUER` Participants are created by one or several [[ref: issuer grantor]](s) — ecosystem operators responsible for onboarding issuers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
+- A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` `Participant` entries are created. Modes include:
+  - `OPEN`: `VERIFIER` Participants can be self-created by any [[ref: corporation]].
+  - `ECOSYSTEM_ONBOARDING_PROCESS`: `VERIFIER` Participants are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
+  - `GRANTOR_ONBOARDING_PROCESS`: `VERIFIER` Participants are created by one or several [[ref: verifier grantor]](s) — ecosystem operators responsible for onboarding verifiers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
+- A **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` `Participant` entries are created. Modes include:
+  - `ISSUER_ONBOARDING_PROCESS`: `HOLDER` Participants are created directly by [[ref: issuers]] for holders, through an [[ref: onboarding process]].
+  - `PERMISSIONLESS`: a holder that wants to obtain credentials from an [[ref: issuer]] does not require a `Participant` entry in the VPR.
+- A **Participant tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each `Participant` entry in the tree can define business rules; see [Business Models](#business-models) below.
 
 ```plantuml
 
 @startuml
 scale max 800 width
  
-package "Example Credential Schema Permission Tree" as cs {
+package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
-        permissionType: ECOSYSTEM (Root)
+        role: ECOSYSTEM (Root)
         did:example:ecosystemA
     }
     object "Issuer Grantor B" as ig {
-        permissionType: ISSUER_GRANTOR
+        role: ISSUER_GRANTOR
         did:example:igB
     }
     object "Issuer C" as issuer #7677ed  {
-        permissionType: ISSUER
+        role: ISSUER
         did:example:iC
     }
     object "Verifier Grantor D" as vg {
-        permissionType: VERIFIER_GRANTOR
+        role: VERIFIER_GRANTOR
         did:example:vgD
     }
     object "Verifier E" as verifier #00b0f0 {
-        permissionType: VERIFIER
+        role: VERIFIER
         did:example:vE
     }
 
     object "Holder Z " as holder #FFB073 {
-        permissionType: HOLDER
+        role: HOLDER
+        did:example:vZ
     }
 }
 
 
 
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
+tr --> ig : creates schema participant
+ig --> issuer : creates schema participant
 
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
+tr --> vg : creates schema participant
+vg --> verifier : creates schema participant
 
-issuer --> holder: granted schema permission
+issuer --> holder: creates schema participant
 
 @enduml
 
@@ -365,12 +379,12 @@ Participant roles are defined in the table below:
 
 | **Participant Role**   | **Description**                                                  |
 |-----------------------|------------------------------------------------------------------|
-| **Ecosystem**    | Create and control trust registries and credential Schemas. Recognize other participants by granting permission(s) to them.        |
-| **Issuer Grantor**    | Trust Registry operator that grants Issuer permissions to candidate issuers.                   |
-| **Verifier Grantor**  | Trust Registry operator that grants Verifier permissions to candidate verifiers.               |
+| **Ecosystem**    | Create and control [[ref: ecosystems]] and credential schemas. Recognize other participants by validating them onto the schema (creating their `Participant` entries).        |
+| **Issuer Grantor**    | Ecosystem operator that creates `ISSUER` `Participant` entries for candidate issuers.                   |
+| **Verifier Grantor**  | Ecosystem operator that creates `VERIFIER` `Participant` entries for candidate verifiers.               |
 | **Issuer**            | Can issue credentials of this schema.                            |
 | **Verifier**          | Can request presentation of credentials of this schema.          |
-| **Holder**            | Holds a credential. Holder permission provide credential status (active, revoked...)  |
+| **Holder**            | Holds a credential. `HOLDER` `Participant` entries carry credential status (active, revoked, ...). |
 
 Example of a Json Schema credential schema:
 
@@ -423,16 +437,16 @@ Example of a Json Schema credential schema:
 
 To participate in an [[ref: ecosystem]] and assume a role associated with a specific [[ref: credential schema]]:
 
-- if schema is `OPEN` for issuance and/or verification: an entity must have an [[ref: account]] in the [[ref: VPR]] and self-create its permission.
+- if the schema is `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and self-create its `Participant` entry.
 
-- if schema is not `OPEN` for issuance and/or verification: an entity must have an [[ref: account]] in the [[ref: VPR]] and complete a [[ref: validation process]] to obtain the required permission.
+- if the schema is not `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and complete an [[ref: onboarding process]] to obtain its `Participant` entry.
 
-The [[ref: validation process]] involves two parties:
+The [[ref: onboarding process]] involves two parties:
 
-- The [[ref: applicant]] — the entity requesting permission for a credential schema within the ecosystem.  
-- The [[ref: validator]] — an entity that already holds permission for the same credential schema and has been delegated authority to validate applicants and issue permissions.
+- The [[ref: applicant]] — the [[ref: corporation]] requesting a `Participant` entry for a credential schema within the ecosystem.
+- The [[ref: validator]] — a corporation that already holds a `Participant` entry for the same credential schema and has been delegated authority to validate applicants and create new `Participant` entries.
 
-Running a validation process **typically involves the payment of [[ref: trust fees]]**. [[ref: Trust fee]] amount to be paid by the [[ref: applicant]] is defined in the permission of the [[ref: validator]] involved in the [[ref: validation process]]:
+Running an [[ref: onboarding process]] **typically involves the payment of [[ref: trust fees]]**. The [[ref: trust fee]] amount to be paid by the [[ref: applicant]] is defined in the [[ref: validator]]'s `Participant` entry:
 
 ```plantuml
 
@@ -441,69 +455,176 @@ scale max 800 width
  
 package "Pay per validation Fee Structure" as cs {
 
-    object "Ecosystem A - Credential Schema Root Permission" as tr #3fbdb6 {
+    object "Ecosystem A - Credential Schema Root Participant" as tr #3fbdb6 {
         did:example:ecosystemA
         Grantor applicant validation cost: 1000 TUs
     }
-    object "Issuer Grantor B - Credential Schema Permission" as ig {
+    object "Issuer Grantor B - Credential Schema Participant" as ig {
         did:example:igB
         Issuer applicant validation cost: 1000 TUs
     }
-    object "Issuer C - Credential Schema Permission" as issuer #7677ed  {
+    object "Issuer C - Credential Schema Participant" as issuer #7677ed  {
         did:example:iC
         Holder applicant validation cost: 10 TUs
     }
-    object "Verifier Grantor D -  Credential Schema Permission" as vg {
+    object "Verifier Grantor D -  Credential Schema Participant" as vg {
         did:example:vgD
         Verifier applicant validation cost: 200 TUs
     }
-    object "Verifier E - Credential Schema Permission" as verifier #00b0f0 {
+    object "Verifier E - Credential Schema Participant" as verifier #00b0f0 {
         did:example:vE
     }
 
-    object "Holder Z - Credential Schema Permission" as holder #FFB073 {
-        permissionType: HOLDER
+    object "Holder Z - Credential Schema Participant" as holder #FFB073 {
+        role: HOLDER
     }
 }
 
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
-issuer --> holder: granted schema permission
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
+tr --> ig : creates schema participant
+ig --> issuer : creates schema participant
+issuer --> holder: creates schema participant
+tr --> vg : creates schema participant
+vg --> verifier : creates schema participant
 
 @enduml
 
 ```
 
-### DID Indexing
+### Corporation Management
 
 *This section is non-normative.*
 
-The Permission registry is a can be used by crawlers to index the metadata associated with [[ref: verifiable services]].
+A [[ref: corporation]] is the VPR-level entity that represents an authority acting in the registry. It extends a Cosmos SDK [[ref: group]] (whose members and policies are managed by the group module) with VPR-specific attributes: a [[ref: DID]], a [[ref: corporation governance framework]] (CGF), and lifecycle metadata. A `Corporation` entry has no `id` of its own — it is keyed by its underlying [[ref: group]] (1:1).
 
-Search engines can iterate over the permissions, and index [[ref: VSs]] by resolving the service identifier (at the moment a [[ref: DID]], that could be extended in the future), verify if service is a [[ref: verifiable service]], and in such a case extracting their verifiable metadata, such as [[ref: linked-vp]] presented credentials.
+A corporation interacts with the VPR in two complementary ways:
 
-The index is particularly important for [[ref: verifiable user agents]], such as social browsers, CDN enabled browsers... However, it can also be leveraged by **traditional, form-based search engines**, which may return simple links for accessing [[ref: VSs]].
+- as the **controller** of zero or more [[ref: ecosystems]] — i.e., the corporation owns the corresponding `Ecosystem` entries. The controlling corporation manages each ecosystem's [[ref: EGF]], its [[ref: credential schemas]], and the root `ECOSYSTEM` `Participant` entries of those schemas.
+- as the **owner of zero or more `Participant` entries** in zero or more [[ref: ecosystems]] — i.e., the corporation acts as `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `HOLDER`, or root `ECOSYSTEM` for [[ref: credential schemas]] of those ecosystems.
 
+The two roles are **independent**: a corporation MAY control no ecosystem at all and only hold `Participant` entries in third-party ecosystems; or it MAY control several ecosystems and additionally hold `Participant` entries in others; or any combination of the two.
 
 ```plantuml
 
 @startuml
 scale max 800 width
-object "Permission registry" as didd
+
+object "Corporation X" as corpX #FFD580 {
+  did:example:corpX
+}
+
+' Ecosystems controlled by Corporation X
+object "Ecosystem A" as eA #3fbdb6 {
+  did:example:eA
+}
+object "Ecosystem B" as eB #3fbdb6 {
+  did:example:eB
+}
+
+' Ecosystems where Corporation X is just a participant
+object "Ecosystem C" as eC #3fbdb6 {
+  did:example:eC
+}
+object "Ecosystem D" as eD #3fbdb6 {
+  did:example:eD
+}
+
+' Corporation X's Participant entries
+object "ISSUER Participant\n(Ecosystem C, Schema #1)" as pC #7677ed
+object "VERIFIER Participant\n(Ecosystem D, Schema #1)" as pD #00b0f0
+object "HOLDER Participant\n(Ecosystem A, Schema #2)" as pA #FFB073
+
+corpX --> eA : controls
+corpX --> eB : controls
+
+corpX --> pC : owns
+corpX --> pD : owns
+corpX --> pA : owns
+
+pC ..> eC : in
+pD ..> eD : in
+pA ..> eA : in
+
+@enduml
+
+```
+
+The same `Corporation` entry is the single entry point for the corporation's governance (the CGF), authorization delegation (via `OperatorAuthorization` to one or more `operator` accounts), and trust-deposit accounting (`TrustDeposit`). See the [Corporation Module](#corporation-module) for the methods that manage `Corporation` entries.
+
+### DID Indexing
+
+*This section is non-normative.*
+
+The `Participant` registry is the foundation for building **searchable indexes of [[ref: verifiable services]] and the verifiable metadata they expose**. Crawlers iterate over `Participant` entries, resolve each service identifier (currently a [[ref: DID]], extensible in the future), verify that the service is a [[ref: verifiable service]], and extract its verifiable metadata — most notably the credentials presented through [[ref: linked-vp]] — together with the [[ref: ecosystem]] memberships, [[ref: credential schema]] permissions, and [[ref: trust deposit]] level associated with the controlling [[ref: corporation]].
+
+Unlike a traditional web index, this index is **trust-typed**: every entry carries cryptographically verifiable claims about *what* the service is, *who* operates it, and *under which governance frameworks* it is accredited. This unlocks a class of discovery use cases that traditional search engines cannot serve.
+
+#### AI agent discovery
+
+AI agents are first-class consumers of the index. Before delegating a task or accepting a connection, an agent needs to find counterparts whose **presented credentials match the capabilities required for the interaction**. Querying the index, an AI agent can:
+
+- find [[ref: verifiable services]] qualified for a specific task — for example, a payment processor accredited in a given jurisdiction, a KYC issuer recognized by a target [[ref: ecosystem]], or an MCP-style service whose operator holds a recognized organization credential;
+- discover other AI agents whose credentials prove the right scope, authority, or operator;
+- restrict the search to a specific [[ref: ecosystem]] or to services that comply with a chosen [[ref: credential schema]];
+- rank candidates by [[ref: trust deposit]] size, accreditations held, slashing history, or credential freshness, in order to bias selection toward parties with stronger economic accountability.
+
+Because every indexed claim is anchored in the [[ref: VPR]], an AI agent can verify a counterpart end-to-end *before* initiating the interaction, avoiding spoofed services and unaccredited issuers.
+
+#### Verifiable User Agent content discovery
+
+[[ref: Verifiable user agents]] (VUAs) — such as social browsers, agentic browsers, or CDN-aware clients — use the index to **find content and services that are compatible with the user's context**: the credentials the user holds, the [[ref: ecosystems]] the user trusts, the jurisdictions and languages that apply, and the schemas that the user's wallet can satisfy.
+
+Typical VUA queries include:
+
+- *"Show only services accredited under ecosystem X"* — filter by [[ref: ecosystem]] membership.
+- *"Show services that accept the credentials currently in my wallet"* — match the holder's credentials against each [[ref: VS]]'s expected presentations.
+- *"Show issuers of schema Y operating in jurisdiction Z"* — combine [[ref: credential schema]] permissions with corporation metadata.
+- *"Show services my user has previously interacted with successfully"* — combine the index with the VUA's local history.
+
+The result is a feed of [[ref: VSs]] for which a proof of trust can be displayed to the user *before* connection, in line with the VUA enforcement obligations defined in this spec and in the [[ref: VT Spec]].
+
+#### Other consumers
+
+The same index serves additional consumers:
+
+- **Trust-aware and traditional, form-based search engines**, which can return ordinary links to [[ref: VSs]] enriched with verifiable trust signals (issuer accreditations, [[ref: ecosystem]] memberships, [[ref: trust deposit]] level).
+- **Ecosystem operators and governance authorities**, which use the index to monitor accredited issuers, verifiers, and grantors, observe schema adoption across [[ref: ecosystems]], and detect rogue or expired participants.
+- **Auditors, regulators, and compliance tools**, which rely on the index to map the supply chain of trust behind a given service or credential, and to verify that participants are still in good standing.
+- **Analytics and reputation services**, which combine indexed metadata with on-chain history (trust-deposit movements, slashing events, session volumes) to produce reputational signals at the [[ref: corporation]] level.
+
+#### Indexing pipeline
+
+
+```plantuml
+
+@startuml
+scale max 1000 width
+
+object "Participant registry" as didd
 object "Crawler" as crawler #3fbdb6
 object "Index" as index #3fbdb6
+
 object "VS #1" as dts1 #7677ed
 object "VS #2" as dts2 #7677ed
+
+object "AI agent" as aiagent #ffb347
 object "VUA" as browser #00b0f0
+object "Search engine" as search #d3d3d3
+object "Governance /\nAudit / Analytics" as gov #f5b7b1
+
 object "User" as user
-didd <|-- crawler : iterate over Permission registry
-crawler --|> dts1 : resolve DID, get linked-vps, index data
-crawler --|> dts2 : resolve DID, get linked-vps, index data
-browser --|> index: query index
-crawler --|> index: create/update index 
-user <|-- browser : show result
+
+didd <|-- crawler : iterate Participant registry
+crawler --|> dts1 : resolve DID, fetch linked-vps,\nindex verifiable metadata
+crawler --|> dts2 : resolve DID, fetch linked-vps,\nindex verifiable metadata
+crawler --|> index : create / update index
+
+aiagent --|> index : query (find counterparts\nby credentials presented)
+browser --|> index : query (find content\ncompatible with user context)
+search --|> index : query (enrich links\nwith trust signals)
+gov --|> index : query (monitor accreditations,\naudit, build reputation)
+
+user <|-- browser : show feed of\nverifiable services
+user <|-- search : show enriched\nsearch results
 @enduml
 
 ```
@@ -514,15 +635,13 @@ user <|-- browser : show result
 
 *This section is non-normative.*
 
-In a [[ref: VPR]], each [[ref: account]] is associated with a [[ref: trust deposit]].
+In a [[ref: VPR]], each [[ref: corporation]] is associated with a [[ref: trust deposit]].
 
-This [[ref: trust deposit]] is automatically funded through transactions involving **trust operations**, such as:
-
-- Paying trust fees between participants when enforcing ecosystem governance rules for services, credential issuance, or presentation...
+This [[ref: trust deposit]] is automatically funded through transactions involving **trust operations**, such as onboarding processes, credential issuance, or presentation...
 
 The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
 
-- The more you use the [[ref: VPR]], the more your [[ref: trust deposit]] grows.
+- The more a [[ref: corporation]] uses the [[ref: VPR]], the more its [[ref: trust deposit]] grows.
 - Trust deposits **generate yield**: block execution fees are distributed not only to network validators, but also to **trust deposit holders**.
 - **network-level penalties**: If a participant violates the [[ref: governance framework]] of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority.
 - **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), their **ecosystem-specific trust deposit can be slashed** by the corresponding ecosystem governance authority.
@@ -533,26 +652,11 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
 
-#### Object creation
+#### Onboarding Process Trust Fees
 
 *This section is non-normative.*
 
-The following operations **only require payment of network fees** (no trust deposit is involved):
-
-- **Trust Registries**: requires paying only [[ref: network fees]]  
-- **Credential Schemas**: requires paying only [[ref: network fees]]  
-
-
-- Updating the **governance framework documents** of an ecosystem trust registry  
-- Updating a Credential Schema
-- Updating a Trust Registry
-- ...
-
-#### Validation process trust fees
-
-*This section is non-normative.*
-
-We've explained in the [Credential Schemas and Permissions](#credential-schemas-and-permissions) section above what is a validation process.
+We've explained in the [Credential Schemas and Participants](#credential-schemas-and-participants) section above what is an onboarding process.
 
 The table below summarizes the possible combinations of applicants and validators:
 
@@ -564,16 +668,15 @@ The table below summarizes the possible combinations of applicants and validator
 | Verifier         | renewable subscription (4)          |                                       | renewable subscription (2)          |                                     |          |                                         |
 | Holder           |                                     |                                       |                                     | renewable subscription  (5)         |          |                                         |
 
-- (1): if *issuer onboarding mode* is set to GRANTOR_VALIDATION_PROCESS.
-- (2): if *verifier onboarding mode* is set to GRANTOR_VALIDATION_PROCESS.
-- (3): if *issuer onboarding mode* is set to ECOSYSTEM_VALIDATION_PROCESS.
-- (4): if *verifier onboarding mode* is set to ECOSYSTEM_VALIDATION_PROCESS.
-- (5): if *holder onboarding mode* is set to ISSUEr_VALIDATION_PROCESS.
+- (1): if *issuer onboarding mode* is set to GRANTOR_ONBOARDING_PROCESS.
+- (2): if *verifier onboarding mode* is set to GRANTOR_ONBOARDING_PROCESS.
+- (3): if *issuer onboarding mode* is set to ECOSYSTEM_ONBOARDING_PROCESS.
+- (4): if *verifier onboarding mode* is set to ECOSYSTEM_ONBOARDING_PROCESS.
+- (5): if *holder onboarding mode* is set to ISSUER_ONBOARDING_PROCESS.
 
+Onboarding process is started by the applicant.
 
-Validation process is started by the applicant.
-
-*Example of a candidate [[ref: issuer]] ([[ref: applicant]]) that would like to be granted an ISSUER permission for a credential schema of an ecosystem, by a [[ref: validator]] that has a ISSUER_GRANTOR permission:*
+*Example of a candidate [[ref: issuer]] ([[ref: applicant]]) that would like to obtain an `ISSUER` `Participant` entry for a credential schema of an ecosystem, validated by a [[ref: validator]] that holds an `ISSUER_GRANTOR` `Participant` entry:*
 
 ```plantuml
 scale max 800 width
@@ -585,36 +688,36 @@ actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
 
 participant "Verifiable Public Registry" as VPR #3fbdb6
 
-ApplicantAccount --> VPR: create new validation with Validator 
-VPR <-- VPR: create validation entry.
-ApplicantAccount <-- VPR: validation entry created
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validation.perm\nby creating a DIDComm connection
+ApplicantAccount --> VPR: start onboarding process with Validator
+VPR <-- VPR: create applicant Participant entry\n(op_state = PENDING)
+ApplicantAccount <-- VPR: applicant Participant entry created
+ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in\napplicant_participant.validator_participant\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
-ApplicantBrowser --> ValidatorVS: I want to proceed with validation.id=...
-ValidatorVS --> ValidatorVS: load validation with id=...\nand verify the associated validation.perm is referring to me
-ApplicantBrowser <-- ValidatorVS: request proof of control\nof validation.applicant account (blind sign)
+ApplicantBrowser --> ValidatorVS: I want to proceed with applicant_participant.id=...
+ValidatorVS --> ValidatorVS: load applicant Participant with this id\nand verify validator_participant_id refers to me
+ApplicantBrowser <-- ValidatorVS: request proof of control\nof applicant_participant.corporation account (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proof of operator account
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are the operator\nof validation entry, I trust you.
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are an operator\nof the applicant Participant, I trust you.
 ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
 ApplicantBrowser --> ValidatorVS: send DID
 ValidatorVS --> ValidatorVS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be registered in the ISSUER permission (blind sign)
+ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be registered on your `ISSUER` `Participant` entry (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proofs
 ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of this DID, I trust you.
 note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
 ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
 note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorVS: Your are a legitimate candidate. I'll now create an ISSUER permission for your account and DID.
-ValidatorAccount --> VPR #3fbdb6: set validation.state to VALIDATED\ncreate permission(s) for applicant.
+ApplicantBrowser <-- ValidatorVS: You are a legitimate candidate. I'll now finalize your `ISSUER` `Participant` entry.
+ValidatorAccount --> VPR #3fbdb6: set applicant_participant.op_state to VALIDATED\n(finalize the `ISSUER` `Participant` entry)
 VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify ISSUER permission created for your account and DID.\nDID can now issue credentials of this schema.
+ApplicantBrowser <-- ValidatorVS: notify `ISSUER` `Participant` entry validated for your corporation and DID.\nDID can now issue credentials of this schema.
 ```
 
-The **total fees** paid by the applicant consists of:
+The **total fees** paid by the applicant consist of:
 
-- The validation [[ref: trust fees]] defined in the permission of the validator participating in the validation process, **plus**
-- An additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant’s trust deposit** when the validation process begins.
+- The validation [[ref: trust fees]] defined in the validator's `Participant` entry (the one acting as the validator in the onboarding process), **plus**
+- an additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant's [[ref: trust deposit]]** when the onboarding process begins, **plus**
 - [[ref: network fees]] (not part of the escrowed amount).
 
 Example, using 20% for `trust_deposit_rate`:
@@ -646,7 +749,7 @@ issuera --> issuertd:  \t+200 TUs
 
 ```
 
-Upon completion of the validation process, **escrowed trust fees are distributed to the validator** as follows:
+Upon completion of the onboarding process, **escrowed trust fees are distributed to the validator** as follows:
 
 - A portion defined by `trust_deposit_rate` is allocated to the **validator’s trust deposit**.  
 - The remaining amount is **transferred directly to the validator’s wallet**.
@@ -680,7 +783,7 @@ ig --> igtd: \t+200 TUs
 
 *This section is non-normative.*
 
-**Pay-per-issuance** and **pay-per-verification** [[ref: trust fees]] are defined **at the permission level** for each role within the ecosystem.
+**Pay-per-issuance** and **pay-per-verification** [[ref: trust fees]] are defined **on each `Participant` entry** for each role within the ecosystem.
 
 ```plantuml
 
@@ -689,54 +792,54 @@ scale max 800 width
  
 package "Ecosystem #A - Credential Schema #1" as cs {
 
-    object "Ecosystem #A - Credential Schema #1 Root Permission" as tr #3fbdb6 {
+    object "Ecosystem #A - Credential Schema #1 Root Participant" as tr #3fbdb6 {
         did:example:ecosystemA
         issuance cost: 10 TUs
         verification cost: 20 TUs
     }
-    object "Issuer Grantor #B - Credential Schema #1 Permission" as ig {
+    object "Issuer Grantor #B - Credential Schema #1 Participant" as ig {
         did:example:igB
         issuance cost: 5 TUs
         verification cost: 5 TUs
     }
-    object "Issuer #C - Credential Schema #1 Permission" as issuer #7677ed  {
+    object "Issuer #C - Credential Schema #1 Participant" as issuer #7677ed  {
         did:example:iC
         verification cost: 30 TUs
     }
-    object "Verifier Grantor #D - Credential #1 Schema Permission" as vg {
+    object "Verifier Grantor #D - Credential #1 Schema Participant" as vg {
         did:example:vgD
         verification cost: 2 TUs
     }
-    object "Verifier #E - Credential Schema #1 Permission" as verifier #00b0f0 {
+    object "Verifier #E - Credential Schema #1 Participant" as verifier #00b0f0 {
         did:example:vE
     }
 }
 
 
 
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
+tr --> ig : creates schema participant
+ig --> issuer : creates schema participant
 
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
+tr --> vg : creates schema participant
+vg --> verifier : creates schema participant
 
 @enduml
 
 ```
 
-Entities acting as **issuers** or **verifiers** for a given credential schema **may be required to pay trust fees** based on the schema's configuration and permission tree.
+[[ref: Corporations]] acting as **issuers** or **verifiers** for a given credential schema **may be required to pay trust fees** based on the schema's configuration and `Participant` tree.
 
-If trust fee payment is required, the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**.
+If trust fee payment is required, the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**, else HOLDER agent will not accept the operation.
 
 Key Points for "Pay-Per" Business Models
 
-- For a given credential schema, **ecosystem** and their participants may define **pay-per-issuance** (or **pay-per-verification**) [[ref: trust fees]] in their respective permissions.
+- For a given credential schema, the **ecosystem** and its participants may define **pay-per-issuance** (or **pay-per-verification**) [[ref: trust fees]] on their respective `Participant` entries.
 
-- In such cases, a participant ISSUER (or VERIFIER) **must pay**:
-  - The corresponding **issuance** (or **verification**) trust fees for each involved permission;
-  - An additional amount equal to the `trust_deposit_rate` of the calculated trust fees, allocated to the **applicant’s trust deposit**;
-  - An amount equal to `wallet_user_agent_reward_rate` of the calculated trust fees, used to **reward the Wallet User Agent**;
-  - An amount equal to `user_agent_reward_rate` of the calculated trust fees, used to **reward the User Agent**.
+- In such cases, an `ISSUER` (or `VERIFIER`) `Participant` **must pay**:
+  - the corresponding **issuance** (or **verification**) trust fees for each involved `Participant` entry along the `Participant` tree;
+  - an additional amount equal to the `trust_deposit_rate` of the calculated trust fees, allocated to the **payer's [[ref: trust deposit]]**;
+  - (optional) an amount equal to `wallet_user_agent_reward_rate` of the calculated trust fees, used to **reward the Wallet User Agent**;
+  - (optional) an amount equal to `user_agent_reward_rate` of the calculated trust fees, used to **reward the User Agent**.
 
 Fee Distribution Model
 
@@ -746,13 +849,13 @@ Trust fees are **consistently distributed** across participants:
 - The remaining portion is **transferred directly to the participant’s wallet**.
 
 :::note
-**Wallet User Agents** and **User Agents** that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment.  
+Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment.  
 If not, they **must reject** the issuance or verification request.
 
 Note: The **User Agent** and **Wallet User Agent** may refer to the same implementation.
 :::
 
-Distribution example for the issuance by ISSUER #C of a credential, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
+Distribution example for the issuance by `ISSUER` #C of a credential, using the `Participant` tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
 
 ```plantuml
 
@@ -820,7 +923,7 @@ issuera --> issuertd:  \t+3 TUs
 
 ```
 
-Distribution example for the verification by VERIFIER #E of a credential issued by ISSUER #C, using the permission tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
+Distribution example for the verification by `VERIFIER` #E of a credential issued by `ISSUER` #C, using the `Participant` tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
 
 ```plantuml
 
@@ -916,7 +1019,7 @@ verifiera --> verifiertd:  \t+11.4 TUs
 
 A [[ref: governance framework]] must define the governance rules that apply to a [[ref: VPR]].
 
-A designated [[ref: governance authority]] is responsible for **enforcing these rules** and, when necessary, **applying financial sanctions** to participants who violate the rules.
+A designated [[ref: governance authority]] (aka a council) is responsible for **enforcing these rules** and, when necessary, **applying financial sanctions** to participants who violate the rules.
 
 :::note
 **Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: VPR]] [[ref: governance framework]].
@@ -938,13 +1041,21 @@ For example, a **key-value store** may be more appropriate for a **ledger-based 
 @startuml
 scale max 800 width
 
-entity "TrustRegistry" as tr {
+entity "Ecosystem" as tr {
   *id: uint64
   +did: string
   +created: timestamp
   +modified: timestamp
   +archived: timestamp
-  +aka: string
+  +active_version: int
+  +language: string
+}
+
+entity "Corporation" as corp {
+  +did: string
+  +created: timestamp
+  +modified: timestamp
+  +archived: timestamp
   +active_version: int
   +language: string
 }
@@ -1003,18 +1114,18 @@ entity "SchemaAuthorizationPolicy" as sap {
 
 enum "IssuerOnboardingMode" as iom {
   OPEN
-  GRANTOR_VALIDATION_PROCESS
-  ECOSYSTEM_VALIDATION_PROCESS
+  GRANTOR_ONBOARDING_PROCESS
+  ECOSYSTEM_ONBOARDING_PROCESS
 }
 
 enum "VerifierOnboardingMode" as vom {
   OPEN
-  GRANTOR_VALIDATION_PROCESS
-  ECOSYSTEM_VALIDATION_PROCESS
+  GRANTOR_ONBOARDING_PROCESS
+  ECOSYSTEM_ONBOARDING_PROCESS
 }
 
 enum "HolderOnboardingMode" as hom {
-  ISSUER_VALIDATION_PROCESS
+  ISSUER_ONBOARDING_PROCESS
   PERMISSIONLESS
 }
 
@@ -1034,8 +1145,8 @@ entity "OperatorAuthorization" as oauthz {
 entity "VSOperatorAuthorization" as vsoauthz {
 }
 
-entity "PermissionAuthorizationRecord" as par {
-   *perm_id: uint64
+entity "ParticipantAuthorizationRecord" as par {
+   *participant_id: uint64
    +msg_types: msg_type[]
    +with_feegrant: boolean
    +expiration: timestamp
@@ -1078,7 +1189,7 @@ entity "ExchangeRateAuthorization" as xrauthz {
 }
 
 
-entity "Permission" as csp {
+entity "Participant" as csp {
   *id: uint64
   did: string
   +created: timestamp
@@ -1095,30 +1206,30 @@ entity "Permission" as csp {
   +slashed_deposit: number
   +repaid_deposit: number
   revoked: timestamp
-  +vp_exp: timestamp
-  +vp_last_state_change: timestamp
-  +vp_validator_deposit: number
-  +vp_current_fees: number
-  +vp_current_deposit: number
-  +vp_summary_digest: string
+  +op_exp: timestamp
+  +op_last_state_change: timestamp
+  +op_validator_deposit: number
+  +op_current_fees: number
+  +op_current_deposit: number
+  +op_summary_digest: string
   +issuance_fee_discount: number
   +verification_fee_discount: number
 }
 
 
-enum "ValidationState" as valstate {
+enum "OnboardingState" as valstate {
   PENDING
   VALIDATED
   TERMINATED
 }
 
-entity "PermissionSession" as csps {
+entity "ParticipantSession" as csps {
   *id: uuid
   +created: timestamp
   +modified: timestamp
 }
 
-entity "PermissionSessionRecord" as cspsr {
+entity "ParticipantSessionRecord" as cspsr {
   *id: uint64
   +created: timestamp
 }
@@ -1128,7 +1239,7 @@ entity "Digest" as digest {
   +created: timestamp
 }
 
-enum "PermissionType" as cspt {
+enum "ParticipantRole" as cspt {
   ISSUER
   VERIFIER
   ISSUER_GRANTOR
@@ -1186,21 +1297,21 @@ account --o oauthz: operator
 group --o vsoauthz: corporation
 account --o vsoauthz: vs_operator
 vsoauthz "1" --- "1..n" par: records
-par o-- csp: perm_id
+par o-- csp: participant_id
 
 csp o-- cspt: type
 csp o-- cs: schema_id
-csp o-- "0..1" csp: validator_perm_id
-cs o-- tr: tr_id
+csp o-- "0..1" csp: validator_participant_id
+cs o-- tr: ecosystem_id
 
 cs o-- "0..n" sap: policies
 
 csps --- "1..n" cspsr : session_records
 
-cspsr  o-- "0..1" csp: issuer_perm_id
-cspsr  o-- "0..1" csp: verifier_perm_id
-cspsr  o-- "0..1" csp: wallet_agent_perm_id
-cspsr  o-- "0..1" csp: agent_perm_id
+cspsr  o-- "0..1" csp: issuer_participant_id
+cspsr  o-- "0..1" csp: verifier_participant_id
+cspsr  o-- "0..1" csp: wallet_agent_participant_id
+cspsr  o-- "0..1" csp: agent_participant_id
 
 oauthz "1" --- "0..n" da: fee_spend_limit
 oauthz "1" --- "0..n" da: spend_limit
@@ -1216,8 +1327,11 @@ csp "1" --- "0..n" da: vs_operator_spend_limit
 csp "1" --- "0..n" da: vs_operator_fee_spend_limit
 
 
-tr "1" --- "1..n" gfv: versions 
-gfv "1" --- "1..n" gfd: documents 
+tr "1" --- "0..n" gfv: versions (ecosystem_id)
+corp "1" --- "0..n" gfv: versions (corporation)
+gfv "1" --- "1..n" gfd: documents
+
+group "1" --- "1" corp
 
 group --o tr: corporation
 group --o csp: corporation
@@ -1227,44 +1341,63 @@ account --o csp: vs_operator
 
 csps o-- account: vs_operator
 
-valstate --o csp: vp_state
-group  --o td: corporation
+valstate --o csp: op_state
+group --o td: corporation
 
 @enduml
 
 ```
 
-### TrustRegistry
+### Corporation
 
-`TrustRegistry`:
+A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
 
-- `id` (uint64) (*mandatory*): the id of the trust registry.
-- `did` (string) (*mandatory*): the did of the ecosystem.
-- `corporation` (group) (*mandatory*): [[ref: group]] that controls this entry.
-- `created` (timestamp) (*mandatory*): timestamp this TrustRegistry has been created.
-- `modified` (timestamp) (*mandatory*): timestamp this TrustRegistry has been modified.
-- `archived` (timestamp) (*mandatory*): timestamp this TrustRegistry has been archived.
-- `aka` (string) (*optional*): optional additional URI of this trust registry.
-- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this trust registry.
+`Corporation`:
+
+- `did` (string) (*mandatory*): the DID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `did` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `did` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-new-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks).
+- `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
+- `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
+- `archived` (timestamp) (*optional*): timestamp this Corporation has been archived.
+- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
+- `active_version` (int) (*mandatory*): active [[ref: CGF]] version.
+
+> Note: a Corporation entry has no `id` of its own. Its primary key is the underlying Cosmos SDK [[ref: group]] (1:1, see the `group --- corp` link in the diagram above): a Corporation entry is created, looked up, and referenced by the id of the group it extends. Members and policies of a Corporation are managed by the underlying Cosmos SDK group module; the Corporation entry adds VPR-level attributes only (DID, governance framework, lifecycle).
+
+### Ecosystem
+
+`Ecosystem`:
+
+- `id` (uint64) (*mandatory*): the id of the ecosystem.
+- `did` (string) (*mandatory*): the did of the ecosystem. MAY be shared with other `Ecosystem` entries (a single DID MAY be the `did` of several ecosystems); per-Ecosystem DID uniqueness is NOT enforced because the `Ecosystem` identity is its `id`. However, per-Ecosystem `(did, corporation)` consistency IS enforced: at any block height, all `Ecosystem` entries with equal `did` MUST share the same `corporation`. Enforced at create time by [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-new-ecosystem-basic-checks) and at rotation time by [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks).
+- `corporation` (group) (*mandatory*): [[ref: corporation]] that controls this entry. Constrained by the per-Ecosystem `(did, corporation)` consistency invariant above.
+- `created` (timestamp) (*mandatory*): timestamp this Ecosystem has been created.
+- `modified` (timestamp) (*mandatory*): timestamp this Ecosystem has been modified.
+- `archived` (timestamp) (*mandatory*): timestamp this Ecosystem has been archived.
+- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
 - `active_version` (int): (*mandatory*) active governance framework version.
 
 ### GovernanceFrameworkVersion
 
+A `GovernanceFrameworkVersion` represents a single version of either an [[ref: EGF]] or a [[ref: CGF]]. Its owning subject is identified by exactly one of `ecosystem_id` or `corporation` (XOR).
+
 `GovernanceFrameworkVersion`:
 
-- `id` (uint64) (*mandatory*): the id of the schema.
-- `tr_id` (uint64) (*mandatory*): the id of the trust registry that controls this `GovernanceFrameworkVersion` entry.
+- `id` (uint64) (*mandatory*): the id of the GFV.
+- `ecosystem_id` (uint64) (*conditional*): the id of the [[ref: ecosystem]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `corporation` is null.
+- `corporation` (group) (*conditional*): the [[ref: corporation]] that controls this `GovernanceFrameworkVersion` entry (i.e., the underlying Cosmos SDK [[ref: group]] of the owning `Corporation`). MUST be set if `ecosystem_id` is null.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkVersion has been created.
 - `version` (int) (*mandatory*): version of this GF. MUST Starts with 1.
+
+> Constraint: exactly one of `ecosystem_id` and `corporation` MUST be set.
 
 ### GovernanceFrameworkDocument
 
 `GovernanceFrameworkDocument`
 
-- `id` (uint64) (*mandatory*): the id of the schema.
+- `id` (uint64) (*mandatory*): the id of the GFD.
 - `gfv_id` (uint64) (*mandatory*): the id of the `GovernanceFrameworkVersion` entry.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkDocument has been created.
-- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this trust registry.
+- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this governance framework document.
 - `url` (string) (*mandatory*): URL where the document is published.
 - `digest_sri` (string) (*mandatory*): digest_sri of the document.
 
@@ -1275,19 +1408,19 @@ group  --o td: corporation
 **General Info**:
 
 - `id` (uint64) (*mandatory*): the id of the schema.
-- `tr_id` (uint64) (*mandatory*): the id of the trust registry that controls this `CredentialSchema` entry.
+- `ecosystem_id` (uint64) (*mandatory*): the id of the ecosystem that controls this `CredentialSchema` entry.
 - `created` (timestamp) (*mandatory*): timestamp this CredentialSchema has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this CredentialSchema has been modified.
 - `archived` (timestamp) (*mandatory*): timestamp this CredentialSchema has been archived.
 - `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
-- `issuer_grantor_validation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor validation process expires and must be renewed.
-- `verifier_grantor_validation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor validation process expires and must be renewed.
-- `issuer_validation_validity_period` (number) (*mandatory*): number of days after which an issuer validation process expires and must be renewed.
-- `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier validation process expires and must be renewed.
-- `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder validation process expires and must be renewed.
-- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR_VALIDATION_PROCESS means a validation process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_VALIDATION_PROCESS means a validation process MUST be run between a candidate ISSUER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
-- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR_VALIDATION_PROCESS means a validation process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_VALIDATION_PROCESS means a validation process MUST be run between a candidate VERIFIER and the trust registry owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
-- `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_VALIDATION_PROCESS means a validation process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission. HOLDER permission is used to check credential revocation status; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
+- `issuer_grantor_validation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor onboarding process expires and must be renewed.
+- `verifier_grantor_validation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor onboarding process expires and must be renewed.
+- `issuer_validation_validity_period` (number) (*mandatory*): number of days after which an issuer onboarding process expires and must be renewed.
+- `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier onboarding process expires and must be renewed.
+- `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder onboarding process expires and must be renewed.
+- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
+- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission. HOLDER permission is used to check credential revocation status; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
 - `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestSRI` for credentials issued under this schema. Valid values are defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
@@ -1307,70 +1440,70 @@ group  --o td: corporation
 - `effective_until` (timestamp) (*optional*): timestamp until which this policy version is in force, if time-limited.
 - `revoked` (boolean) (*mandatory*): indicates whether this policy version has been revoked and must no longer be used.
 
-### Permission
+### Participant
 
-`Permission`:
+`Participant`:
 
-- `id` (uint64) (*mandatory*): the id of the perm.
+- `id` (uint64) (*mandatory*): the id of the participant.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
-- `type` (PermissionType): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER
-- `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]].
-- `corporation` (group) (*mandatory*): [[ref: group]] that owns this permission.
+- `role` (ParticipantRole): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER
+- `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]]. MAY be shared with other `Participant` entries (a single DID MAY be the `did` of several participants); per-Participant DID uniqueness is NOT enforced because the `Participant` identity is its `id`. However, per-Participant `(did, corporation)` consistency IS enforced: at any block height, all `Participant` entries with non-null equal `did` MUST share the same `corporation`. Enforced by the create-time basic checks of [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks), and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks). `Participant.did` is set at create time and is not rotated thereafter.
+- `corporation` (group) (*mandatory*): [[ref: corporation]] that owns this permission. Constrained by the per-Participant `(did, corporation)` consistency invariant above (when `did` is non-null).
 - `vs_operator` (account) (*mandatory*): verifiable service agent account. This is the account that will have the right to create or update permission sessions.
-- `created` (timestamp) (*mandatory*): timestamp this `Permission` has been created.
-- `adjusted` (timestamp) (*mandatory*): timestamp this `Permission` has been adjusted.
-- `slashed` (timestamp) (*mandatory*): timestamp this `Permission` has been slashed.
-- `repaid` (timestamp) (*mandatory*): timestamp this `Permission` has been repaid.
-- `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Permission` is effective.
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective, null if no time limit has been set for this permission.
-- `modified` (timestamp) (*mandatory*): timestamp this Permission has been modified.
-- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`corporation` grantee of this perm) for running a validation process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
+- `created` (timestamp) (*mandatory*): timestamp this `Participant` has been created.
+- `adjusted` (timestamp) (*mandatory*): timestamp this `Participant` has been adjusted.
+- `slashed` (timestamp) (*mandatory*): timestamp this `Participant` has been slashed.
+- `repaid` (timestamp) (*mandatory*): timestamp this `Participant` has been repaid.
+- `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` is effective.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit has been set for this permission.
+- `modified` (timestamp) (*mandatory*): timestamp this Participant has been modified.
+- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`corporation` grantee of this perm) for running an onboarding process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
-- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the validation process), in [[ ref: native denom ]]. Usually, it is incremented when for example, for a ISSUER type `Permission` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `perm.deposit` value as well. If `perm` is, let's say revoked, then corresponding `perm.deposit` value is freed from `perm.grantee` Trust Deposit.
+- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the onboarding process), in [[ ref: native denom ]]. Usually, it is incremented when for example, for a ISSUER type `Participant` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `participant.deposit` value as well. If `perm` is, let's say revoked, then corresponding `participant.deposit` value is freed from `participant.grantee` Trust Deposit.
 - `slashed_deposit` (number) (*mandatory*): part of the deposit in [[ ref: native denom ]] that has been slashed.
 - `repaid_deposit` (number) (*mandatory*): part of the slashed deposit in [[ ref: native denom ]] that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
-- `validator_perm_id` (uint64) (*optional*): permission of the validator assigned to the validation process of this permission, ie *parent node* in the `Permission` tree.
-- `vp_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
-- `vp_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the validation process itself, not for the issued credential or `Permission` expiration timestamp.
-- `vp_last_state_change` (timestamp) (*mandatory*)
-- `vp_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
-- `vp_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon validation process completion, in [[ref: denom]].
-- `vp_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
-- `vp_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION_PROCESS mode) or an ISSUER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the onboarding process of this permission, ie *parent node* in the `Participant` tree.
+- `op_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
+- `op_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Participant` expiration timestamp.
+- `op_last_state_change` (timestamp) (*mandatory*)
+- `op_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
+- `op_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon onboarding process completion, in [[ref: denom]].
+- `op_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
+- `op_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
-> Note: VS operator authorization settings (spend limits, feegrant, expiration, authorized message types) are no longer stored on `Permission`. They live in `PermissionAuthorizationRecord` entries inside [VSOperatorAuthorization](#vsoperatorauthorization), keyed by `Permission.id`. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
+> Note: VS operator authorization settings (spend limits, feegrant, expiration, authorized message types) are no longer stored on `Participant`. They live in `ParticipantAuthorizationRecord` entries inside [VSOperatorAuthorization](#vsoperatorauthorization), keyed by `Participant.id`. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
-### PermissionSession
+### ParticipantSession
 
-`PermissionSession`:
+`ParticipantSession`:
 
 - `id` (uuid) (*mandatory*): session uuid.
 - `corporation` (group) (*mandatory*): corporation that controls the entry.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account that controls the entry (agent crypto account).
-- `created` (timestamp) (*mandatory*): timestamp this PermissionSession has been created.
-- `modified` (timestamp) (*mandatory*): timestamp this PermissionSession has been modified.
-- `session_records` (PermissionSessionRecord[]) (*mandatory*): session records, for this session.
+- `created` (timestamp) (*mandatory*): timestamp this ParticipantSession has been created.
+- `modified` (timestamp) (*mandatory*): timestamp this ParticipantSession has been modified.
+- `session_records` (ParticipantSessionRecord[]) (*mandatory*): session records, for this session.
 
-### PermissionSessionRecord
+### ParticipantSessionRecord
 
-`PermissionSessionRecord`:
+`ParticipantSessionRecord`:
 
 - `created` (timestamp) (*mandatory*): timestamp this record has been created.
-- `issuer_perm_id` (uint64) (*optional*): related issuer `Permission` id (if applicable).
-- `verifier_perm_id` (uint64) (*optional*): related verifier `Permission` id (if applicable).
-- `wallet_agent_perm_id` (uint64) (*optional*): related wallet agent `Permission` id (if applicable).
-- `agent_perm_id` (uint64) (*optional*): permission id of the agent `Permission` id (if applicable).
+- `issuer_participant_id` (uint64) (*optional*): related issuer `Participant` id (if applicable).
+- `verifier_participant_id` (uint64) (*optional*): related verifier `Participant` id (if applicable).
+- `wallet_agent_participant_id` (uint64) (*optional*): related wallet agent `Participant` id (if applicable).
+- `agent_participant_id` (uint64) (*optional*): permission id of the agent `Participant` id (if applicable).
 
 ### TrustDeposit
 
 `TrustDeposit`:
 
 - `share` (number) (*mandatory*): share of the module total deposit.
-- `corporation` (group) (*mandatory*) (key): the [[ref: group]]
+- `corporation` (group) (*mandatory*) (key): the [[ref: corporation]]
 - `deposit` (number) (*mandatory*): amount of deposit in `denom`.
 - `refunded` (number) (*mandatory*): amount of refunded trust deposit, in `denom`. Refunded trust deposit is reused as funding for the next trust deposit spending before drawing additional funds from the corporation account.
 - `slashed_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
@@ -1391,7 +1524,7 @@ group  --o td: corporation
 
 ### OperatorAuthorization
 
-- `corporation` (group) (*mandatory*): the corporation group granting the authorization.
+- `corporation` (group) (*mandatory*): the [[ref: corporation]] granting the authorization.
 - `operator` (account) (*mandatory*): the operator account receiving the authorization.
 - `msg_types` (msg_type[]) (*mandatory*): list of module message types this authorization applies to.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the grantee is allowed to spend
@@ -1406,7 +1539,7 @@ group  --o td: corporation
 
 `FeeGrant`:
 
-- `grantor` (group) (*mandatory*): the corporation group granting the fee allowance.
+- `grantor` (group) (*mandatory*): the [[ref: corporation]] granting the fee allowance.
 - `grantee` (account) (*mandatory*): the account that receives the fee grant from `grantor`.
 - `msg_types` (msg_type[]) (*mandatory*): list of VPR delegable message types for which the fee allowance applies.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of fees that can be spent using this grant.
@@ -1416,25 +1549,25 @@ group  --o td: corporation
 
 ### VSOperatorAuthorization
 
-A `VSOperatorAuthorization` groups all `PermissionAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. It is keyed by the `(corporation, vs_operator)` pair. The entry exists if, and only if, it has at least one record.
+A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. It is keyed by the `(corporation, vs_operator)` pair. The entry exists if, and only if, it has at least one record.
 
-- `corporation` (group) (*mandatory*): the corporation group granting the authorization.
+- `corporation` (group) (*mandatory*): the [[ref: corporation]] granting the authorization.
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization.
-- `records` (PermissionAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation`.
+- `records` (ParticipantAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation`.
 
-### PermissionAuthorizationRecord
+### ParticipantAuthorizationRecord
 
-A `PermissionAuthorizationRecord` carries the per-permission authorization configuration that was previously stored on `Permission.vs_operator_authz_*` fields. Each record is globally unique by `perm_id`: for any `Permission.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `perm_id` via a direct lookup.
+A `ParticipantAuthorizationRecord` carries the per-permission authorization configuration that was previously stored on `Participant.vs_operator_authz_*` fields. Each record is globally unique by `participant_id`: for any `Participant.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `participant_id` via a direct lookup.
 
-- `perm_id` (uint64) (*mandatory*): id of the `Permission` this authorization record applies to. Globally unique across all `PermissionAuthorizationRecord` entries.
-- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `perm_id`. Declared by the applicant at record creation time (see [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) and [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission)). Frozen after creation.
-- `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this permission, as a direct consequence of executing authorized messages.
+- `participant_id` (uint64) (*mandatory*): id of the `Participant` this authorization record applies to. Globally unique across all `ParticipantAuthorizationRecord` entries.
+- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `participant_id`. Declared by the applicant at record creation time (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). Frozen after creation.
+- `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this `Participant` entry, as a direct consequence of executing authorized messages.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
-- `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
+- `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this `Participant` entry.
 - `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
-- `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this permission, through an on-chain `FeeGrant`.
-- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) (disabled until validation) and to `Permission.effective_until` at [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated) / [[MOD-PERM-MSG-8]](#mod-perm-msg-8-adjust-permission) / [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission).
-- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this permission.
+- `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this `Participant` entry, through an on-chain `FeeGrant`.
+- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (disabled until validation) and to `Participant.effective_until` at [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) / [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant).
+- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this `Participant` entry.
 
 ### ExchangeRate
 
@@ -1501,18 +1634,17 @@ All [[ref: VPR]] modules MUST, at least, provide:
 Note about Query REST API:
 
 - all query methods MUST return valid JSON.
-- objects MUST be nested when needed, such as when returning a trust registry.
-- JSON formatting MUST obey to data model regarding attribute names. A method that returns a `TrustRegistry` entry MUST return an entry called "trust_registry". A method that returns a list of Trust Registries MUST return an entry called "trustRegistries" that contain a list of `TrustRegistry` entries.
+- objects MUST be nested when needed, such as when returning an ecosystem.
+- JSON formatting MUST obey to data model regarding attribute names. A method that returns a `Ecosystem` entry MUST return an entry called "ecosystem". A method that returns a list of Ecosystems MUST return an entry called "ecosystems" that contain a list of `Ecosystem` entries.
 
 Examples:
 
-Get a `TrustRegistry`
+Get an `Ecosystem`
 
 ```json
-"trust_registry": {
+"ecosystem": {
   {
     "active_version": 0,
-    "aka": "string",
     "corporation": "string",
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
@@ -1525,7 +1657,7 @@ Get a `TrustRegistry`
         "active_since": "2025-01-14T19:40:37.967Z",
         "created": "2025-01-14T19:40:37.967Z",
         "id": "string",
-        "tr_id": "string",
+        "ecosystem_id": "string",
         "version": 0,
         "documents": [
           {
@@ -1543,10 +1675,9 @@ Get a `TrustRegistry`
 ```
 
 ```json
-"trustRegistries": [ {
+"ecosystems": [ {
   {
     "active_version": 0,
-    "aka": "string",
     "corporation": "string",
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
@@ -1559,7 +1690,7 @@ Get a `TrustRegistry`
         "active_since": "2025-01-14T19:40:37.967Z",
         "created": "2025-01-14T19:40:37.967Z",
         "id": "string",
-        "tr_id": "string",
+        "ecosystem_id": "string",
         "version": 0,
         "documents": [
           {
@@ -1575,7 +1706,6 @@ Get a `TrustRegistry`
     ]  
   }, {
     "active_version": 0,
-    "aka": "string",
     "corporation": "string",
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
@@ -1588,7 +1718,7 @@ Get a `TrustRegistry`
         "active_since": "2025-01-14T19:40:37.967Z",
         "created": "2025-01-14T19:40:37.967Z",
         "id": "string",
-        "tr_id": "string",
+        "ecosystem_id": "string",
         "version": 0,
         "documents": [
           {
@@ -1613,7 +1743,7 @@ For Msg methods, all precondition checks MUST be verified first for accepting th
 A VPR implementation MUST implement all the following requirements.
 
 :::note
-The relative REST path is the path suffix. Implementer can set any prefix, like https://example/verana/tr/v1/get.
+The relative REST path is the path suffix. Implementer can set any prefix, like https://example/verana/ec/v1/get.
 :::
 
 ### Authorization and Fee Grants
@@ -1658,17 +1788,17 @@ Some module messages specify only a `corporation`:
 - `corporation` (group):  
   The `group` that owns the manipulated resource.
 
-Such messages **cannot be delegated** and MUST be executed exclusively through a **group proposal**.
+Such messages **cannot be delegated** and MUST be executed exclusively through a **corporation proposal**.
 
 #### Governance-Signed Module Messages
 
-Some module messages can be executed **only through a governance proposal**.
+Some module messages can be executed **only through a VPR council governance proposal**.
 
 These messages do not support delegation and are not executable by accounts, whether directly or via group authorization.
 
 #### Fee Grants
 
-A `corporation` group MAY allow its `operator`s to pay **network transaction fees** using the `corporation`’s funds.
+A `corporation` MAY allow its `operator`s to pay **network transaction fees** using the `corporation`’s funds.
 
 Fee grants are **not created directly**.  
 They are created, updated, and revoked **exclusively by Authorization module messages**.  
@@ -1703,13 +1833,13 @@ If the transaction fees are paid by the `corporation` account (via fee grant) in
 
 ##### [AUTHZ-CHECK-3] VS Operator Authorization checks
 
-A second authorization grant mode exists for vs-agents. It is used when a corporation delegates a specific permission (and a specific set of message types, scoped to that permission) to a `vs_operator` account. The authorization model differs from other delegable messages: it relies on [VSOperatorAuthorization](#vsoperatorauthorization) / [PermissionAuthorizationRecord](#permissionauthorizationrecord) instead of `OperatorAuthorization`.
+A second authorization grant mode exists for vs-agents. It is used when a corporation delegates a specific permission (and a specific set of message types, scoped to that permission) to a `vs_operator` account. The authorization model differs from other delegable messages: it relies on [VSOperatorAuthorization](#vsoperatorauthorization) / [ParticipantAuthorizationRecord](#participantauthorizationrecord) instead of `OperatorAuthorization`.
 
-> Note: the set of messages a `vs_operator` is authorized to execute in the context of a permission is declared by the applicant at permission creation time (see [[MOD-PERM-MSG-1-1]](#mod-perm-msg-1-1-start-permission-vp-parameters) and [[MOD-PERM-MSG-14-1]](#mod-perm-msg-14-1-self-create-permission-parameters)) and stored in `record.msg_types`. It is frozen for the lifetime of the record and can only be changed by revoking the permission and starting a new one.
+> Note: the set of messages a `vs_operator` is authorized to execute in the context of a permission is declared by the applicant at permission creation time (see [[MOD-PP-MSG-1-1]](#mod-pp-msg-1-1-start-participant-op-parameters) and [[MOD-PP-MSG-14-1]](#mod-pp-msg-14-1-self-create-participant-parameters)) and stored in `record.msg_types`. It is frozen for the lifetime of the record and can only be changed by revoking the permission and starting a new one.
 
-Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission id** `perm_id` (determined by the calling method), and the current message type `msg_type`:
+Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission id** `participant_id` (determined by the calling method), and the current message type `msg_type`:
 
-1. A `PermissionAuthorizationRecord` `record` MUST exist for `perm_id`. Abort if not found.
+1. A `ParticipantAuthorizationRecord` `record` MUST exist for `participant_id`. Abort if not found.
 2. `record` MUST belong to `VSOperatorAuthorization[corporation, operator]`, that is: the containing `VSOperatorAuthorization` MUST have `corporation` as its `corporation` and `operator` as its `vs_operator`. Abort otherwise.
 3. `msg_type` MUST be in `record.msg_types`. Abort otherwise.
 4. Cycle / expiration check:
@@ -1722,18 +1852,26 @@ Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission
 
 ##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
 
-If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `PermissionAuthorizationRecord` `record` looked up in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
+If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `ParticipantAuthorizationRecord` `record` looked up in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
 
 1. `record.with_feegrant` MUST be true, else abort.
 2. The cycle / expiration check from [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 4 has already been performed against the same `record`; `record.remaining_fee_spend` is therefore current.
 3. If `record.fee_spend_limit` is set, `record.remaining_fee_spend` MUST be sufficient for the [[ref: estimated transaction fees]]. After successful execution, the consumed fee amount MUST be deducted from `record.remaining_fee_spend` (per matching `denom` entry).
 
+##### [AUTHZ-CHECK-5] Corporation Registration check
+
+A `Corporation` entry MUST exist for the signing `corporation` (i.e., keyed by its underlying Cosmos SDK [[ref: group]]). If none exists, the [[ref: transaction]] MUST abort with an error indicating that the underlying [[ref: group]] has not yet been registered as a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
+
+> Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation), whose explicit purpose is to register a Cosmos SDK [[ref: group]] as a new `Corporation`. That method enforces the inverse precondition (the entry MUST NOT yet exist) in its own basic checks.
+
+This check applies to every delegable message that invokes [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks). As a result, all Create-* methods (and every other delegable Msg) implicitly require the signing `corporation` to be a registered `Corporation`.
+
 #### Example
 
 A corporation group `corporationABC` wants to authorize an operator account `accountABC` to execute the  
-[`mod-perm-msg-10-create-or-update-permission-session`](#mod-perm-msg-10-create-or-update-permission-session),
-[`mod-perm-msg-3-set-permission-vp-to-validated`](#mod-perm-msg-3-set-permission-vp-to-validated), and
-[`mod-perm-msg-15-trigger-resolver`](#mod-perm-msg-15-trigger-resolver)
+[`mod-pp-msg-10-create-or-update-participant-session`](#mod-pp-msg-10-create-or-update-participant-session),
+[`mod-pp-msg-3-set-participant-op-to-validated`](#mod-pp-msg-3-set-participant-op-to-validated), and
+[`mod-pp-msg-15-trigger-resolver`](#mod-pp-msg-15-trigger-resolver)
  messages.
 
 Additionally, the corporation wants `accountABC` to pay the transaction fees for this message using the corporation's funds.
@@ -1741,9 +1879,9 @@ Additionally, the corporation wants `accountABC` to pay the transaction fees for
 To achieve this, `corporationABC` MUST:
 
 - create an **authorization** from `corporationABC` to `accountABC` for the  
-  [`mod-perm-msg-10-create-or-update-permission-session`](#mod-perm-msg-10-create-or-update-permission-session),
-[`mod-perm-msg-3-set-permission-vp-to-validated`](#mod-perm-msg-3-set-permission-vp-to-validated), and
-[`mod-perm-msg-15-trigger-resolver`](#mod-perm-msg-15-trigger-resolver) message types, optionally enabling an associated fee grant.
+  [`mod-pp-msg-10-create-or-update-participant-session`](#mod-pp-msg-10-create-or-update-participant-session),
+[`mod-pp-msg-3-set-participant-op-to-validated`](#mod-pp-msg-3-set-participant-op-to-validated), and
+[`mod-pp-msg-15-trigger-resolver`](#mod-pp-msg-15-trigger-resolver) message types, optionally enabling an associated fee grant.
 
 As a result, `accountABC` is authorized to:
 
@@ -1754,15 +1892,24 @@ As a result, `accountABC` is authorized to:
 
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      | Signers |
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
-| Trust Registry                 | Create a Trust Registry                 |    N/A (Tx)                    | Msg    | [[MOD-TR-MSG-1]](#mod-tr-msg-1-create-new-trust-registry)   | corporation + operator |
-|                                | Add Governance Framework Document       |     N/A (Tx)                      | Msg    | [[MOD-TR-MSG-2]](#mod-tr-msg-2-add-governance-framework-document)   |corporation + operator |
-|                                | Increase Active Governance Framework Version |      N/A (Tx)                   | Msg    | [[MOD-TR-MSG-3]](#mod-tr-msg-3-increase-active-governance-framework-version)   |corporation + operator |
-|                                | Update Trust Registry                   |       N/A (Tx)                   | Msg    | [[MOD-TR-MSG-4]](#mod-tr-msg-4-update-trust-registry)   |corporation + operator |
-|                                | Archive Trust Registry                  |        N/A (Tx)                 | Msg    | [[MOD-TR-MSG-5]](#mod-tr-msg-5-archive-trust-registry)   |corporation + operator |
-|                                | Update TR Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-TR-MSG-6]](#mod-tr-msg-6-update-module-parameters)   |governance proposal |
-|                                | Get Trust Registry                      | /tr/v1/get                  | Query  | [[MOD-TR-QRY-1]](#mod-tr-qry-1-get-trust-registry)   |N/A |
-|                                | List Trust Registries                   | /tr/v1/list                 | Query  | [[MOD-TR-QRY-2]](#mod-tr-qry-2-list-trust-registries)   |N/A |
-|                                | List TR Module Parameters               | /tr/v1/params                 | Query  | [[MOD-TR-QRY-3]](#mod-tr-qry-3-list-module-parameters)   |N/A |
+| Corporation               | Create New Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)   | corporation + operator |
+|                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + operator |
+|                                | Archive Corporation                          | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-archive-corporation)   | corporation + operator |
+|                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-4]](#mod-co-msg-4-update-module-parameters)   | governance proposal |
+|                                | Get Corporation                              | /co/v1/get                       | Query  | [[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)   | N/A |
+|                                | List Corporations                            | /co/v1/list                      | Query  | [[MOD-CO-QRY-2]](#mod-co-qry-2-list-corporations)   | N/A |
+|                                | List Corporation Module Parameters           | /co/v1/params                    | Query  | [[MOD-CO-QRY-3]](#mod-co-qry-3-list-module-parameters)   | N/A |
+| Ecosystem                 | Create an Ecosystem                 |    N/A (Tx)                    | Msg    | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-new-ecosystem)   | corporation + operator |
+|                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)   |corporation + operator |
+|                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem)   |corporation + operator |
+|                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters)   |governance proposal |
+|                                | Get Ecosystem                      | /ec/v1/get                  | Query  | [[MOD-ES-QRY-1]](#mod-es-qry-1-get-ecosystem)   |N/A |
+|                                | List Ecosystems                   | /ec/v1/list                 | Query  | [[MOD-ES-QRY-2]](#mod-es-qry-2-list-ecosystems)   |N/A |
+|                                | List Ecosystem Module Parameters               | /ec/v1/params                 | Query  | [[MOD-ES-QRY-3]](#mod-es-qry-3-list-module-parameters)   |N/A |
+| Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation + operator |
+|                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + operator |
+|                                | Get Governance Framework Version             | /gf/v1/get                       | Query  | [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version)   | N/A |
+|                                | List Governance Framework Versions           | /gf/v1/list                      | Query  | [[MOD-GF-QRY-2]](#mod-gf-qry-2-list-governance-framework-versions)   | N/A |
 | Credential Schema              | Create a Credential Schema              |       N/A (Tx)                   | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |corporation + operator |
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation + operator |
 |                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |corporation + operator |
@@ -1776,24 +1923,24 @@ As a result, `accountABC` is authorized to:
 |                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-CS-QRY-4]](#mod-cs-qry-4-list-module-parameters)   |N/A  |
 |                  | Get Schema Authorization Policy                         | /cs/v1/sap/get         | Query | [[MOD-CS-QRY-5]](#mod-cs-qry-5-get-schema-authorization-policy) | N/A |
 |                  | List Schema Authorization Policies                      | /cs/v1/sap/list        | Query | [[MOD-CS-QRY-6]](#mod-cs-qry-6-list-schema-authorization-policies) | N/A |
-| Permission                     | Start Permission VP                     |     N/A (Tx)                       | Msg    | [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp)    |corporation + operator |
-|                                | Renew a Permission VP                   |       N/A (Tx)                     | Msg    | [[MOD-PERM-MSG-2]](#mod-perm-msg-2-renew-permission-vp)    |corporation + operator |
-|                                | Set Permission VP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated)    |corporation + operator |
-|                                | Cancel Permission VP Last Request       |         N/A (Tx)                    | Msg    | [[MOD-PERM-MSG-6]](#mod-perm-msg-6-cancel-permission-vp-last-request)    |corporation + operator |
-|                                | Create Root Permission                  |         N/A (Tx)                | Msg    | [[MOD-PERM-MSG-7]](#mod-perm-msg-7-create-root-permission)   |corporation + operator |
-|                                | Adjust Permission                       |         N/A (Tx)            | Msg    | [[MOD-PERM-MSG-8]](#mod-perm-msg-8-adjust-permission)  |corporation + operator |
-|                                | Revoke Permission                       |          N/A (Tx)              | Msg    | [[MOD-PERM-MSG-9]](#mod-perm-msg-9-revoke-permission)  |corporation + operator |
-|                                | Create or update Permission Session     |           N/A (Tx)              | Msg    | [[MOD-PERM-MSG-10]](#mod-perm-msg-10-create-or-update-permission-session)  |corporation + operator |
-|                                | Update Permission Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-PERM-MSG-11]](#mod-perm-msg-11-update-permission-module-parameters) |governance proposal |
-|                                | Slash Permission Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-PERM-MSG-12]](#mod-perm-msg-12-slash-permission-trust-deposit) |corporation + operator |
-|                                | Repay Permission Slashed Trust Deposit  |     N/A (Tx)                | Msg    | [[MOD-PERM-MSG-13]](#mod-perm-msg-13-repay-permission-slashed-trust-deposit) |corporation + operator |
-|                                | Self Create Permission (OPEN mode)      |         N/A (Tx)              | Msg    | [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission) |corporation + operator  |
-|                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-PERM-MSG-15]](#mod-perm-msg-15-trigger-resolver) |corporation + operator |
-|                                | List Permissions                        | /perm/v1/list                | Query  | [[MOD-PERM-QRY-1]](#mod-perm-qry-1-list-permissions)    |N/A |
-|                                | Get a Permission                        | /perm/v1/get                 | Query  | [[MOD-PERM-QRY-2]](#mod-perm-qry-2-get-permission)    |N/A |
-|                                | Find Beneficiaries                      | /perm/v1/beneficiaries       | Query  | [[MOD-PERM-QRY-4]](#mod-perm-qry-4-find-beneficiaries)  |N/A |
-|                                | Get Permission Session                  | /perm/v1/session/get         | Query  | [[MOD-PERM-QRY-5]](#mod-perm-qry-5-get-permissionsession) |N/A |
-|                                | List Permission Module Parameters     |  /perm/v1/params         | Query    | [[MOD-PERM-QRY-6]](#mod-perm-qry-6-list-permission-module-parameters)   |N/A |
+| Participant                    | Start Participant OP                     |     N/A (Tx)                       | Msg    | [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op)    |corporation + operator |
+|                                | Renew a Participant OP                   |       N/A (Tx)                     | Msg    | [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)    |corporation + operator |
+|                                | Set Participant OP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)    |corporation + operator |
+|                                | Cancel Participant OP Last Request       |         N/A (Tx)                    | Msg    | [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)    |corporation + operator |
+|                                | Create Root Participant                  |         N/A (Tx)                | Msg    | [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant)   |corporation + operator |
+|                                | Set Participant Effective Until                       |         N/A (Tx)            | Msg    | [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until)  |corporation + operator |
+|                                | Revoke Participant                       |          N/A (Tx)              | Msg    | [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)  |corporation + operator |
+|                                | Create or update Participant Session     |           N/A (Tx)              | Msg    | [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)  |corporation + operator |
+|                                | Update Participant Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-PP-MSG-11]](#mod-pp-msg-11-update-participant-module-parameters) |governance proposal |
+|                                | Slash Participant Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) |corporation + operator |
+|                                | Repay Participant Slashed Trust Deposit  |     N/A (Tx)                | Msg    | [[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit) |corporation + operator |
+|                                | Self Create Participant (OPEN mode)      |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) |corporation + operator  |
+|                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver) |corporation + operator |
+|                                | List Participants                        | /pp/v1/list                | Query  | [[MOD-PP-QRY-1]](#mod-pp-qry-1-list-participants)    |N/A |
+|                                | Get a Participant                        | /pp/v1/get                 | Query  | [[MOD-PP-QRY-2]](#mod-pp-qry-2-get-participant)    |N/A |
+|                                | Find Beneficiaries                      | /pp/v1/beneficiaries       | Query  | [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)  |N/A |
+|                                | Get Participant Session                  | /pp/v1/session/get         | Query  | [[MOD-PP-QRY-5]](#mod-pp-qry-5-get-participantsession) |N/A |
+|                                | List Participant Module Parameters     |  /pp/v1/params         | Query    | [[MOD-PP-QRY-6]](#mod-pp-qry-6-list-participant-module-parameters)   |N/A |
 | Trust Deposit                  | Adjust Trust Deposit                    |   N/A (Tx)                       | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-adjust-trust-deposit)   | module call |
 |                                | Reclaim Trust Deposit Yield         |     N/A (Tx)           | Msg    | [[MOD-TD-MSG-2]](#mod-td-msg-2-reclaim-trust-deposit-yield)   |corporation + operator |
 |                                | Update TD Module Parameters             |      N/A (Tx)               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |governance proposal |
@@ -1825,72 +1972,69 @@ As a result, `accountABC` is authorized to:
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
 :::
 
-### Trust Registry Module
+### Corporation Module
 
-#### [MOD-TR-MSG-1] Create New Trust Registry
+This module manages [[ref: corporation]] entries — the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A `Corporation` entry MUST exist before its underlying group can be referenced as the `corporation` (group) in any other VPR Create-* method (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+#### [MOD-CO-MSG-1] Create New Corporation
 
-##### [MOD-TR-MSG-1-1] Create New Trust Registry parameters
+Any authorized `operator` CAN execute this method on behalf of a Cosmos SDK [[ref: group]] to register a new `Corporation` entry for that group.
 
-An authorized `operator` that would like to create a [[ref: trust registry]] MUST call this method by specifying:
+##### [MOD-CO-MSG-1-1] Create New Corporation parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+An authorized `operator` that would like to register a Cosmos SDK [[ref: group]] as a `Corporation` MUST call this method by specifying:
+
+- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed. For this method specifically, the underlying Cosmos SDK [[ref: group]] of `corporation` is the group that wants to register itself — no `Corporation` entry exists for that group yet.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `did` (string) (*mandatory*): the did of the ecosystem that is creating the trust registry.
-- `aka` (string) (*optional*): optional additional URI of this trust registry.
-- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this trust registry.
-- `doc_url` (string) (*mandatory*): URL where the document is published.
-- `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
+- `did` (string) (*mandatory*): the DID of the Corporation.
+- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
+- `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
+- `doc_digest_sri` (string) (*mandatory*): digest_sri of the v1 [[ref: CGF]] document.
 
-Provided document must be of the same language that the primary language of the trust registry.
+Provided document MUST be of the same language as the primary `language` of the Corporation.
 
-##### [MOD-TR-MSG-1-2] Create New Trust Registry precondition checks
+##### [MOD-CO-MSG-1-2] Create New Corporation precondition checks
 
 If any of these precondition checks fail, method MUST abort.
 
-###### [MOD-TR-MSG-1-2-1] Create New Trust Registry basic checks
+###### [MOD-CO-MSG-1-2-1] Create New Corporation basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
 
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- A `Corporation` entry for the signing [[ref: group]] MUST NOT exist; if one exists, method MUST abort (a group MAY register itself as a `Corporation` at most once).
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `aka` (string) (*optional*): optional additional URI of this trust registry. MUST be an [[ref: URI]].
+- `did` MUST NOT already be the `did` of any existing `Corporation` entry; if some `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant: a DID is the `did` of at most one `Corporation`).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
-- `doc_url` (string) (*mandatory*): MUST be a valid URL .
+- `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
-:::note
-It is not a problem if several trust registries are created with the same ecosystem DID. Identifier of a `TrustRegistry` is its id, and the Verifiable Trust Spec includes the id of the `TrustRegistry` in the DID Document. DID unique constraint is then not needed: proof of control of the DID is verified by resolving the DID outside of the context of the VPR.
-:::
+###### [MOD-CO-MSG-1-2-2] Create New Corporation fee checks
 
-###### [MOD-TR-MSG-1-2-2] Create New Trust Registry fee checks
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
 
-Fee payer MUST have an available balance to cover the [[ref: estimated transaction fees]].
-
-##### [MOD-TR-MSG-1-3] Create New Trust Registry execution
+##### [MOD-CO-MSG-1-3] Create New Corporation execution
 
 If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- create and persist a new `TrustRegistry` entry `tr`:
+- create and persist a new `Corporation` entry `co` keyed by the signing Cosmos SDK [[ref: group]] (1:1):
 
-- `tr.id` : auto-incremented uint64
-- `tr.did`: `did`
-- `tr.corporation`: `corporation`
-- `tr.created`: current timestamp
-- `tr.modified`: `tr.created`
-- `tr.aka`: `aka`
-- `tr.language`: `language`
-- `tr.active_version`: 1
+- `co.did`: `did`
+- `co.created`: current timestamp
+- `co.modified`: `co.created`
+- `co.archived`: null
+- `co.language`: `language`
+- `co.active_version`: 1
 
 - create and persist a new `GovernanceFrameworkVersion` entry `gfv`:
 
 - `gfv.id`: auto-incremented uint64
-- `gfv.tr_id`: `tr.id`
+- `gfv.ecosystem_id`: null
+- `gfv.corporation`: the signing `corporation` (i.e., the underlying [[ref: group]] of `co`)
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
@@ -1904,211 +2048,114 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `gfd.url`: `doc_url`
 - `gfd.digest_sri`: `doc_digest_sri`
 
-#### [MOD-TR-MSG-2] Add Governance Framework Document
+> Subsequent governance framework documents and version activations for this `Corporation` MUST be managed through [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version).
+
+#### [MOD-CO-MSG-2] Update Corporation
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-##### [MOD-TR-MSG-2-1] Add Governance Framework Document parameters
+##### [MOD-CO-MSG-2-1] Update Corporation parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): the id of the trust registry.
-- `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the [[ref: EGF]] document, provided by the [[ref: EGA]].
-- `doc_url` (string) (*mandatory*): URL where the document is published.
-- `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
-- `version` (int) (*mandatory*): targeted version.
+- `did` (string) (*mandatory*): the new DID of the Corporation.
 
-If for a given language, a document already exists, the execution of this transaction will replace the corresponding entry. Else, a new entry is created. It is only possible to edit future versions. Active version cannot be modified.
+> Note: `language` is set at creation time by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation) and is **immutable** thereafter; it cannot be updated through this method.
 
-##### [MOD-TR-MSG-2-2] Add Governance Framework Document precondition checks
+##### [MOD-CO-MSG-2-2] Update Corporation precondition checks
 
 If any of these precondition checks fail, method MUST abort.
 
-###### [MOD-TR-MSG-2-2-1] Add Governance Framework Document basic checks
-
-if a mandatory parameter is not present, method MUST abort.
-
-- `corporation` (group): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and `corporation` executing the method MUST be the `corporation` of the `TrustRegistry` entry.
-- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` where `gfv.tr_id` is equal to `id` and `gfv.version` = `version`, or `version` MUST be exactly equal to the biggest found `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries found for this `gfv.tr_id` equal to `id`. `version` MUST be greater than the `tr.active_version`.
-- `doc_language` (string) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
-- `doc_url` (string) (*mandatory*): MUST be a valid URL.
-- `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
-
-###### [MOD-TR-MSG-2-2-2] Add Governance Framework Document fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-TR-MSG-2-3] Add Governance Framework Document execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-load `GovernanceFrameworkVersion` entry `gfv` for the requested version, or create a new `GovernanceFrameworkVersion` `gfv` if required:
-
-- `gfv.id`: auto-incremented uint64
-- `gfv.tr_id`: `id`
-- `gfv.created`: current timestamp
-- `gfv.version`: `version`
-- `gfv.active_since`: null
-
-- create and persist or (replace if already exist) a `GovernanceFrameworkDocument` entry `gfd`:
-
-- `gfd.id`: auto-incremented uint64
-- `gfd.gfv_id`: `gfv.id`
-- `gfd.created`: current timestamp
-- `gfd.language`: `doc_language`
-- `gfd.url`: `doc_url`
-- `gfd.digest_sri`: `doc_digest_sri`
-
-#### [MOD-TR-MSG-3] Increase Active Governance Framework Version
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-##### [MOD-TR-MSG-3-1] Increase Active Governance Framework Version parameters
-
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): the id of the trust registry.
-
-##### [MOD-TR-MSG-3-2] Increase Active Governance Framework Version precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-TR-MSG-3-2-1] Increase Active Governance Framework Version basic checks
+###### [MOD-CO-MSG-2-2-1] Update Corporation basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
 
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` (uint64) (*mandatory*): a `TrustRegistry` entry with this id MUST exist and `corporation` executing the method MUST be the `corporation` of the `TrustRegistry` entry.
-- load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort.
-- find `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `tr.language`. If no document is found (and thus no document exist for the default language of this version for this trust registry), transaction MUST abort.
-
-###### [MOD-TR-MSG-3-2-2] Increase Active Governance Framework Version fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-TR-MSG-3-3] Increase Active Governance Framework Version execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- load `TrustRegistry` entry `tr` from its `id`. Find a `GovernanceFrameworkVersion` entry `gfv` where version is equal to `tr.active_version` + 1. If none is found, transaction MUST abort. Else, update `tr.active_version` to `tr.active_version` + 1. Set `tr.modified` to current timestamp, and set `gfv.active_since` to current timestamp and persist changes.
-
-#### [MOD-TR-MSG-4] Update Trust Registry
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-##### [MOD-TR-MSG-4-1] Update Trust Registry parameters
-
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): the id of the trust registry.
-- `did` (string) (*mandatory*): the did of the trust registry.
-- `aka` (string) (*optional*): optional additional URI of this trust registry. If null, it means replace existing value with null.
-
-##### [MOD-TR-MSG-4-2] Update Trust Registry precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-TR-MSG-4-2-1] Update Trust Registry basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-
-- `corporation` (group): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` (uint64) (*mandatory*): a `TrustRegistry` entry `tr` with id `id` MUST exist and `corporation` executing the method MUST be the `corporation` of the `TrustRegistry` entry `tr`.
+- A `Corporation` entry `co` for the signing `corporation` MUST exist; if none exists, method MUST abort.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `aka` (string) (*optional*): optional additional URI of this trust registry. MUST be an [[ref: URI]] or null.
+- `did` MUST NOT already be the `did` of any **other** `Corporation` entry (i.e., any `Corporation` entry whose underlying group differs from the signing `corporation`); if some other `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant). Rotating to the same value `co.did` already holds is a no-op and MUST be allowed.
 
-###### [MOD-TR-MSG-4-2-2] Update Trust Registry fee checks
+###### [MOD-CO-MSG-2-2-2] Update Corporation fee checks
 
-Fee payer must have available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+Fee payer MUST have available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
 
-##### [MOD-TR-MSG-4-3] Update Trust Registry execution
+##### [MOD-CO-MSG-2-3] Update Corporation execution
 
 If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- load `TrustRegistry` entry `tr` from `id` and set:
+- load `Corporation` entry `co` for the signing `corporation` and set:
 
-- `tr.did`: `did`
-- `tr.aka`: `aka`
-- `tr.modified`: current timestamp
+- `co.did`: `did`
+- `co.modified`: current timestamp
 
-#### [MOD-TR-MSG-5] Archive Trust Registry
+#### [MOD-CO-MSG-3] Archive Corporation
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-##### [MOD-TR-MSG-5-1] Archive Trust Registry parameters
+##### [MOD-CO-MSG-3-1] Archive Corporation parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*) id of the trust registry (*mandatory*);
-- `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
+- `archive` (boolean) (*mandatory*): true means archive, false means unarchive.
 
-##### [MOD-TR-MSG-5-2] Archive Trust Registry precondition checks
+##### [MOD-CO-MSG-3-2] Archive Corporation precondition checks
 
 If any of these precondition checks fail, method MUST abort.
 
-###### [MOD-TR-MSG-5-2-1] Archive Trust Registry basic checks
+###### [MOD-CO-MSG-3-2-1] Archive Corporation basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
 
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- load `TrustRegistry` `tr` from `id`. `tr.corporation` MUST be the corporation executing the method, else MUST abort.
+- load `Corporation` `co` from the id of the signing `corporation`. If none exists, MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean.
-  - If `archive` is true and `tr.archived` is not null, MUST abort as `TrustRegistry` is already archived.
-  - If `archive` is false and `tr.archived` is null, MUST abort as `TrustRegistry` is already not archived.
+  - If `archive` is true and `co.archived` is not null, MUST abort as `Corporation` is already archived.
+  - If `archive` is false and `co.archived` is null, MUST abort as `Corporation` is already not archived.
 
-###### [MOD-TR-MSG-5-2-2] Archive Trust Registry fee checks
+###### [MOD-CO-MSG-3-2-2] Archive Corporation fee checks
 
 Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
 
-##### [MOD-TR-MSG-5-3] Archive Trust Registry execution
+##### [MOD-CO-MSG-3-3] Archive Corporation execution
 
 If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- update `TrustRegistry` entry `tr` with `tr.id` equal to `id`:
-- if `archived` is true: set `tr.archived` to current timestamp.
-- if `archived` is false: set `tr.archived` to null.
-- `tr.modified`: current timestamp
+- update `Corporation` entry `co`:
+- if `archive` is true: set `co.archived` to current timestamp.
+- if `archive` is false: set `co.archived` to null.
+- `co.modified`: current timestamp
 
-#### [MOD-TR-MSG-6] Update Module Parameters
+#### [MOD-CO-MSG-4] Update Module Parameters
 
 Update Module Parameters.
 
 Can only be executed through a governance proposal.
 
-##### [MOD-TR-MSG-6-1] Update Module Parameters parameters
+##### [MOD-CO-MSG-4-1] Update Module Parameters parameters
 
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
-##### [MOD-TR-MSG-6-2] Update Module Parameters precondition checks
+##### [MOD-CO-MSG-4-2] Update Module Parameters precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-TR-MSG-6-2-1] Update Module Parameters basic checks
+###### [MOD-CO-MSG-4-2-1] Update Module Parameters basic checks
 
-- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
 
-###### [MOD-TR-MSG-6-2-2] Update Module Parameters fee checks
+###### [MOD-CO-MSG-4-2-2] Update Module Parameters fee checks
 
-provided transaction fees MUST be sufficient for execution
+provided transaction fees MUST be sufficient for execution.
 
-##### [MOD-TR-MSG-6-3] Update Module Parameters execution
+##### [MOD-CO-MSG-4-3] Update Module Parameters execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -2118,57 +2165,54 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
 
-#### [MOD-TR-QRY-1] Get Trust Registry
+#### [MOD-CO-QRY-1] Get Corporation
 
 Anyone CAN execute this method.
 
-##### [MOD-TR-QRY-1-1] Get Trust Registry parameters
+##### [MOD-CO-QRY-1-1] Get Corporation query parameters
 
-- `id` (uint64) (*mandatory*): id of the [[ref: trust registry]].
+- `corporation` (group) (*mandatory*): the [[ref: corporation]] to fetch (i.e., the underlying Cosmos SDK [[ref: group]] whose `Corporation` entry is keyed by it).
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
-- `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
 
-##### [MOD-TR-QRY-1-2] Get Trust Registry checks
+##### [MOD-CO-QRY-1-2] Get Corporation query checks
 
-##### [MOD-TR-QRY-1-3] Get Trust Registry execution
+If any of these checks fail, [[ref: query]] MUST fail.
 
-return found `TrustRegistry` entry (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
+- `corporation` (group) (*mandatory*): MUST be a valid group id.
 
-#### [MOD-TR-QRY-2] List Trust Registries
+##### [MOD-CO-QRY-1-3] Get Corporation execution
 
-##### [MOD-TR-QRY-2-1] List Trust Registries query parameters
+Return the `Corporation` entry keyed by `corporation` (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
+
+#### [MOD-CO-QRY-2] List Corporations
+
+##### [MOD-CO-QRY-2-1] List Corporations query parameters
 
 The following parameters are optional:
 
-- `corporation` (group) (*optional*): if specified, filter by corporation.
-- `modified_after` (timestamp) (*optional*): if specified, returns only `TrustRegistry` entries with `TrustRegistry.modified` greater than `modified`.
+- `modified_after` (timestamp) (*optional*): if specified, returns only `Corporation` entries with `Corporation.modified` greater than `modified_after`.
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
-- `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 
-##### [MOD-TR-QRY-2-2] List Trust Registries query checks
+##### [MOD-CO-QRY-2-2] List Corporations query checks
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
 - `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
 
-##### [MOD-TR-QRY-2-3] List Trust Registries execution of the query
+##### [MOD-CO-QRY-2-3] List Corporations execution
 
 If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned. If `modified_after` is specified, order by `modified` desc.
 
-#### [MOD-TR-QRY-3] List Module Parameters
+#### [MOD-CO-QRY-3] List Module Parameters
 
 Anyone CAN run this [[ref: query]].
 
-##### [MOD-TR-QRY-3-2] List Module Parameters parameters
+##### [MOD-CO-QRY-3-3] List Module Parameters execution
 
-##### [MOD-TR-QRY-3-2] List Module Parameters query checks
-
-##### [MOD-TR-QRY-3-3] List Module Parameters execution of the query
-
-Return the list of the existing parameters and their values.
-
-##### [MOD-TR-QRY-3-4] List Module Parameters API result example
+Return the list of parameters of this module as a json file:
 
 ```json
 {
@@ -2180,6 +2224,423 @@ Return the list of the existing parameters and their values.
   }
 }
 ```
+
+### Ecosystem Module
+
+#### [MOD-ES-MSG-1] Create New Ecosystem
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-ES-MSG-1-1] Create New Ecosystem parameters
+
+An authorized `operator` that would like to create a [[ref: ecosystem]] MUST call this method by specifying:
+
+- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `did` (string) (*mandatory*): the did of the ecosystem that is creating the ecosystem.
+- `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
+- `doc_url` (string) (*mandatory*): URL where the document is published.
+- `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
+
+Provided document must be of the same language that the primary language of the ecosystem.
+
+##### [MOD-ES-MSG-1-2] Create New Ecosystem precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-ES-MSG-1-2-1] Create New Ecosystem basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `corporation` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Ecosystem `(did, corporation)` consistency invariant: at any block height, all `Ecosystem` entries sharing a `did` are controlled by the same `Corporation`).
+- `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
+- `doc_url` (string) (*mandatory*): MUST be a valid URL .
+- `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
+
+:::note
+Several `Ecosystem` entries MAY share the same ecosystem DID. The identifier of an `Ecosystem` is its `id`, and the Verifiable Trust Spec includes the `id` of the `Ecosystem` in the DID Document. Per-Ecosystem DID uniqueness is therefore NOT required: proof of control of the DID is verified by resolving the DID outside of the context of the VPR. However, **all `Ecosystem` entries sharing the same `did` MUST be controlled by the same `corporation`** — see the basic-check bullet above. Proof of control of the shared DID is, by construction, held by that single controlling `Corporation`, and the corresponding `Corporation` entry (if any whose own `did` equals this value) is unique by the per-Corporation `did` uniqueness invariant (although the Corporation that *owns* the DID per Corp.did and the Corporation that *controls* the Ecosystems claiming it need not coincide).
+:::
+
+###### [MOD-ES-MSG-1-2-2] Create New Ecosystem fee checks
+
+Fee payer MUST have an available balance to cover the [[ref: estimated transaction fees]].
+
+##### [MOD-ES-MSG-1-3] Create New Ecosystem execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- create and persist a new `Ecosystem` entry `ecosystem`:
+
+- `ecosystem.id` : auto-incremented uint64
+- `ecosystem.did`: `did`
+- `ecosystem.corporation`: `corporation`
+- `ecosystem.created`: current timestamp
+- `ecosystem.modified`: `ecosystem.created`
+- `ecosystem.language`: `language`
+- `ecosystem.active_version`: 1
+
+- create and persist a new `GovernanceFrameworkVersion` entry `gfv`:
+
+- `gfv.id`: auto-incremented uint64
+- `gfv.ecosystem_id`: `ecosystem.id`
+- `gfv.corporation`: null
+- `gfv.created`: current timestamp
+- `gfv.version`: 1
+- `gfv.active_since`: current timestamp
+
+- create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
+
+- `gfd.id`: auto-incremented uint64
+- `gfd.gfv_id`: `gfv.id`
+- `gfd.created`: current timestamp
+- `gfd.language`: `language`
+- `gfd.url`: `doc_url`
+- `gfd.digest_sri`: `doc_digest_sri`
+
+> Subsequent governance framework documents and version activations for this ecosystem MUST be managed through [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version).
+
+#### [MOD-ES-MSG-2] Update Ecosystem
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-ES-MSG-2-1] Update Ecosystem parameters
+
+- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `id` (uint64) (*mandatory*): the id of the ecosystem.
+- `did` (string) (*mandatory*): the did of the ecosystem.
+
+##### [MOD-ES-MSG-2-2] Update Ecosystem precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-ES-MSG-2-2-1] Update Ecosystem basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `corporation` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `id` (uint64) (*mandatory*): a `Ecosystem` entry `ecosystem` with id `id` MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry `ecosystem`.
+- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if any **other** `Ecosystem` entry (i.e., any `Ecosystem` entry whose `id` differs from the supplied `id`) has `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Ecosystem `(did, corporation)` consistency invariant). Rotating `ecosystem.did` to a value already held by another `Ecosystem` controlled by a different `corporation` is forbidden.
+
+###### [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks
+
+Fee payer must have available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+
+##### [MOD-ES-MSG-2-3] Update Ecosystem execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- load `Ecosystem` entry `ecosystem` from `id` and set:
+
+- `ecosystem.did`: `did`
+- `ecosystem.modified`: current timestamp
+
+#### [MOD-ES-MSG-3] Archive Ecosystem
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-ES-MSG-3-1] Archive Ecosystem parameters
+
+- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `id` (uint64) (*mandatory*) id of the ecosystem (*mandatory*);
+- `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
+
+##### [MOD-ES-MSG-3-2] Archive Ecosystem precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-ES-MSG-3-2-1] Archive Ecosystem basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `corporation` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- load `Ecosystem` `ecosystem` from `id`. `ecosystem.corporation` MUST be the corporation executing the method, else MUST abort.
+- `archive` (boolean) (*mandatory*) MUST be a boolean.
+  - If `archive` is true and `ecosystem.archived` is not null, MUST abort as `Ecosystem` is already archived.
+  - If `archive` is false and `ecosystem.archived` is null, MUST abort as `Ecosystem` is already not archived.
+
+###### [MOD-ES-MSG-3-2-2] Archive Ecosystem fee checks
+
+Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
+
+##### [MOD-ES-MSG-3-3] Archive Ecosystem execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- update `Ecosystem` entry `ecosystem` with `ecosystem.id` equal to `id`:
+- if `archived` is true: set `ecosystem.archived` to current timestamp.
+- if `archived` is false: set `ecosystem.archived` to null.
+- `ecosystem.modified`: current timestamp
+
+#### [MOD-ES-MSG-4] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-ES-MSG-4-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-ES-MSG-4-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-ES-MSG-4-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+
+###### [MOD-ES-MSG-4-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution
+
+##### [MOD-ES-MSG-4-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
+#### [MOD-ES-QRY-1] Get Ecosystem
+
+Anyone CAN execute this method.
+
+##### [MOD-ES-QRY-1-1] Get Ecosystem parameters
+
+- `id` (uint64) (*mandatory*): id of the [[ref: ecosystem]].
+- `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
+
+##### [MOD-ES-QRY-1-2] Get Ecosystem checks
+
+##### [MOD-ES-QRY-1-3] Get Ecosystem execution
+
+return found `Ecosystem` entry (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
+
+#### [MOD-ES-QRY-2] List Ecosystems
+
+##### [MOD-ES-QRY-2-1] List Ecosystems query parameters
+
+The following parameters are optional:
+
+- `corporation` (group) (*optional*): if specified, filter by corporation.
+- `modified_after` (timestamp) (*optional*): if specified, returns only `Ecosystem` entries with `Ecosystem.modified` greater than `modified`.
+- `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
+- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
+
+##### [MOD-ES-QRY-2-2] List Ecosystems query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
+
+##### [MOD-ES-QRY-2-3] List Ecosystems execution of the query
+
+If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned. If `modified_after` is specified, order by `modified` desc.
+
+#### [MOD-ES-QRY-3] List Module Parameters
+
+Anyone CAN run this [[ref: query]].
+
+##### [MOD-ES-QRY-3-2] List Module Parameters parameters
+
+##### [MOD-ES-QRY-3-2] List Module Parameters query checks
+
+##### [MOD-ES-QRY-3-3] List Module Parameters execution of the query
+
+Return the list of the existing parameters and their values.
+
+##### [MOD-ES-QRY-3-4] List Module Parameters API result example
+
+```json
+{
+  "params": {
+    "key1": "value1",
+    "key2": "value2",
+    ...
+    ...
+  }
+}
+```
+
+### Governance Framework Module
+
+This module handles [[ref: governance framework]] documents and version activation for both [[ref: ecosystems]] and [[ref: corporations]]. Methods are polymorphic over the owning subject: every message takes an optional `ecosystem_id` parameter to designate whose governance framework is being modified — if set, the target subject is that `Ecosystem` (and the signing `corporation` MUST be its controller); if not set, the target subject is the signing `corporation`'s own [[ref: CGF]] (a Corporation may only edit its own CGF, so no extra parameter is needed).
+
+The initial `GovernanceFrameworkVersion` and its first `GovernanceFrameworkDocument` are created atomically by [Create New Ecosystem](#mod-es-msg-1-create-new-ecosystem) (and, by parallel construction, by [Create New Corporation](#mod-co-msg-1-create-new-corporation)). After that, subsequent versions and documents are added through this module.
+
+#### [MOD-GF-MSG-1] Add Governance Framework Document
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-GF-MSG-1-1] Add Governance Framework Document parameters
+
+- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]] whose governance framework will be modified. If set, the signing `corporation` MUST be the controller of the target `Ecosystem`. If not set, the target subject is the signing `corporation`'s own [[ref: CGF]].
+- `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the governance framework document.
+- `doc_url` (string) (*mandatory*): URL where the document is published.
+- `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
+- `version` (int) (*mandatory*): targeted version.
+
+If for a given language, a document already exists, the execution of this transaction will replace the corresponding entry. Else, a new entry is created. It is only possible to edit future versions. Active version cannot be modified.
+
+##### [MOD-GF-MSG-1-2] Add Governance Framework Document precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-GF-MSG-1-2-1] Add Governance Framework Document basic checks
+
+if a mandatory parameter is not present, method MUST abort.
+
+- `corporation` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- Define `subject` as:
+  - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation` MUST be equal to the signing `corporation`.
+  - if `ecosystem_id` is not set: the `Corporation` entry whose underlying [[ref: group]] is the signing `corporation`. The entry MUST exist (a Corporation may only edit its own governance framework, so no further check is required).
+- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` whose owner matches `subject` (i.e., `gfv.ecosystem_id = ecosystem_id` if subject is an Ecosystem, else `gfv.corporation = corporation`) and `gfv.version = version`, OR `version` MUST be exactly equal to the biggest `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries owned by `subject`. `version` MUST be greater than `subject.active_version`.
+- `doc_language` (string) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
+- `doc_url` (string) (*mandatory*): MUST be a valid URL.
+- `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
+
+###### [MOD-GF-MSG-1-2-2] Add Governance Framework Document fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-GF-MSG-1-3] Add Governance Framework Document execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- if a `GovernanceFrameworkVersion` entry `gfv` matching `subject` and `version` does not exist, create and persist a new one:
+  - `gfv.id`: auto-incremented uint64
+  - `gfv.ecosystem_id`: `ecosystem_id` (or null if subject is a Corporation)
+  - `gfv.corporation`: the signing `corporation` (or null if subject is an Ecosystem)
+  - `gfv.created`: current timestamp
+  - `gfv.version`: `version`
+  - `gfv.active_since`: null
+
+- if a `GovernanceFrameworkDocument` entry `gfd` exists with `gfd.gfv_id = gfv.id` and `gfd.language = doc_language`, update it:
+  - `gfd.url`: `doc_url`
+  - `gfd.digest_sri`: `doc_digest_sri`
+
+- else, create and persist a new `GovernanceFrameworkDocument` entry `gfd`:
+  - `gfd.id`: auto-incremented uint64
+  - `gfd.gfv_id`: `gfv.id`
+  - `gfd.created`: current timestamp
+  - `gfd.language`: `doc_language`
+  - `gfd.url`: `doc_url`
+  - `gfd.digest_sri`: `doc_digest_sri`
+
+#### [MOD-GF-MSG-2] Increase Active Governance Framework Version
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-GF-MSG-2-1] Increase Active Governance Framework Version parameters
+
+- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]]. If set, the signing `corporation` MUST be its controller. If not set, the target subject is the signing `corporation`'s own [[ref: CGF]].
+
+##### [MOD-GF-MSG-2-2] Increase Active Governance Framework Version precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-GF-MSG-2-2-1] Increase Active Governance Framework Version basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+
+- `corporation` (group): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- Define `subject` as:
+  - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation` MUST be equal to the signing `corporation`.
+  - if `ecosystem_id` is not set: the `Corporation` entry whose underlying [[ref: group]] is the signing `corporation`. The entry MUST exist.
+- Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` (matching `gfv.ecosystem_id` or `gfv.corporation` as appropriate) whose `gfv.version` is equal to `subject.active_version` + 1. If none is found, transaction MUST abort.
+- Find a `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `subject.language`. If no document is found (and thus no document exists for the default language of this version for this subject), transaction MUST abort.
+
+###### [MOD-GF-MSG-2-2-2] Increase Active Governance Framework Version fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-GF-MSG-2-3] Increase Active Governance Framework Version execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- Load `subject` (`Ecosystem` or `Corporation` as identified above).
+- Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` whose `gfv.version` is equal to `subject.active_version` + 1.
+- Update `subject.active_version` to `subject.active_version` + 1.
+- Set `subject.modified` to current timestamp.
+- Set `gfv.active_since` to current timestamp.
+- Persist changes.
+
+#### [MOD-GF-QRY-1] Get Governance Framework Version
+
+Anyone CAN execute this method.
+
+##### [MOD-GF-QRY-1-1] Get Governance Framework Version query parameters
+
+- `id` (uint64) (*mandatory*): the id of the `GovernanceFrameworkVersion`.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`. If not set, return all documents of all languages.
+
+##### [MOD-GF-QRY-1-2] Get Governance Framework Version query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `id` (uint64) (*mandatory*): MUST be a valid uint64.
+
+##### [MOD-GF-QRY-1-3] Get Governance Framework Version execution
+
+Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id` or `corporation`) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
+
+#### [MOD-GF-QRY-2] List Governance Framework Versions
+
+Anyone CAN execute this method.
+
+##### [MOD-GF-QRY-2-1] List Governance Framework Versions query parameters
+
+Exactly one of `ecosystem_id` and `corporation` MUST be set:
+
+- `ecosystem_id` (uint64) (*conditional*): filter by ecosystem. MUST be set if `corporation` is null.
+- `corporation` (group) (*conditional*): filter by corporation (the underlying Cosmos SDK [[ref: group]] of the target `Corporation`). MUST be set if `ecosystem_id` is null.
+- `active_only` (boolean) (*optional*): if true, return only the entry corresponding to the subject's `active_version`.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
+- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
+
+##### [MOD-GF-QRY-2-2] List Governance Framework Versions query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- Exactly one of `ecosystem_id` and `corporation` MUST be set.
+- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
+
+##### [MOD-GF-QRY-2-3] List Governance Framework Versions execution
+
+Return the list of `GovernanceFrameworkVersion` entries matching the filter, with their nested `GovernanceFrameworkDocument` entries (filtered as above). Entries MUST be ordered by ascending `version`.
 
 ### Credential Schema Module
 
@@ -2193,7 +2654,7 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `tr_id` id of the trust registry (*mandatory*);
+- `ecosystem_id` id of the ecosystem (*mandatory*);
 - `json_schema` the [[ref: Json Schema]] of the credential (*mandatory*).
 - `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
 - `verifier_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
@@ -2218,7 +2679,7 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `tr_id` MUST represent an existing `TrustRegistry` entry `tr` and `tr.corporation` MUST be the `corporation` executing the method.
+- `ecosystem_id` MUST represent an existing `Ecosystem` entry `ecosystem` and `ecosystem.corporation` MUST be the `corporation` executing the method.
 - `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] is ignored and will be replaced during execution by the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
@@ -2253,7 +2714,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - create and persist a new `CredentialSchema` entry `cs`:
 
   - `cs.id`: auto-incremented uint64.
-  - `cs.tr_id`: id of the `TrustRegistry` entry that will be the owner of `cs`.
+  - `cs.ecosystem_id`: id of the `Ecosystem` entry that will be the owner of `cs`.
   - `cs.json_schema`: `json_schema`, with VPR_CREDENTIAL_SCHEMA_ID string replaced by generated `cs.id`, and then canonicalize it using the [JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785) as defined in RFC 8785. Schema MUST be saved canonized.
   - `cs.issuer_grantor_validation_validity_period`: `issuer_grantor_validation_validity_period`
   - `cs.verifier_grantor_validation_validity_period`: `verifier_grantor_validation_validity_period`
@@ -2270,7 +2731,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.digest_algorithm`: `digest_algorithm`
 
 :::note
-If needed, depending on configuration mode, Trust Registry controller MAY need to create a ECOSYSTEM `Permission` so that validation processes can be run.
+If needed, depending on configuration mode, Ecosystem controller MAY need to create a ECOSYSTEM `Participant` so that onboarding processes can be run.
 :::
 
 #### [MOD-CS-MSG-2] Update Credential Schema
@@ -2304,7 +2765,7 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
-- load `TrustRegistry` `tr` from `cs.tr_id`. `tr.corporation` MUST be the `corporation` executing the method, else MUST abort.
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation` MUST be the `corporation` executing the method, else MUST abort.
 - `issuer_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
 - `issuer_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
@@ -2355,7 +2816,7 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
-- load `TrustRegistry` `tr` from `cs.tr_id`. `tr.corporation` MUST be the `corporation` executing the method, else MUST abort.
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation` MUST be the `corporation` executing the method, else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean. 
   - If `archive` is true and `cs.archived` is not null, MUST abort as Credential Schema is already archived.
   - If `archive` is false and `cs.archived` is null, MUST abort as Credential Schema is already not archived.
@@ -2415,7 +2876,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 This message creates a **draft** `SchemaAuthorizationPolicy` for a given `(schema_id, role)`, or overwrites the existing draft policy if one already exists.  
 A draft policy is defined as a policy with `effective_from == null` and MUST NOT be revoked.
 
-Accordingly, if a credential schema defines one or more active policies for the ISSUER or VERIFIER role, the corresponding corporation that grants the ISSUER or VERIFIER role for this schema (ISSUER_GRANTOR, VERIFIER_GRANTOR, or ECOSYSTEM, depending on how schema issuer and verifier modes have been configured) MUST issue an IAC or VAC credential to the candidate upon successful completion of the validation process. Refer to the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec) for more information.
+Accordingly, if a credential schema defines one or more active policies for the ISSUER or VERIFIER role, the corresponding corporation that grants the ISSUER or VERIFIER role for this schema (ISSUER_GRANTOR, VERIFIER_GRANTOR, or ECOSYSTEM, depending on how schema issuer and verifier modes have been configured) MUST issue an IAC or VAC credential to the candidate upon successful completion of the onboarding process. Refer to the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec) for more information.
 
 ##### [MOD-CS-MSG-5-1] Create Schema Authorization Policy parameters
 
@@ -2555,7 +3016,7 @@ Method execution MUST perform the following task in a [[ref: transaction]]:
 
 ##### [MOD-CS-QRY-1-1] List Credential Schemas parameters
 
-- `tr_id` (uint64) (*optional*): to filter by trust registry id.
+- `ecosystem_id` (uint64) (*optional*): to filter by ecosystem id.
 - `modified_after` (timestamp) (*optional*): show schemas modified after this timestamp.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 - `only_active` (boolean): if set to true, returns only not archived entries.
@@ -2701,202 +3162,206 @@ Returned entries MUST include at least the following fields:
 
 Entries MUST be ordered by ascending `version`.
 
-### Permission Module
+### Participant Module
 
-#### Permission Module Overview
+#### Participant Module Overview
 
 *This section is non-normative.*
 
-Permission are linked to a Credential Schema and representable as a tree.
+Participants are linked to a Credential Schema and representable as a tree.
 
 ```plantuml
 
 @startuml
 scale max 800 width
  
-package "Example Credential Schema Permission Tree" as cs {
+package "Example Credential Schema Participant Tree" as cs {
 
-    object "Trust Registry A" as tr #3fbdb6 {
-        permissionType: ECOSYSTEM (Root)
+    object "Ecosystem A" as tr #3fbdb6 {
+        role: ECOSYSTEM (Root)
         did:example:trA
     }
     object "Issuer Grantor B" as ig {
-        permissionType: ISSUER_GRANTOR
+        role: ISSUER_GRANTOR
         did:example:igB
     }
     object "Issuer C" as issuer #7677ed  {
-        permissionType: ISSUER
+        role: ISSUER
         did:example:iC
     }
     object "Verifier Grantor D" as vg {
-        permissionType: VERIFIER_GRANTOR
+        role: VERIFIER_GRANTOR
         did:example:vgD
     }
     object "Verifier E" as verifier #00b0f0 {
-        permissionType: VERIFIER
+        role: VERIFIER
         did:example:vE
     }
     object "Holder Z " as holder #FFB073 {
-        permissionType: HOLDER
+        role: HOLDER
     }
 }
 
 
 
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
+tr --> ig 
+ig --> issuer
 
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
+tr --> vg
+vg --> verifier
 
-issuer --> holder: granted schema permission
+issuer --> holder
 
 @enduml
 
 ```
 
-The ECOSYSTEM type permissions are created by the Credential Schema owner. All other permissions are created by running a Validation Process (or by any account: - for `ISSUER` permissions if issuer_onboarding_mode is equal to `OPEN`, - for `VERIFIER` permissions if verifier_onboarding_mode is equal to `OPEN`).
+`ECOSYSTEM` Participants are created directly by the [[ref: credential schema]] owner. All other Participants are created by running an [[ref: onboarding process]] — except when onboarding mode is set to `OPEN` for ISSUER and/or VERIFIER Participants, which any account CAN create directly:
 
-A Validation Process (VP) is a process which involves an [[ref: applicant]] (which is the [[ref: corporation]] of validation entry stored in a validation [[ref: keeper]]), a [[ref: validator]] permission, and optional validation fees plus transaction fees.
+- `ISSUER` Participants when `issuer_onboarding_mode` is `OPEN`;
+- `VERIFIER` Participants when `verifier_onboarding_mode` is `OPEN`.
 
-Validation is used by [[ref: applicants]] that want to:
+An [[ref: onboarding process]] (OP) involves an [[ref: applicant]] (the [[ref: corporation]] of a given Participant entry) and a [[ref: validator]] Participant. It MAY require the applicant to pay `validation_fees` in addition to [[ref: transaction fees]].
+
+An [[ref: onboarding process]] is run by [[ref: applicants]] that want to:
 
 - be an [[ref: issuer]] of a specific [[ref: credential schema]];
 - be a [[ref: verifier]] of a specific [[ref: credential schema]];
 - be an [[ref: issuer grantor]] of a specific [[ref: credential schema]];
 - be a [[ref: verifier grantor]] of a specific [[ref: credential schema]];
 - get issued a credential of a specific [[ref: credential schema]];
-- obtain a HOLDER permission from a issuer of a specific [[ref: credential schema]] and get issued a verifiable credential of this schema (HOLDER permission provide credential status (revoked, etc...));
+- obtain a `HOLDER` Participant entry from an [[ref: issuer]] of a specific [[ref: credential schema]] and be issued a verifiable credential of that schema (the `HOLDER` Participant entry carries credential status — revoked, etc.).
 
-In all cases, the process is very similar. Example execution of a validation process:
+In all cases, the process is very similar. Example execution of an [[ref: onboarding process]]:
 
-1. Applicant starts a validation process by running the [start new validation] [[ref: transaction]]. Validation process may be subject to paying validation fees, as defined by validator.
-2. Validation process requires that [[ref: applicant]] connects to a validation [[ref: VS]] identified by its [[ref: DID]], and execute a some validation steps, required for the validation process to conclude.
-3. If [[ref: applicant]] qualifies, [[ref: validator]] updates the validation entry by running the [set to validated] [[ref: transaction]], and [[ref: applicant]] is granted new permissions, and/or gets issued a credential.
+1. The [[ref: applicant]] starts an [[ref: onboarding process]] by running [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The process MAY be subject to paying `validation_fees`, as defined in the [[ref: validator]]'s Participant entry.
+2. The [[ref: applicant]] connects to the [[ref: validator]]'s [[ref: VS]] (identified by its [[ref: DID]]) and executes the validation steps required for the [[ref: onboarding process]] to conclude.
+3. If the [[ref: applicant]] qualifies, the [[ref: validator]] runs [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) to update the Participant entry; the [[ref: applicant]] is then granted the new `Participant` entries and/or issued a credential.
 
-Validation is valid for a specific period, for example 365 days, as configured in the [[ref: credential schema]] for credential schema related validations, or set by trust registry for user-agent validation.
+Once in the `VALIDATED` state, a Participant entry remains valid for a specific period (e.g., 365 days), configured in the [[ref: credential schema]] for credential-schema-related onboarding, or set by the [[ref: ecosystem]] for user-agent onboarding.
 
 :::note
-In some cases, even if the validation is valid for a period of time, the resulting created permission or issued credential might have a shorter expiration timestamp because the validated attribute(s) might expire before validation expiration: in this case, the [[ref: applicant]] must provide updated information to the [[ref: validator]] before attribute expiration, in order to get issued an updated new permission and/or an updated credential.
+Even when the Participant entry remains in the `VALIDATED` state for the configured period, the resulting `Participant` entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the [[ref: applicant]] MUST provide updated information to the [[ref: validator]] before attribute expiration in order to be issued an updated `Participant` entry and/or credential.
 :::
 
-If validation is set to expire, [[ref: applicant]] that wishes to extend the expiration timestamp must renew its validation.
+If the `VALIDATED` state is set to expire, an [[ref: applicant]] that wishes to extend the expiration timestamp MUST renew its [[ref: onboarding process]] (see [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)).
 
-At any time, [[ref: applicant]] can cancel the validation process.
+At any time, the [[ref: applicant]] CAN cancel the [[ref: onboarding process]] (see [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)).
 
-Some special unexpected situation may arise and must be mitigated. Examples:
+Some unexpected situations may arise and MUST be mitigated. Examples:
 
-- if selected validator permission is revoked while applicant's validation is in PENDING state: Applicant CAN cancel the validation process [MOD-PERM-MSG-6].
-- if selected validator permission is revoked while applicant is in VALIDATED state: Applicant CAN renew the validation process by choosing a new validator [MOD-PERM-MSG-2].
+- if the selected [[ref: validator]] Participant entry is revoked while the [[ref: applicant]] is in `PENDING` state: applicant CAN cancel the [[ref: onboarding process]] (see [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request));
+- if the selected [[ref: validator]] Participant entry is revoked while the [[ref: applicant]] is in `VALIDATED` state: applicant CAN renew the [[ref: onboarding process]] by choosing a new validator (see [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)).
 
-#### [MOD-PERM-MSG-1] Start Permission VP
+#### [MOD-PP-MSG-1] Start Participant OP
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-##### [MOD-PERM-MSG-1-1] Start Permission VP parameters
+##### [MOD-PP-MSG-1-1] Start Participant OP parameters
 
-An Applicant that would like to start a permission validation process MUST execute this method by specifying:
+An Applicant that would like to start an onboarding process MUST execute this method by specifying:
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_operator` (account) (*optional*): the account of the Veriable Service we want to authorize to create permission sessions linked to this permission. If not specified, Verifiable Service will not be able to use the payment delegation feature. **Required** to use the payment delegation feature.
-- `type` (PermissionType) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the permission that the applicant would like to get;
-- `validator_perm_id` (uint64) (*mandatory*): the [[ref: validator]] permission (parent permission in the tree), chosen by the applicant.
-- `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
-- `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
-- `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
+- `vs_operator` (account) (*optional*): the account of the Veriable Service we want to authorize to create participant sessions linked to this participant. If not specified, Verifiable Service will not be able to use the payment delegation feature. **Required** to use the payment delegation feature.
+- `role` (ParticipantRole) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the Participant role that the applicant would like to get;
+- `validator_participant_id` (uint64) (*mandatory*): the [[ref: validator]] participant (parent participant in the tree), chosen by the applicant.
+- `validation_fees` (number) (*optional*): Requested validation_fees for this participant (can be modified by validator).
+- `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
+- `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
 - `did` (string) (*required*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
-The following VS Operator Authorization parameters are **optional** and collectively define the initial [PermissionAuthorizationRecord](#permissionauthorizationrecord) that will be created for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode (the corporation signs and pays for its own permission-related transactions directly). VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) that will be created for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode (the corporation signs and pays for its own `Participant`-related transactions directly). VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
 
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `PermissionAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
-- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this `Participant` entry. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this `Participant` entry as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this `Participant` entry.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this `Participant` entry.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this `Participant` entry.
 
-Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`.
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`.
 
-|Permission type|Permitted Messages|
+|Participant role|Permitted Messages|
 |-|-|
 | HOLDER | TriggerResolver |
-| ISSUER | CreateOrUpdatePermissionSession, SetPermissionVPtoValidated |
-| VERIFIER | CreateOrUpdatePermissionSession |
-| ISSUER_GRANTOR | SetPermissionVPtoValidated |
-| VERIFIER_GRANTOR | SetPermissionVPtoValidated |
-| ECOSYSTEM | SetPermissionVPtoValidated |
+| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated |
+| VERIFIER | CreateOrUpdateParticipantSession |
+| ISSUER_GRANTOR | SetParticipantOPtoValidated |
+| VERIFIER_GRANTOR | SetParticipantOPtoValidated |
+| ECOSYSTEM | SetParticipantOPtoValidated |
  
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
-##### [MOD-PERM-MSG-1-2] Start Permission VP precondition checks
+##### [MOD-PP-MSG-1-2] Start Participant OP precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-1-2-1] Start Permission VP basic checks
+###### [MOD-PP-MSG-1-2-1] Start Participant OP basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `type` (PermissionType) (*mandatory*) MUST be a valid PermissionType: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
-- `validator_perm_id` (uint64) (*mandatory*): see [MOD-PERM-MSG-1-2-2](#mod-perm-msg-1-2-2-start-permission-vp-permission-checks).
-- `validation_fees` (number) (*optional*): Requested validation_fees for this permission (can be modified by validator).
-- `issuance_fees` (number) (*optional*): Requested issuance_fees for this permission (can be modified by validator).
-- `verification_fees` (number) (*optional*): Requested verification_fees for this permission (can be modified by validator).
+- `role` (ParticipantRole) (*mandatory*) MUST be a valid ParticipantRole: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
+- `validator_participant_id` (uint64) (*mandatory*): see [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-participant-op-permission-checks).
+- `validation_fees` (number) (*optional*): Requested validation_fees for this `Participant` entry (can be modified by validator).
+- `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
+- `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PERM-MSG-1-1](#mod-perm-msg-1-1-start-permission-vp-parameters).
+- if `did` is specified and any existing `Participant` entry has non-null `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Participant `(did, corporation)` consistency invariant: at any block height, all `Participant` entries sharing a non-null `did` are owned by the same `Corporation`).
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-op-parameters).
 
 :::note
-A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the validation process is REQUIRED or not.
+A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the onboarding process is REQUIRED or not.
 :::
 
-###### [MOD-PERM-MSG-1-2-2] Start Permission VP permission checks
+###### [MOD-PP-MSG-1-2-2] Start Participant OP permission checks
 
-- Load `Permission` entry `validator_perm` from `validator_perm_id`. It MUST be a [[ref: active permission]] else transaction MUST abort.
-- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`. It MUST exist.
+- Load `Participant` entry `validator_participant` from `validator_participant_id`. It MUST be a [[ref: active participant]] else transaction MUST abort.
+- Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`. It MUST exist.
 
-- if `type` (PermissionType) is equal to ISSUER:
+- if `role` (ParticipantRole) is equal to ISSUER:
 
-  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS: `validator_perm.type` MUST be ISSUER_GRANTOR, else MUST abort.
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be ISSUER_GRANTOR, else MUST abort.
   
-  - else if `cs.issuer_onboarding_mode` is equal to ECOSYSTEM_VALIDATION_PROCESS: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - else if `cs.issuer_onboarding_mode` is equal to ECOSYSTEM_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
 
   - else MUST abort.
 
-- else if `type` (PermissionType) is equal to ISSUER_GRANTOR:
+- else if `role` (ParticipantRole) is equal to ISSUER_GRANTOR:
 
-  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS:  `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS:  `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
   
   - else abort.
 
-- else if `type` (PermissionType) is equal to VERIFIER:
+- else if `role` (ParticipantRole) is equal to VERIFIER:
 
-  - if `cs.verifier_onboarding_mode` is equal to GRANTOR: `validator_perm.type` MUST be VERIFIER_GRANTOR, else MUST abort.
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be VERIFIER_GRANTOR, else MUST abort.
   
-  - else if `cs.verifier_onboarding_mode` is equal to ECOSYSTEM_VALIDATION_PROCESS: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - else if `cs.verifier_onboarding_mode` is equal to ECOSYSTEM_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
 
   - else abort.
 
-- else if `type` (PermissionType) is equal to VERIFIER_GRANTOR:
+- else if `role` (ParticipantRole) is equal to VERIFIER_GRANTOR:
 
-  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_VALIDATION_PROCESS: `validator_perm.type` MUST be ECOSYSTEM, else MUST abort.
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
   
   - else abort.
 
-- else if `type` (PermissionType) is equal to HOLDER:
+- else if `role` (ParticipantRole) is equal to HOLDER:
 
-  - if `cs.holder_onboarding_mode` is equal to ISSUER_VALIDATION_PROCESS: `validator_perm.type` MUST be ISSUER, else MUST abort.
+  - if `cs.holder_onboarding_mode` is equal to ISSUER_ONBOARDING_PROCESS: `validator_participant.role` MUST be ISSUER, else MUST abort.
   
   - else abort.
 
-At the end, if a [[ ref: active permission]] `validator_perm` is not found, [[ref: transaction]] MUST abort.
+At the end, if a [[ref: active participant]] `validator_participant` is not found, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-1-2-3] Start Permission VP fee checks
+###### [MOD-PP-MSG-1-2-3] Start Participant OP fee checks
 
-- Load `Permission` entry `validator_perm` from `validator_perm_id`.
-- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`.
+- Load `Participant` entry `validator_participant` from `validator_participant_id`.
+- Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`.
 
 - Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
 
@@ -2907,48 +3372,48 @@ At the end, if a [[ ref: active permission]] `validator_perm` is not found, [[re
 if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in [[ref: native denom]].
+  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in [[ref: native denom]].
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, "tu")`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) in [[ref: native denom]];
+  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) in [[ref: native denom]];
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
+  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
   - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
   - the required `validation_fees_in_denom` = 0 in [[ref: native denom]].
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 :::note
 Trust deposit MUST always be paid in [[ref: native denom]]
 :::
 
-###### [MOD-PERM-MSG-1-2-4] Start Permission VP overlap checks
+###### [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks
 
-We want to make sure that 2 validation processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different VP with differents validators for the same `schema_id`, `type`.
+We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different OP with differents validators for the same `schema_id`, `role`.
 
-Find all permission `perms[]` for `schema_id`, `type`, `validator_perm_id`, `corporation` with vp_state = VALIDATED or PENDING.
+Find all `Participant` entries `participants[]` for `schema_id`, `role`, `validator_participant_id`, `corporation` with op_state = VALIDATED or PENDING.
 
-if size of `perms[]` > 0, it means there is already an existing validation process in this context, so MUST abort.
+if size of `participants[]` > 0, it means there is already an existing onboarding process in this context, so MUST abort.
 
 > note: this check was not present in v3.
 
-##### [MOD-PERM-MSG-1-3] Start Permission VP execution
+##### [MOD-PP-MSG-1-3] Start Participant OP execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Load `Permission` entry `validator_perm` of the selected validator.
+- Load `Participant` entry `validator_participant` of the selected validator.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
 - use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module.
@@ -2956,33 +3421,33 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- create an persist a new permission entry `applicant_perm`:
+- create an persist a new `Participant` entry `applicant_participant`:
 
-  - `applicant_perm.id`: auto-incremented uint64.
-  - `applicant_perm.schema_id` = `validator_perm.schema_id`
-  - `applicant_perm.corporation`: `corporation`.
-  - `applicant_perm.vs_operator`: `vs_operator`.
-  - `applicant_perm.type`: `type`.
-  - `applicant_perm.created`: `now`
-  - `applicant_perm.modified`: `now`
-  - `applicant_perm.deposit`: `validation_trust_deposit_in_native_denom`.
-  - `applicant_perm.validation_fees`: `validation_fees`.
-  - `applicant_perm.issuance_fees`: `issuance_fees`.
-  - `applicant_perm.verification_fees`: `verification_fees`.
-  - `applicant_perm.validator_perm_id`: `validator_perm_id`.
-  - `applicant_perm.vp_last_state_change`: `now`
-  - `applicant_perm.vp_state`: PENDING.
-  - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
-  - `applicant_perm.vp_summary_digest`: null.
-  - `applicant_perm.vp_validator_deposit`: 0.
+  - `applicant_participant.id`: auto-incremented uint64.
+  - `applicant_participant.schema_id` = `validator_participant.schema_id`
+  - `applicant_participant.corporation`: `corporation`.
+  - `applicant_participant.vs_operator`: `vs_operator`.
+  - `applicant_participant.role`: `role`.
+  - `applicant_participant.created`: `now`
+  - `applicant_participant.modified`: `now`
+  - `applicant_participant.deposit`: `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.validation_fees`: `validation_fees`.
+  - `applicant_participant.issuance_fees`: `issuance_fees`.
+  - `applicant_participant.verification_fees`: `verification_fees`.
+  - `applicant_participant.validator_participant_id`: `validator_participant_id`.
+  - `applicant_participant.op_last_state_change`: `now`
+  - `applicant_participant.op_state`: PENDING.
+  - `applicant_participant.op_current_fees` (number): `validation_fees_in_denom`.
+  - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.op_summary_digest`: null.
+  - `applicant_participant.op_validator_deposit`: 0.
 
-If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
 - `corporation`: `corporation`
 - `vs_operator`: `vs_operator`
 - `record`:
-  - `record.perm_id`: `applicant_perm.id`
+  - `record.participant_id`: `applicant_participant.id`
   - `record.msg_types`: `vs_operator_authz_msg_types`
   - `record.spend_limit`: `vs_operator_authz_spend_limit`
   - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
@@ -2990,7 +3455,7 @@ If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizatio
   - `record.expiration`: `now`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: the record is created with `expiration = now` so authorization is **not yet active**. [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) will reject any attempt to use it until [[MOD-PERM-MSG-3]](#mod-perm-msg-3-set-permission-vp-to-validated) updates `expiration` to `applicant_perm.effective_until`. No on-chain `FeeGrant` object is created at this stage even if `with_feegrant` is true (the recompute subroutine in [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) requires `expiration > now`).
+> Note: the record is created with `expiration = now` so authorization is **not yet active**. [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) will reject any attempt to use it until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) updates `expiration` to `applicant_participant.effective_until`. No on-chain `FeeGrant` object is created at this stage even if `with_feegrant` is true (the recompute subroutine in [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) requires `expiration > now`).
 
 #### Connecting to the VS of the Validator
 
@@ -2998,65 +3463,65 @@ If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizatio
 
 This action must be initiated by the [[ref: applicant]].
 
-During a validation process, if the associated `validator_perm` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
+During an onboarding process, if the associated `validator_participant` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
 
 Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by the [[ref: validator]] to complete one or more of the following tasks:
 
-1. **Prove control** over the `vs_operator` [[ref: account]] specifid in the permission (e.g., via blind signature or cryptographic challenge).
+1. **Prove control** over the `vs_operator` [[ref: account]] specified in the `Participant` entry (e.g., via blind signature or cryptographic challenge).
 2. **Provide requested information**, such as filling out forms, submitting documents, or other forms of disclosure as required by the validation [[ref: VS]].
-3. If the requested permission includes a [[ref: VS]] DID, the [[ref: applicant]] should prove control over the corresponding [[ref: DID]] to the validator's [[ref: VS]].
+3. If the requested `Participant` entry includes a [[ref: VS]] DID, the [[ref: applicant]] should prove control over the corresponding [[ref: DID]] to the validator's [[ref: VS]].
 
-Once the [[ref: validator]] determines that the process is complete, they may terminate the validation process and create the permission accordingly. This permission configuration usually include:
+Once the [[ref: validator]] determines that the process is complete, they may terminate the onboarding process and create the `Participant` entry accordingly. This `Participant`-entry configuration usually includes:
 
 - `validation_fees`  
 - `issuance_fees`  
 - `verification_fees`  
-- `permission expiration`
+- `Participant` expiration
 
-The [[ref: validator]] may compile a summary file of the validation process, documenting exchanged data, proofs, and decisions, and share it with the [[ref: applicant]] via the [[ref: VS]] connection or another secure channel.
+The [[ref: validator]] may compile a summary file of the onboarding process, documenting exchanged data, proofs, and decisions, and share it with the [[ref: applicant]] via the [[ref: VS]] connection or another secure channel.
 
-For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_perm.vp_summary_digest`.
+For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_participant.op_summary_digest`.
 
-#### [MOD-PERM-MSG-2] Renew Permission VP
+#### [MOD-PP-MSG-2] Renew Participant OP
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 *This section is non-normative.*
 
-- Requesting a renewal has no effect on permission expiration or issued credentials.
+- Requesting a renewal has no effect on `Participant` expiration or issued credentials.
 - Renewal is only possible with the same validator.
-- If validator permission is not valid anymore, applicant MUST perform a new validation process with another validator.
-- Renewal does not allow changing the `perm.validation_fees`, `perm.issuance_fees`, `perm.verification_fees`. To change these values, applicant MUST start a new validation process.
-- if permission is revoked, slashed, or repaid, method MUST fail.
+- If validator `Participant` is not valid anymore, applicant MUST perform a new onboarding process with another validator.
+- Renewal does not allow changing the `participant.validation_fees`, `participant.issuance_fees`, `participant.verification_fees`. To change these values, applicant MUST start a new onboarding process.
+- if `applicant_participant` is revoked, slashed, or repaid, method MUST fail.
 
-##### [MOD-PERM-MSG-2-1] Renew Permission VP parameters
+##### [MOD-PP-MSG-2-1] Renew Participant OP parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission for which applicant would like to renew the validation process;
+- `id` (uint64) (*mandatory*): id of the `Participant` entry for which applicant would like to renew the onboarding process;
 
-##### [MOD-PERM-MSG-2-2] Renew Permission VP precondition checks
+##### [MOD-PP-MSG-2-2] Renew Participant OP precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-2-2-1] Renew Permission VP basic checks
+###### [MOD-PP-MSG-2-2-1] Renew Participant OP basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` MUST be a valid uint64 and a permission entry with the same id MUST exist.
+- `id` MUST be a valid uint64 and a `Participant` entry with the same id MUST exist.
 
-###### [MOD-PERM-MSG-2-2-2] Renew Permission VP permission checks
+###### [MOD-PP-MSG-2-2-2] Renew Participant OP permission checks
 
-- Load `Permission` entry `applicant_perm`. `corporation` running the operation MUST be `applicant_perm.corporation`, else MUST abort. `applicant_perm` MUST be a [[ref: active permission]].
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`. It MUST exist, and be a [[ref: active permission]], else MUST abort.
+- Load `Participant` entry `applicant_participant`. `corporation` running the operation MUST be `applicant_participant.corporation`, else MUST abort. `applicant_participant` MUST be a [[ref: active participant]].
+- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: active participant]], else MUST abort.
 
-###### [MOD-PERM-MSG-2-2-3] Renew Permission VP fee checks
+###### [MOD-PP-MSG-2-2-3] Renew Participant OP fee checks
 
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
-- Load `CredentialSchema` entry `cs` from `validator_perm.schema_id`.
+- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
+- Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`.
 
 - Fee payer MUST have an available balance in its [[ref: account]], to cover the [[ref: estimated transaction fees]];
 
@@ -3067,39 +3532,39 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in [[ref: native denom]].
+  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in [[ref: native denom]].
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, "tu")`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) in [[ref: native denom]];
+  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) in [[ref: native denom]];
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = `validator_perm.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
+  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
   - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
   - the required `validation_fees_in_denom` = 0 in [[ref: native denom]].
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_perm.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
 :::note
 Trust deposit MUST always be paid in [[ref: native denom]]
 :::
 
-###### [MOD-PERM-MSG-2-3] Renew Permission VP execution
+###### [MOD-PP-MSG-2-3] Renew Participant OP execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Load `Permission` entry `applicant_perm`. 
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
+- Load `Participant` entry `applicant_participant`. 
+- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
 - use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module.
@@ -3107,209 +3572,209 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- update permission entry:
+- update `Participant` entry:
 
-  - `applicant_perm.vp_state`: PENDING.
-  - `applicant_perm.vp_last_state_change`: current timestamp.
-  - `applicant_perm.deposit`: `applicant_perm.deposit` + `validation_trust_deposit_in_native_denom`.
-  - `applicant_perm.vp_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_perm.vp_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
-  - `applicant_perm.modified`: `now`
+  - `applicant_participant.op_state`: PENDING.
+  - `applicant_participant.op_last_state_change`: current timestamp.
+  - `applicant_participant.deposit`: `applicant_participant.deposit` + `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.op_current_fees` (number): `validation_fees_in_denom`.
+  - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.modified`: `now`
 
-#### [MOD-PERM-MSG-3] Set Permission VP to Validated
+#### [MOD-PP-MSG-3] Set Participant OP to Validated
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-##### [MOD-PERM-MSG-3-1] Set Permission VP to Validated parameters
+##### [MOD-PP-MSG-3-1] Set Participant OP to Validated parameters
 
 An [[ref: account]] that would like to set a validation entry to VALIDATED MUST execute this method by specifying:
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the validation process;
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Permission` is effective, null if no time limit should been set for this permission or if we want it to be aligned with the validation process expiration timestamp calculated by this method.
-- `validation_fees` (number) (*mandatory*): Agreed validation_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
-- `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
-- `verification_fees` (number) (*mandatory*): Agreed verification_fees for this permission. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
-- `vp_summary_digest` (string) (*optional*): an optional digest, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
-- `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR, ISSUER permission (if GRANTOR_VALIDATION_PROCESS mode) or an ISSUER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated issuance fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR, VERIFIER permission (if GRANTOR_VALIDATION_PROCESS mode) and/or a VERIFIER permission (ECOSYSTEM_VALIDATION_PROCESS mode) to reduce (or void) calculated fees for subtree of permissions. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `id` (uint64) (*mandatory*): id of the onboarding process;
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit should been set for this `Participant` entry or if we want it to be aligned with the onboarding process expiration timestamp calculated by this method.
+- `validation_fees` (number) (*mandatory*): Agreed validation_fees for this `Participant` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
+- `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this `Participant` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
+- `verification_fees` (number) (*mandatory*): Agreed verification_fees for this `Participant` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
+- `op_summary_digest` (string) (*optional*): an optional digest, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
-##### [MOD-PERM-MSG-3-2] Set Permission VP to Validated precondition checks
+##### [MOD-PP-MSG-3-2] Set Participant OP to Validated precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-3-2-1] Set Permission VP to Validated basic checks
+###### [MOD-PP-MSG-3-2-1] Set Participant OP to Validated basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- Load `Permission` entry `validator_perm` from `applicant_perm_validator_perm_id`.
+- Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
+- Load `Participant` entry `validator_participant` from `applicant_participant_validator_participant_id`.
 - Authorization:
 
 either (executed by any operator of corporation):
-[[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetPermissionVPtoValidated` message.
-[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetPermissionVPtoValidated` message.
-OR (executed by vs-agent account defined in validator permission):
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `validator_perm`) tuple.
-[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `validator_perm`) tuple.
+[[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetParticipantOPtoValidated` message.
+[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `SetParticipantOPtoValidated` message.
+OR (executed by vs-agent account defined in validator `Participant`):
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `validator_participant`) tuple.
+[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `validator_participant`) tuple.
 else MUST abort.
 
-- `applicant_perm.vp_state` MUST be equal to PENDING, else abort.
-- `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_perm.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_perm.validation_fees`, else abort.
-- `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_perm.issuance_fees` or, else abort.
-- `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_perm.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_perm.verification_fees`, else abort.
-- `vp_summary_digest` (string) (*optional*): MUST be null if `validation.type` is set to HOLDER (for HOLDER, proofs can be stored in credentials). Else, MUST be a valid digest. Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
+- `applicant_participant.op_state` MUST be equal to PENDING, else abort.
+- `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_participant.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_participant.validation_fees`, else abort.
+- `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_participant.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_participant.issuance_fees` or, else abort.
+- `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_participant.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_participant.verification_fees`, else abort.
+- `op_summary_digest` (string) (*optional*): MUST be a valid digest. Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
-- Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
-- Load `Permission` `validator_perm` from `applicant_perm.validator_perm_id`.
+- Load `CredentialSchema` `cs` from `applicant_participant.schema_id`.
+- Load `Participant` `validator_participant` from `applicant_participant.validator_participant_id`.
 
 - `issuance_fee_discount` : (number) (*mandatory*):
-  - if `applicant_perm.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_perm.issuance_fee_discount` else MUST abort.
-  - if `cs.issuer_onboarding_mode` is set to GRANTOR_VALIDATION_PROCESS:
-    - if `applicant_perm.type` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-    - if `applicant_perm.type` == ISSUER: if `validator_perm.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_perm.issuance_fee_discount` (100% discount) inclusive.
-  - if `cs.issuer_onboarding_mode` is set to ECOSYSTEM_VALIDATION_PROCESS:
-    - if `applicant_perm.type` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+  - if `applicant_participant.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_participant.issuance_fee_discount` else MUST abort.
+  - if `cs.issuer_onboarding_mode` is set to GRANTOR_ONBOARDING_PROCESS:
+    - if `applicant_participant.role` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+    - if `applicant_participant.role` == ISSUER: if `validator_participant.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_participant.issuance_fee_discount` (100% discount) inclusive.
+  - if `cs.issuer_onboarding_mode` is set to ECOSYSTEM_ONBOARDING_PROCESS:
+    - if `applicant_participant.role` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
   - else MUST abort.
 
 - `verification_fee_discount` : (number) (*mandatory*):
-  - if `applicant_perm.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_perm.verification_fee_discount` else MUST abort.
-  - if `cs.verifier_onboarding_mode` is set to GRANTOR_VALIDATION_PROCESS:
-    - if `applicant_perm.type` == VERIFIER_GRANTOR: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-    - if `applicant_perm.type` == VERIFIER: if `validator_perm.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_perm.verification_fee_discount` (100% discount) inclusive.
-  - if `cs.verifier_onboarding_mode` is set to ECOSYSTEM_VALIDATION_PROCESS:
-    - if `applicant_perm.type` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+  - if `applicant_participant.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_participant.verification_fee_discount` else MUST abort.
+  - if `cs.verifier_onboarding_mode` is set to GRANTOR_ONBOARDING_PROCESS:
+    - if `applicant_participant.role` == VERIFIER_GRANTOR: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
+    - if `applicant_participant.role` == VERIFIER: if `validator_participant.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_participant.verification_fee_discount` (100% discount) inclusive.
+  - if `cs.verifier_onboarding_mode` is set to ECOSYSTEM_ONBOARDING_PROCESS:
+    - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
   - else MUST abort.
 
-Calculation of `vp_exp`, the validation process expiration timestamp, required to verify provided `effective_until`:
+Calculation of `op_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
 
-- let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_perm.type` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_perm.type` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_perm.type` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_perm.type` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_perm.type` is HOLDER).
+- let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_participant.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_participant.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_participant.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_participant.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_participant.role` is HOLDER).
 
-- if `validity_period` is NULL:  `vp_exp` = NULL.
-- else if `applicant_perm.vp_exp` is null, `vp_exp` =  timestamp of now() plus `validity_period`.
-- else `vp_exp` =  `applicant_perm.vp_exp` plus `validity_period`
+- if `validity_period` is NULL:  `op_exp` = NULL.
+- else if `applicant_participant.op_exp` is null, `op_exp` =  timestamp of now() plus `validity_period`.
+- else `op_exp` =  `applicant_participant.op_exp` plus `validity_period`
 
 Now, let's verify `effective_until`:
 
 - if `effective_until` is NULL, no issue.
-- else if `applicant_perm.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
-- else `effective_until` MUST be greater than `applicant_perm.effective_until` AND, if `vp_exp` is not null, lower or equal to `vp_exp`.
+- else if `applicant_participant.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `op_exp` is not null, lower or equal to `op_exp`.
+- else `effective_until` MUST be greater than `applicant_participant.effective_until` AND, if `op_exp` is not null, lower or equal to `op_exp`.
 
-###### [MOD-PERM-MSG-3-2-2] Set Permission VP to Validated validator perms
+###### [MOD-PP-MSG-3-2-2] Set Participant OP to Validated validator perms
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]].
-- `corporation` running the method MUST be `validator_perm.corporation`.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]].
+- `corporation` running the method MUST be `validator_participant.corporation`.
 
-If `validator_perm` is not a [[ ref: active permission]] (expired, revoked, slashed...) then applicant MUST start a new validation process.
+If `validator_participant` is not a [[ref: active participant]] (expired, revoked, slashed...) then applicant MUST start a new onboarding process.
 
-###### [MOD-PERM-MSG-3-2-3] Set Permission VP to Validated fee checks
+###### [MOD-PP-MSG-3-2-3] Set Participant OP to Validated fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
-- if `applicant_perm.vp_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_perm.vp_current_deposit` available in [[ref: native denom]] on its account for paying the trust deposit.
+- if `applicant_participant.op_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.op_current_deposit` available in [[ref: native denom]] on its account for paying the trust deposit.
 
-###### [MOD-PERM-MSG-3-2-4] Set Permission VP to Validated overlap checks
+###### [MOD-PP-MSG-3-2-4] Set Participant OP to Validated overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. That should not occur in this method, but better do the check anyway.
+We want to make sure that 2 `Participant` entries cannot be active at the same time for the same `validator_participant_id`. That should not occur in this method, but better do the check anyway.
 
-Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation`.
 
-for each `Permission` entry `p` from `perms[]`:
+for each `Participant` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
 
 > note: this check was not present in v3.
 
-##### [MOD-PERM-MSG-3-3] Set Permission VP to Validated execution
+##### [MOD-PP-MSG-3-3] Set Participant OP to Validated execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Load `Permission` entry `applicant_perm` from `id`.
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
+- Load `Participant` entry `applicant_participant` from `id`.
+- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
 - define `now` timestamp of now().
 
-Calculate `vp_exp`:
+Calculate `op_exp`:
 
-- Load `CredentialSchema` `cs` from `applicant_perm.schema_id`.
-- let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_perm.type` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_perm.type` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_perm.type` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_perm.type` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_perm.type` is HOLDER).
+- Load `CredentialSchema` `cs` from `applicant_participant.schema_id`.
+- let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_participant.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_participant.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_participant.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_participant.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_participant.role` is HOLDER).
 
-- if `validity_period` is NULL:  `vp_exp` = NULL.
-- else if `applicant_perm.vp_exp` is null, `vp_exp` =  timestamp of now() plus `validity_period`.
-- else `vp_exp` =  `applicant_perm.vp_exp` plus `validity_period`.
+- if `validity_period` is NULL:  `op_exp` = NULL.
+- else if `applicant_participant.op_exp` is null, `op_exp` =  timestamp of now() plus `validity_period`.
+- else `op_exp` =  `applicant_participant.op_exp` plus `validity_period`.
 
 Change value of provided `effective_until` if needed, and abort if needed:
 
 - if provided  `effective_until` is NULL:
-  - change value of provided `effective_until` to `vp_exp`.
+  - change value of provided `effective_until` to `op_exp`.
 
-- else if `applicant_perm.effective_until` is NULL:
+- else if `applicant_participant.effective_until` is NULL:
   - verify that provided `effective_until` is greater than `now` else MUST abort
-  - if `vp_exp` is not null, verify that provided `effective_until` is lower or equal to `vp_exp` else MUST abort
+  - if `op_exp` is not null, verify that provided `effective_until` is lower or equal to `op_exp` else MUST abort
 
 - else:
-  - `effective_until` MUST be greater than `applicant_perm.effective_until` else MUST abort
-  - if `vp_exp` is not null, verify that provided `effective_until` is lower or equal to `vp_exp` else MUST abort.
+  - `effective_until` MUST be greater than `applicant_participant.effective_until` else MUST abort
+  - if `op_exp` is not null, verify that provided `effective_until` is lower or equal to `op_exp` else MUST abort.
 
 Fees and Trust Deposits:
 
-- transfer the full amount `applicant_perm.vp_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to validator `corporation` [[ref: account]] `validator_perm.corporation`;
-- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_perm.vp_current_deposit` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_perm.vp_validator_deposit` to `applicant_perm.vp_validator_deposit` + `applicant_perm.vp_current_deposit`.
+- transfer the full amount `applicant_participant.op_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to validator `corporation` [[ref: account]] `validator_participant.corporation`;
+- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_participant.op_current_deposit` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_participant.op_validator_deposit` to `applicant_participant.op_validator_deposit` + `applicant_participant.op_current_deposit`.
 
-> Important: if `applicant_perm.vp_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_perm.vp_current_deposit` available for paying the trust deposit.
+> Important: if `applicant_participant.op_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.op_current_deposit` available for paying the trust deposit.
 
-Update `Permission` `applicant_perm`:
+Update `Participant` `applicant_participant`:
 
-- set `applicant_perm.modified` to `now`.
-- set `applicant_perm.vp_state` to VALIDATED.
-- set `applicant_perm.vp_last_state_change` to `now`.
-- set `applicant_perm.vp_current_fees` to 0;
-- set `applicant_perm.vp_current_deposit` to 0;
-- set `applicant_perm.vp_summary_digest` to `vp_summary_digest`.
-- set `applicant_perm.vp_exp` to `vp_exp`.
-- set `applicant_perm.effective_until` to `effective_until`.
-- if `applicant_perm.effective_from` IS NULL (first time method is called for this perm, and thus we are not in a renewal):
-  - set `applicant_perm.validation_fees` to `validation_fees`;
-  - set `applicant_perm.issuance_fees` to `issuance_fees`;
-  - set `applicant_perm.verification_fees` to `verification_fees`;
-  - set `applicant_perm.effective_from` to `now`.
-  - set `applicant_perm.issuance_fee_discount` to `issuance_fee_discount`.
-  - set `applicant_perm.verification_fee_discount` to `verification_fee_discount`.
+- set `applicant_participant.modified` to `now`.
+- set `applicant_participant.op_state` to VALIDATED.
+- set `applicant_participant.op_last_state_change` to `now`.
+- set `applicant_participant.op_current_fees` to 0;
+- set `applicant_participant.op_current_deposit` to 0;
+- set `applicant_participant.op_summary_digest` to `op_summary_digest`.
+- set `applicant_participant.op_exp` to `op_exp`.
+- set `applicant_participant.effective_until` to `effective_until`.
+- if `applicant_participant.effective_from` IS NULL (first time method is called for this perm, and thus we are not in a renewal):
+  - set `applicant_participant.validation_fees` to `validation_fees`;
+  - set `applicant_participant.issuance_fees` to `issuance_fees`;
+  - set `applicant_participant.verification_fees` to `verification_fees`;
+  - set `applicant_participant.effective_from` to `now`.
+  - set `applicant_participant.issuance_fee_discount` to `issuance_fee_discount`.
+  - set `applicant_participant.verification_fee_discount` to `verification_fee_discount`.
 
 Activate VS Operator Authorization, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
 
-- `perm_id`: `applicant_perm.id`
-- `new_expiration`: `applicant_perm.effective_until`
+- `participant_id`: `applicant_participant.id`
+- `new_expiration`: `applicant_participant.effective_until`
 
-This call is a no-op if no record was created at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its `expiration` is updated from `now` (disabled) to `applicant_perm.effective_until`, and the on-chain `FeeGrant` for the containing VSOA is granted for the first time (or refreshed) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
+This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its `expiration` is updated from `now` (disabled) to `applicant_participant.effective_until`, and the on-chain `FeeGrant` for the containing VSOA is granted for the first time (or refreshed) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 
-#### [MOD-PERM-MSG-4] Void
+#### [MOD-PP-MSG-4] Void
 
-#### [MOD-PERM-MSG-5] Void
+#### [MOD-PP-MSG-5] Void
 
-#### [MOD-PERM-MSG-6] Cancel Permission VP Last Request
+#### [MOD-PP-MSG-6] Cancel Participant OP Last Request
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-At any time, [[ref: applicant]] of a permission validation process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and escrewed [[ref: trust fees]] are refunded. If `vp_exp` is not null, `vp_state` is set back to VALIDATED, else `vp_state` is set to TERMINATED.
+At any time, [[ref: applicant]] of an onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and escrewed [[ref: trust fees]] are refunded. If `op_exp` is not null, `op_state` is set back to VALIDATED, else `op_state` is set to TERMINATED.
 
-##### [MOD-PERM-MSG-6-1] Cancel Permission VP Last Request parameters
+##### [MOD-PP-MSG-6-1] Cancel Participant OP Last Request parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the `Permission` entry;
+- `id` (uint64) (*mandatory*): id of the `Participant` entry;
 
-##### [MOD-PERM-MSG-6-2] Cancel Permission VP Last Request precondition checks
+##### [MOD-PP-MSG-6-2] Cancel Participant OP Last Request precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-6-2-1] Cancel Permission VP Last Request basic checks
+###### [MOD-PP-MSG-6-2-1] Cancel Participant OP Last Request basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3317,77 +3782,77 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` with this id. It MUST exist.
-- `corporation` running the [[ref: transaction]] MUST be `applicant_perm.corporation`.
-- `applicant_perm.vp_state` MUST be PENDING.
-- if `applicant_perm.deposit` has been slashed and not repaid, MUST abort
+- Load `Participant` entry `applicant_participant` with this id. It MUST exist.
+- `corporation` running the [[ref: transaction]] MUST be `applicant_participant.corporation`.
+- `applicant_participant.op_state` MUST be PENDING.
+- if `applicant_participant.deposit` has been slashed and not repaid, MUST abort
 
-###### [MOD-PERM-MSG-6-2-2] Cancel Permission VP Last Request fee checks
+###### [MOD-PP-MSG-6-2-2] Cancel Participant OP Last Request fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-PERM-MSG-6-3] Cancel Permission VP Last Request execution
+##### [MOD-PP-MSG-6-3] Cancel Participant OP Last Request execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Load `Permission` entry `applicant_perm` with `id`. It MUST exist.
+- Load `Participant` entry `applicant_participant` with `id`. It MUST exist.
 - define `now`: current timestamp.
 
-- set `applicant_perm.modified` to `now`.
-- if `applicant_perm.vp_exp` is null (validation never completed), set `applicant_perm.vp_state` to TERMINATED, else set `applicant_perm.vp_state` to VALIDATED.
-- set `applicant_perm.vp_last_state_change` to `now`.
-- if `applicant_perm.vp_current_fees` > 0:
-  - transfer `applicant_perm.vp_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_perm.corporation`.
-  - set `applicant_perm.vp_current_fees` to 0;
+- set `applicant_participant.modified` to `now`.
+- if `applicant_participant.op_exp` is null (validation never completed), set `applicant_participant.op_state` to TERMINATED, else set `applicant_participant.op_state` to VALIDATED.
+- set `applicant_participant.op_last_state_change` to `now`.
+- if `applicant_participant.op_current_fees` > 0:
+  - transfer `applicant_participant.op_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_participant.corporation`.
+  - set `applicant_participant.op_current_fees` to 0;
 
-- if `applicant_perm.vp_current_deposit` > 0:
-  - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_perm.corporation` by `applicant_perm.vp_current_deposit`
-  - set `applicant_perm.vp_current_deposit` to 0.
+- if `applicant_participant.op_current_deposit` > 0:
+  - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_participant.corporation` by `applicant_participant.op_current_deposit`
+  - set `applicant_participant.op_current_deposit` to 0.
 
-If `applicant_perm.vp_state` was set to TERMINATED (i.e. `applicant_perm.vp_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any disabled authorization record created at [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp). The call is a no-op if no record exists. If `applicant_perm.vp_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
+If `applicant_participant.op_state` was set to TERMINATED (i.e. `applicant_participant.op_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The call is a no-op if no record exists. If `applicant_participant.op_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
 
-#### [MOD-PERM-MSG-7] Create Root Permission
+#### [MOD-PP-MSG-7] Create Root Participant
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-This method is used by controller authorities of Trust Registries. When they create a Credential Schema, they need to create (a) permission(s) of type ECOSYSTEM so that other participants can run validation processes (if schema mode is ECOSYSTEM) or self create their permissions (schema mode set to OPEN).
+This method is used by controller authorities of Ecosystems. When they create a Credential Schema, they need to create (a) `Participant` entry(ies) of role ECOSYSTEM so that other participants can run onboarding processes (if schema mode is ECOSYSTEM) or self create their `Participant` entries (schema mode set to OPEN).
 
-##### [MOD-PERM-MSG-7-1] Create Root Permission parameters
+##### [MOD-PP-MSG-7-1] Create Root Participant parameters
 
-An [[ref: account]] that would like to create a `Permission` entry MUST call this method by specifying:
+An [[ref: account]] that would like to create a `Participant` entry MUST call this method by specifying:
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
-- `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this permission. **Required** for payment delegation.
+- `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this `Participant` entry. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS.
 - `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
-- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running a validation process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean a validation process must take place. For enabling validation processes, at least one of the two issuer, verifier mode must be different than OPEN.
+- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running an onboarding process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean an onboarding process must take place. For enabling onboarding processes, at least one of the two issuer, verifier mode must be different than OPEN.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
 
-The following VS Operator Authorization parameters are **optional** and collectively define the initial [PermissionAuthorizationRecord](#permissionauthorizationrecord) for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
 
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `PermissionAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
-- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this `Participant` entry. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this `Participant` entry as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this `Participant` entry.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this `Participant` entry.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this `Participant` entry.
 
-Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`. Since [Create Root Permission](#mod-perm-msg-7-create-root-permission) always creates an ECOSYSTEM permission, only the following is allowed:
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`. Since [Create Root Participant](#mod-pp-msg-7-create-root-participant) always creates an ECOSYSTEM `Participant` entry, only the following is allowed:
 
-|Permission type|Permitted Messages|
+|Participant role|Permitted Messages|
 |-|-|
-| ECOSYSTEM | SetPermissionVPtoValidated |
+| ECOSYSTEM | SetParticipantOPtoValidated |
 
-##### [MOD-PERM-MSG-7-2] Create Root Permission precondition checks
+##### [MOD-PP-MSG-7-2] Create Root Participant precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-7-2-1] Create Root Permission basic checks
+###### [MOD-PP-MSG-7-2-1] Create Root Participant basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3396,43 +3861,44 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
 - `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if `did` is specified and any existing `Participant` entry has non-null `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Participant `(did, corporation)` consistency invariant).
 - `effective_from` must be in the future.
 - `effective_until`, if not null, must be greater than `effective_from`
 - `validation_fees` (number) (*mandatory*): MUST be >= 0.
 - `issuance_fees` (number) (*mandatory*): MUST be >= 0.
 - `verification_fees` (number) (*mandatory*): MUST be >= 0.
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PERM-MSG-7-1](#mod-perm-msg-7-1-create-root-permission-parameters).
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-7-1](#mod-pp-msg-7-1-create-root-participant-parameters).
 
-###### [MOD-PERM-MSG-7-2-2] Create Root Permission permission checks
+###### [MOD-PP-MSG-7-2-2] Create Root Participant permission checks
 
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
 - The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
-- The related `TrustRegistry` entry `tr` is loaded from `cs.tr_id`.
-- `corporation` executing the method MUST be `tr.corporation`.
+- The related `Ecosystem` entry `ecosystem` is loaded from `cs.ecosystem_id`.
+- `corporation` executing the method MUST be `ecosystem.corporation`.
 - else MUST abort.
 
-###### [MOD-PERM-MSG-7-2-3] Create Root Permission fee checks
+###### [MOD-PP-MSG-7-2-3] Create Root Participant fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
-###### [MOD-PERM-MSG-7-2-4] Create Root Permission overlap checks
+###### [MOD-PP-MSG-7-2-4] Create Root Participant overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-adjust-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 `Participant` entries cannot be active at the same time. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
-Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `corporation`.
 
-> Note: unlike overlap checks from other methods, here we do not need to check for `validator_perm_id`, as for ECOSYSTEM type permissions it is NULL.
+> Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM-role `Participant` entries it is NULL.
 
-for each `Permission` entry `p` from `perms[]`:
+for each `Participant` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
 
 > note: this check was not present in v3.
 
-##### [MOD-PERM-MSG-7-3] Create Root Permission execution
+##### [MOD-PP-MSG-7-3] Create Root Participant execution
 
 If all precondition checks passed, method is executed.
 
@@ -3440,60 +3906,60 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-A new entry `Permission` `perm` MUST be created:
+A new entry `Participant` `perm` MUST be created:
 
-- `perm.id`: auto-incremented uint64.
-- `perm.schema_id`: `schema_id`.
-- `perm.modified` to `now`.
-- `perm.type`: ECOSYSTEM.
-- `perm.did`: `did`.
-- `perm.corporation`: `corporation`.
-- `perm.vs_operator`: `vs_operator`.
-- `perm.created`: `now`
-- `perm.effective_from`: `effective_from`
-- `perm.effective_until`: `effective_until`
-- `perm.validation_fees`: `validation_fees`
-- `perm.issuance_fees`: `issuance_fees`
-- `perm.verification_fees`: `verification_fees`
-- `perm.deposit`: 0
+- `participant.id`: auto-incremented uint64.
+- `participant.schema_id`: `schema_id`.
+- `participant.modified` to `now`.
+- `participant.role`: ECOSYSTEM.
+- `participant.did`: `did`.
+- `participant.corporation`: `corporation`.
+- `participant.vs_operator`: `vs_operator`.
+- `participant.created`: `now`
+- `participant.effective_from`: `effective_from`
+- `participant.effective_until`: `effective_until`
+- `participant.validation_fees`: `validation_fees`
+- `participant.issuance_fees`: `issuance_fees`
+- `participant.verification_fees`: `verification_fees`
+- `participant.deposit`: 0
 
-If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
 - `corporation`: `corporation`
 - `vs_operator`: `vs_operator`
 - `record`:
-  - `record.perm_id`: `perm.id`
+  - `record.participant_id`: `participant.id`
   - `record.msg_types`: `vs_operator_authz_msg_types`
   - `record.spend_limit`: `vs_operator_authz_spend_limit`
   - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
   - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
-  - `record.expiration`: `perm.effective_until`
+  - `record.expiration`: `participant.effective_until`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: like [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission), the record is created with `expiration = perm.effective_until` and is therefore immediately active. If `with_feegrant` is true and `perm.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
+> Note: like [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant), the record is created with `expiration = participant.effective_until` and is therefore immediately active. If `with_feegrant` is true and `participant.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
-#### [MOD-PERM-MSG-8] Adjust Permission
+#### [MOD-PP-MSG-8] Set Participant Effective Until
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 This method can be called:
 
-- by `perm.corporation`, if permission is of type ECOSYSTEM.
-- by `perm.corporation`, if it is a self-created permission (schema configuration is open)
-- by a `corporation` of a validator permission (if permission is managed by a VP).
+- by `participant.corporation`, if the `Participant` entry has role ECOSYSTEM.
+- by `participant.corporation`, if it is a self-created `Participant` entry (schema configuration is open).
+- by a `corporation` of a validator `Participant`, if the `Participant` entry is managed by an OP.
 
-##### [MOD-PERM-MSG-8-1] Adjust Permission parameters
+##### [MOD-PP-MSG-8-1] Set Participant Effective Until parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission;
-- `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Permission` will be effective.
+- `id` (uint64) (*mandatory*): id of the `Participant` entry;
+- `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Participant` will be effective.
 
-##### [MOD-PERM-MSG-8-2] Adjust Permission precondition checks
+##### [MOD-PP-MSG-8-2] Set Participant Effective Until precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-8-2-1] Adjust Permission basic checks
+###### [MOD-PP-MSG-8-2-1] Set Participant Effective Until basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3501,47 +3967,47 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `applicant_perm` MUST be a [[ref: active permission]]
-- `applicant_perm.effective_until` MUST be greater than now().
+- Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
+- `applicant_participant` MUST be a [[ref: active participant]]
+- `applicant_participant.effective_until` MUST be greater than now().
 - else MUST abort.
 
 > Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null,  which was not the case in spec v3.
 
-###### [MOD-PERM-MSG-8-2-2] Adjust Permission advanced checks
+###### [MOD-PP-MSG-8-2-2] Set Participant Effective Until advanced checks
 
-1. ECOSYSTEM permissions
+1. ECOSYSTEM `Participant` entries
 
-- if `applicant_perm.validator_perm_id` is null and `applicant_perm.type` is ECOSYSTEM, `corporation` running the method MUST be `applicant_perm.corporation`.
+- if `applicant_participant.validator_participant_id` is null and `applicant_participant.role` is ECOSYSTEM, `corporation` running the method MUST be `applicant_participant.corporation`.
 
-2. Self-created permissions
+2. Self-created `Participant` entries
 
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]] of type ECOSYSTEM. `corporation` running the method MUST be `applicant_perm.corporation`.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]] of role ECOSYSTEM. `corporation` running the method MUST be `applicant_participant.corporation`.
 
-3. VP managed permissions
+3. OP-managed `Participant` entries
 
-- `effective_until` MUST be lower or equal to `applicant_perm.vp_exp` else MUST abort.
-- load `validator_perm` from `applicant_perm.validator_perm_id`. `validator_perm` MUST be a [[ref: active permission]]. `corporation` running the method MUST be `validator_perm.corporation`.
+- `effective_until` MUST be lower or equal to `applicant_participant.op_exp` else MUST abort.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]]. `corporation` running the method MUST be `validator_participant.corporation`.
 
-###### [MOD-PERM-MSG-8-2-3] Adjust Permission fee checks
+###### [MOD-PP-MSG-8-2-3] Set Participant Effective Until fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-8-2-4] Adjust Permission overlap checks
+###### [MOD-PP-MSG-8-2-4] Set Participant Effective Until overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-adjust-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 `Participant` entries cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
-Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `schema_id`, `type`, `validator_perm_id`, `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation`.
 
-for each `Permission` entry `p` from `perms[]`:
+for each `Participant` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
 
 > note: this check was not present in v3.
 
-##### [MOD-PERM-MSG-8-3] Adjust Permission execution
+##### [MOD-PP-MSG-8-3] Set Participant Effective Until execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -3549,40 +4015,40 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- Load `Permission` entry `applicant_perm` from `id`.
-- set `applicant_perm.effective_until` to `effective_until`
-- set `applicant_perm.adjusted` to `now`
-- set `applicant_perm.modified` to `now`
+- Load `Participant` entry `applicant_participant` from `id`.
+- set `applicant_participant.effective_until` to `effective_until`
+- set `applicant_participant.adjusted` to `now`
+- set `applicant_participant.modified` to `now`
 
 
 Synchronise VS Operator Authorization expiration, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) Update VS Operator Authorization Expiration with:
 
-- `perm_id`: `applicant_perm.id`
-- `new_expiration`: `applicant_perm.effective_until`
+- `participant_id`: `applicant_participant.id`
+- `new_expiration`: `applicant_participant.effective_until`
 
-This call is a no-op if no record exists for `applicant_perm.id`. If a record exists, its `expiration` is updated and the on-chain `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Adjust Permission does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp) and [[MOD-PERM-MSG-14]](#mod-perm-msg-14-self-create-permission)). Adjust also cannot create a record that does not already exist.
+This call is a no-op if no record exists for `applicant_participant.id`. If a record exists, its `expiration` is updated and the on-chain `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Set Participant Effective Until does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). This method also cannot create a record that does not already exist.
 
-#### [MOD-PERM-MSG-9] Revoke Permission
+#### [MOD-PP-MSG-9] Revoke Participant
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 This method can only be called:
 
-- by an ancestor (`corporation` of a validator in the permission branch until the root permission (GRANTOR, ECOSYSTEM, OPEN schema mode)).
+- by an ancestor (`corporation` of a validator in the `Participant` branch until the root `Participant` entry (GRANTOR, ECOSYSTEM, OPEN schema mode)).
 - by the grantee `corporation` (OPEN, GRANTOR, ECOSYSTEM schema mode).
-- by the `TrustRegistry` `corporation` (owner of the credential schema).
+- by the `Ecosystem` `corporation` (owner of the credential schema).
 
-##### [MOD-PERM-MSG-9-1] Revoke Permission parameters
+##### [MOD-PP-MSG-9-1] Revoke Participant parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission;
+- `id` (uint64) (*mandatory*): id of the `Participant` entry;
 
-##### [MOD-PERM-MSG-9-2] Revoke Permission precondition checks
+##### [MOD-PP-MSG-9-2] Revoke Participant precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-9-2-1] Revoke Permission basic checks
+###### [MOD-PP-MSG-9-2-1] Revoke Participant basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -3590,94 +4056,94 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `applicant_perm` MUST be a [[ref: active permission]]
+- Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
+- `applicant_participant` MUST be a [[ref: active participant]]
 
-###### [MOD-PERM-MSG-9-2-2] Revoke Permission advanced checks
+###### [MOD-PP-MSG-9-2-2] Revoke Participant advanced checks
 
 Either Option #1, #2 or #3 MUST return true, else abort.
 
 *Option #1*: executed by a validator ancestor
 
-if `applicant_perm.validator_perm_id` is defined:
+if `applicant_participant.validator_participant_id` is defined:
 
-- set `validator_perm` = `applicant_perm`
-- while `validator_perm.validator_perm_id` is defined, 
-  - load `validator_perm` from `validator_perm.validator_perm_id`.
-  - if `validator_perm` is a [[ref: active permission]] and `validator_perm.corporation` is who is running the method, => return true.
+- set `validator_participant` = `applicant_participant`
+- while `validator_participant.validator_participant_id` is defined, 
+  - load `validator_participant` from `validator_participant.validator_participant_id`.
+  - if `validator_participant` is a [[ref: active participant]] and `validator_participant.corporation` is who is running the method, => return true.
 - end
 - return false.
 
-*Option #2*: executed by `TrustRegistry` controller
+*Option #2*: executed by `Ecosystem` controller
 
-- load `CredentialSchema` `cs` from `applicant_perm.schema_id`
-- load `TrustRegistry` `tr` from `cs.tr_id`
-- if `corporation` running the method is `tr.corporation`, return true.
+- load `CredentialSchema` `cs` from `applicant_participant.schema_id`
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`
+- if `corporation` running the method is `ecosystem.corporation`, return true.
 - else return false.
 
-*Option #3*: executed by `applicant_perm.corporation`: return true.
+*Option #3*: executed by `applicant_participant.corporation`: return true.
 
 Example:
 
-In the following permission tree, "Verifier E" permission can be revoked:
+In the following `Participant` tree, the "Verifier E" `Participant` entry can be revoked:
 
-- by "Verifier E", if the corresponding permission is a [[ref: active permission]];
-- by "Verifier Grantor D", if the corresponding permission is a [[ref: active permission]];
-- by "Ecosystem A", if the corresponding root permission is a [[ref: active permission]];
-- by the `TrustRegistry` object controller, obtained by resolving perm => credential schema => trust registry.
+- by "Verifier E", if the corresponding `Participant` entry is a [[ref: active participant]];
+- by "Verifier Grantor D", if the corresponding `Participant` entry is a [[ref: active participant]];
+- by "Ecosystem A", if the corresponding root `Participant` entry is a [[ref: active participant]];
+- by the `Ecosystem` object controller, obtained by resolving perm => credential schema => ecosystem.
 
 ```plantuml
 
 @startuml
 scale max 800 width
  
-package "Example Credential Schema Permission Tree" as cs {
+package "Example Credential Schema Participant Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
-        permissionType: ECOSYSTEM (Root)
+        role: ECOSYSTEM (Root)
         did:example:ecosystemA
     }
     object "Issuer Grantor B" as ig {
-        permissionType: ISSUER_GRANTOR
+        role: ISSUER_GRANTOR
         did:example:igB
     }
     object "Issuer C" as issuer #7677ed  {
-        permissionType: ISSUER
+        role: ISSUER
         did:example:iC
     }
     object "Verifier Grantor D" as vg {
-        permissionType: VERIFIER_GRANTOR
+        role: VERIFIER_GRANTOR
         did:example:vgD
     }
     object "Verifier E" as verifier #00b0f0 {
-        permissionType: VERIFIER
+        role: VERIFIER
         did:example:vE
     }
 
     object "Holder Z " as holder #FFB073 {
-        permissionType: HOLDER
+        role: HOLDER
     }
 }
 
 
 
-tr --> ig : granted schema permission
-ig --> issuer : granted schema permission
+tr --> ig : creates schema participant
+ig --> issuer : creates schema participant
 
-tr --> vg : granted schema permission
-vg --> verifier : granted schema permission
+tr --> vg : creates schema participant
+vg --> verifier : creates schema participant
 
-issuer --> holder: granted schema permission
+issuer --> holder: creates schema participant
 
 @enduml
 
 ```
 
-###### [MOD-PERM-MSG-9-2-3] Revoke Permission fee checks
+###### [MOD-PP-MSG-9-2-3] Revoke Participant fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-PERM-MSG-9-3] Revoke Permission execution
+##### [MOD-PP-MSG-9-3] Revoke Participant execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -3685,33 +4151,33 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- Load `Permission` entry `applicant_perm` from `id`.
-- set `applicant_perm.revoked` to `now`
-- set `applicant_perm.modified` to `now`
+- Load `Participant` entry `applicant_participant` from `id`.
+- set `applicant_participant.revoked` to `now`
+- set `applicant_participant.modified` to `now`
 
-Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
+Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
 
-#### [MOD-PERM-MSG-10] Create or Update Permission Session
+#### [MOD-PP-MSG-10] Create or Update Participant Session
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-Any credential exchange that requires issuer or verifier to pay fees, register a digest_sri, or produce a proof implies the creation of a `PermissionSession`.
+Any credential exchange that requires issuer or verifier to pay fees, register a digest_sri, or produce a proof implies the creation of a `ParticipantSession`.
 
 If the peer wants to issue a credential, the `agent`, the Verifiable User Agent or Verifiable Service that receive the request MUST send to peer:
 
 - a `uuid` for session identification;
-- *optional*: the `agent_perm_id` permission id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
-- *optional*: the `wallet_agent_perm_id` permission id of the agent wallet that will store the credential. If this is the same software than the agent, then it should be equal to `agent_perm_id`. It MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: the `agent_participant_id` `Participant` id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: the `wallet_agent_participant_id` `Participant` id of the agent wallet that will store the credential. If this is the same software than the agent, then it should be equal to `agent_participant_id`. It MUST NOT be set if peer is a **Verifiable Service**.
 
 If the peer wants to verify a credential, agent must send to peer:
 
 - a `uuid` for session identification;
-- *optional*: the `agent_perm_id` permission id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
-- *optional*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_perm_ids, uint64: wallet_agent_perm_id>. wallet_agent_perm_id MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: the `agent_participant_id` `Participant` id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_participant_ids, uint64: wallet_agent_participant_id>. wallet_agent_participant_id MUST NOT be set if peer is a **Verifiable Service**.
 
-In case peer is a **Verifiable Service** and illegaly set `agent_perm_id` and/or `wallet_agent_perm_id`, the other end MUST refuse the request.
+In case peer is a **Verifiable Service** and illegaly set `agent_participant_id` and/or `wallet_agent_participant_id`, the other end MUST refuse the request.
 
-`payer` MUST create a Permission Session using the above information, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
+`payer` MUST create a Participant Session using the above information, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
 
 ```plantuml
 scale max 800 width
@@ -3721,7 +4187,7 @@ participant "VPR" as vpr
 
 
 Issued <-- Issuer: I want to issue a credential from schema id ... to you
-Issued --> Issuer: Here is the session uuid and the wallet_agent_perm_id
+Issued --> Issuer: Here is the session uuid and the wallet_agent_participant_id
 Issuer --> vpr: create session
 Issued <-- Issuer: session created, you can verify
 Issued --> vpr: getSession(uuid)
@@ -3734,20 +4200,20 @@ Issued <-- Issued: Store credential in wallet agent
 
 See [[ref: VT spec]].
 
-##### [MOD-PERM-MSG-10-1] Create or Update Permission Session parameters
+##### [MOD-PP-MSG-10-1] Create or Update Participant Session parameters
 
-An [[ref: account]] that would like to create or update a `PermissionSession` entry MUST send a Msg by specifying:
+An [[ref: account]] that would like to create or update a `ParticipantSession` entry MUST send a Msg by specifying:
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uuid) (*mandatory*): id of the `PermissionSession`.
-- `issuer_perm_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the issuance of a credential.
-- `verifier_perm_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
-- `agent_perm_id` (uint64) (*optional*): the agent credential issuer permission id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
-- `wallet_agent_perm_id` (uint64) (*optional*): the wallet credential issuer permission id of the VUA where the credential will be or is stored. Can be the same perm than `agent_perm_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
+- `id` (uuid) (*mandatory*): id of the `ParticipantSession`.
+- `issuer_participant_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the issuance of a credential.
+- `verifier_participant_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
+- `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
+- `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `digest` (string) (*optional*): digest derived from an issued or verified credential.
 
-##### [MOD-PERM-MSG-10-2] Create or Update Permission Session precondition checks
+##### [MOD-PP-MSG-10-2] Create or Update Participant Session precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
@@ -3755,72 +4221,72 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uuid. If an entry `existing_entry` with `id` already exist, then  `existing_entry.corporation` MUST be equal to `corporation` AND `existing_entry.vs_operator` MUST be equal to `operator`, else abort.
 
-if `issuer_perm_id` is null AND `verifier_perm_id` is null, MUST abort.
+if `issuer_participant_id` is null AND `verifier_participant_id` is null, MUST abort.
 
-- define `issuer_perm` as null.
-- define `verifier_perm` as null.
+- define `issuer_participant` as null.
+- define `verifier_participant` as null.
 
-if `issuer_perm_id` is not null:
+if `issuer_participant_id` is not null:
 
-- Load `issuer_perm` from `issuer_perm_id`.
-- if `issuer_perm.type` is not ISSUER, abort.
-- if `issuer_perm` is not a [[ref: active permission]], abort.
-- if `issuer_perm.vs_operator` is not equal to `operator`, abort.
-- if `issuer_perm.corporation` is not equal to `corporation`, abort.
+- Load `issuer_participant` from `issuer_participant_id`.
+- if `issuer_participant.role` is not ISSUER, abort.
+- if `issuer_participant` is not a [[ref: active participant]], abort.
+- if `issuer_participant.vs_operator` is not equal to `operator`, abort.
+- if `issuer_participant.corporation` is not equal to `corporation`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
 
-if `verifier_perm_id` is not null:
+if `verifier_participant_id` is not null:
 
-- Load `verifier_perm` from `verifier_perm_id`.
-- if `verifier_perm.type` is not VERIFIER, abort.
-- if `verifier_perm` is not a [[ref: active permission]], abort.
-- if `verifier_perm.vs_operator` is not equal to `operator`, abort.
-- if `verifier_perm.corporation` is not equal to `corporation`, abort.
+- Load `verifier_participant` from `verifier_participant_id`.
+- if `verifier_participant.role` is not VERIFIER, abort.
+- if `verifier_participant` is not a [[ref: active participant]], abort.
+- if `verifier_participant.vs_operator` is not equal to `operator`, abort.
+- if `verifier_participant.corporation` is not equal to `corporation`, abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
 
-Define the **primary permission** `perm`: if `verifier_perm` is not null, `perm` = `verifier_perm` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_perm` (the caller is the `vs_operator` of the issuer).
+Define the **primary `Participant`** `perm`: if `verifier_participant` is not null, `perm` = `verifier_participant` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_participant` (the caller is the `vs_operator` of the issuer).
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 
 agent:
 
-- Load `agent_perm` from `agent_perm_id`.
-- if `agent_perm.type` is not ISSUER, abort.
-- if `agent_perm` is not a [[ref: active permission]], abort.
+- Load `agent_participant` from `agent_participant_id`.
+- if `agent_participant.role` is not ISSUER, abort.
+- if `agent_participant` is not a [[ref: active participant]], abort.
 
 wallet_agent:
 
-- Load `wallet_agent_perm` from `wallet_agent_perm_id`.
-- if `wallet_agent_perm.type` is not ISSUER, abort.
-- if `wallet_agent_perm` is not a [[ref: active permission]], abort.
+- Load `wallet_agent_participant` from `wallet_agent_participant_id`.
+- if `wallet_agent_participant.role` is not ISSUER, abort.
+- if `wallet_agent_participant` is not a [[ref: active participant]], abort.
 
 :::warning
-we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a permission that is not controlled by its owner.
+we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a `Participant` entry that is not controlled by its owner.
 :::
 
-###### [MOD-PERM-MSG-10-3] Create or Update Permission Session fee checks
+###### [MOD-PP-MSG-10-3] Create or Update Participant Session fee checks
 
-- Load `CredentialSchema` entry `cs` from `issuer_perm.schema_id` if `issuer_perm` is not null, else from `verifier_perm.schema_id`.
+- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` if `issuer_participant` is not null, else from `verifier_participant.schema_id`.
 - Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]].
 
 For trust fees, `corporation` account MUST have sufficient available balance as explained below.
 
 **Step 1: Calculate total beneficiary fees in credential schema pricing asset**
 
-Use "Find Beneficiaries" query method to get the set of beneficiary permissions `found_perm_set` (all ancestors in the permission tree).
+Use "Find Beneficiaries" query method to get the set of beneficiary `Participant` entries `found_participant_set` (all ancestors in the `Participant` tree).
 
 - define `total_beneficiary_fees` = 0
 
-If **Credential Issuance** (`issuer_perm` is NOT null):
+If **Credential Issuance** (`issuer_participant` is NOT null):
 
-- for each `perm` in `found_perm_set`:
-  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.issuance_fees` × (1 - `issuer_perm.issuance_fee_discount`)
+- for each `perm` in `found_participant_set`:
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.issuance_fees` × (1 - `issuer_participant.issuance_fee_discount`)
 
-If **Credential Verification** (`verifier_perm` is NOT null):
+If **Credential Verification** (`verifier_participant` is NOT null):
 
-- for each `perm` in `found_perm_set`:
-  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.verification_fees` × (1 - `verifier_perm.verification_fee_discount`)
+- for each `perm` in `found_participant_set`:
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.verification_fees` × (1 - `verifier_participant.verification_fee_discount`)
 
 > Note: `total_beneficiary_fees` is expressed in the credential schema pricing asset `(cs.pricing_asset_type, cs.pricing_asset)`.
 
@@ -3865,11 +4331,11 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-if `agent_perm_id` is set:
+if `agent_participant_id` is set:
 
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-if `wallet_agent_perm_id` is set:
+if `wallet_agent_participant_id` is set:
 
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
@@ -3890,11 +4356,11 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-if `agent_perm_id` is set:
+if `agent_participant_id` is set:
 
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-if `wallet_agent_perm_id` is set:
+if `wallet_agent_participant_id` is set:
 
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
@@ -3915,11 +4381,11 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-if `agent_perm_id` is set:
+if `agent_participant_id` is set:
 
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-if `wallet_agent_perm_id` is set:
+if `wallet_agent_participant_id` is set:
 
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
@@ -3941,11 +4407,11 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = 0 (FIAT payments are managed off-chain)
 
-if `agent_perm_id` is set:
+if `agent_participant_id` is set:
 
 - `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-if `wallet_agent_perm_id` is set:
+if `wallet_agent_participant_id` is set:
 
 - `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
@@ -3960,14 +4426,14 @@ Required balance check:
 - When paying with COIN ≠ [[ref: native denom]] or with FIAT, payer pays trust deposits on behalf of payees (since payees receive non-native assets that cannot be directly staked).
 :::
 
-##### [MOD-PERM-MSG-10-4] Create or Update Permission Session execution
+##### [MOD-PP-MSG-10-4] Create or Update Participant Session execution
 
 If all precondition checks passed, method is executed.
 
-- Load all permissions as in basic checks.
-- Load `CredentialSchema` entry `cs` from `issuer_perm.schema_id` if `issuer_perm` is not null, else from `verifier_perm.schema_id`.
+- Load all `Participant` entries as in basic checks.
+- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` if `issuer_participant` is not null, else from `verifier_participant.schema_id`.
 - define `now`: current timestamp.
-- use "Find Beneficiaries" to build `found_perm_set`.
+- use "Find Beneficiaries" to build `found_participant_set`.
 
 > Note: All funds are transferred from the `corporation` account executing the method. The steps below describe what each recipient must receive. Implementation details (batching, order of transfers) are left to the implementer.
 
@@ -3982,22 +4448,22 @@ Initialize accumulators for agent rewards:
 
 Determine the operation type and applicable discount:
 
-- If **Credential Issuance** (`issuer_perm` is NOT null):
+- If **Credential Issuance** (`issuer_participant` is NOT null):
   - `fee_field` = `issuance_fees`
-  - `discount` = `issuer_perm.issuance_fee_discount`
-  - `payer_perm` = `issuer_perm`
+  - `discount` = `issuer_participant.issuance_fee_discount`
+  - `payer_participant` = `issuer_participant`
 
-- Else if **Credential Verification** (`verifier_perm` is NOT null):
+- Else if **Credential Verification** (`verifier_participant` is NOT null):
   - `fee_field` = `verification_fees`
-  - `discount` = `verifier_perm.verification_fee_discount`
-  - `payer_perm` = `verifier_perm`
+  - `discount` = `verifier_participant.verification_fee_discount`
+  - `payer_participant` = `verifier_participant`
 
-**For each beneficiary permission `perm` in `found_perm_set`:**
+**For each beneficiary `Participant` `perm` in `found_participant_set`:**
 
-If `perm.[fee_field]` > 0:
+If `participant.[fee_field]` > 0:
 
 1. Calculate the discounted fee for this beneficiary:
-   - `beneficiary_fee_in_pricing_asset` = `perm.[fee_field]` × (1 - `discount`)
+   - `beneficiary_fee_in_pricing_asset` = `participant.[fee_field]` × (1 - `discount`)
 
 2. Calculate amounts based on pricing configuration (same logic as fee checks):
 
@@ -4008,10 +4474,10 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-  if `agent_perm_id` is set:
+  if `agent_participant_id` is set:
     - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-  if `wallet_agent_perm_id` is set:
+  if `wallet_agent_participant_id` is set:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
   
@@ -4022,10 +4488,10 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-  if `agent_perm_id` is set:
+  if `agent_participant_id` is set:
     - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-  if `wallet_agent_perm_id` is set:
+  if `wallet_agent_participant_id` is set:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
    **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
@@ -4035,10 +4501,10 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `beneficiary_fee_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`) *(in `<arbitrary_denom>`)*
 
-  if `agent_perm_id` is set:
+  if `agent_participant_id` is set:
     - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-  if `wallet_agent_perm_id` is set:
+  if `wallet_agent_participant_id` is set:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
 
@@ -4049,17 +4515,17 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = 0 *(FIAT payments are managed off-chain)*
 
-  if `agent_perm_id` is set:
+  if `agent_participant_id` is set:
     - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
 
-  if `wallet_agent_perm_id` is set:
+  if `wallet_agent_participant_id` is set:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
 3. Execute transfers and deposits for this beneficiary:
 
-   - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `perm.corporation` (in the appropriate denom).
-   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `perm.corporation` by `payee_trust_deposit`. Increase `perm.deposit` by the same value.
-   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `corporation` (payer) by `payer_trust_deposit`. Increase `payer_perm.deposit` by the same value.
+   - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `participant.corporation` (in the appropriate denom).
+   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `participant.corporation` by `payee_trust_deposit`. Increase `participant.deposit` by the same value.
+   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `corporation` (payer) by `payer_trust_deposit`. Increase `payer_participant.deposit` by the same value.
 
 4. Accumulate agent rewards:
 
@@ -4074,21 +4540,21 @@ After processing all beneficiaries, distribute accumulated rewards to agents.
 
 **User Agent Reward:**
 
-If `agent_perm_id` is set AND `accumulated_user_agent_reward` > 0:
+If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0:
 
 - `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
-- Transfer `agent_fees_to_account` to `agent_perm.corporation` in [[ref: native denom]].
-- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `agent_perm.corporation` by `agent_trust_deposit`. Increase `agent_perm.deposit` by the same value.
+- Transfer `agent_fees_to_account` to `agent_participant.corporation` in [[ref: native denom]].
+- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `agent_participant.corporation` by `agent_trust_deposit`. Increase `agent_participant.deposit` by the same value.
 
 **Wallet Agent Reward:**
 
-If `wallet_agent_perm_id` is set AND `accumulated_wallet_agent_reward` > 0:
+If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 0:
 
 - `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
-- Transfer `wallet_agent_fees_to_account` to `wallet_agent_perm.corporation` in [[ref: native denom]].
-- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `wallet_agent_perm.corporation` by `wallet_agent_trust_deposit`. Increase `wallet_agent_perm.deposit` by the same value.
+- Transfer `wallet_agent_fees_to_account` to `wallet_agent_participant.corporation` in [[ref: native denom]].
+- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `wallet_agent_participant.corporation` by `wallet_agent_trust_deposit`. Increase `wallet_agent_participant.deposit` by the same value.
 
 ---
 
@@ -4096,15 +4562,15 @@ If `wallet_agent_perm_id` is set AND `accumulated_wallet_agent_reward` > 0:
 
 > Now that all transfers have been done, we can create the entries
 
-Create a `PermissionSessionRecord` `cspsr`:
+Create a `ParticipantSessionRecord` `cspsr`:
 
 - `cspsr.created`: `now`
-- `cspsr.issuer_perm_id`: `issuer_perm_id`
-- `cspsr.verifier_perm_id`: `verifier_perm_id`
-- `cspsr.agent_perm_id`: `agent_perm_id`
-- `cspsr.wallet_agent_perm_id`: `wallet_agent_perm_id`
+- `cspsr.issuer_participant_id`: `issuer_participant_id`
+- `cspsr.verifier_participant_id`: `verifier_participant_id`
+- `cspsr.agent_participant_id`: `agent_participant_id`
+- `cspsr.wallet_agent_participant_id`: `wallet_agent_participant_id`
 
-If new, create entry `PermissionSession` `session`:
+If new, create entry `ParticipantSession` `session`:
 
 - `session.id`: `id`
 - `session.corporation`: `corporation`
@@ -4121,32 +4587,32 @@ then, add the `cspsr` to `session.session_records`
 if current transaction if for issuance of a credential, persist the digest SRI by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest).
 
 :::warning
-`session.authz[]` can contain null `issuer_perm_id` OR `verifier_perm_id`
+`session.authz[]` can contain null `issuer_participant_id` OR `verifier_participant_id`
 :::
 
-#### [MOD-PERM-MSG-11] Update Permission Module Parameters
+#### [MOD-PP-MSG-11] Update Participant Module Parameters
 
-Update Permission Module Parameters.
+Update Participant Module Parameters.
 
 Can only be executed through a governance proposal.
 
-##### [MOD-PERM-MSG-11-1] Update Permission Module Parameters parameters
+##### [MOD-PP-MSG-11-1] Update Participant Module Parameters parameters
 
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
-##### [MOD-PERM-MSG-11-2] Update Permission Module Parameters precondition checks
+##### [MOD-PP-MSG-11-2] Update Participant Module Parameters precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-11-2-1] Update Permission Module Parameters basic checks
+###### [MOD-PP-MSG-11-2-1] Update Participant Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
 
-###### [MOD-PERM-MSG-11-2-2] Update Permission Module Parameters fee checks
+###### [MOD-PP-MSG-11-2-2] Update Participant Module Parameters fee checks
 
 provided transaction fees MUST be sufficient for execution
 
-##### [MOD-PERM-MSG-11-3] Update Permission Module Parameters execution
+##### [MOD-PP-MSG-11-3] Update Participant Module Parameters execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -4156,25 +4622,25 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
 
-#### [MOD-PERM-MSG-12] Slash Permission Trust Deposit
+#### [MOD-PP-MSG-12] Slash Participant Trust Deposit
 
 This method can only be called by either:
 
-- a `corporation` ancestor validator of this permission;
-- the `corporation` controller of the `TrustRegistry` object, owner of the corresponding credential schema.
+- a `corporation` ancestor validator of this `Participant` entry;
+- the `corporation` controller of the `Ecosystem` object, owner of the corresponding credential schema.
 
-##### [MOD-PERM-MSG-12-1] Slash Permission Trust Deposit parameters
+##### [MOD-PP-MSG-12-1] Slash Participant Trust Deposit parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission;
+- `id` (uint64) (*mandatory*): id of the `Participant` entry;
 - `amount` (number) (*mandatory*): the amount to slash
 
-##### [MOD-PERM-MSG-12-2] Slash Permission Trust Deposit precondition checks
+##### [MOD-PP-MSG-12-2] Slash Participant Trust Deposit precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-12-2-1] Slash Permission Trust Deposit basic checks
+###### [MOD-PP-MSG-12-2-1] Slash Participant Trust Deposit basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -4182,40 +4648,40 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- `amount` MUST be lower or equal to `applicant_perm.deposit` else MUST abort.
+- Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
+- `amount` MUST be lower or equal to `applicant_participant.deposit` else MUST abort.
 
 :::note
-Even if the permission has expired or is revoked, it is still possible to slash it.
+Even if the `Participant` entry has expired or is revoked, it is still possible to slash it.
 :::
 
-###### [MOD-PERM-MSG-12-2-2] Slash Permission Trust Deposit validator perms
+###### [MOD-PP-MSG-12-2-2] Slash Participant Trust Deposit validator perms
 
 Either Option #1, or #2 MUST return true, else abort.
 
 *Option #1*: executed by a validator ancestor
 
-if `applicant_perm.validator_perm_id` is defined:
+if `applicant_participant.validator_participant_id` is defined:
 
-- set `validator_perm` = `applicant_perm`
-- while `validator_perm.validator_perm_id` is defined, 
-  - load `validator_perm` from `validator_perm.validator_perm_id`.
-  - if `validator_perm` is a [[ref: active permission]] and `validator_perm.corporation` is who is running the method, => return true.
+- set `validator_participant` = `applicant_participant`
+- while `validator_participant.validator_participant_id` is defined, 
+  - load `validator_participant` from `validator_participant.validator_participant_id`.
+  - if `validator_participant` is a [[ref: active participant]] and `validator_participant.corporation` is who is running the method, => return true.
 - end
 - return false.
 
-*Option #2*: executed by `TrustRegistry` controller
+*Option #2*: executed by `Ecosystem` controller
 
-- load `CredentialSchema` `cs` from `applicant_perm.schema_id`
-- load `TrustRegistry` `tr` from `cs.tr_id`
-- if `corporation` running the method is `tr.corporation`, return true.
+- load `CredentialSchema` `cs` from `applicant_participant.schema_id`
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`
+- if `corporation` running the method is `ecosystem.corporation`, return true.
 - else return false.
 
-###### [MOD-PERM-MSG-12-2-3] Slash Permission Trust Deposit fee checks
+###### [MOD-PP-MSG-12-2-3] Slash Participant Trust Deposit fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-PERM-MSG-12-3] Slash Permission Trust Deposit execution
+##### [MOD-PP-MSG-12-3] Slash Participant Trust Deposit execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -4223,33 +4689,33 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-- Load `Permission` entry `applicant_perm` from `id`.
-- Load `Permission` entry `validator_perm` from `applicant_perm.validator_perm_id`.
-- set `applicant_perm.slashed` to `now`
-- set `applicant_perm.modified` to `now`
-- set `applicant_perm.slashed_deposit` to `applicant_perm.slashed_deposit` + `amount`
+- Load `Participant` entry `applicant_participant` from `id`.
+- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
+- set `applicant_participant.slashed` to `now`
+- set `applicant_participant.modified` to `now`
+- set `applicant_participant.slashed_deposit` to `applicant_participant.slashed_deposit` + `amount`
 
-use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_perm.corporation`.
+use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_participant.corporation`.
 
-Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `perm_id = applicant_perm.id` to remove any authorization record for this permission. The call is a no-op if no record exists.
+Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
 
-#### [MOD-PERM-MSG-13] Repay Permission Slashed Trust Deposit
+#### [MOD-PP-MSG-13] Repay Participant Slashed Trust Deposit
 
-This method can only be called by the `corporation` that want to repay the deposit of a slashed perm they own. This won't make the perm re-usable: it will be needed for the `corporation` associated to this permission to request a new permission, as slashed permissions cannot be revived (same happen for revoked, etc...).
+This method can only be called by the `corporation` that wants to repay the deposit of a slashed `Participant` entry they own. This won't make the `Participant` entry re-usable: it will be needed for the `corporation` associated to this `Participant` entry to request a new `Participant` entry, as slashed `Participant` entries cannot be revived (same happens for revoked, etc.).
 
-Nevertheless, to get a new permission for a given ecosystem, it is needed, using this method, to repay the deposit of a slashed permission first.
+Nevertheless, to get a new `Participant` entry for a given ecosystem, it is needed, using this method, to repay the deposit of a slashed `Participant` entry first.
 
-##### [MOD-PERM-MSG-13-1] Repay Permission Slashed Trust Deposit parameters
+##### [MOD-PP-MSG-13-1] Repay Participant Slashed Trust Deposit parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission
+- `id` (uint64) (*mandatory*): id of the `Participant` entry
 
-##### [MOD-PERM-MSG-13-2] Repay Permission Slashed Trust Deposit precondition checks
+##### [MOD-PP-MSG-13-2] Repay Participant Slashed Trust Deposit precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-13-2-1] Repay Permission Slashed Trust Deposit basic checks
+###### [MOD-PP-MSG-13-2-1] Repay Participant Slashed Trust Deposit basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -4257,15 +4723,15 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `applicant_perm` from `id`. If no entry found, abort.
-- if `applicant_perm.corporation` is not equal to `corporation`, abort.
+- Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
+- if `applicant_participant.corporation` is not equal to `corporation`, abort.
 
-###### [MOD-PERM-MSG-13-2-2] Repay Permission Slashed Trust Deposit fee checks
+###### [MOD-PP-MSG-13-2-2] Repay Participant Slashed Trust Deposit fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- `corporation` MUST have at least `applicant_perm.slashed_deposit` in its account balance, else [[ref: transaction]] MUST abort.
+- `corporation` MUST have at least `applicant_participant.slashed_deposit` in its account balance, else [[ref: transaction]] MUST abort.
 
-##### [MOD-PERM-MSG-13-3] Repay Permission Slashed Trust Deposit execution
+##### [MOD-PP-MSG-13-3] Repay Participant Slashed Trust Deposit execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -4273,252 +4739,253 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `applicant_perm.slashed_deposit` to trust deposit of `applicant_perm.corporation`.
+use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `applicant_participant.slashed_deposit` to trust deposit of `applicant_participant.corporation`.
 
-- Load `Permission` entry `applicant_perm` from `id`.
-- set `applicant_perm.repaid` to `now`
-- set `applicant_perm.modified` to `now`
-- set `applicant_perm.repaid_deposit` to `applicant_perm.slashed_deposit`.
+- Load `Participant` entry `applicant_participant` from `id`.
+- set `applicant_participant.repaid` to `now`
+- set `applicant_participant.modified` to `now`
+- set `applicant_participant.repaid_deposit` to `applicant_participant.slashed_deposit`.
 
-#### [MOD-PERM-MSG-14] Self Create Permission
+#### [MOD-PP-MSG-14] Self Create Participant
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-This simple permission creation method can be used to self-create an ISSUER (resp. VERIFIER) permission if issuance mode (resp. verification mode) is set to `OPEN` for a given schema. As permissions are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a permission for being issuer or verifier of a given schema.
+This simple `Participant`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Participant` entry if issuance mode (resp. verification mode) is set to `OPEN` for a given schema. As `Participant` entries are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a `Participant` entry for being issuer or verifier of a given schema.
 
 :::note
-Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their permission may be revoked by ecosystem governance authority and their deposit slashed.
+Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their `Participant` entry may be revoked by ecosystem governance authority and their deposit slashed.
 :::
 
-##### [MOD-PERM-MSG-14-1] Self Create Permission parameters
+##### [MOD-PP-MSG-14-1] Self Create Participant parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `type` (PermissionType) (*mandatory*): ISSUER or VERIFIER.
-- `validator_perm_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]].
-- `vs_operator` (account) (*optional*): the account we want to authorize to create permission sessions linked to this permission. **Required** for payment delegation.
+- `role` (ParticipantRole) (*mandatory*): ISSUER or VERIFIER.
+- `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
+- `vs_operator` (account) (*optional*): the account we want to authorize to create `ParticipantSession` entries linked to this `Participant` entry. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
-- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing a validation process to obtain a credential, in the denom specified in the credential schema. Default to 0.
+- `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing an onboarding process to obtain a credential, in the denom specified in the credential schema. Default to 0.
 
-The following VS Operator Authorization parameters are **optional** and collectively define the initial [PermissionAuthorizationRecord](#permissionauthorizationrecord) for this permission. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the permission operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the permission MUST be revoked and re-created.
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
 
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this permission. If provided, a `PermissionAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this permission as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this permission.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this permission.
-- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this permission.
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this `Participant` entry. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this `Participant` entry as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this `Participant` entry.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this `Participant` entry.
+- `vs_operator_authz_period` (duration) (*optional*): reset period for `vs_operator_authz_spend_limit` and `vs_operator_authz_fee_spend_limit` in the context of this `Participant` entry.
 
-Permitted message types to be set in `vs_operator_authz_msg_types` depends on `type`.
+Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`.
 
-|Permission type|Permitted Messages|
+|Participant role|Permitted Messages|
 |-|-|
 | HOLDER | TriggerResolver |
-| ISSUER | CreateOrUpdatePermissionSession, SetPermissionVPtoValidated |
-| VERIFIER | CreateOrUpdatePermissionSession |
+| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated |
+| VERIFIER | CreateOrUpdateParticipantSession |
  
-##### [MOD-PERM-MSG-14-2] Self Create Permission precondition checks
+##### [MOD-PP-MSG-14-2] Self Create Participant precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-14-2-1] Self Create Permission basic checks
+###### [MOD-PP-MSG-14-2-1] Self Create Participant basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-Load `Permission` `validator_perm` from `validator_perm_id`.
+Load `Participant` `validator_participant` from `validator_participant_id`.
 
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `type` (PermissionType) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
-- `validator_perm_id` (uint64) (*mandatory*): `validator_perm` MUST be an ECOSYSTEM [[ref: active permission]] or [[ref: future permission]].
+- `role` (ParticipantRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
+- `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): no check required.
 - `did`, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if any existing `Participant` entry has non-null `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Participant `(did, corporation)` consistency invariant: at any block height, all `Participant` entries sharing a non-null `did` are owned by the same `Corporation`).
 - `effective_from` MUST be in the future AND
-  - MUST be greater or equal to `validator_perm.effective_from` AND
-  - if `validator_perm.effective_until` is not null, MUST be lower than `validator_perm.effective_until`
+  - MUST be greater or equal to `validator_participant.effective_from` AND
+  - if `validator_participant.effective_until` is not null, MUST be lower than `validator_participant.effective_until`
 - `effective_until`:
-  - if null, `validator_perm.effective_until` MUST be NULL
-  - else if not null, must be greater than `effective_from` AND if `validator_perm.effective_until` is not null, MUST be lower or equal to `validator_perm.effective_until`
-- `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
-- `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and MUST be a ISSUER permission.
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PERM-MSG-14-1](#mod-perm-msg-14-1-self-create-permission-parameters).
+  - if null, `validator_participant.effective_until` MUST be NULL
+  - else if not null, must be greater than `effective_from` AND if `validator_participant.effective_until` is not null, MUST be lower or equal to `validator_participant.effective_until`
+- `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and the `Participant` entry MUST be an ISSUER.
+- `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and the `Participant` entry MUST be an ISSUER.
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-14-1](#mod-pp-msg-14-1-self-create-participant-parameters).
 
-###### [MOD-PERM-MSG-14-2-2] Self Create Permission permission checks
+###### [MOD-PP-MSG-14-2-2] Self Create Participant permission checks
 
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
-- The related `CredentialSchema` entry is loaded with `validator_perm.schema_id`, and will be named `cs` in this section.
-- if `type` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
-- if `type` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is not equal to OPEN, MUST abort.
-- if `type` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
-- if `type` is equal to VERIFIER and `verification_fees` is specified and different than 0, MUST abort.
+- The related `CredentialSchema` entry is loaded with `validator_participant.schema_id`, and will be named `cs` in this section.
+- if `role` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
+- if `role` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is not equal to OPEN, MUST abort.
+- if `role` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
+- if `role` is equal to VERIFIER and `verification_fees` is specified and different than 0, MUST abort.
 
-###### [MOD-PERM-MSG-14-2-3] Self Create Permission fee checks
+###### [MOD-PP-MSG-14-2-3] Self Create Participant fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
-###### [MOD-PERM-MSG-14-2-4] Self Create Permission overlap checks
+###### [MOD-PP-MSG-14-2-4] Self Create Participant overlap checks
 
-We want to make sure that 2 permissions cannot be active at the same time for the same `validator_perm_id`. If `corporation` wishes to create a new permission but existing active one never expires (or expire too far from now), `corporation` MUST use first the [Extend Perm Msg](#mod-perm-msg-8-adjust-permission) to set or adjust the `effective_until` value.
+We want to make sure that 2 `Participant` entries cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
-Find all [[ref: active permissions]] `perms[]` (not revoked, not slashed, not repaid) for `cs.id`, `type`, `validator_perm_id`, `corporation`.
+Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `cs.id`, `role`, `validator_participant_id`, `corporation`.
 
-for each `Permission` entry `p` from `perms[]`:
+for each `Participant` entry `p` from `participants[]`:
 
 - if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
 - if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new permission doesn't make any sense and method execution MUST abort.
+- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
 
 > note: this check was not present in v3.
 
-##### [MOD-PERM-MSG-14-3] Self Create Permission execution
+##### [MOD-PP-MSG-14-3] Self Create Participant execution
 
 If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-- Load `Permission` `validator_perm` from `validator_perm_id`.
+- Load `Participant` `validator_participant` from `validator_participant_id`.
 
-A new entry `Permission` `perm` MUST be created:
+A new entry `Participant` `perm` MUST be created:
 
-- `perm.id`: auto-incremented uint64.
-- `perm.validator_perm_id`: `validator_perm_id`
-- `perm.schema_id`: `validator_perm.schema_id`
-- `perm.modified` to `now`.
-- `perm.type`: `type`.
-- `perm.did`: `did`.
-- `perm.corporation`: `corporation`.
-- `perm.vs_operator`: `vs_operator`.
-- `perm.created`: `now`
-- `perm.effective_from`: `effective_from`
-- `perm.effective_until`: `effective_until`
-- `perm.validation_fees`: `validation_fees` if specified and `type` is ISSUER, else 0.
-- `perm.issuance_fees`: 0
-- `perm.verification_fees`: `verification_fees` if specified and `type` is ISSUER, else 0.
-- `perm.deposit`: 0
+- `participant.id`: auto-incremented uint64.
+- `participant.validator_participant_id`: `validator_participant_id`
+- `participant.schema_id`: `validator_participant.schema_id`
+- `participant.modified` to `now`.
+- `participant.role`: `role`.
+- `participant.did`: `did`.
+- `participant.corporation`: `corporation`.
+- `participant.vs_operator`: `vs_operator`.
+- `participant.created`: `now`
+- `participant.effective_from`: `effective_from`
+- `participant.effective_until`: `effective_until`
+- `participant.validation_fees`: `validation_fees` if specified and `role` is ISSUER, else 0.
+- `participant.issuance_fees`: 0
+- `participant.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
+- `participant.deposit`: 0
 
-If `vs_operator_authz_msg_types` is provided, create the [PermissionAuthorizationRecord](#permissionauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
 - `corporation`: `corporation`
 - `vs_operator`: `vs_operator`
 - `record`:
-  - `record.perm_id`: `perm.id`
+  - `record.participant_id`: `participant.id`
   - `record.msg_types`: `vs_operator_authz_msg_types`
   - `record.spend_limit`: `vs_operator_authz_spend_limit`
   - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
   - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
-  - `record.expiration`: `perm.effective_until`
+  - `record.expiration`: `participant.effective_until`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: unlike [[MOD-PERM-MSG-1]](#mod-perm-msg-1-start-permission-vp), the record is created with `expiration = perm.effective_until` and is therefore immediately active. If `with_feegrant` is true and `perm.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
+> Note: unlike [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), the record is created with `expiration = participant.effective_until` and is therefore immediately active. If `with_feegrant` is true and `participant.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
-#### [MOD-PERM-MSG-15] Trigger Resolver
+#### [MOD-PP-MSG-15] Trigger Resolver
 
 This method CAN be executed by:
 
-- the `vs_operator` of the permission, acting on behalf of `perm.corporation`; or
-- any ancestor validator of the permission in the permission tree (from the direct parent up to the root permission). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` defined in `v`, or by any `operator` authorized by `v.corporation` for this message type.
+- the `vs_operator` of the `Participant` entry, acting on behalf of `participant.corporation`; or
+- any ancestor validator of the `Participant` entry in the `Participant` tree (from the direct parent up to the root `Participant` entry). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` defined in `v`, or by any `operator` authorized by `v.corporation` for this message type.
 
-This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the `did` registered in the permission. Typical use cases include:
+This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the `did` registered in the `Participant` entry. Typical use cases include:
 
 - a new [[ref: verifiable service]] has been onboarded and its credentials are now present in the DID Document, so trust can be (re-)evaluated;
-- an issuer has revoked a credential issued to a holder: the issuer (acting as the validator of the corresponding HOLDER permission) notifies the trust resolver to re-evaluate trust for the revoked HOLDER permission;
-- an issuer is no longer operating: a parent issuer grantor or root ecosystem permission triggers a re-evaluation.
+- an issuer has revoked a credential issued to a holder: the issuer (acting as the validator of the corresponding HOLDER `Participant` entry) notifies the trust resolver to re-evaluate trust for the revoked HOLDER `Participant` entry;
+- an issuer is no longer operating: a parent issuer grantor or root ecosystem `Participant` entry triggers a re-evaluation.
 
 The method does not modify the [[ref: VPR]] state; it only emits an event that off-chain components MAY consume.
 
-##### [MOD-PERM-MSG-15-1] Trigger Resolver parameters
+##### [MOD-PP-MSG-15-1] Trigger Resolver parameters
 
 - `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the permission for which a trust resolution must be triggered.
+- `id` (uint64) (*mandatory*): id of the `Participant` entry for which a trust resolution must be triggered.
 
-##### [MOD-PERM-MSG-15-2] Trigger Resolver precondition checks
+##### [MOD-PP-MSG-15-2] Trigger Resolver precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-PERM-MSG-15-2-1] Trigger Resolver basic checks
+###### [MOD-PP-MSG-15-2-1] Trigger Resolver basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
-- Load `Permission` entry `perm` from `id`. If no entry found, abort.
-- `perm` MUST be an [[ref: active permission]], else abort.
-- `perm.did` MUST NOT be null, else abort.
+- Load `Participant` entry `perm` from `id`. If no entry found, abort.
+- `perm` MUST be an [[ref: active participant]], else abort.
+- `participant.did` MUST NOT be null, else abort.
 
-###### [MOD-PERM-MSG-15-2-2] Trigger Resolver authorization checks
+###### [MOD-PP-MSG-15-2-2] Trigger Resolver authorization checks
 
 At least one of the two authorization paths below MUST pass, else [[ref: transaction]] MUST abort.
 
-*Path 1 — vs_operator of the target permission*
+*Path 1 — vs_operator of the target `Participant` entry*
 
-- `corporation` MUST be equal to `perm.corporation`.
-- `operator` MUST be equal to `perm.vs_operator`.
+- `corporation` MUST be equal to `participant.corporation`.
+- `operator` MUST be equal to `participant.vs_operator`.
 - [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 - [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 
-*Path 2 — ancestor validator in the permission tree*
+*Path 2 — ancestor validator in the `Participant` tree*
 
 The target `perm` itself is excluded from this walk; only its ancestors (from the direct parent up to the root) are considered. Walk the tree:
 
 - set `v` = `perm`.
-- while `v.validator_perm_id` is defined and != `perm.id` :
-  - load `v` from `v.validator_perm_id`.
-  - if `v` is not an [[ref: active permission]], continue with the next iteration.
+- while `v.validator_participant_id` is defined and != `participant.id` :
+  - load `v` from `v.validator_participant_id`.
+  - if `v` is not an [[ref: active participant]], continue with the next iteration.
   - if corporation != v.corporation, continue with the next iteration.
   - if [AUTHZ-CHECK-1](#authz-check-1-operator-authorization-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver`, then authorization is granted => match.
 
 If the walk terminates without a match, Path 2 fails.
 
-###### [MOD-PERM-MSG-15-2-3] Trigger Resolver fee checks
+###### [MOD-PP-MSG-15-2-3] Trigger Resolver fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-PERM-MSG-15-3] Trigger Resolver execution
+##### [MOD-PP-MSG-15-3] Trigger Resolver execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
 This method does not modify the state of the [[ref: VPR]]. It MUST emit an event signaling that a trust resolution has been triggered for `perm`. The event MUST include at least:
 
-- `perm_id`: equal to `id`.
+- `participant_id`: equal to `id`.
 
-> Note: the identity of the signers (`corporation`, `operator`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `Permission` entry queried by `perm_id` to resolve `did`, `corporation`, `vs_operator`, and ancestor chain without duplicating them in the event payload.
+> Note: the identity of the signers (`corporation`, `operator`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `Participant` entry queried by `participant_id` to resolve `did`, `corporation`, `vs_operator`, and ancestor chain without duplicating them in the event payload.
 
-#### [MOD-PERM-QRY-1] List Permissions
+#### [MOD-PP-QRY-1] List Participants
 
 Anyone CAN execute this method.
 
 Generic query used for (at least):
 
-- find all permissions (all or limit to active) of a given schema;
-- for a given validator, get PENDING validation processes;
-- find all permissions of a given grantee;
-- find all permissions of a given did;
-- find all ISSUER_GRANTOR active permission, so that I can apply to an ISSUER permission;
+- find all `Participant` entries (all or limit to active) of a given schema;
+- for a given validator, get PENDING onboarding processes;
+- find all `Participant` entries of a given grantee;
+- find all `Participant` entries of a given did;
+- find all ISSUER_GRANTOR active participants, so that I can apply to an ISSUER `Participant` entry;
 ...
 
-##### [MOD-PERM-QRY-1-1] List Permissions parameters
+##### [MOD-PP-QRY-1-1] List Participants parameters
 
 - `schema_id` (number) (*optional*): the schema id.
 - `grantee` (account) (*optional*): the grantee account.
-- `did` (string) (*optional*): the did the permission refers to.
-- `perm_id` (number) (*optional*): limit to permissions where the `validator_perm_id` is `perm_id`.
-- `type` (PermissionType) (*optional*): if we want to limit to a specific permission type.
-- `only_valid` (boolean) (*optional*): if set to true, only return active permissions.
-- `only_slashed` (boolean) (*optional*): if set to true, only return slashed permissions.
-- `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed permissions.
-- `modified_after` (timestamp) (*optional*): limit to permissions modified after (or equal to) `modified_after`.
-- `vp_state` (ValidationState) (*optional*): limit to permissions with a `vp_state` not null and equal to `vp_state`.
+- `did` (string) (*optional*): the did the `Participant` entry refers to.
+- `participant_id` (number) (*optional*): limit to `Participant` entries where the `validator_participant_id` is `participant_id`.
+- `role` (ParticipantRole) (*optional*): if we want to limit to a specific `Participant` role.
+- `only_valid` (boolean) (*optional*): if set to true, only return active participants.
+- `only_slashed` (boolean) (*optional*): if set to true, only return slashed `Participant` entries.
+- `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed `Participant` entries.
+- `modified_after` (timestamp) (*optional*): limit to `Participant` entries modified after (or equal to) `modified_after`.
+- `op_state` (OnboardingState) (*optional*): limit to `Participant` entries with a `op_state` not null and equal to `op_state`.
 - `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
 - `when` (timestamp) (*optional*): if set, query *at* `when`, else query *at* now(). Used to query the VPR state at a previous datetime.
 
-##### [MOD-PERM-QRY-1-2] List Permissions checks
+##### [MOD-PP-QRY-1-2] List Participants checks
 
 Basic type check arg SHOULD be applied.
 
@@ -4526,50 +4993,50 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 - `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
 
-##### [MOD-PERM-QRY-1-3] List Permissions execution
+##### [MOD-PP-QRY-1-3] List Participants execution
 
 return a list of found entries, or an empty list if nothing found. Ordered by `modified` asc.
 
-#### [MOD-PERM-QRY-2] Get Permission
+#### [MOD-PP-QRY-2] Get Participant
 
 Anyone CAN execute this method.
 
-##### [MOD-PERM-QRY-2-1] Get Permission parameters
+##### [MOD-PP-QRY-2-1] Get Participant parameters
 
-- `id` of the [[ref: credential schema permission]] (*mandatory*);
+- `id` of the [[ref: credential schema participant]] (*mandatory*);
 
-##### [MOD-PERM-QRY-2-2] Get Permission checks
+##### [MOD-PP-QRY-2-2] Get Participant checks
 
 - `id` must be a uint64.
 
-##### [MOD-PERM-QRY-2-3] Get Permission execution
+##### [MOD-PP-QRY-2-3] Get Participant execution
 
 return found entry (if any).
 
-#### [MOD-PERM-QRY-3] Void
+#### [MOD-PP-QRY-3] Void
 
-Obsoleted by [MOD-PERM-QRY-1].
+Obsoleted by [MOD-PP-QRY-1].
 
-#### [MOD-PERM-QRY-4] Find Beneficiaries
+#### [MOD-PP-QRY-4] Find Beneficiaries
 
 Anyone can execute this method.
 
-To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the permission tree (which is the trust registry perm), starting from the 2 branches `issuer_perm` and `verifier_perm`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_perm` is null, `issuer_perm` is never added to the set. If `verifier_perm` is NOT null, `issuer_perm` is added to the set if it exists but `verifier_perm` is not added to the set.
+To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the `Participant` tree (which is the ecosystem perm), starting from the 2 branches `issuer_participant` and `verifier_participant`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_participant` is null, `issuer_participant` is never added to the set. If `verifier_participant` is NOT null, `issuer_participant` is added to the set if it exists but `verifier_participant` is not added to the set.
 
-Example 1: `verifier_perm`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
+Example 1: `verifier_participant`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
 
 ```plantuml
 
 @startuml
 scale max 800 width
 object "ECOSYSTEM executor ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "ISSUER_GRANTOR executor ancestor perm" as ig #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "ISSUER executor perm" as i #7677ed {
-  don't add me to found_perm_set
+  don't add me to found_participant_set
 }
 
 ig --> tr
@@ -4578,17 +5045,17 @@ i --> ig
 
 ```
 
-Example 2: `verifier_perm`: is not set: it's a credential offer. Schema configured to NOT have Issuer Grantors.
+Example 2: `verifier_participant`: is not set: it's a credential offer. Schema configured to NOT have Issuer Grantors.
 
 ```plantuml
 
 @startuml
 scale max 800 width
 object "ECOSYSTEM executor ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "ISSUER executor perm" as i #7677ed {
-  don't add me to found_perm_set
+  don't add me to found_participant_set
 }
 
 
@@ -4597,27 +5064,27 @@ i --> tr
 
 ```
 
-Example 3: `verifier_perm` is set, it's a presentation request. Schema configured to have Verifier and Issuer Grantors.
+Example 3: `verifier_participant` is set, it's a presentation request. Schema configured to have Verifier and Issuer Grantors.
 
 ```plantuml
 
 @startuml
 scale max 800 width
 object "ECOSYSTEM beneficiary ancestor perm" as tr #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "ISSUER_GRANTOR beneficiary ancestor perm" as ig #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "ISSUER beneficiary perm" as i #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 
 object "VERIFIER_GRANTOR executor ancestor perm" as vg #3fbdb6 {
-  add me to found_perm_set
+  add me to found_participant_set
 }
 object "VERIFIER executor perm" as v #7677ed {
-  don't add me to found_perm_set
+  don't add me to found_participant_set
 }
 
 ig --> tr
@@ -4629,41 +5096,41 @@ v --> vg
 
 ```
 
-##### [MOD-PERM-QRY-4-1] Find Beneficiaries parameters
+##### [MOD-PP-QRY-4-1] Find Beneficiaries parameters
 
-- `issuer_perm_id` (uint64) (*optional*): id of issuer permission.
-- `verifier_perm_id` (uint64) (*optional*): id of verifier permission.
+- `issuer_participant_id` (uint64) (*optional*): id of issuer `Participant` entry.
+- `verifier_participant_id` (uint64) (*optional*): id of verifier `Participant` entry.
 
-##### [MOD-PERM-QRY-4-2] Find Beneficiaries checks
+##### [MOD-PP-QRY-4-2] Find Beneficiaries checks
 
-- if `issuer_perm_id` and `verifier_perm_id` are unset then MUST abort.
-- if `issuer_perm_id` is specified, load `issuer_perm` from `issuer_perm_id`, Permission MUST exist and MUST be a [[ref: active permission]].
-- if `verifier_perm_id` is specified, load `verifier_perm` from `verifier_perm_id`, Permission MUST exist and MUST be a [[ref: active permission]].
+- if `issuer_participant_id` and `verifier_participant_id` are unset then MUST abort.
+- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`, Participant MUST exist and MUST be a [[ref: active participant]].
+- if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Participant MUST exist and MUST be a [[ref: active participant]].
 
-##### [MOD-PERM-QRY-4-3] Find Beneficiaries execution
+##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
-Example: Let's build the set. Revoked and slashed permissions will not be added to the set. Expired permissions, if not revoked/slashed, will be considered.
+Example: Let's build the set. Revoked and slashed `Participant` entries will not be added to the set. Expired `Participant` entries, if not revoked/slashed, will be considered.
 
-- create Set `found_perm_set`.
+- create Set `found_participant_set`.
 
-- define permission `current_perm` as null.
+- define `current_participant` as null.
 
-- load perms `issuer_perm` and optional `verifier_perm` as specified in basic checks above.
+- load perms `issuer_participant` and optional `verifier_participant` as specified in basic checks above.
 
-if `issuer_perm` is not null:
+if `issuer_participant` is not null:
 
-- set `current_perm` = `issuer_perm`
-- while `current_perm.validator_perm_id` is not null:
-  - current_perm = load(`current_perm.validator_perm_id`)
-  - if `current_perm.revoked` is NULL AND `current_perm.slashed` is NULL, Add `current_perm` to `found_perm_set`.
+- set `current_participant` = `issuer_participant`
+- while `current_participant.validator_participant_id` is not null:
+  - current_participant = load(`current_participant.validator_participant_id`)
+  - if `current_participant.revoked` is NULL AND `current_participant.slashed` is NULL, Add `current_participant` to `found_participant_set`.
 
-Additionally, if `verifier_perm` is not null:
+Additionally, if `verifier_participant` is not null:
 
-- if `issuer_perm` is not null, add `issuer_perm` to `found_perm_set`
-- set `current_perm` = `verifier_perm`
-- while `current_perm.validator_perm_id` != null:
-  - current_perm = load(`current_perm.validator_perm_id`)
-  - if `current_perm.revoked` is NULL AND `current_perm.slashed` is NULL, Add `current_perm` to `found_perm_set`.
+- if `issuer_participant` is not null, add `issuer_participant` to `found_participant_set`
+- set `current_participant` = `verifier_participant`
+- while `current_participant.validator_participant_id` != null:
+  - current_participant = load(`current_participant.validator_participant_id`)
+  - if `current_participant.revoked` is NULL AND `current_participant.slashed` is NULL, Add `current_participant` to `found_participant_set`.
 
 return `found_perms`.
 
@@ -4671,29 +5138,29 @@ return `found_perms`.
 This works even is schema is open to any issuer or open to any verifier.
 :::
 
-#### [MOD-PERM-QRY-5] Get PermissionSession
+#### [MOD-PP-QRY-5] Get ParticipantSession
 
-##### [MOD-PERM-QRY-5-1] Get PermissionSession parameters
+##### [MOD-PP-QRY-5-1] Get ParticipantSession parameters
 
-- `id` (uuid) (*mandatory*): the id of the `PermissionSession`.
+- `id` (uuid) (*mandatory*): the id of the `ParticipantSession`.
 
-##### [MOD-PERM-QRY-5-2] Get PermissionSession checks
+##### [MOD-PP-QRY-5-2] Get ParticipantSession checks
 
-##### [MOD-PERM-QRY-5-3] Get PermissionSession execution
+##### [MOD-PP-QRY-5-3] Get ParticipantSession execution
 
-return `PermissionSession` entry if found, else return not found.
+return `ParticipantSession` entry if found, else return not found.
 
-##### [MOD-PERM-QRY-6] List Permission Module Parameters
+##### [MOD-PP-QRY-6] List Participant Module Parameters
 
-##### [MOD-PERM-QRY-6-2] List Permission Module Parameters parameters
+##### [MOD-PP-QRY-6-2] List Participant Module Parameters parameters
 
-##### [MOD-PERM-QRY-6-2] List Permission Module Parameters query checks
+##### [MOD-PP-QRY-6-2] List Participant Module Parameters query checks
 
-##### [MOD-PERM-QRY-6-3] List Permission Module Parameters execution of the query
+##### [MOD-PP-QRY-6-3] List Participant Module Parameters execution of the query
 
 Return the list of the existing parameters and their values.
 
-##### [MOD-PERM-QRY-6-4] List Permission Module Parameters API result example
+##### [MOD-PP-QRY-6-4] List Participant Module Parameters API result example
 
 ```json
 {
@@ -4727,7 +5194,7 @@ autonumber "<font color='#7677ed'><b>(end start method)"
 Applicant <-- VPR: Transaction completed and Validation entry created
 autonumber stop
 autonumber "<font color='#7677ed'><b>(connects to Certification Entity Validation VS)"
-Applicant --> CE: share id of Permission
+Applicant --> CE: share id of Participant
 autonumber stop
 Applicant <-- CE: Request proof of account and DID ownership (blind sign)
 Applicant --> CE: send blind sign proofs 
@@ -4756,30 +5223,30 @@ actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
 
 participant "Verifiable Public Registry" as VPR #3fbdb6
 
-ApplicantAccount --> VPR: Start Permission VP
-VPR <-- VPR: create permission entry.
-ApplicantAccount <-- VPR: permission entry created,\nassigned perm.validator_perm_id from ISSUER_GRANTOR permissions.
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validator_perm.did\nby creating a DIDComm connection
+ApplicantAccount --> VPR: Start Participant OP
+VPR <-- VPR: create `Participant` entry.
+ApplicantAccount <-- VPR: `Participant` entry created,\nassigned participant.validator_participant_id from ISSUER_GRANTOR `Participant` entries.
+ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validator_participant.did\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
-ApplicantBrowser --> ValidatorVS: I want to proceed with perm.id=...
-ValidatorVS --> ValidatorVS: load perm with id=...\nand verify the associated perm.validator_perm_id is referring to me
-ApplicantBrowser <-- ValidatorVS: request proof of control\nof perm.applicant account (blind sign)
+ApplicantBrowser --> ValidatorVS: I want to proceed with participant.id=...
+ValidatorVS --> ValidatorVS: load perm with id=...\nand verify the associated participant.validator_participant_id is referring to me
+ApplicantBrowser <-- ValidatorVS: request proof of control\nof participant.applicant account (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proof of account
 ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof validation entry, I trust you.
 ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
 ApplicantBrowser --> ValidatorVS: send DID
 ValidatorVS --> ValidatorVS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be added in an ISSUER permission (blind sign)
+ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be added in an ISSUER `Participant` entry (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proofs
 ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of the DID, I trust you.
 note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
 ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
 note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorVS: Your are a legitimate issuer. I'll now create an ISSUER permission for your account and DID.
-ValidatorAccount --> VPR #3fbdb6: Set Permission VP to Validated\nset validation.state to VALIDATED\n.
+ApplicantBrowser <-- ValidatorVS: Your are a legitimate issuer. I'll now create an ISSUER `Participant` entry for your account and DID.
+ValidatorAccount --> VPR #3fbdb6: Set Participant OP to Validated\nset validation.state to VALIDATED\n.
 VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify permission added for your DID.\nDID can now issue credentials of this schema.
+ApplicantBrowser <-- ValidatorVS: notify `Participant` entry added for your DID.\nDID can now issue credentials of this schema.
 ```
 
 ### Trust deposit module
@@ -4950,7 +5417,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - else if `augend` < 0:
   - set `td.refunded` to `td.refunded` - `augend`
 
-The last case, `augend` < 0, is to refund trust deposit (e.g. when canceling a validation process). The refunded amount is added to `td.refunded` and is reused for the next trust deposit spending.
+The last case, `augend` < 0, is to refund trust deposit (e.g. when canceling an onboarding process). The refunded amount is added to `td.refunded` and is reused for the next trust deposit spending.
 
 #### [MOD-TD-MSG-2] Reclaim Trust Deposit Yield
 
@@ -5036,7 +5503,7 @@ This method is used by the network governance authority to **globally slash** a 
 
 This method can only be called by a governance proposal. A globally slashed account MUST repay the slashed deposit in order to continue to use the services provided by the VPR. When and account is slashed, and while slashed deposit has not been repaid, all account linked permissions MUST be considered non trustable.
 
-This method is for network governance authority slash. For ecosystem slash, see [Slash Permission Trust Deposit](#mod-perm-msg-12-slash-permission-trust-deposit).
+This method is for network governance authority slash. For ecosystem slash, see [Slash Participant Trust Deposit](#mod-pp-msg-12-slash-participant-trust-deposit).
 
 ##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
 
@@ -5301,7 +5768,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `corporation` (group): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `CreateOrUpdatePermissionSession` which is not allowed.
+- `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `CreateOrUpdateParticipantSession` which is not allowed.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `authz_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `authz_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `authz_spend_limit` is not set.
@@ -5312,7 +5779,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - Check if a **VS Operator Authorization** exists for `corporation` and `grantee`. If this is the case, MUST abort.
 
 ::: warning
-An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for `perm.corporation` and `perm.vs_operator`. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
+An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for `participant.corporation` and `participant.vs_operator`. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
 :::
 
 ##### [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks
@@ -5372,27 +5839,27 @@ MUST abort if one of these conditions fails:
 
 #### [MOD-DE-MSG-5] Grant VS Operator Authorization
 
-This method can only be called directly by the following Permission module methods, with no signer check:
+This method can only be called directly by the following Participant module methods, with no signer check:
 
-- [Start Permission VP](#mod-perm-msg-1-start-permission-vp)
-- [Self Create Permission](#mod-perm-msg-14-self-create-permission)
+- [Start Participant OP](#mod-pp-msg-1-start-participant-op)
+- [Self Create Participant](#mod-pp-msg-14-self-create-participant)
 
-It creates a new [PermissionAuthorizationRecord](#permissionauthorizationrecord) inside `VSOperatorAuthorization[corporation, vs_operator]` and, if the record enables a fee grant and its `expiration` is in the future, synchronises the on-chain `FeeGrant` for the containing VSOA.
+It creates a new [ParticipantAuthorizationRecord](#participantauthorizationrecord) inside `VSOperatorAuthorization[corporation, vs_operator]` and, if the record enables a fee grant and its `expiration` is in the future, synchronises the on-chain `FeeGrant` for the containing VSOA.
 
-This method does NOT read `Permission` state. All authorization configuration is provided by the caller.
+This method does NOT read `Participant` state. All authorization configuration is provided by the caller.
 
 ##### [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters
 
 - `corporation` (group) (*mandatory*): the corporation delegating the authorization.
 - `vs_operator` (account) (*mandatory*): the account receiving the authorization.
-- `record` ([PermissionAuthorizationRecord](#permissionauthorizationrecord)) (*mandatory*): the full record to store.
+- `record` ([ParticipantAuthorizationRecord](#participantauthorizationrecord)) (*mandatory*): the full record to store.
 
 ##### [MOD-DE-MSG-5-2] Grant VS Operator Authorization basic checks
 
 If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `corporation` and `vs_operator` MUST NOT be null.
-- `record.perm_id` MUST NOT match an existing `PermissionAuthorizationRecord` anywhere in the store (each record is globally unique by `perm_id`).
+- `record.participant_id` MUST NOT match an existing `ParticipantAuthorizationRecord` anywhere in the store (each record is globally unique by `participant_id`).
 - `record.msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
 - No `OperatorAuthorization` `oauthz` where `oauthz.corporation` = `corporation` and `oauthz.operator` = `vs_operator` MUST exist.
 - No other `VSOperatorAuthorization` `vsoauthz'` where `vsoauthz'.vs_operator` = `vs_operator` AND `vsoauthz'.corporation` != `corporation` MUST exist. In other words, a vs-agent VPR account cannot be controlled by multiple corporations.
@@ -5433,25 +5900,25 @@ This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-o
 
 #### [MOD-DE-MSG-6] Revoke VS Operator Authorization
 
-This method can only be called directly by the following Permission module methods, with no signer check:
+This method can only be called directly by the following Participant module methods, with no signer check:
 
-- [Cancel Permission VP Last Request](#mod-perm-msg-6-cancel-permission-vp-last-request) (only when the cancellation terminates the permission)
-- [Revoke Permission](#mod-perm-msg-9-revoke-permission)
-- [Slash Permission Trust Deposit](#mod-perm-msg-12-slash-permission-trust-deposit)
+- [Cancel Participant OP Last Request](#mod-pp-msg-6-cancel-participant-op-last-request) (only when the cancellation terminates the permission)
+- [Revoke Participant](#mod-pp-msg-9-revoke-participant)
+- [Slash Participant Trust Deposit](#mod-pp-msg-12-slash-participant-trust-deposit)
 
-It removes the unique [PermissionAuthorizationRecord](#permissionauthorizationrecord) identified by `perm_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no such record exists.
+It removes the unique [ParticipantAuthorizationRecord](#participantauthorizationrecord) identified by `participant_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no such record exists.
 
-This method does NOT read `Permission` state.
+This method does NOT read `Participant` state.
 
 ##### [MOD-DE-MSG-6-1] Revoke VS Operator Authorization method parameters
 
-- `perm_id` (uint64) (*mandatory*): id of the permission whose authorization record must be removed.
+- `participant_id` (uint64) (*mandatory*): id of the permission whose authorization record must be removed.
 
 ##### [MOD-DE-MSG-6-2] Revoke VS Operator Authorization basic checks
 
-- `perm_id` MUST be a valid uint64.
+- `participant_id` MUST be a valid uint64.
 
-> Note: absence of a record for `perm_id` is NOT an error. The method is a no-op in that case (the permission was never VS-operator-authorized, or was already revoked).
+> Note: absence of a record for `participant_id` is NOT an error. The method is a no-op in that case (the permission was never VS-operator-authorized, or was already revoked).
 
 ##### [MOD-DE-MSG-6-3] Revoke VS Operator Authorization fee checks
 
@@ -5459,7 +5926,7 @@ This method does NOT read `Permission` state.
 
 ##### [MOD-DE-MSG-6-4] Revoke VS Operator Authorization execution of the method
 
-- Locate the unique `PermissionAuthorizationRecord` `record` with `record.perm_id = perm_id`. If none exists, EXIT (no-op).
+- Locate the unique `ParticipantAuthorizationRecord` `record` with `record.participant_id = participant_id`. If none exists, EXIT (no-op).
 - Let `vsoa` = the `VSOperatorAuthorization` that contains `record`.
 - Remove `record` from `vsoa.records`.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
@@ -5467,26 +5934,26 @@ This method does NOT read `Permission` state.
 
 #### [MOD-DE-MSG-9] Update VS Operator Authorization Expiration
 
-This method can only be called directly by the following Permission module methods, with no signer check:
+This method can only be called directly by the following Participant module methods, with no signer check:
 
-- [Set Permission VP to Validated](#mod-perm-msg-3-set-permission-vp-to-validated)
-- [Adjust Permission](#mod-perm-msg-8-adjust-permission)
+- [Set Participant OP to Validated](#mod-pp-msg-3-set-participant-op-to-validated)
+- [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until)
 
-It updates the `expiration` of the unique record identified by `perm_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no record exists for `perm_id`.
+It updates the `expiration` of the unique record identified by `participant_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no record exists for `participant_id`.
 
-This method does NOT read `Permission` state; the caller supplies the new expiration value directly.
+This method does NOT read `Participant` state; the caller supplies the new expiration value directly.
 
 ##### [MOD-DE-MSG-9-1] Update VS Operator Authorization Expiration method parameters
 
-- `perm_id` (uint64) (*mandatory*): id of the permission whose authorization record's `expiration` must be updated.
+- `participant_id` (uint64) (*mandatory*): id of the permission whose authorization record's `expiration` must be updated.
 - `new_expiration` (timestamp) (*mandatory*): the new value of `record.expiration`.
 
 ##### [MOD-DE-MSG-9-2] Update VS Operator Authorization Expiration basic checks
 
-- `perm_id` MUST be a valid uint64.
+- `participant_id` MUST be a valid uint64.
 - `new_expiration` MUST be a valid timestamp.
 
-> Note: absence of a record for `perm_id` is NOT an error. The method is a no-op in that case (the permission does not enable VS operator authorization).
+> Note: absence of a record for `participant_id` is NOT an error. The method is a no-op in that case (the permission does not enable VS operator authorization).
 
 ##### [MOD-DE-MSG-9-3] Update VS Operator Authorization Expiration fee checks
 
@@ -5494,7 +5961,7 @@ This method does NOT read `Permission` state; the caller supplies the new expira
 
 ##### [MOD-DE-MSG-9-4] Update VS Operator Authorization Expiration execution of the method
 
-- Locate the unique `PermissionAuthorizationRecord` `record` with `record.perm_id = perm_id`. If none exists, EXIT (no-op).
+- Locate the unique `ParticipantAuthorizationRecord` `record` with `record.participant_id = participant_id`. If none exists, EXIT (no-op).
 - Set `record.expiration = new_expiration`.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for the VSOA containing `record`.
 
@@ -5545,7 +6012,7 @@ Return a list of `VSOperatorAuthorization` entries matching the filter criteria,
 #### [MOD-DI-MSG-1] Store Digest
 
 - Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-- This method can be called directly by [Create or Update Permission Session](#mod-perm-msg-10-create-or-update-permission-session) module with no checks.
+- This method can be called directly by [Create or Update Participant Session](#mod-pp-msg-10-create-or-update-participant-session) module with no checks.
 
 ##### [MOD-DI-MSG-1-1] Store Digest method parameters
 
@@ -5700,7 +6167,7 @@ Create `ExchangeRate` entry `xr`:
 
 #### [MOD-XR-MSG-2] Update Exchange Rate
 
-The **Update Exchange Rate** method allows an operator authorized by network governance (via an [[ref: ExchangeRateAuthorization]]) to push a fresh `rate` for a given `ExchangeRate` entry.
+The **Update Exchange Rate** method allows an operator authorized by network governance (via an `ExchangeRateAuthorization`) to push a fresh `rate` for a given `ExchangeRate` entry.
 
 - Only the `operator` designated in an `ExchangeRateAuthorization` matching the target `ExchangeRate` CAN execute this method.
 
