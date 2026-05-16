@@ -1976,7 +1976,7 @@ Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR /
 
 This module manages [[ref: corporation]] entries — the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A `Corporation` entry MUST exist before its underlying group can be referenced as the `corporation` (group) in any other VPR Create-* method (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
 
-**Group lifecycle operations:** Membership management (adding/removing members), proposal submission, voting, and proposal execution are handled directly via the Cosmos SDK `x/group` module. VPR does not wrap these operations. Implementations MUST refer to the `x/group` specification for `MsgUpdateGroupMembers`, `MsgSubmitProposal`, `MsgVote`, `MsgWithdrawProposal`, and `MsgExec`. Discovery queries (`GroupsByMember`, `GroupProposals`, `VotesByProposal`) from `x/group` apply directly.
+**Group lifecycle operations:** Membership management (adding/removing members), proposal submission, voting, and proposal execution are handled directly via the Cosmos SDK `x/group` module. VPR does not wrap these operations. Implementations MUST refer to the `x/group` specification for `MsgUpdateGroupMembers`, `MsgSubmitProposal`, `MsgVote`, `MsgWithdrawProposal`, and `MsgExec`. Discovery queries (`GroupsByMember`, `ProposalsByGroupPolicy`, `VotesByProposal`) from `x/group` apply directly.
 
 #### [MOD-CO-MSG-1] Create New Corporation
 
@@ -1986,9 +1986,12 @@ An `admin` account CAN execute this method to atomically create a new Cosmos SDK
 
 An `admin` account that would like to create a new [[ref: corporation]] MUST call this method by specifying:
 
-- `admin` (account): (Signer) the account that becomes the admin of the newly created Cosmos SDK [[ref: group]].
-- `members` (list of MemberRequest): (*mandatory*) initial members of the group; each entry specifies `address`, `weight`, and optional `metadata`. MUST contain at least one member.
+- `admin` (account): (Signer) the account that becomes the admin of the newly created Cosmos SDK [[ref: group]] and its group policy.
+- `members` (list of MemberRequest): (*mandatory*) initial members of the group; each entry specifies `address`, `weight` (non-zero decimal string, e.g. `"1"`), and optional `metadata`. MUST contain at least one member.
 - `group_metadata` (string): (*optional*) opaque metadata for the Cosmos SDK group.
+- `group_policy_metadata` (string): (*optional*) opaque metadata for the Cosmos SDK group policy.
+- `group_policy_as_admin` (boolean): (*mandatory*) if `true`, the group policy address becomes the admin of both the group and the group policy. SHOULD be set to `true` so that the group policy address governs itself via the group's decision policy, with no external admin.
+- `decision_policy` (DecisionPolicy): (*mandatory*) the decision policy for the group policy. MUST be either a `ThresholdDecisionPolicy` (minimum weighted sum of YES votes) or a `PercentageDecisionPolicy` (minimum percentage of total weight).
 - `did` (string) (*mandatory*): the DID of the Corporation.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
@@ -2005,7 +2008,8 @@ If any of these precondition checks fail, method MUST abort.
 - if a mandatory parameter is not present, method MUST abort.
 
 - `admin` (account): (Signer) signature must be verified.
-- `members`: MUST contain at least one entry. Each entry's `address` MUST be a valid account address. Each entry's `weight` MUST be a positive integer.
+- `members`: MUST contain at least one entry. Each entry's `address` MUST be a valid account address. Each entry's `weight` MUST be a non-zero decimal string representing a positive number (e.g. `"1"`, `"10"`).
+- `decision_policy`: MUST be a valid `ThresholdDecisionPolicy` or `PercentageDecisionPolicy`.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `did` MUST NOT already be the `did` of any existing `Corporation` entry; if some `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant: a DID is the `did` of at most one `Corporation`).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
@@ -2022,9 +2026,9 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- create a new Cosmos SDK [[ref: group]] via `MsgCreateGroup` with `admin`, `members`, and `group_metadata`; let `group` be the resulting group.
+- create a new Cosmos SDK [[ref: group]] and group policy via `MsgCreateGroupWithPolicy` with `admin`, `members`, `group_metadata`, `group_policy_metadata`, `group_policy_as_admin`, and `decision_policy`; let `group_id` be the `group_id` and `group_policy_address` be the `group_policy_address` returned in `MsgCreateGroupWithPolicyResponse`. The `group_policy_address` is the address that subsequently acts as the `corporation` (group) signer for all VPR messages.
 
-- create and persist a new `Corporation` entry `co` keyed by `group` (1:1):
+- create and persist a new `Corporation` entry `co` keyed by `group_id` (1:1):
 
 - `co.did`: `did`
 - `co.created`: current timestamp
@@ -2037,7 +2041,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.ecosystem_id`: null
-- `gfv.corporation`: `group`
+- `gfv.corporation`: `group_policy_address`
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
