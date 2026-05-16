@@ -1976,16 +1976,19 @@ Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR /
 
 This module manages [[ref: corporation]] entries — the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A `Corporation` entry MUST exist before its underlying group can be referenced as the `corporation` (group) in any other VPR Create-* method (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
 
+**Group lifecycle operations:** Membership management (adding/removing members), proposal submission, voting, and proposal execution are handled directly via the Cosmos SDK `x/group` module. VPR does not wrap these operations. Implementations MUST refer to the `x/group` specification for `MsgUpdateGroupMembers`, `MsgSubmitProposal`, `MsgVote`, `MsgWithdrawProposal`, and `MsgExec`. Discovery queries (`GroupsByMember`, `GroupProposals`, `VotesByProposal`) from `x/group` apply directly.
+
 #### [MOD-CO-MSG-1] Create New Corporation
 
-Any authorized `operator` CAN execute this method on behalf of a Cosmos SDK [[ref: group]] to register a new `Corporation` entry for that group.
+An `admin` account CAN execute this method to atomically create a new Cosmos SDK [[ref: group]] and register a `Corporation` VPR entry for it in a single [[ref: transaction]]. This eliminates any window between group creation and VPR registration, ensuring [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) can never observe an unregistered group.
 
 ##### [MOD-CO-MSG-1-1] Create New Corporation parameters
 
-An authorized `operator` that would like to register a Cosmos SDK [[ref: group]] as a `Corporation` MUST call this method by specifying:
+An `admin` account that would like to create a new [[ref: corporation]] MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed. For this method specifically, the underlying Cosmos SDK [[ref: group]] of `corporation` is the group that wants to register itself — no `Corporation` entry exists for that group yet.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `admin` (account): (Signer) the account that becomes the admin of the newly created Cosmos SDK [[ref: group]].
+- `members` (list of MemberRequest): (*mandatory*) initial members of the group; each entry specifies `address`, `weight`, and optional `metadata`. MUST contain at least one member.
+- `group_metadata` (string): (*optional*) opaque metadata for the Cosmos SDK group.
 - `did` (string) (*mandatory*): the DID of the Corporation.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
@@ -2001,10 +2004,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- A `Corporation` entry for the signing [[ref: group]] MUST NOT exist; if one exists, method MUST abort (a group MAY register itself as a `Corporation` at most once).
+- `admin` (account): (Signer) signature must be verified.
+- `members`: MUST contain at least one entry. Each entry's `address` MUST be a valid account address. Each entry's `weight` MUST be a positive integer.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `did` MUST NOT already be the `did` of any existing `Corporation` entry; if some `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant: a DID is the `did` of at most one `Corporation`).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
@@ -2021,7 +2022,9 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- create and persist a new `Corporation` entry `co` keyed by the signing Cosmos SDK [[ref: group]] (1:1):
+- create a new Cosmos SDK [[ref: group]] via `MsgCreateGroup` with `admin`, `members`, and `group_metadata`; let `group` be the resulting group.
+
+- create and persist a new `Corporation` entry `co` keyed by `group` (1:1):
 
 - `co.did`: `did`
 - `co.created`: current timestamp
@@ -2034,7 +2037,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.ecosystem_id`: null
-- `gfv.corporation`: the signing `corporation` (i.e., the underlying [[ref: group]] of `co`)
+- `gfv.corporation`: `group`
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
@@ -2132,6 +2135,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if `archive` is true: set `co.archived` to current timestamp.
 - if `archive` is false: set `co.archived` to null.
 - `co.modified`: current timestamp
+
+> The underlying Cosmos SDK [[ref: group]] is NOT destroyed by this operation. It remains active so that any pending proposals can be resolved. Only the VPR-level `Corporation` entry is affected.
 
 #### [MOD-CO-MSG-4] Update Module Parameters
 
