@@ -2026,9 +2026,9 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- create a new Cosmos SDK [[ref: group]] and group policy via `MsgCreateGroupWithPolicy` with `admin`, `members`, `group_metadata`, `group_policy_metadata`, `group_policy_as_admin`, and `decision_policy`; let `group_id` be the `group_id` and `group_policy_address` be the `group_policy_address` returned in `MsgCreateGroupWithPolicyResponse`. The `group_policy_address` is the address that subsequently acts as the `corporation` (group) signer for all VPR messages.
+- create a new Cosmos SDK [[ref: group]] and group policy via `MsgCreateGroupWithPolicy` with `admin`, `members`, `group_metadata`, `group_policy_metadata`, `group_policy_as_admin`, and `decision_policy`; let `group_policy_address` be the `group_policy_address` returned in `MsgCreateGroupWithPolicyResponse`. The `group_policy_address` is the address that subsequently acts as the `corporation` (group) signer for all VPR messages.
 
-- create and persist a new `Corporation` entry `co` keyed by `group_id` (1:1):
+- create and persist a new `Corporation` entry `co` keyed by `group_policy_address` (1:1):
 
 - `co.did`: `did`
 - `co.created`: current timestamp
