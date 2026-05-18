@@ -1055,7 +1055,6 @@ entity "Corporation" as corp {
   +did: string
   +created: timestamp
   +modified: timestamp
-  +archived: timestamp
   +active_version: int
   +language: string
 }
@@ -1357,7 +1356,6 @@ A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]]
 - `did` (string) (*mandatory*): the DID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `did` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `did` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-new-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks).
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
-- `archived` (timestamp) (*optional*): timestamp this Corporation has been archived.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `active_version` (int) (*mandatory*): active [[ref: CGF]] version.
 
@@ -1894,8 +1892,7 @@ As a result, `accountABC` is authorized to:
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
 | Corporation               | Create New Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)   | corporation + operator |
 |                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + operator |
-|                                | Archive Corporation                          | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-archive-corporation)   | corporation + operator |
-|                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-4]](#mod-co-msg-4-update-module-parameters)   | governance proposal |
+|                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters)   | governance proposal |
 |                                | Get Corporation                              | /co/v1/get                       | Query  | [[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)   | N/A |
 |                                | List Corporations                            | /co/v1/list                      | Query  | [[MOD-CO-QRY-2]](#mod-co-qry-2-list-corporations)   | N/A |
 |                                | List Corporation Module Parameters           | /co/v1/params                    | Query  | [[MOD-CO-QRY-3]](#mod-co-qry-3-list-module-parameters)   | N/A |
@@ -1976,16 +1973,23 @@ Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR /
 
 This module manages [[ref: corporation]] entries — the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A `Corporation` entry MUST exist before its underlying group can be referenced as the `corporation` (group) in any other VPR Create-* method (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
 
+**Group lifecycle operations:** Membership management (adding/removing members), proposal submission, voting, and proposal execution are handled directly via the Cosmos SDK `x/group` module. VPR does not wrap these operations. Implementations MUST refer to the `x/group` specification for `MsgUpdateGroupMembers`, `MsgSubmitProposal`, `MsgVote`, `MsgWithdrawProposal`, and `MsgExec`. Discovery queries (`GroupsByMember`, `ProposalsByGroupPolicy`, `VotesByProposal`) from `x/group` apply directly. Because `group_policy_as_admin` is always `true` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)), the group policy address is the admin of the group — not the account that created it. Therefore all group lifecycle operations, including member updates, MUST go through the group's own proposal and voting process (`MsgSubmitProposal` → `MsgVote` → `MsgExec`); no account can bypass this by calling group admin messages directly.
+
 #### [MOD-CO-MSG-1] Create New Corporation
 
-Any authorized `operator` CAN execute this method on behalf of a Cosmos SDK [[ref: group]] to register a new `Corporation` entry for that group.
+An `admin` account CAN execute this method to atomically create a new Cosmos SDK [[ref: group]] and register a `Corporation` VPR entry for it in a single [[ref: transaction]]. This eliminates any window between group creation and VPR registration, ensuring [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) can never observe an unregistered group.
 
 ##### [MOD-CO-MSG-1-1] Create New Corporation parameters
 
-An authorized `operator` that would like to register a Cosmos SDK [[ref: group]] as a `Corporation` MUST call this method by specifying:
+An `admin` account that would like to create a new [[ref: corporation]] MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed. For this method specifically, the underlying Cosmos SDK [[ref: group]] of `corporation` is the group that wants to register itself — no `Corporation` entry exists for that group yet.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `admin` (account): (Signer) the account that initiates group creation. After creation, `admin` holds no ongoing admin privileges over the group or group policy — the `group_policy_address` becomes the admin of both immediately.
+- `members` (list of MemberRequest): (*mandatory*) initial members of the group; each entry specifies `address`, `weight` (non-zero decimal string, e.g. `"1"`), and optional `metadata`. MUST contain at least one member.
+- `group_metadata` (string): (*optional*) opaque metadata for the Cosmos SDK group.
+- `group_policy_metadata` (string): (*optional*) opaque metadata for the Cosmos SDK group policy.
+- `decision_policy` (DecisionPolicy): (*mandatory*) the decision policy for the group policy. MUST be either a `ThresholdDecisionPolicy` (minimum weighted sum of YES votes) or a `PercentageDecisionPolicy` (minimum percentage of total weight).
+
+> `group_policy_as_admin` is not a caller parameter — it is always set to `true` by the implementation. The group policy address becomes the admin of both the group and the group policy immediately upon creation; the `admin` account retains no admin rights thereafter.
 - `did` (string) (*mandatory*): the DID of the Corporation.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
@@ -2001,10 +2005,9 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- A `Corporation` entry for the signing [[ref: group]] MUST NOT exist; if one exists, method MUST abort (a group MAY register itself as a `Corporation` at most once).
+- `admin` (account): (Signer) signature must be verified.
+- `members`: MUST contain at least one entry. Each entry's `address` MUST be a valid account address. Each entry's `weight` MUST be a non-zero decimal string representing a positive number (e.g. `"1"`, `"10"`).
+- `decision_policy`: MUST be a valid `ThresholdDecisionPolicy` or `PercentageDecisionPolicy`.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - `did` MUST NOT already be the `did` of any existing `Corporation` entry; if some `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant: a DID is the `did` of at most one `Corporation`).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
@@ -2021,12 +2024,13 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- create and persist a new `Corporation` entry `co` keyed by the signing Cosmos SDK [[ref: group]] (1:1):
+- create a new Cosmos SDK [[ref: group]] and group policy via `MsgCreateGroupWithPolicy` with `admin`, `members`, `group_metadata`, `group_policy_metadata`, and `decision_policy`, with `group_policy_as_admin` hardcoded to `true`; let `group_policy_address` be the `group_policy_address` returned in `MsgCreateGroupWithPolicyResponse`. The `group_policy_address` becomes the admin of both the group and the group policy, and subsequently acts as the `corporation` (group) signer for all VPR messages.
+
+- create and persist a new `Corporation` entry `co` keyed by `group_policy_address` (1:1):
 
 - `co.did`: `did`
 - `co.created`: current timestamp
 - `co.modified`: `co.created`
-- `co.archived`: null
 - `co.language`: `language`
 - `co.active_version`: 1
 
@@ -2034,7 +2038,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.ecosystem_id`: null
-- `gfv.corporation`: the signing `corporation` (i.e., the underlying [[ref: group]] of `co`)
+- `gfv.corporation`: `group_policy_address`
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
@@ -2092,70 +2096,29 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `co.did`: `did`
 - `co.modified`: current timestamp
 
-#### [MOD-CO-MSG-3] Archive Corporation
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-##### [MOD-CO-MSG-3-1] Archive Corporation parameters
-
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `archive` (boolean) (*mandatory*): true means archive, false means unarchive.
-
-##### [MOD-CO-MSG-3-2] Archive Corporation precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-CO-MSG-3-2-1] Archive Corporation basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-
-- `corporation` (group): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- load `Corporation` `co` from the id of the signing `corporation`. If none exists, MUST abort.
-- `archive` (boolean) (*mandatory*) MUST be a boolean.
-  - If `archive` is true and `co.archived` is not null, MUST abort as `Corporation` is already archived.
-  - If `archive` is false and `co.archived` is null, MUST abort as `Corporation` is already not archived.
-
-###### [MOD-CO-MSG-3-2-2] Archive Corporation fee checks
-
-Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
-
-##### [MOD-CO-MSG-3-3] Archive Corporation execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- update `Corporation` entry `co`:
-- if `archive` is true: set `co.archived` to current timestamp.
-- if `archive` is false: set `co.archived` to null.
-- `co.modified`: current timestamp
-
-#### [MOD-CO-MSG-4] Update Module Parameters
+#### [MOD-CO-MSG-3] Update Module Parameters
 
 Update Module Parameters.
 
 Can only be executed through a governance proposal.
 
-##### [MOD-CO-MSG-4-1] Update Module Parameters parameters
+##### [MOD-CO-MSG-3-1] Update Module Parameters parameters
 
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
-##### [MOD-CO-MSG-4-2] Update Module Parameters precondition checks
+##### [MOD-CO-MSG-3-2] Update Module Parameters precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-CO-MSG-4-2-1] Update Module Parameters basic checks
+###### [MOD-CO-MSG-3-2-1] Update Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
 
-###### [MOD-CO-MSG-4-2-2] Update Module Parameters fee checks
+###### [MOD-CO-MSG-3-2-2] Update Module Parameters fee checks
 
 provided transaction fees MUST be sufficient for execution.
 
-##### [MOD-CO-MSG-4-3] Update Module Parameters execution
+##### [MOD-CO-MSG-3-3] Update Module Parameters execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
