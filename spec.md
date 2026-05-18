@@ -1055,7 +1055,6 @@ entity "Corporation" as corp {
   +did: string
   +created: timestamp
   +modified: timestamp
-  +archived: timestamp
   +active_version: int
   +language: string
 }
@@ -1357,7 +1356,6 @@ A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]]
 - `did` (string) (*mandatory*): the DID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `did` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `did` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-new-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks).
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
-- `archived` (timestamp) (*optional*): timestamp this Corporation has been archived.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `active_version` (int) (*mandatory*): active [[ref: CGF]] version.
 
@@ -1894,8 +1892,7 @@ As a result, `accountABC` is authorized to:
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
 | Corporation               | Create New Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)   | corporation + operator |
 |                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + operator |
-|                                | Archive Corporation                          | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-archive-corporation)   | corporation + operator |
-|                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-4]](#mod-co-msg-4-update-module-parameters)   | governance proposal |
+|                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters)   | governance proposal |
 |                                | Get Corporation                              | /co/v1/get                       | Query  | [[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)   | N/A |
 |                                | List Corporations                            | /co/v1/list                      | Query  | [[MOD-CO-QRY-2]](#mod-co-qry-2-list-corporations)   | N/A |
 |                                | List Corporation Module Parameters           | /co/v1/params                    | Query  | [[MOD-CO-QRY-3]](#mod-co-qry-3-list-module-parameters)   | N/A |
@@ -2033,7 +2030,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `co.did`: `did`
 - `co.created`: current timestamp
 - `co.modified`: `co.created`
-- `co.archived`: null
 - `co.language`: `language`
 - `co.active_version`: 1
 
@@ -2099,72 +2095,29 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `co.did`: `did`
 - `co.modified`: current timestamp
 
-#### [MOD-CO-MSG-3] Archive Corporation
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-##### [MOD-CO-MSG-3-1] Archive Corporation parameters
-
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `archive` (boolean) (*mandatory*): true means archive, false means unarchive.
-
-##### [MOD-CO-MSG-3-2] Archive Corporation precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-CO-MSG-3-2-1] Archive Corporation basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-
-- `corporation` (group): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- load `Corporation` `co` from the id of the signing `corporation`. If none exists, MUST abort.
-- `archive` (boolean) (*mandatory*) MUST be a boolean.
-  - If `archive` is true and `co.archived` is not null, MUST abort as `Corporation` is already archived.
-  - If `archive` is false and `co.archived` is null, MUST abort as `Corporation` is already not archived.
-
-###### [MOD-CO-MSG-3-2-2] Archive Corporation fee checks
-
-Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: transaction fees]].
-
-##### [MOD-CO-MSG-3-3] Archive Corporation execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- update `Corporation` entry `co`:
-- if `archive` is true: set `co.archived` to current timestamp.
-- if `archive` is false: set `co.archived` to null.
-- `co.modified`: current timestamp
-
-> The underlying Cosmos SDK [[ref: group]] is NOT destroyed by this operation. It remains active so that any pending proposals can be resolved. Only the VPR-level `Corporation` entry is affected.
-
-#### [MOD-CO-MSG-4] Update Module Parameters
+#### [MOD-CO-MSG-3] Update Module Parameters
 
 Update Module Parameters.
 
 Can only be executed through a governance proposal.
 
-##### [MOD-CO-MSG-4-1] Update Module Parameters parameters
+##### [MOD-CO-MSG-3-1] Update Module Parameters parameters
 
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
-##### [MOD-CO-MSG-4-2] Update Module Parameters precondition checks
+##### [MOD-CO-MSG-3-2] Update Module Parameters precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-CO-MSG-4-2-1] Update Module Parameters basic checks
+###### [MOD-CO-MSG-3-2-1] Update Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
 
-###### [MOD-CO-MSG-4-2-2] Update Module Parameters fee checks
+###### [MOD-CO-MSG-3-2-2] Update Module Parameters fee checks
 
 provided transaction fees MUST be sufficient for execution.
 
-##### [MOD-CO-MSG-4-3] Update Module Parameters execution
+##### [MOD-CO-MSG-3-3] Update Module Parameters execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
