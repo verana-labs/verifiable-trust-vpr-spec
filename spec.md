@@ -1973,7 +1973,7 @@ Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR /
 
 This module manages [[ref: corporation]] entries — the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A `Corporation` entry MUST exist before its underlying group can be referenced as the `corporation` (group) in any other VPR Create-* method (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
 
-**Group lifecycle operations:** Membership management (adding/removing members), proposal submission, voting, and proposal execution are handled directly via the Cosmos SDK `x/group` module. VPR does not wrap these operations. Implementations MUST refer to the `x/group` specification for `MsgUpdateGroupMembers`, `MsgSubmitProposal`, `MsgVote`, `MsgWithdrawProposal`, and `MsgExec`. Discovery queries (`GroupsByMember`, `ProposalsByGroupPolicy`, `VotesByProposal`) from `x/group` apply directly.
+**Group lifecycle operations:** Membership management (adding/removing members), proposal submission, voting, and proposal execution are handled directly via the Cosmos SDK `x/group` module. VPR does not wrap these operations. Implementations MUST refer to the `x/group` specification for `MsgUpdateGroupMembers`, `MsgSubmitProposal`, `MsgVote`, `MsgWithdrawProposal`, and `MsgExec`. Discovery queries (`GroupsByMember`, `ProposalsByGroupPolicy`, `VotesByProposal`) from `x/group` apply directly. Because `group_policy_as_admin` is always `true` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)), the group policy address is the admin of the group — not the account that created it. Therefore all group lifecycle operations, including member updates, MUST go through the group's own proposal and voting process (`MsgSubmitProposal` → `MsgVote` → `MsgExec`); no account can bypass this by calling group admin messages directly.
 
 #### [MOD-CO-MSG-1] Create New Corporation
 
@@ -1983,12 +1983,13 @@ An `admin` account CAN execute this method to atomically create a new Cosmos SDK
 
 An `admin` account that would like to create a new [[ref: corporation]] MUST call this method by specifying:
 
-- `admin` (account): (Signer) the account that becomes the admin of the newly created Cosmos SDK [[ref: group]] and its group policy.
+- `admin` (account): (Signer) the account that initiates group creation. After creation, `admin` holds no ongoing admin privileges over the group or group policy — the `group_policy_address` becomes the admin of both immediately.
 - `members` (list of MemberRequest): (*mandatory*) initial members of the group; each entry specifies `address`, `weight` (non-zero decimal string, e.g. `"1"`), and optional `metadata`. MUST contain at least one member.
 - `group_metadata` (string): (*optional*) opaque metadata for the Cosmos SDK group.
 - `group_policy_metadata` (string): (*optional*) opaque metadata for the Cosmos SDK group policy.
-- `group_policy_as_admin` (boolean): (*mandatory*) if `true`, the group policy address becomes the admin of both the group and the group policy. SHOULD be set to `true` so that the group policy address governs itself via the group's decision policy, with no external admin.
 - `decision_policy` (DecisionPolicy): (*mandatory*) the decision policy for the group policy. MUST be either a `ThresholdDecisionPolicy` (minimum weighted sum of YES votes) or a `PercentageDecisionPolicy` (minimum percentage of total weight).
+
+> `group_policy_as_admin` is not a caller parameter — it is always set to `true` by the implementation. The group policy address becomes the admin of both the group and the group policy immediately upon creation; the `admin` account retains no admin rights thereafter.
 - `did` (string) (*mandatory*): the DID of the Corporation.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
@@ -2023,7 +2024,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- create a new Cosmos SDK [[ref: group]] and group policy via `MsgCreateGroupWithPolicy` with `admin`, `members`, `group_metadata`, `group_policy_metadata`, `group_policy_as_admin`, and `decision_policy`; let `group_policy_address` be the `group_policy_address` returned in `MsgCreateGroupWithPolicyResponse`. The `group_policy_address` is the address that subsequently acts as the `corporation` (group) signer for all VPR messages.
+- create a new Cosmos SDK [[ref: group]] and group policy via `MsgCreateGroupWithPolicy` with `admin`, `members`, `group_metadata`, `group_policy_metadata`, and `decision_policy`, with `group_policy_as_admin` hardcoded to `true`; let `group_policy_address` be the `group_policy_address` returned in `MsgCreateGroupWithPolicyResponse`. The `group_policy_address` becomes the admin of both the group and the group policy, and subsequently acts as the `corporation` (group) signer for all VPR messages.
 
 - create and persist a new `Corporation` entry `co` keyed by `group_policy_address` (1:1):
 
