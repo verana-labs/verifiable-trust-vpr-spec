@@ -1338,13 +1338,26 @@ corp --o td: corporation_id
 
 ```
 
+### Identifier conventions
+
+Unless otherwise stated, every entity's `id` field is:
+
+- a server-assigned, strictly monotonically increasing `uint64`;
+- globally unique within the entity class (the entity's primary key);
+- assigned at the entity's creation by the corresponding Create-* Msg, and immutable thereafter;
+- never reused after deletion: if a new entry is later created for the same logical referent (e.g. the same `(corporation_id, operator)` pair after a revoke followed by a fresh grant), it is a brand-new entry with a brand-new `id`; the previous `id` is never re-issued.
+
+Clients MAY rely on `id` ordering as a deterministic cursor for keyset pagination.
+
+Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (string PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `ParticipantAuthorizationRecord` (single-field PK on `participant_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
+
 ### Corporation
 
 A `Corporation` is the VPR-level entity representing an authority that acts in the registry. It carries a DID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
 
 `Corporation`:
 
-- `id` (uint64) (*mandatory*): the id of the Corporation.
+- `id` (uint64) (*mandatory*) (key): the id of the Corporation.
 - `policy_address` (account) (*mandatory*): the on-chain account that signs on behalf of this Corporation. MUST be **globally unique** across all `Corporation` entries (1:1): at any block height, no two `Corporation` entries MAY share the same `policy_address`. (Can be, for example, a Cosmos SDK `group_policy_address`; see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation).)
 - `did` (string) (*mandatory*): the DID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `did` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `did` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-new-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks).
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
@@ -1358,7 +1371,7 @@ A `Corporation` is the VPR-level entity representing an authority that acts in t
 
 `Ecosystem`:
 
-- `id` (uint64) (*mandatory*): the id of the ecosystem.
+- `id` (uint64) (*mandatory*) (key): the id of the ecosystem.
 - `did` (string) (*mandatory*): the did of the ecosystem. MAY be shared with other `Ecosystem` entries (a single DID MAY be the `did` of several ecosystems); per-Ecosystem DID uniqueness is NOT enforced because the `Ecosystem` identity is its `id`. However, per-Ecosystem `(did, corporation_id)` consistency IS enforced: at any block height, all `Ecosystem` entries with equal `did` MUST share the same `corporation_id`. Enforced at create time by [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-new-ecosystem-basic-checks) and at rotation time by [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks).
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that controls this entry. Constrained by the per-Ecosystem `(did, corporation_id)` consistency invariant above.
 - `created` (timestamp) (*mandatory*): timestamp this Ecosystem has been created.
@@ -1373,7 +1386,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `GovernanceFrameworkVersion`:
 
-- `id` (uint64) (*mandatory*): the id of the GFV.
+- `id` (uint64) (*mandatory*) (key): the id of the GFV.
 - `ecosystem_id` (uint64) (*conditional*): the id of the [[ref: ecosystem]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `corporation_id` is null.
 - `corporation_id` (uint64) (*conditional*): id of the [[ref: corporation]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `ecosystem_id` is null.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkVersion has been created.
@@ -1385,7 +1398,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `GovernanceFrameworkDocument`
 
-- `id` (uint64) (*mandatory*): the id of the GFD.
+- `id` (uint64) (*mandatory*) (key): the id of the GFD.
 - `gfv_id` (uint64) (*mandatory*): the id of the `GovernanceFrameworkVersion` entry.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkDocument has been created.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this governance framework document.
@@ -1398,7 +1411,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 **General Info**:
 
-- `id` (uint64) (*mandatory*): the id of the schema.
+- `id` (uint64) (*mandatory*) (key): the id of the schema.
 - `ecosystem_id` (uint64) (*mandatory*): the id of the ecosystem that controls this `CredentialSchema` entry.
 - `created` (timestamp) (*mandatory*): timestamp this CredentialSchema has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this CredentialSchema has been modified.
@@ -1420,7 +1433,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `SchemaAuthorizationPolicy`:
 
-- `id` (uint64) (*mandatory*): unique identifier of this authorization policy.
+- `id` (uint64) (*mandatory*) (key): the id of this `SchemaAuthorizationPolicy`.
 - `schema_id` (uint64) (*mandatory*): id of the `CredentialSchema` this policy applies to.
 - `created` (timestamp) (*mandatory*): timestamp when this policy entry was created.
 - `version` (integer) (*mandatory*): version number of this policy for the given `(schema_id, role)`.
@@ -1435,7 +1448,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `Participant`:
 
-- `id` (uint64) (*mandatory*): the id of the participant.
+- `id` (uint64) (*mandatory*) (key): the id of the participant.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `role` (ParticipantRole) (*mandatory*): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER. Set at create time and never rotated thereafter.
 - `did` (string) (*mandatory*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]]. MAY be shared with other `Participant` entries (a single DID MAY be the `did` of several participants); per-Participant DID uniqueness is NOT enforced because the `Participant` identity is its `id`. However, per-Participant `(did, corporation_id)` consistency IS enforced: at any block height, all `Participant` entries with equal `did` MUST share the same `corporation_id`. Enforced by the create-time basic checks of [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks), and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks). `Participant.did` is set at create time and is not rotated thereafter.
@@ -1483,7 +1496,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `ParticipantSessionRecord`:
 
-- `id` (uint64) (*mandatory*) (key): auto-incremented numeric identifier of this `ParticipantSessionRecord`. Globally unique across all `ParticipantSessionRecord` entries. Assigned at creation time by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) and immutable thereafter.
+- `id` (uint64) (*mandatory*) (key): the id of this `ParticipantSessionRecord`.
 - `created` (timestamp) (*mandatory*): timestamp this record has been created.
 - `issuer_participant_id` (uint64) (*optional*): related issuer `Participant` id (if applicable).
 - `verifier_participant_id` (uint64) (*optional*): related verifier `Participant` id (if applicable).
@@ -1516,7 +1529,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### OperatorAuthorization
 
-- `id` (uint64) (*mandatory*) (key): auto-incremented numeric identifier of this `OperatorAuthorization`. Globally unique across all `OperatorAuthorization` entries. Assigned at creation time by [[MOD-DE-MSG-3-4]](#mod-de-msg-3-4-grant-operator-authorization-execution-of-the-method) and immutable for the lifetime of the entry: it is preserved across in-place updates that re-grant the same `(corporation_id, operator)` pair on an entry that still exists. If the entry is fully revoked (deleted) by [[MOD-DE-MSG-4-4]](#mod-de-msg-4-4-revoke-operator-authorization-execution-of-the-method) and a later grant re-establishes authorization for the same `(corporation_id, operator)` pair, that re-grant creates a brand-new entry and a new `id` is minted; the previous `id` is never reused.
+- `id` (uint64) (*mandatory*) (key): the id of this `OperatorAuthorization`. Re-granting the same `(corporation_id, operator)` pair on an entry that still exists preserves the `id` (in-place update via [[MOD-DE-MSG-3-4]](#mod-de-msg-3-4-grant-operator-authorization-execution-of-the-method)); after a full revoke that deletes the entry via [[MOD-DE-MSG-4-4]](#mod-de-msg-4-4-revoke-operator-authorization-execution-of-the-method), a later re-grant mints a fresh `id` per the [Identifier conventions](#identifier-conventions).
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the authorization. The `(corporation_id, operator)` tuple MUST be **unique** across all `OperatorAuthorization` entries: at any block height, at most one entry MAY exist for a given `(corporation_id, operator)`.
 - `operator` (account) (*mandatory*): the operator account receiving the authorization. See the `(corporation_id, operator)` uniqueness constraint above.
 - `msg_types` (msg_type[]) (*mandatory*): list of module message types this authorization applies to.
@@ -1532,8 +1545,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `FeeGrant`:
 
-- `grantor_corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the fee allowance.
-- `grantee` (account) (*mandatory*): the account that receives the fee grant from the corporation referenced by `grantor_corporation_id`.
+- `grantor_corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] granting the fee allowance. Together with `grantee`, forms the composite key.
+- `grantee` (account) (*mandatory*) (key): the account that receives the fee grant from the corporation referenced by `grantor_corporation_id`. Together with `grantor_corporation_id`, forms the composite key.
 - `msg_types` (msg_type[]) (*mandatory*): list of VPR delegable message types for which the fee allowance applies.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of fees that can be spent using this grant.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
@@ -1544,7 +1557,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. The `(corporation_id, vs_operator)` tuple MUST be **unique** across all `VSOperatorAuthorization` entries: at any block height, at most one entry MAY exist for a given `(corporation_id, vs_operator)`. The entry exists if, and only if, it has at least one record.
 
-- `id` (uint64) (*mandatory*) (key): auto-incremented numeric identifier of this `VSOperatorAuthorization`. Globally unique across all `VSOperatorAuthorization` entries. Assigned at creation time by [[MOD-DE-MSG-5-4]](#mod-de-msg-5-4-grant-vs-operator-authorization-execution-of-the-method) and immutable for the lifetime of the entry: it is preserved across subsequent grants that append records to an existing `vsoa` (i.e., as long as `vsoa.records` remains non-empty). If the entry's last record is revoked and the `vsoa` is consequently deleted by [[MOD-DE-MSG-6-4]](#mod-de-msg-6-4-revoke-vs-operator-authorization-execution-of-the-method), a later grant for the same `(corporation_id, vs_operator)` pair creates a brand-new `vsoa` and a new `id` is minted; the previous `id` is never reused.
+- `id` (uint64) (*mandatory*) (key): the id of this `VSOperatorAuthorization`. Appending further records to an existing `vsoa` via [[MOD-DE-MSG-5-4]](#mod-de-msg-5-4-grant-vs-operator-authorization-execution-of-the-method) (i.e., while `vsoa.records` remains non-empty) preserves the `id`; revoking the last record deletes the `vsoa` via [[MOD-DE-MSG-6-4]](#mod-de-msg-6-4-revoke-vs-operator-authorization-execution-of-the-method), and a later grant for the same `(corporation_id, vs_operator)` pair mints a fresh `id` per the [Identifier conventions](#identifier-conventions).
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
 - `records` (ParticipantAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation_id`.
@@ -1553,7 +1566,7 @@ A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries 
 
 A `ParticipantAuthorizationRecord` carries the per-permission authorization configuration that was previously stored on `Participant.vs_operator_authz_*` fields. Each record is globally unique by `participant_id`: for any `Participant.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `participant_id` via a direct lookup.
 
-- `participant_id` (uint64) (*mandatory*): id of the `Participant` this authorization record applies to. Globally unique across all `ParticipantAuthorizationRecord` entries.
+- `participant_id` (uint64) (*mandatory*) (key): id of the `Participant` this authorization record applies to. Globally unique across all `ParticipantAuthorizationRecord` entries.
 - `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `participant_id`. Declared by the applicant at record creation time (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). Frozen after creation.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this `Participant` entry, as a direct consequence of executing authorized messages.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
@@ -1569,7 +1582,7 @@ Represents an on-chain exchange rate between two assets.
 
 `ExchangeRate`:
 
-- `id` (uint64) (*mandatory*) (key): auto-incremented numeric identifier of this `ExchangeRate`. Globally unique across all `ExchangeRate` entries. Assigned at creation time by [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate) and immutable thereafter.
+- `id` (uint64) (*mandatory*) (key): the id of this `ExchangeRate`.
 - `base_asset_type` (PricingAssetType) (*mandatory*): Type of the base asset.
 - `base_asset` (string) (*conditional*): Identifier of the base asset. MUST be set when `base_asset_type` is COIN or FIAT, MUST be null when `base_asset_type` is TU.
 - `quote_asset_type` (PricingAssetType) (*mandatory*): Type of the quote asset.
@@ -1589,8 +1602,8 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 `ExchangeRateAuthorization`:
 
-- `xr_id` (uint64) (*mandatory*): id of the `ExchangeRate` this authorization applies to. Together with `operator`, forms the composite key.
-- `operator` (account) (*mandatory*): account authorized to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) on `xr_id`. Together with `xr_id`, forms the composite key.
+- `xr_id` (uint64) (*mandatory*) (key): id of the `ExchangeRate` this authorization applies to. Together with `operator`, forms the composite key.
+- `operator` (account) (*mandatory*) (key): account authorized to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) on `xr_id`. Together with `xr_id`, forms the composite key.
 - `expiration` (timestamp) (*mandatory*): authorization end-of-life. When `now() >= expiration`, the authorization is dead and [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected.
 - `min_interval` (duration) (*optional*): anti-spam guard. If set, two successive successful [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls under this authorization MUST be separated by at least `min_interval`.
 - `max_deviation_bps` (uint32) (*optional*): circuit breaker, expressed in basis points (1 bps = 0.01%). If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh governance proposal (typically a new [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate) or an updated authorization).
