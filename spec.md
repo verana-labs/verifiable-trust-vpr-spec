@@ -65,7 +65,7 @@ A Verifiable Public Registry (VPR) is a “registry of registries”, a public s
 
 - [[ref: corporation]] lifecycle and directory:
   - corporation onboarding, with associated [[ref: DID]] and [[ref: corporation governance framework]] publication
-  - multi-member governance via a Cosmos SDK [[ref: group]] (members, voting policy, threshold)
+  - multi-member governance through an on-chain `policy_address` (e.g., a Cosmos SDK group policy account)
   - a public corporation directory queryable by indexers, [[ref: verifiable services]], and [[ref: verifiable user agents]]
   - corporations are the foundational actors of the VPR: they control [[ref: participants]] and may themselves control [[ref: ecosystems]].
 
@@ -130,7 +130,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A [[ref: account]] that starts a [[ref: onboarding process]].
 
 [[def: corporation, corporations]]:
-~ A legal/organizational entity that controls Participants in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` extends a Cosmos SDK [[ref: group]] with VPR-level attributes (DID, governance framework, lifecycle).
+~ A legal/organizational entity that controls Participants in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` is a VPR-level entity with VPR-specific attributes (DID, governance framework, lifecycle) anchored on-chain by a `policy_address` account that signs on its behalf.
 
 [[def: corporation governance framework, CGF]]:
 ~ The governance framework (GF) of a [[ref: corporation]].
@@ -178,9 +178,6 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: grantor, grantors]]:
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: ecosystem]].
-
-[[def: group, groups]]:
-~ The underlying Cosmos SDK group primitive that a [[ref: corporation]] extends. Members and policies are managed by the group module; VPR-level attributes (DID, governance framework, lifecycle) live on the corresponding [[ref: corporation]] entry.
 
 [[def: holder, holders]]:
 ~ A role an entity might perform by possessing one or more verifiable credentials and generating verifiable presentations from them. A holder is often, but not always, a [[ref: subject]] of the verifiable credentials they are holding. Holders store their credentials in credential repositories. Example holders include organizations, persons, things.
@@ -494,7 +491,7 @@ vg --> verifier : creates schema participant
 
 *This section is non-normative.*
 
-A [[ref: corporation]] is the VPR-level entity that represents an authority acting in the registry. It extends a Cosmos SDK [[ref: group]] (whose members and policies are managed by the group module) with VPR-specific attributes: a [[ref: DID]], a [[ref: corporation governance framework]] (CGF), and lifecycle metadata. A `Corporation` entry has no `id` of its own — it is keyed by its underlying [[ref: group]] (1:1).
+A [[ref: corporation]] is the VPR-level entity that represents an authority acting in the registry. A `Corporation` carries VPR-specific attributes — a [[ref: DID]], a [[ref: corporation governance framework]] (CGF), and lifecycle metadata — and is anchored on-chain by a `policy_address` account that signs on its behalf. The `Corporation` entry has its own `id`, and every other VPR entity points to it through a `corporation_id` foreign key.
 
 A corporation interacts with the VPR in two complementary ways:
 
@@ -695,7 +692,7 @@ ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in\napplican
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
 ApplicantBrowser --> ValidatorVS: I want to proceed with applicant_participant.id=...
 ValidatorVS --> ValidatorVS: load applicant Participant with this id\nand verify validator_participant_id refers to me
-ApplicantBrowser <-- ValidatorVS: request proof of control\nof applicant_participant.corporation account (blind sign)
+ApplicantBrowser <-- ValidatorVS: request proof of control\nof applicant_participant.corporation_id account (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proof of operator account
 ApplicantBrowser <-- ValidatorVS: proof accepted, you are an operator\nof the applicant Participant, I trust you.
 ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
@@ -1046,12 +1043,13 @@ entity "Ecosystem" as tr {
   +did: string
   +created: timestamp
   +modified: timestamp
-  +archived: timestamp
+  +archived: boolean
   +active_version: int
   +language: string
 }
 
 entity "Corporation" as corp {
+  *id: uint64
   +did: string
   +created: timestamp
   +modified: timestamp
@@ -1078,7 +1076,7 @@ entity "CredentialSchema" as cs {
   *id: uint64
   +created: timestamp
   +modified: timestamp
-  +archived: timestamp
+  +archived: boolean
   +json_schema: string
   +issuer_grantor_validation_validity_period: number
   +verifier_grantor_validation_validity_period: number
@@ -1132,16 +1130,15 @@ enum "HolderOnboardingMode" as hom {
 entity "(SDK) Account" as account {
 }
 
-entity "Group" as group {
-}
-
 entity "OperatorAuthorization" as oauthz {
+   *id: uint64
    +msg_types: msg_type[]
-   +expiration: timestamp
-   +period: duration
+   expiration: timestamp
+   period: duration
 }
 
 entity "VSOperatorAuthorization" as vsoauthz {
+   *id: uint64
 }
 
 entity "ParticipantAuthorizationRecord" as par {
@@ -1149,7 +1146,7 @@ entity "ParticipantAuthorizationRecord" as par {
    +msg_types: msg_type[]
    +with_feegrant: boolean
    +expiration: timestamp
-   +period: duration
+   period: duration
 }
 
 entity "DenomAmount" as da {
@@ -1177,8 +1174,8 @@ entity "ExchangeRate" as xr {
 
 entity "FeeGrant" as fg {
   +msg_types: msg_type[]
-  +expiration: timestamp
-  +period: duration
+  expiration: timestamp
+  period: duration
 }
 
 entity "ExchangeRateAuthorization" as xrauthz {
@@ -1190,12 +1187,12 @@ entity "ExchangeRateAuthorization" as xrauthz {
 
 entity "Participant" as csp {
   *id: uint64
-  did: string
+  +did: string
   +created: timestamp
   +modified: timestamp
-  +adjusted: timestamp
-  +slashed: timestamp
-  +repaid: timestamp
+  adjusted: timestamp
+  slashed: timestamp
+  repaid: timestamp
   effective_from: timestamp
   effective_until: timestamp
   +validation_fees: number
@@ -1205,12 +1202,12 @@ entity "Participant" as csp {
   +slashed_deposit: number
   +repaid_deposit: number
   revoked: timestamp
-  +op_exp: timestamp
+  op_exp: timestamp
   +op_last_state_change: timestamp
-  +op_validator_deposit: number
+  op_validator_deposit: number
   +op_current_fees: number
   +op_current_deposit: number
-  +op_summary_digest: string
+  op_summary_digest: string
   +issuance_fee_discount: number
   +verification_fee_discount: number
 }
@@ -1265,17 +1262,17 @@ entity "GlobalVariables" as gv {
 }
 
 entity "TrustDeposit" as td {
-  share: number
-  deposit: number
-  refunded: number
-  slashed_deposit: number
-  repaid_deposit: number
+  +share: number
+  +deposit: number
+  +refunded: number
+  +slashed_deposit: number
+  +repaid_deposit: number
   last_slashed: timestamp
   last_repaid: timestamp
-  slash_count: number
+  +slash_count: number
 }
 
-group --o fg: grantor
+corp --o fg: grantor_corporation_id
 account --o fg: grantee
 fg "1" --- "0..n" da: spend_limit
 fg "1" --- "0..n" da: remaining_spend
@@ -1286,19 +1283,17 @@ xrauthz o-- account: operator
 xr o-- pricingassettype: base_asset_type
 xr o-- pricingassettype: quote_asset_type
 
-xr --- "1..n" account: update_whitelist
-
 cs o-- pricingassettype: pricing_asset_type 
 
-group --o oauthz: corporation
+corp --o oauthz: corporation_id
 account --o oauthz: operator
 
-group --o vsoauthz: corporation
+corp --o vsoauthz: corporation_id
 account --o vsoauthz: vs_operator
 vsoauthz "1" --- "1..n" par: records
 par o-- csp: participant_id
 
-csp o-- cspt: type
+csp o-- cspt: role
 csp o-- cs: schema_id
 csp o-- "0..1" csp: validator_participant_id
 cs o-- tr: ecosystem_id
@@ -1322,26 +1317,22 @@ par "1" --- "0..n" da: fee_spend_limit
 par "1" --- "0..n" da: remaining_spend
 par "1" --- "0..n" da: remaining_fee_spend
 
-csp "1" --- "0..n" da: vs_operator_spend_limit
-csp "1" --- "0..n" da: vs_operator_fee_spend_limit
-
-
 tr "1" --- "0..n" gfv: versions (ecosystem_id)
-corp "1" --- "0..n" gfv: versions (corporation)
+corp "1" --- "0..n" gfv: versions (corporation_id)
 gfv "1" --- "1..n" gfd: documents
 
-group "1" --- "1" corp
+account "1" --- "1" corp : policy_address
 
-group --o tr: corporation
-group --o csp: corporation
-group --o csps: corporation
+corp --o tr: corporation_id
+corp --o csp: corporation_id
+corp --o csps: corporation_id
 
 account --o csp: vs_operator
 
 csps o-- account: vs_operator
 
 valstate --o csp: op_state
-group --o td: corporation
+corp --o td: corporation_id
 
 @enduml
 
@@ -1349,44 +1340,46 @@ group --o td: corporation
 
 ### Corporation
 
-A `Corporation` is the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
+A `Corporation` is the VPR-level entity representing an authority that acts in the registry. It carries a DID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
 
 `Corporation`:
 
+- `id` (uint64) (*mandatory*): the id of the Corporation.
+- `policy_address` (account) (*mandatory*): the on-chain account that signs on behalf of this Corporation. MUST be **globally unique** across all `Corporation` entries (1:1): at any block height, no two `Corporation` entries MAY share the same `policy_address`. (Can be, for example, a Cosmos SDK `group_policy_address`; see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation).)
 - `did` (string) (*mandatory*): the DID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `did` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `did` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-new-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks).
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `active_version` (int) (*mandatory*): active [[ref: CGF]] version.
 
-> Note: a Corporation entry has no `id` of its own. Its primary key is the underlying Cosmos SDK [[ref: group]] (1:1, see the `group --- corp` link in the diagram above): a Corporation entry is created, looked up, and referenced by the id of the group it extends. Members and policies of a Corporation are managed by the underlying Cosmos SDK group module; the Corporation entry adds VPR-level attributes only (DID, governance framework, lifecycle).
+> Note: every other VPR entity that points to a Corporation does so through `corporation_id` (uint64), the FK referencing `Corporation.id`. The `policy_address` is the on-chain identity that signs Msgs on behalf of the Corporation; how that account is provisioned (single key, multisig, Cosmos SDK group policy, …) is an implementation concern out of scope for the data model.
 
 ### Ecosystem
 
 `Ecosystem`:
 
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
-- `did` (string) (*mandatory*): the did of the ecosystem. MAY be shared with other `Ecosystem` entries (a single DID MAY be the `did` of several ecosystems); per-Ecosystem DID uniqueness is NOT enforced because the `Ecosystem` identity is its `id`. However, per-Ecosystem `(did, corporation)` consistency IS enforced: at any block height, all `Ecosystem` entries with equal `did` MUST share the same `corporation`. Enforced at create time by [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-new-ecosystem-basic-checks) and at rotation time by [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks).
-- `corporation` (group) (*mandatory*): [[ref: corporation]] that controls this entry. Constrained by the per-Ecosystem `(did, corporation)` consistency invariant above.
+- `did` (string) (*mandatory*): the did of the ecosystem. MAY be shared with other `Ecosystem` entries (a single DID MAY be the `did` of several ecosystems); per-Ecosystem DID uniqueness is NOT enforced because the `Ecosystem` identity is its `id`. However, per-Ecosystem `(did, corporation_id)` consistency IS enforced: at any block height, all `Ecosystem` entries with equal `did` MUST share the same `corporation_id`. Enforced at create time by [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-new-ecosystem-basic-checks) and at rotation time by [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks).
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that controls this entry. Constrained by the per-Ecosystem `(did, corporation_id)` consistency invariant above.
 - `created` (timestamp) (*mandatory*): timestamp this Ecosystem has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Ecosystem has been modified.
-- `archived` (timestamp) (*mandatory*): timestamp this Ecosystem has been archived.
+- `archived` (boolean) (*mandatory*): whether this Ecosystem is archived. Initialized to `false` at creation by [[MOD-ES-MSG-1-3]](#mod-es-msg-1-3-create-new-ecosystem-execution) and toggled by [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem). MUST never be null.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
 - `active_version` (int): (*mandatory*) active governance framework version.
 
 ### GovernanceFrameworkVersion
 
-A `GovernanceFrameworkVersion` represents a single version of either an [[ref: EGF]] or a [[ref: CGF]]. Its owning subject is identified by exactly one of `ecosystem_id` or `corporation` (XOR).
+A `GovernanceFrameworkVersion` represents a single version of either an [[ref: EGF]] or a [[ref: CGF]]. Its owning subject is identified by exactly one of `ecosystem_id` or `corporation_id` (XOR).
 
 `GovernanceFrameworkVersion`:
 
 - `id` (uint64) (*mandatory*): the id of the GFV.
-- `ecosystem_id` (uint64) (*conditional*): the id of the [[ref: ecosystem]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `corporation` is null.
-- `corporation` (group) (*conditional*): the [[ref: corporation]] that controls this `GovernanceFrameworkVersion` entry (i.e., the underlying Cosmos SDK [[ref: group]] of the owning `Corporation`). MUST be set if `ecosystem_id` is null.
+- `ecosystem_id` (uint64) (*conditional*): the id of the [[ref: ecosystem]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `corporation_id` is null.
+- `corporation_id` (uint64) (*conditional*): id of the [[ref: corporation]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `ecosystem_id` is null.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkVersion has been created.
 - `version` (int) (*mandatory*): version of this GF. MUST Starts with 1.
 
-> Constraint: exactly one of `ecosystem_id` and `corporation` MUST be set.
+> Constraint: exactly one of `ecosystem_id` and `corporation_id` MUST be set.
 
 ### GovernanceFrameworkDocument
 
@@ -1409,7 +1402,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `ecosystem_id` (uint64) (*mandatory*): the id of the ecosystem that controls this `CredentialSchema` entry.
 - `created` (timestamp) (*mandatory*): timestamp this CredentialSchema has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this CredentialSchema has been modified.
-- `archived` (timestamp) (*mandatory*): timestamp this CredentialSchema has been archived.
+- `archived` (boolean) (*mandatory*): whether this CredentialSchema is archived. Initialized to `false` at creation by [[MOD-CS-MSG-1-3]](#mod-cs-msg-1-3-create-new-credential-schema-execution) and toggled by [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema). MUST never be null.
 - `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
 - `issuer_grantor_validation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor onboarding process expires and must be renewed.
 - `verifier_grantor_validation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor onboarding process expires and must be renewed.
@@ -1444,14 +1437,14 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 - `id` (uint64) (*mandatory*): the id of the participant.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
-- `role` (ParticipantRole): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER
-- `did` (string) (*optional*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]]. MAY be shared with other `Participant` entries (a single DID MAY be the `did` of several participants); per-Participant DID uniqueness is NOT enforced because the `Participant` identity is its `id`. However, per-Participant `(did, corporation)` consistency IS enforced: at any block height, all `Participant` entries with non-null equal `did` MUST share the same `corporation`. Enforced by the create-time basic checks of [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks), and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks). `Participant.did` is set at create time and is not rotated thereafter.
-- `corporation` (group) (*mandatory*): [[ref: corporation]] that owns this permission. Constrained by the per-Participant `(did, corporation)` consistency invariant above (when `did` is non-null).
+- `role` (ParticipantRole) (*mandatory*): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER. Set at create time and never rotated thereafter.
+- `did` (string) (*mandatory*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]]. MAY be shared with other `Participant` entries (a single DID MAY be the `did` of several participants); per-Participant DID uniqueness is NOT enforced because the `Participant` identity is its `id`. However, per-Participant `(did, corporation_id)` consistency IS enforced: at any block height, all `Participant` entries with equal `did` MUST share the same `corporation_id`. Enforced by the create-time basic checks of [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks), and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks). `Participant.did` is set at create time and is not rotated thereafter.
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns this permission. Constrained by the per-Participant `(did, corporation_id)` consistency invariant above.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account. This is the account that will have the right to create or update permission sessions.
 - `created` (timestamp) (*mandatory*): timestamp this `Participant` has been created.
-- `adjusted` (timestamp) (*mandatory*): timestamp this `Participant` has been adjusted.
-- `slashed` (timestamp) (*mandatory*): timestamp this `Participant` has been slashed.
-- `repaid` (timestamp) (*mandatory*): timestamp this `Participant` has been repaid.
+- `adjusted` (timestamp) (*optional*): timestamp this `Participant` has last been adjusted; null until the first adjustment.
+- `slashed` (timestamp) (*optional*): timestamp this `Participant` has last been slashed; null until the first slash.
+- `repaid` (timestamp) (*optional*): timestamp this `Participant` has last been repaid; null until the first repay.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` is effective.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit has been set for this permission.
 - `modified` (timestamp) (*mandatory*): timestamp this Participant has been modified.
@@ -1480,7 +1473,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 `ParticipantSession`:
 
 - `id` (uuid) (*mandatory*): session uuid.
-- `corporation` (group) (*mandatory*): corporation that controls the entry.
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that controls the entry.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account that controls the entry (agent crypto account).
 - `created` (timestamp) (*mandatory*): timestamp this ParticipantSession has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this ParticipantSession has been modified.
@@ -1490,6 +1483,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `ParticipantSessionRecord`:
 
+- `id` (uint64) (*mandatory*) (key): auto-incremented numeric identifier of this `ParticipantSessionRecord`. Globally unique across all `ParticipantSessionRecord` entries. Assigned at creation time by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) and immutable thereafter.
 - `created` (timestamp) (*mandatory*): timestamp this record has been created.
 - `issuer_participant_id` (uint64) (*optional*): related issuer `Participant` id (if applicable).
 - `verifier_participant_id` (uint64) (*optional*): related verifier `Participant` id (if applicable).
@@ -1501,14 +1495,14 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 `TrustDeposit`:
 
 - `share` (number) (*mandatory*): share of the module total deposit.
-- `corporation` (group) (*mandatory*) (key): the [[ref: corporation]]
+- `corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] this trust deposit belongs to.
 - `deposit` (number) (*mandatory*): amount of deposit in `denom`.
 - `refunded` (number) (*mandatory*): amount of refunded trust deposit, in `denom`. Refunded trust deposit is reused as funding for the next trust deposit spending before drawing additional funds from the corporation account.
-- `slashed_deposit` (number) (*optional*): amount of slashed deposit in `denom`.
-- `repaid_deposit` (number) (*optional*): part of the slashed trust deposit, in `denom`, that has been repaid.
-- `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed.
-- `last_repaid` (timestamp) (*optional*): last time this trust deposit has been repaid.
-- `slash_count` (number) (*optional*): number of times this account has been slashed.
+- `slashed_deposit` (number) (*mandatory*): amount of slashed deposit in `denom`. Initialized to 0 at creation by [[MOD-TD-MSG-1-3]](#mod-td-msg-1-3-adjust-trust-deposit-execution-of-the-method) and incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit). MUST never be null.
+- `repaid_deposit` (number) (*mandatory*): part of the slashed trust deposit, in `denom`, that has been repaid. Initialized to 0 at creation by [[MOD-TD-MSG-1-3]](#mod-td-msg-1-3-adjust-trust-deposit-execution-of-the-method) and incremented by [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit). MUST never be null.
+- `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed; null until the first slash.
+- `last_repaid` (timestamp) (*optional*): last time this trust deposit has been repaid; null until the first repay.
+- `slash_count` (number) (*mandatory*): number of times this account has been slashed. Initialized to 0 at creation by [[MOD-TD-MSG-1-3]](#mod-td-msg-1-3-adjust-trust-deposit-execution-of-the-method) and incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit). MUST never be null.
 
 ### DenomAmount
 
@@ -1517,13 +1511,14 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### Digest
 
-- `digest` (string) (*mandatory*): digest to store.
-- `created` (timestamp) (*mandatory*): block execution date of when it was persisted.
+- `digest` (string) (*mandatory*) (key): digest to store. Globally unique across all `Digest` entries.
+- `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted.
 
 ### OperatorAuthorization
 
-- `corporation` (group) (*mandatory*): the [[ref: corporation]] granting the authorization.
-- `operator` (account) (*mandatory*): the operator account receiving the authorization.
+- `id` (uint64) (*mandatory*) (key): auto-incremented numeric identifier of this `OperatorAuthorization`. Globally unique across all `OperatorAuthorization` entries. Assigned at creation time by [[MOD-DE-MSG-3-4]](#mod-de-msg-3-4-grant-operator-authorization-execution-of-the-method) and immutable for the lifetime of the entry: it is preserved across in-place updates that re-grant the same `(corporation_id, operator)` pair on an entry that still exists. If the entry is fully revoked (deleted) by [[MOD-DE-MSG-4-4]](#mod-de-msg-4-4-revoke-operator-authorization-execution-of-the-method) and a later grant re-establishes authorization for the same `(corporation_id, operator)` pair, that re-grant creates a brand-new entry and a new `id` is minted; the previous `id` is never reused.
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the authorization. The `(corporation_id, operator)` tuple MUST be **unique** across all `OperatorAuthorization` entries: at any block height, at most one entry MAY exist for a given `(corporation_id, operator)`.
+- `operator` (account) (*mandatory*): the operator account receiving the authorization. See the `(corporation_id, operator)` uniqueness constraint above.
 - `msg_types` (msg_type[]) (*mandatory*): list of module message types this authorization applies to.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the grantee is allowed to spend
   as a direct consequence of executing authorized messages.
@@ -1537,8 +1532,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `FeeGrant`:
 
-- `grantor` (group) (*mandatory*): the [[ref: corporation]] granting the fee allowance.
-- `grantee` (account) (*mandatory*): the account that receives the fee grant from `grantor`.
+- `grantor_corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the fee allowance.
+- `grantee` (account) (*mandatory*): the account that receives the fee grant from the corporation referenced by `grantor_corporation_id`.
 - `msg_types` (msg_type[]) (*mandatory*): list of VPR delegable message types for which the fee allowance applies.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of fees that can be spent using this grant.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
@@ -1547,11 +1542,12 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### VSOperatorAuthorization
 
-A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. It is keyed by the `(corporation, vs_operator)` pair. The entry exists if, and only if, it has at least one record.
+A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. The `(corporation_id, vs_operator)` tuple MUST be **unique** across all `VSOperatorAuthorization` entries: at any block height, at most one entry MAY exist for a given `(corporation_id, vs_operator)`. The entry exists if, and only if, it has at least one record.
 
-- `corporation` (group) (*mandatory*): the [[ref: corporation]] granting the authorization.
-- `vs_operator` (account) (*mandatory*): the operator account receiving the authorization.
-- `records` (ParticipantAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation`.
+- `id` (uint64) (*mandatory*) (key): auto-incremented numeric identifier of this `VSOperatorAuthorization`. Globally unique across all `VSOperatorAuthorization` entries. Assigned at creation time by [[MOD-DE-MSG-5-4]](#mod-de-msg-5-4-grant-vs-operator-authorization-execution-of-the-method) and immutable for the lifetime of the entry: it is preserved across subsequent grants that append records to an existing `vsoa` (i.e., as long as `vsoa.records` remains non-empty). If the entry's last record is revoked and the `vsoa` is consequently deleted by [[MOD-DE-MSG-6-4]](#mod-de-msg-6-4-revoke-vs-operator-authorization-execution-of-the-method), a later grant for the same `(corporation_id, vs_operator)` pair creates a brand-new `vsoa` and a new `id` is minted; the previous `id` is never reused.
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
+- `vs_operator` (account) (*mandatory*): the operator account receiving the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
+- `records` (ParticipantAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation_id`.
 
 ### ParticipantAuthorizationRecord
 
@@ -1573,16 +1569,17 @@ Represents an on-chain exchange rate between two assets.
 
 `ExchangeRate`:
 
-- `base_asset_type` (PricingAssetType, mandatory): Type of the base asset.
-- `base_asset` (string, mandatory if `base_asset_type` is COIN or FIAT, null if `base_asset_type` is TU): Identifier of the base asset.
-- `quote_asset_type` (PricingAssetType, mandatory): Type of the quote asset.
-- `quote_asset` (string, mandatory): Identifier of the quote asset.
-- `rate` (string, mandatory): Fixed-point integer representing the exchange rate from base asset to quote asset.
-- `rate_scale` (uint32, mandatory): Number of decimal digits used to scale rate.
-- `validity_duration` (duration, mandatory): when updated, set `expires` to block time plus `validity_duration`.
-- `updated` (timestamp, mandatory): Timestamp of the last exchange rate update.
-- `expires` (timestamp, mandatory): Timestamp after which the exchange rate is considered invalid.
-- `state` (boolean, mandatory): true means enabled, false means disabled.
+- `id` (uint64) (*mandatory*) (key): auto-incremented numeric identifier of this `ExchangeRate`. Globally unique across all `ExchangeRate` entries. Assigned at creation time by [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate) and immutable thereafter.
+- `base_asset_type` (PricingAssetType) (*mandatory*): Type of the base asset.
+- `base_asset` (string) (*conditional*): Identifier of the base asset. MUST be set when `base_asset_type` is COIN or FIAT, MUST be null when `base_asset_type` is TU.
+- `quote_asset_type` (PricingAssetType) (*mandatory*): Type of the quote asset.
+- `quote_asset` (string) (*mandatory*): Identifier of the quote asset.
+- `rate` (string) (*mandatory*): Fixed-point integer representing the exchange rate from base asset to quote asset.
+- `rate_scale` (uint32) (*mandatory*): Number of decimal digits used to scale rate.
+- `validity_duration` (duration) (*mandatory*): when updated, set `expires` to block time plus `validity_duration`.
+- `updated` (timestamp) (*mandatory*): Timestamp of the last exchange rate update.
+- `expires` (timestamp) (*mandatory*): Timestamp after which the exchange rate is considered invalid.
+- `state` (boolean) (*mandatory*): true means enabled, false means disabled.
 
 ### ExchangeRateAuthorization
 
@@ -1592,11 +1589,11 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 `ExchangeRateAuthorization`:
 
-- `xr_id` (uint64, *mandatory*): id of the `ExchangeRate` this authorization applies to. Together with `operator`, forms the composite key.
-- `operator` (account, *mandatory*): account authorized to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) on `xr_id`. Together with `xr_id`, forms the composite key.
-- `expiration` (timestamp, *mandatory*): authorization end-of-life. When `now() >= expiration`, the authorization is dead and [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected.
-- `min_interval` (duration, *optional*): anti-spam guard. If set, two successive successful [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls under this authorization MUST be separated by at least `min_interval`.
-- `max_deviation_bps` (uint32, *optional*): circuit breaker, expressed in basis points (1 bps = 0.01%). If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh governance proposal (typically a new [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate) or an updated authorization).
+- `xr_id` (uint64) (*mandatory*): id of the `ExchangeRate` this authorization applies to. Together with `operator`, forms the composite key.
+- `operator` (account) (*mandatory*): account authorized to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) on `xr_id`. Together with `xr_id`, forms the composite key.
+- `expiration` (timestamp) (*mandatory*): authorization end-of-life. When `now() >= expiration`, the authorization is dead and [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected.
+- `min_interval` (duration) (*optional*): anti-spam guard. If set, two successive successful [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls under this authorization MUST be separated by at least `min_interval`.
+- `max_deviation_bps` (uint32) (*optional*): circuit breaker, expressed in basis points (1 bps = 0.01%). If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh governance proposal (typically a new [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate) or an updated authorization).
 
 ### GlobalVariables
 
@@ -1643,7 +1640,7 @@ Get an `Ecosystem`
 "ecosystem": {
   {
     "active_version": 0,
-    "corporation": "string",
+    "corporation_id": 0,
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
     "did": "string",
@@ -1676,7 +1673,7 @@ Get an `Ecosystem`
 "ecosystems": [ {
   {
     "active_version": 0,
-    "corporation": "string",
+    "corporation_id": 0,
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
     "did": "string",
@@ -1704,7 +1701,7 @@ Get an `Ecosystem`
     ]  
   }, {
     "active_version": 0,
-    "corporation": "string",
+    "corporation_id": 0,
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
     "did": "string",
@@ -1750,12 +1747,12 @@ The relative REST path is the path suffix. Implementer can set any prefix, like 
 
 Most VPR module messages (Msg) **support delegation** and follow the pattern described below.
 
-Delegable messages are defined as messages that can be executed by an `operator` account on behalf of a `corporation` group, provided that the appropriate authorization has been granted.
+Delegable messages are defined as messages that can be executed by an `operator` account on behalf of a `corporation`, provided that the appropriate authorization has been granted.
 
 Such messages conceptually involve **two roles**:
 
-- `corporation` (group):  
-  The `group` that owns the created or manipulated resource.  
+- `corporation` (account):  
+  The `policy_address` of the `Corporation` that owns the created or manipulated resource. This account signs the Msg as the corporation; on-chain it MAY be backed by any signing primitive (single key, multisig, Cosmos SDK group policy, …).  
   The corporation is represented in the Msg through an authorization granted to an `operator` account.
 
 - `operator` (account):  
@@ -1771,20 +1768,20 @@ Using this model makes it possible to:
 
 For the execution of delegable messages:
 
-- the `operator` account MUST have a valid authorization from the `corporation` group for the specific message type being executed.
+- the `operator` account MUST have a valid authorization from the `corporation` for the specific message type being executed.
 
-A `corporation` group is not required to delegate all message types to the same `operator`.  
-It is entirely up to the `corporation` group to decide **which accounts may execute which messages**.
+A `corporation` is not required to delegate all message types to the same `operator`.  
+It is entirely up to the `corporation` to decide **which accounts may execute which messages**.
 
-- Authorizations MUST be granted to individual `account`s through **group proposals**.
+- Authorizations MUST be granted to individual `account`s through corporation-level proposals (e.g., a Cosmos SDK group proposal when the `policy_address` is backed by a group policy).
 - Authorizations MAY include an optional `spend_limit` and an optional `expiration` date.
 
 #### Not Delegable Module Messages
 
 Some module messages specify only a `corporation`:
 
-- `corporation` (group):  
-  The `group` that owns the manipulated resource.
+- `corporation` (account):  
+  The `policy_address` of the `Corporation` that owns the manipulated resource.
 
 Such messages **cannot be delegated** and MUST be executed exclusively through a **corporation proposal**.
 
@@ -1799,7 +1796,7 @@ These messages do not support delegation and are not executable by accounts, whe
 A `corporation` MAY allow its `operator`s to pay **network transaction fees** using the `corporation`’s funds.
 
 Fee grants are **not created directly**.  
-They are created, updated, and revoked **exclusively by Authorization module messages**.  
+They are created, updated, and revoked **exclusively by Delegation module messages**.  
 When an authorization is created or updated, it MAY optionally include an associated fee grant.
 
 #### [AUTHZ-CHECK] Common Authorization and Fee Grant Precondition Checks
@@ -1808,7 +1805,7 @@ For any **delegable message** executed by an `operator` on behalf of a `corporat
 
 ##### [AUTHZ-CHECK-1] Operator Authorization checks
 
-1. An `OperatorAuthorization` `oauthz` MUST exist where `oauthz.corporation` = `corporation`, `oauthz.operator` = `operator`, and `oauthz.msg_types` includes the current message type.
+1. An `OperatorAuthorization` `oauthz` MUST exist where `oauthz.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), `oauthz.operator` = `operator`, and `oauthz.msg_types` includes the current message type.
 2. If `oauthz.expiration` is set:
    - if `oauthz.period` is set and `now() >= oauthz.expiration`:
      - if `oauthz.spend_limit` is set, set `oauthz.remaining_spend := oauthz.spend_limit`.
@@ -1821,7 +1818,7 @@ For any **delegable message** executed by an `operator` on behalf of a `corporat
 
 If the transaction fees are paid by the `corporation` account (via fee grant) instead of the `operator` account:
 
-1. A `FeeGrant` `fg` MUST exist where `fg.grantor` = `corporation`, `fg.grantee` = `operator`, and `fg.msg_types` includes the current message type.
+1. A `FeeGrant` `fg` MUST exist where `fg.grantor_corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), `fg.grantee` = `operator`, and `fg.msg_types` includes the current message type.
 2. If `fg.expiration` is set:
    - if `fg.period` is set and `now() >= fg.expiration`:
      - if `fg.spend_limit` is set, set `fg.remaining_spend := fg.spend_limit`.
@@ -1838,7 +1835,7 @@ A second authorization grant mode exists for vs-agents. It is used when a corpor
 Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission id** `participant_id` (determined by the calling method), and the current message type `msg_type`:
 
 1. A `ParticipantAuthorizationRecord` `record` MUST exist for `participant_id`. Abort if not found.
-2. `record` MUST belong to `VSOperatorAuthorization[corporation, operator]`, that is: the containing `VSOperatorAuthorization` MUST have `corporation` as its `corporation` and `operator` as its `vs_operator`. Abort otherwise.
+2. `record` MUST belong to `VSOperatorAuthorization[co.id, operator]` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), that is: the containing `VSOperatorAuthorization` MUST have `co.id` as its `corporation_id` and `operator` as its `vs_operator`. Abort otherwise.
 3. `msg_type` MUST be in `record.msg_types`. Abort otherwise.
 4. Cycle / expiration check:
    - if `record.period` is set and `now() >= record.expiration`:
@@ -1858,15 +1855,15 @@ If the [[ref: transaction]] fees are paid by the `corporation` account (via fee 
 
 ##### [AUTHZ-CHECK-5] Corporation Registration check
 
-A `Corporation` entry MUST exist for the signing `corporation` (i.e., keyed by its underlying Cosmos SDK [[ref: group]]). If none exists, the [[ref: transaction]] MUST abort with an error indicating that the underlying [[ref: group]] has not yet been registered as a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
+A `Corporation` entry `co` MUST exist whose `co.policy_address` equals the signing `corporation` account. If none exists, the [[ref: transaction]] MUST abort with an error indicating that the signing account has not yet been registered as the `policy_address` of a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)). The resolved `co.id` is the `corporation_id` used by the message.
 
-> Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation), whose explicit purpose is to register a Cosmos SDK [[ref: group]] as a new `Corporation`. That method enforces the inverse precondition (the entry MUST NOT yet exist) in its own basic checks.
+> Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation), whose explicit purpose is to register a new `Corporation` and bind a `policy_address` to it. That method enforces the inverse precondition (no `Corporation` entry MUST yet exist for that `policy_address`) in its own basic checks.
 
-This check applies to every delegable message that invokes [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks). As a result, all Create-* methods (and every other delegable Msg) implicitly require the signing `corporation` to be a registered `Corporation`.
+This check applies to every delegable message that invokes [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks). As a result, all Create-* methods (and every other delegable Msg) implicitly require the signing `corporation` account to be the `policy_address` of a registered `Corporation`.
 
 #### Example
 
-A corporation group `corporationABC` wants to authorize an operator account `accountABC` to execute the  
+A corporation `corporationABC` wants to authorize an operator account `accountABC` to execute the  
 [`mod-pp-msg-10-create-or-update-participant-session`](#mod-pp-msg-10-create-or-update-participant-session),
 [`mod-pp-msg-3-set-participant-op-to-validated`](#mod-pp-msg-3-set-participant-op-to-validated), and
 [`mod-pp-msg-15-trigger-resolver`](#mod-pp-msg-15-trigger-resolver)
@@ -1890,7 +1887,7 @@ As a result, `accountABC` is authorized to:
 
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      | Signers |
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
-| Corporation               | Create New Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)   | corporation + operator |
+| Corporation               | Create New Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)   | any account |
 |                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + operator |
 |                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters)   | governance proposal |
 |                                | Get Corporation                              | /co/v1/get                       | Query  | [[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)   | N/A |
@@ -1952,13 +1949,16 @@ As a result, `accountABC` is authorized to:
 |             | Revoke Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
 |             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |module call|
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
+|             | Update VS Operator Authorization Expiration | N/A (Tx) | Msg | [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) |module call|
 |             | List Operator Authorizations              | /de/v1/authz/list | Query  | [[MOD-DE-QRY-1]](#mod-de-qry-1-list-operator-authorizations)   |N/A |
 |             | List VS Operator Authorizations           | /de/v1/vs-authz/list | Query  | [[MOD-DE-QRY-2]](#mod-de-qry-2-list-vs-operator-authorizations)   |N/A |
+|             | Get Operator Authorization                | /de/v1/authz/get | Query  | [[MOD-DE-QRY-3]](#mod-de-qry-3-get-operator-authorization)   |N/A |
+|             | Get VS Operator Authorization             | /de/v1/vs-authz/get | Query  | [[MOD-DE-QRY-4]](#mod-de-qry-4-get-vs-operator-authorization)   |N/A |
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + operator OR module call|
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
-| Exchange Rate     | Create Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
-|                   | Update Exchange Rate              |                                  | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
-|                   | Toggle Exchange Rate State        |                                  | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-toggle-exchange-rate-state)   |governance proposal|
+| Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
+|                   | Update Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
+|                   | Set Exchange Rate State           | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)   |governance proposal|
 |                   | Grant Exchange Rate Authorization |     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization)   |governance proposal|
 |                   | Revoke Exchange Rate Authorization|     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-5]](#mod-xr-msg-5-revoke-exchange-rate-authorization)   |governance proposal|
 |                   | Get Exchange Rate                 | /xr/v1/get                  | Query  | [[MOD-XR-QRY-1]](#mod-xr-qry-1-get-exchange-rate)   |N/A |
@@ -1971,25 +1971,27 @@ Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR /
 
 ### Corporation Module
 
-This module manages [[ref: corporation]] entries — the VPR-level entity that extends a Cosmos SDK [[ref: group]] with a DID, a governance framework, and lifecycle attributes. A `Corporation` entry MUST exist before its underlying group can be referenced as the `corporation` (group) in any other VPR Create-* method (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
+This module manages [[ref: corporation]] entries — the VPR-level entity that carries a DID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A `Corporation` entry MUST exist before its `policy_address` can sign as the `corporation` in any other VPR Create-* method, and before its `id` can be referenced as `corporation_id` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
 
 **Group lifecycle operations:** Membership management (adding/removing members), proposal submission, voting, and proposal execution are handled directly via the Cosmos SDK `x/group` module. VPR does not wrap these operations. Implementations MUST refer to the `x/group` specification for `MsgUpdateGroupMembers`, `MsgSubmitProposal`, `MsgVote`, `MsgWithdrawProposal`, and `MsgExec`. Discovery queries (`GroupsByMember`, `ProposalsByGroupPolicy`, `VotesByProposal`) from `x/group` apply directly. Because `group_policy_as_admin` is always `true` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)), the group policy address is the admin of the group — not the account that created it. Therefore all group lifecycle operations, including member updates, MUST go through the group's own proposal and voting process (`MsgSubmitProposal` → `MsgVote` → `MsgExec`); no account can bypass this by calling group admin messages directly.
 
 #### [MOD-CO-MSG-1] Create New Corporation
 
-An `admin` account CAN execute this method to atomically create a new Cosmos SDK [[ref: group]] and register a `Corporation` VPR entry for it in a single [[ref: transaction]]. This eliminates any window between group creation and VPR registration, ensuring [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) can never observe an unregistered group.
+Any [[ref: account]] CAN execute this method to atomically create a new on-chain `policy_address` account (in this implementation, a Cosmos SDK [[ref: group]] policy account) and register a `Corporation` VPR entry bound to it, in a single [[ref: transaction]]. This eliminates any window between policy-address creation and VPR registration, ensuring [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) can never observe an unregistered `policy_address`.
+
+There is no special "admin" role required to create a corporation: the signer is just the [[ref: account]] that submits the transaction, and that account holds no ongoing privileges over the resulting Corporation, group, or group policy.
 
 ##### [MOD-CO-MSG-1-1] Create New Corporation parameters
 
-An `admin` account that would like to create a new [[ref: corporation]] MUST call this method by specifying:
+An [[ref: account]] that would like to create a new [[ref: corporation]] MUST call this method by specifying:
 
-- `admin` (account): (Signer) the account that initiates group creation. After creation, `admin` holds no ongoing admin privileges over the group or group policy — the `group_policy_address` becomes the admin of both immediately.
+- `signer` (account): (Signer) the account that submits this transaction. Any [[ref: account]] MAY play this role; no pre-existing privilege is required. This value is forwarded as the `admin` field of the underlying `MsgCreateGroupWithPolicy`. After creation, `signer` holds no ongoing admin privileges over the group, group policy, or Corporation — the `group_policy_address` becomes the admin of both the group and the group policy immediately, and the Corporation is governed exclusively through that group policy.
 - `members` (list of MemberRequest): (*mandatory*) initial members of the group; each entry specifies `address`, `weight` (non-zero decimal string, e.g. `"1"`), and optional `metadata`. MUST contain at least one member.
 - `group_metadata` (string): (*optional*) opaque metadata for the Cosmos SDK group.
 - `group_policy_metadata` (string): (*optional*) opaque metadata for the Cosmos SDK group policy.
 - `decision_policy` (DecisionPolicy): (*mandatory*) the decision policy for the group policy. MUST be either a `ThresholdDecisionPolicy` (minimum weighted sum of YES votes) or a `PercentageDecisionPolicy` (minimum percentage of total weight).
 
-> `group_policy_as_admin` is not a caller parameter — it is always set to `true` by the implementation. The group policy address becomes the admin of both the group and the group policy immediately upon creation; the `admin` account retains no admin rights thereafter.
+> `group_policy_as_admin` is not a caller parameter — it is always set to `true` by the implementation. The group policy address becomes the admin of both the group and the group policy immediately upon creation; the `signer` account retains no admin rights thereafter.
 - `did` (string) (*mandatory*): the DID of the Corporation.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
@@ -2005,7 +2007,7 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `admin` (account): (Signer) signature must be verified.
+- `signer` (account): (Signer) signature must be verified. No further restriction — any [[ref: account]] MAY be the signer.
 - `members`: MUST contain at least one entry. Each entry's `address` MUST be a valid account address. Each entry's `weight` MUST be a non-zero decimal string representing a positive number (e.g. `"1"`, `"10"`).
 - `decision_policy`: MUST be a valid `ThresholdDecisionPolicy` or `PercentageDecisionPolicy`.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
@@ -2024,10 +2026,12 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- create a new Cosmos SDK [[ref: group]] and group policy via `MsgCreateGroupWithPolicy` with `admin`, `members`, `group_metadata`, `group_policy_metadata`, and `decision_policy`, with `group_policy_as_admin` hardcoded to `true`; let `group_policy_address` be the `group_policy_address` returned in `MsgCreateGroupWithPolicyResponse`. The `group_policy_address` becomes the admin of both the group and the group policy, and subsequently acts as the `corporation` (group) signer for all VPR messages.
+- create a new Cosmos SDK [[ref: group]] and group policy via `MsgCreateGroupWithPolicy` with `admin = signer`, `members`, `group_metadata`, `group_policy_metadata`, and `decision_policy`, with `group_policy_as_admin` hardcoded to `true`; let `group_policy_address` be the `group_policy_address` returned in `MsgCreateGroupWithPolicyResponse`. The `group_policy_address` becomes the admin of both the group and the group policy, and is the on-chain account that subsequently signs as `corporation` for all VPR messages.
 
-- create and persist a new `Corporation` entry `co` keyed by `group_policy_address` (1:1):
+- create and persist a new `Corporation` entry `co`:
 
+- `co.id`: auto-incremented uint64
+- `co.policy_address`: `group_policy_address`
 - `co.did`: `did`
 - `co.created`: current timestamp
 - `co.modified`: `co.created`
@@ -2038,7 +2042,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.ecosystem_id`: null
-- `gfv.corporation`: `group_policy_address`
+- `gfv.corporation_id`: `co.id`
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
@@ -2060,7 +2064,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-CO-MSG-2-1] Update Corporation parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `did` (string) (*mandatory*): the new DID of the Corporation.
 
@@ -2074,12 +2078,12 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- A `Corporation` entry `co` for the signing `corporation` MUST exist; if none exists, method MUST abort.
+- A `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account MUST exist; if none exists, method MUST abort.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `did` MUST NOT already be the `did` of any **other** `Corporation` entry (i.e., any `Corporation` entry whose underlying group differs from the signing `corporation`); if some other `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant). Rotating to the same value `co.did` already holds is a no-op and MUST be allowed.
+- `did` MUST NOT already be the `did` of any **other** `Corporation` entry (i.e., any `Corporation` entry whose `id` differs from `co.id`); if some other `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant). Rotating to the same value `co.did` already holds is a no-op and MUST be allowed.
 
 ###### [MOD-CO-MSG-2-2-2] Update Corporation fee checks
 
@@ -2091,7 +2095,7 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- load `Corporation` entry `co` for the signing `corporation` and set:
+- load `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account and set:
 
 - `co.did`: `did`
 - `co.modified`: current timestamp
@@ -2134,7 +2138,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-CO-QRY-1-1] Get Corporation query parameters
 
-- `corporation` (group) (*mandatory*): the [[ref: corporation]] to fetch (i.e., the underlying Cosmos SDK [[ref: group]] whose `Corporation` entry is keyed by it).
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] to fetch.
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
 
@@ -2142,11 +2146,11 @@ Anyone CAN execute this method.
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
-- `corporation` (group) (*mandatory*): MUST be a valid group id.
+- `corporation_id` (uint64) (*mandatory*): MUST be a valid uint64.
 
 ##### [MOD-CO-QRY-1-3] Get Corporation execution
 
-Return the `Corporation` entry keyed by `corporation` (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
+Return the `Corporation` entry whose `id` equals `corporation_id` (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
 
 #### [MOD-CO-QRY-2] List Corporations
 
@@ -2198,7 +2202,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An authorized `operator` that would like to create a [[ref: ecosystem]] MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `did` (string) (*mandatory*): the did of the ecosystem that is creating the ecosystem.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
@@ -2215,17 +2219,17 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Ecosystem `(did, corporation)` consistency invariant: at any block height, all `Ecosystem` entries sharing a `did` are controlled by the same `Corporation`).
+- if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)); else method MUST abort (per-Ecosystem `(did, corporation_id)` consistency invariant: at any block height, all `Ecosystem` entries sharing a `did` are controlled by the same `Corporation`).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL .
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
 :::note
-Several `Ecosystem` entries MAY share the same ecosystem DID. The identifier of an `Ecosystem` is its `id`, and the Verifiable Trust Spec includes the `id` of the `Ecosystem` in the DID Document. Per-Ecosystem DID uniqueness is therefore NOT required: proof of control of the DID is verified by resolving the DID outside of the context of the VPR. However, **all `Ecosystem` entries sharing the same `did` MUST be controlled by the same `corporation`** — see the basic-check bullet above. Proof of control of the shared DID is, by construction, held by that single controlling `Corporation`, and the corresponding `Corporation` entry (if any whose own `did` equals this value) is unique by the per-Corporation `did` uniqueness invariant (although the Corporation that *owns* the DID per Corp.did and the Corporation that *controls* the Ecosystems claiming it need not coincide).
+Several `Ecosystem` entries MAY share the same ecosystem DID. The identifier of an `Ecosystem` is its `id`, and the Verifiable Trust Spec includes the `id` of the `Ecosystem` in the DID Document. Per-Ecosystem DID uniqueness is therefore NOT required: proof of control of the DID is verified by resolving the DID outside of the context of the VPR. However, **all `Ecosystem` entries sharing the same `did` MUST be controlled by the same `Corporation`** — see the basic-check bullet above. Proof of control of the shared DID is, by construction, held by that single controlling `Corporation`, and the corresponding `Corporation` entry (if any whose own `did` equals this value) is unique by the per-Corporation `did` uniqueness invariant (although the Corporation that *owns* the DID per Corp.did and the Corporation that *controls* the Ecosystems claiming it need not coincide).
 :::
 
 ###### [MOD-ES-MSG-1-2-2] Create New Ecosystem fee checks
@@ -2242,9 +2246,10 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `ecosystem.id` : auto-incremented uint64
 - `ecosystem.did`: `did`
-- `ecosystem.corporation`: `corporation`
+- `ecosystem.corporation_id`: `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account)
 - `ecosystem.created`: current timestamp
 - `ecosystem.modified`: `ecosystem.created`
+- `ecosystem.archived`: false
 - `ecosystem.language`: `language`
 - `ecosystem.active_version`: 1
 
@@ -2252,7 +2257,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `gfv.id`: auto-incremented uint64
 - `gfv.ecosystem_id`: `ecosystem.id`
-- `gfv.corporation`: null
+- `gfv.corporation_id`: null
 - `gfv.created`: current timestamp
 - `gfv.version`: 1
 - `gfv.active_since`: current timestamp
@@ -2274,7 +2279,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-ES-MSG-2-1] Update Ecosystem parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
 - `did` (string) (*mandatory*): the did of the ecosystem.
@@ -2287,12 +2292,12 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` (uint64) (*mandatory*): a `Ecosystem` entry `ecosystem` with id `id` MUST exist and `corporation` executing the method MUST be the `corporation` of the `Ecosystem` entry `ecosystem`.
+- `id` (uint64) (*mandatory*): a `Ecosystem` entry `ecosystem` with id `id` MUST exist and `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any **other** `Ecosystem` entry (i.e., any `Ecosystem` entry whose `id` differs from the supplied `id`) has `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Ecosystem `(did, corporation)` consistency invariant). Rotating `ecosystem.did` to a value already held by another `Ecosystem` controlled by a different `corporation` is forbidden.
+- if any **other** `Ecosystem` entry (i.e., any `Ecosystem` entry whose `id` differs from the supplied `id`) has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id`; else method MUST abort (per-Ecosystem `(did, corporation_id)` consistency invariant). Rotating `ecosystem.did` to a value already held by another `Ecosystem` controlled by a different `Corporation` is forbidden.
 
 ###### [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks
 
@@ -2315,7 +2320,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-ES-MSG-3-1] Archive Ecosystem parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*) id of the ecosystem (*mandatory*);
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
@@ -2328,13 +2333,13 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- load `Ecosystem` `ecosystem` from `id`. `ecosystem.corporation` MUST be the corporation executing the method, else MUST abort.
+- load `Ecosystem` `ecosystem` from `id`. `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean.
-  - If `archive` is true and `ecosystem.archived` is not null, MUST abort as `Ecosystem` is already archived.
-  - If `archive` is false and `ecosystem.archived` is null, MUST abort as `Ecosystem` is already not archived.
+  - If `archive` is true and `ecosystem.archived` is true, MUST abort as `Ecosystem` is already archived.
+  - If `archive` is false and `ecosystem.archived` is false, MUST abort as `Ecosystem` is already not archived.
 
 ###### [MOD-ES-MSG-3-2-2] Archive Ecosystem fee checks
 
@@ -2347,8 +2352,7 @@ If all precondition checks passed, method is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - update `Ecosystem` entry `ecosystem` with `ecosystem.id` equal to `id`:
-- if `archived` is true: set `ecosystem.archived` to current timestamp.
-- if `archived` is false: set `ecosystem.archived` to null.
+- set `ecosystem.archived` to `archive` (the boolean message parameter).
 - `ecosystem.modified`: current timestamp
 
 #### [MOD-ES-MSG-4] Update Module Parameters
@@ -2405,7 +2409,7 @@ return found `Ecosystem` entry (if any), as well as *all its nested* `Governance
 
 The following parameters are optional:
 
-- `corporation` (group) (*optional*): if specified, filter by corporation.
+- `corporation_id` (uint64) (*optional*): if specified, filter by corporation.
 - `modified_after` (timestamp) (*optional*): if specified, returns only `Ecosystem` entries with `Ecosystem.modified` greater than `modified`.
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
@@ -2448,7 +2452,7 @@ Return the list of the existing parameters and their values.
 
 ### Governance Framework Module
 
-This module handles [[ref: governance framework]] documents and version activation for both [[ref: ecosystems]] and [[ref: corporations]]. Methods are polymorphic over the owning subject: every message takes an optional `ecosystem_id` parameter to designate whose governance framework is being modified — if set, the target subject is that `Ecosystem` (and the signing `corporation` MUST be its controller); if not set, the target subject is the signing `corporation`'s own [[ref: CGF]] (a Corporation may only edit its own CGF, so no extra parameter is needed).
+This module handles [[ref: governance framework]] documents and version activation for both [[ref: ecosystems]] and [[ref: corporations]]. Methods are polymorphic over the owning subject: every message takes an optional `ecosystem_id` parameter to designate whose governance framework is being modified — if set, the target subject is that `Ecosystem` (and the signing `corporation` MUST be its controller, i.e., the `Corporation` resolved from the signing account MUST equal `Ecosystem.corporation_id`); if not set, the target subject is the signing `corporation`'s own [[ref: CGF]] (a Corporation may only edit its own CGF, so no extra parameter is needed).
 
 The initial `GovernanceFrameworkVersion` and its first `GovernanceFrameworkDocument` are created atomically by [Create New Ecosystem](#mod-es-msg-1-create-new-ecosystem) (and, by parallel construction, by [Create New Corporation](#mod-co-msg-1-create-new-corporation)). After that, subsequent versions and documents are added through this module.
 
@@ -2458,7 +2462,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-GF-MSG-1-1] Add Governance Framework Document parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]] whose governance framework will be modified. If set, the signing `corporation` MUST be the controller of the target `Ecosystem`. If not set, the target subject is the signing `corporation`'s own [[ref: CGF]].
 - `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the governance framework document.
@@ -2476,13 +2480,13 @@ If any of these precondition checks fail, method MUST abort.
 
 if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - Define `subject` as:
-  - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation` MUST be equal to the signing `corporation`.
-  - if `ecosystem_id` is not set: the `Corporation` entry whose underlying [[ref: group]] is the signing `corporation`. The entry MUST exist (a Corporation may only edit its own governance framework, so no further check is required).
-- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` whose owner matches `subject` (i.e., `gfv.ecosystem_id = ecosystem_id` if subject is an Ecosystem, else `gfv.corporation = corporation`) and `gfv.version = version`, OR `version` MUST be exactly equal to the biggest `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries owned by `subject`. `version` MUST be greater than `subject.active_version`.
+  - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
+  - if `ecosystem_id` is not set: the `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account. The entry MUST exist (a Corporation may only edit its own governance framework, so no further check is required).
+- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` whose owner matches `subject` (i.e., `gfv.ecosystem_id = ecosystem_id` if subject is an Ecosystem, else `gfv.corporation_id = co.id`) and `gfv.version = version`, OR `version` MUST be exactly equal to the biggest `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries owned by `subject`. `version` MUST be greater than `subject.active_version`.
 - `doc_language` (string) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
@@ -2500,7 +2504,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if a `GovernanceFrameworkVersion` entry `gfv` matching `subject` and `version` does not exist, create and persist a new one:
   - `gfv.id`: auto-incremented uint64
   - `gfv.ecosystem_id`: `ecosystem_id` (or null if subject is a Corporation)
-  - `gfv.corporation`: the signing `corporation` (or null if subject is an Ecosystem)
+  - `gfv.corporation_id`: `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account; null if subject is an Ecosystem)
   - `gfv.created`: current timestamp
   - `gfv.version`: `version`
   - `gfv.active_since`: null
@@ -2523,7 +2527,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-GF-MSG-2-1] Increase Active Governance Framework Version parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]]. If set, the signing `corporation` MUST be its controller. If not set, the target subject is the signing `corporation`'s own [[ref: CGF]].
 
@@ -2535,13 +2539,13 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - Define `subject` as:
-  - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation` MUST be equal to the signing `corporation`.
-  - if `ecosystem_id` is not set: the `Corporation` entry whose underlying [[ref: group]] is the signing `corporation`. The entry MUST exist.
-- Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` (matching `gfv.ecosystem_id` or `gfv.corporation` as appropriate) whose `gfv.version` is equal to `subject.active_version` + 1. If none is found, transaction MUST abort.
+  - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
+  - if `ecosystem_id` is not set: the `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account. The entry MUST exist.
+- Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` (matching `gfv.ecosystem_id` or `gfv.corporation_id` as appropriate) whose `gfv.version` is equal to `subject.active_version` + 1. If none is found, transaction MUST abort.
 - Find a `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `subject.language`. If no document is found (and thus no document exists for the default language of this version for this subject), transaction MUST abort.
 
 ###### [MOD-GF-MSG-2-2-2] Increase Active Governance Framework Version fee checks
@@ -2578,7 +2582,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-GF-QRY-1-3] Get Governance Framework Version execution
 
-Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id` or `corporation`) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
+Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id` or `corporation_id`) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
 
 #### [MOD-GF-QRY-2] List Governance Framework Versions
 
@@ -2586,10 +2590,10 @@ Anyone CAN execute this method.
 
 ##### [MOD-GF-QRY-2-1] List Governance Framework Versions query parameters
 
-Exactly one of `ecosystem_id` and `corporation` MUST be set:
+Exactly one of `ecosystem_id` and `corporation_id` MUST be set:
 
-- `ecosystem_id` (uint64) (*conditional*): filter by ecosystem. MUST be set if `corporation` is null.
-- `corporation` (group) (*conditional*): filter by corporation (the underlying Cosmos SDK [[ref: group]] of the target `Corporation`). MUST be set if `ecosystem_id` is null.
+- `ecosystem_id` (uint64) (*conditional*): filter by ecosystem. MUST be set if `corporation_id` is null.
+- `corporation_id` (uint64) (*conditional*): filter by corporation. MUST be set if `ecosystem_id` is null.
 - `active_only` (boolean) (*optional*): if true, return only the entry corresponding to the subject's `active_version`.
 - `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
@@ -2598,7 +2602,7 @@ Exactly one of `ecosystem_id` and `corporation` MUST be set:
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
-- Exactly one of `ecosystem_id` and `corporation` MUST be set.
+- Exactly one of `ecosystem_id` and `corporation_id` MUST be set.
 - `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
 
 ##### [MOD-GF-QRY-2-3] List Governance Framework Versions execution
@@ -2615,7 +2619,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An [[ref: account]] that would like to create a [[ref: credential schema]] MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` id of the ecosystem (*mandatory*);
 - `json_schema` the [[ref: Json Schema]] of the credential (*mandatory*).
@@ -2639,10 +2643,10 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `ecosystem_id` MUST represent an existing `Ecosystem` entry `ecosystem` and `ecosystem.corporation` MUST be the `corporation` executing the method.
+- `ecosystem_id` MUST represent an existing `Ecosystem` entry `ecosystem` and `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 - `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] is ignored and will be replaced during execution by the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
@@ -2689,6 +2693,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.holder_onboarding_mode`: `holder_onboarding_mode`
   - `cs.created`: current timestamp
   - `cs.modified`: `cs.created`.
+  - `cs.archived`: false
   - `cs.pricing_asset_type`: `pricing_asset_type`
   - `cs.pricing_asset`: `pricing_asset`
   - `cs.digest_algorithm`: `digest_algorithm`
@@ -2705,7 +2710,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An [[ref: account]] that would like to update a [[ref: credential schema]] MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` id of the credential schema (*mandatory*);
 - `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
@@ -2724,11 +2729,11 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
-- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation` MUST be the `corporation` executing the method, else MUST abort.
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else MUST abort.
 - `issuer_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
 - `issuer_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
@@ -2762,7 +2767,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An [[ref: account]] that would like to archive or unarchive a [[ref: credential schema]] MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*) id of the credential schema (*mandatory*);
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
@@ -2775,14 +2780,14 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
-- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation` MUST be the `corporation` executing the method, else MUST abort.
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean. 
-  - If `archive` is true and `cs.archived` is not null, MUST abort as Credential Schema is already archived.
-  - If `archive` is false and `cs.archived` is null, MUST abort as Credential Schema is already not archived.
+  - If `archive` is true and `cs.archived` is true, MUST abort as Credential Schema is already archived.
+  - If `archive` is false and `cs.archived` is false, MUST abort as Credential Schema is already not archived.
 
 ###### [MOD-CS-MSG-3-2-2] Archive Credential Schema fee checks
 
@@ -2796,8 +2801,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - update `CredentialSchema` entry `cs` with `cs.id` equal to `id`:
 
-- if `archived` is true: set `cs.archived` to current timestamp.
-- if `archived` is false: set `cs.archived` to null.
+- set `cs.archived` to `archive` (the boolean message parameter).
 - set `cs.modified` to current timestamp.
 
 #### [MOD-CS-MSG-4] Update Module Parameters
@@ -2843,7 +2847,7 @@ Accordingly, if a credential schema defines one or more active policies for the 
 
 ##### [MOD-CS-MSG-5-1] Create Schema Authorization Policy parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
 - `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
@@ -2857,7 +2861,7 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-CS-MSG-5-2-1] Create Schema Authorization Policy basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `corporation`.
@@ -2900,7 +2904,7 @@ This message activates the current draft `SchemaAuthorizationPolicy` for the giv
 
 ##### [MOD-CS-MSG-6-1] Increase Active Schema Authorization Policy Version parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
 - `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
@@ -2912,7 +2916,7 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-CS-MSG-6-2-1] Basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `corporation`.
@@ -2943,7 +2947,7 @@ This message revokes a previously enabled `SchemaAuthorizationPolicy` version. R
 
 ##### [MOD-CS-MSG-7-1] Revoke Schema Authorization Policy parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
 - `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
@@ -2956,7 +2960,7 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-CS-MSG-7-2-1] Basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - a policy MUST exist for `(schema_id, role, version)`.
@@ -3224,7 +3228,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An Applicant that would like to start an onboarding process MUST execute this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_operator` (account) (*optional*): the account of the Veriable Service we want to authorize to create participant sessions linked to this participant. If not specified, Verifiable Service will not be able to use the payment delegation feature. **Required** to use the payment delegation feature.
 - `role` (ParticipantRole) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the Participant role that the applicant would like to get;
@@ -3232,7 +3236,7 @@ An Applicant that would like to start an onboarding process MUST execute this me
 - `validation_fees` (number) (*optional*): Requested validation_fees for this participant (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
-- `did` (string) (*required*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 
 The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) that will be created for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode (the corporation signs and pays for its own `Participant`-related transactions directly). VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
 
@@ -3264,7 +3268,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `role` (ParticipantRole) (*mandatory*) MUST be a valid ParticipantRole: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
@@ -3272,8 +3276,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this `Participant` entry (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
-- `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if `did` is specified and any existing `Participant` entry has non-null `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Participant `(did, corporation)` consistency invariant: at any block height, all `Participant` entries sharing a non-null `did` are owned by the same `Corporation`).
+- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant: at any block height, all `Participant` entries sharing a `did` are owned by the same `Corporation`).
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-op-parameters).
 
 :::note
@@ -3379,7 +3383,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Participant` entry `validator_participant` of the selected validator.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
-- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module.
+- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
 - define `now`: current timestamp.
@@ -3388,7 +3392,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
   - `applicant_participant.id`: auto-incremented uint64.
   - `applicant_participant.schema_id` = `validator_participant.schema_id`
-  - `applicant_participant.corporation`: `corporation`.
+  - `applicant_participant.corporation_id`: `co.id`.
   - `applicant_participant.vs_operator`: `vs_operator`.
   - `applicant_participant.role`: `role`.
   - `applicant_participant.created`: `now`
@@ -3459,7 +3463,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-PP-MSG-2-1] Renew Participant OP parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry for which applicant would like to renew the onboarding process;
 
@@ -3471,14 +3475,14 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64 and a `Participant` entry with the same id MUST exist.
 
 ###### [MOD-PP-MSG-2-2-2] Renew Participant OP permission checks
 
-- Load `Participant` entry `applicant_participant`. `corporation` running the operation MUST be `applicant_participant.corporation`, else MUST abort. `applicant_participant` MUST be a [[ref: active participant]].
+- Load `Participant` entry `applicant_participant`. `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else MUST abort. `applicant_participant` MUST be a [[ref: active participant]].
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: active participant]], else MUST abort.
 
 ###### [MOD-PP-MSG-2-2-3] Renew Participant OP fee checks
@@ -3530,7 +3534,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
-- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module.
+- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) and transfer the corresponding amount to `TrustDeposit` module.
 - send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
 
 - define `now`: current timestamp.
@@ -3552,7 +3556,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 An [[ref: account]] that would like to set a validation entry to VALIDATED MUST execute this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the onboarding process;
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit should been set for this `Participant` entry or if we want it to be aligned with the onboarding process expiration timestamp calculated by this method.
@@ -3571,7 +3575,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
@@ -3630,7 +3634,7 @@ Now, let's verify `effective_until`:
 ###### [MOD-PP-MSG-3-2-2] Set Participant OP to Validated validator perms
 
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]].
-- `corporation` running the method MUST be `validator_participant.corporation`.
+- `co.id` MUST equal `validator_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 
 If `validator_participant` is not a [[ref: active participant]] (expired, revoked, slashed...) then applicant MUST start a new onboarding process.
 
@@ -3687,8 +3691,8 @@ Change value of provided `effective_until` if needed, and abort if needed:
 
 Fees and Trust Deposits:
 
-- transfer the full amount `applicant_participant.op_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to validator `corporation` [[ref: account]] `validator_participant.corporation`;
-- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_participant.op_current_deposit` the [[ref: trust deposit]] of `corporation` running the method and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_participant.op_validator_deposit` to `applicant_participant.op_validator_deposit` + `applicant_participant.op_current_deposit`.
+- transfer the full amount `applicant_participant.op_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address`;
+- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_participant.op_current_deposit` the [[ref: trust deposit]] of `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_participant.op_validator_deposit` to `applicant_participant.op_validator_deposit` + `applicant_participant.op_current_deposit`.
 
 > Important: if `applicant_participant.op_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.op_current_deposit` available for paying the trust deposit.
 
@@ -3729,7 +3733,7 @@ At any time, [[ref: applicant]] of an onboarding process may request cancellatio
 
 ##### [MOD-PP-MSG-6-1] Cancel Participant OP Last Request parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry;
 
@@ -3741,12 +3745,12 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` with this id. It MUST exist.
-- `corporation` running the [[ref: transaction]] MUST be `applicant_participant.corporation`.
+- `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 - `applicant_participant.op_state` MUST be PENDING.
 - if `applicant_participant.deposit` has been slashed and not repaid, MUST abort
 
@@ -3767,11 +3771,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if `applicant_participant.op_exp` is null (validation never completed), set `applicant_participant.op_state` to TERMINATED, else set `applicant_participant.op_state` to VALIDATED.
 - set `applicant_participant.op_last_state_change` to `now`.
 - if `applicant_participant.op_current_fees` > 0:
-  - transfer `applicant_participant.op_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_participant.corporation`.
+  - transfer `applicant_participant.op_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to [[ref: applicant]] [[ref: account]], `applicant_participant.corporation_id`.
   - set `applicant_participant.op_current_fees` to 0;
 
 - if `applicant_participant.op_current_deposit` > 0:
-  - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_participant.corporation` by `applicant_participant.op_current_deposit`
+  - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_participant.corporation_id` by `applicant_participant.op_current_deposit`
   - set `applicant_participant.op_current_deposit` to 0.
 
 If `applicant_participant.op_state` was set to TERMINATED (i.e. `applicant_participant.op_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The call is a no-op if no record exists. If `applicant_participant.op_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
@@ -3786,7 +3790,7 @@ This method is used by controller authorities of Ecosystems. When they create a 
 
 An [[ref: account]] that would like to create a `Participant` entry MUST call this method by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
 - `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this `Participant` entry. **Required** for payment delegation.
@@ -3819,12 +3823,12 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
-- `did`, if specified, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if `did` is specified and any existing `Participant` entry has non-null `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Participant `(did, corporation)` consistency invariant).
+- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant).
 - `effective_from` must be in the future.
 - `effective_until`, if not null, must be greater than `effective_from`
 - `validation_fees` (number) (*mandatory*): MUST be >= 0.
@@ -3838,7 +3842,7 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 
 - The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
 - The related `Ecosystem` entry `ecosystem` is loaded from `cs.ecosystem_id`.
-- `corporation` executing the method MUST be `ecosystem.corporation`.
+- `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 - else MUST abort.
 
 ###### [MOD-PP-MSG-7-2-3] Create Root Participant fee checks
@@ -3876,7 +3880,7 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.modified` to `now`.
 - `participant.role`: ECOSYSTEM.
 - `participant.did`: `did`.
-- `participant.corporation`: `corporation`.
+- `participant.corporation_id`: `co.id`.
 - `participant.vs_operator`: `vs_operator`.
 - `participant.created`: `now`
 - `participant.effective_from`: `effective_from`
@@ -3907,13 +3911,13 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 This method can be called:
 
-- by `participant.corporation`, if the `Participant` entry has role ECOSYSTEM.
-- by `participant.corporation`, if it is a self-created `Participant` entry (schema configuration is open).
-- by a `corporation` of a validator `Participant`, if the `Participant` entry is managed by an OP.
+- by the corporation that owns the `Participant` entry (i.e., `Corporation[participant.corporation_id]`), if the `Participant` entry has role ECOSYSTEM.
+- by the corporation that owns the `Participant` entry (i.e., `Corporation[participant.corporation_id]`), if it is a self-created `Participant` entry (schema configuration is open).
+- by the corporation of a validator `Participant`, if the `Participant` entry is managed by an OP.
 
 ##### [MOD-PP-MSG-8-1] Set Participant Effective Until parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry;
 - `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Participant` will be effective.
@@ -3926,7 +3930,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
@@ -3941,16 +3945,16 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 1. ECOSYSTEM `Participant` entries
 
-- if `applicant_participant.validator_participant_id` is null and `applicant_participant.role` is ECOSYSTEM, `corporation` running the method MUST be `applicant_participant.corporation`.
+- if `applicant_participant.validator_participant_id` is null and `applicant_participant.role` is ECOSYSTEM, `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 
 2. Self-created `Participant` entries
 
-- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]] of role ECOSYSTEM. `corporation` running the method MUST be `applicant_participant.corporation`.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]] of role ECOSYSTEM. `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 
 3. OP-managed `Participant` entries
 
 - `effective_until` MUST be lower or equal to `applicant_participant.op_exp` else MUST abort.
-- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]]. `corporation` running the method MUST be `validator_participant.corporation`.
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]]. `co.id` MUST equal `validator_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 
 ###### [MOD-PP-MSG-8-2-3] Set Participant Effective Until fee checks
 
@@ -4003,7 +4007,7 @@ This method can only be called:
 
 ##### [MOD-PP-MSG-9-1] Revoke Participant parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry;
 
@@ -4015,7 +4019,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
@@ -4033,7 +4037,7 @@ if `applicant_participant.validator_participant_id` is defined:
 - set `validator_participant` = `applicant_participant`
 - while `validator_participant.validator_participant_id` is defined, 
   - load `validator_participant` from `validator_participant.validator_participant_id`.
-  - if `validator_participant` is a [[ref: active participant]] and `validator_participant.corporation` is who is running the method, => return true.
+  - if `validator_participant` is a [[ref: active participant]] and `validator_participant.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), => return true.
 - end
 - return false.
 
@@ -4041,10 +4045,10 @@ if `applicant_participant.validator_participant_id` is defined:
 
 - load `CredentialSchema` `cs` from `applicant_participant.schema_id`
 - load `Ecosystem` `ecosystem` from `cs.ecosystem_id`
-- if `corporation` running the method is `ecosystem.corporation`, return true.
+- if `co.id` equals `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), return true.
 - else return false.
 
-*Option #3*: executed by `applicant_participant.corporation`: return true.
+*Option #3*: executed by the corporation that owns `applicant_participant` (i.e., `co.id` equals `applicant_participant.corporation_id`): return true.
 
 Example:
 
@@ -4167,7 +4171,7 @@ See [[ref: VT spec]].
 
 An [[ref: account]] that would like to create or update a `ParticipantSession` entry MUST send a Msg by specifying:
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uuid) (*mandatory*): id of the `ParticipantSession`.
 - `issuer_participant_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the issuance of a credential.
@@ -4180,9 +4184,9 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- `id` MUST be a valid uuid. If an entry `existing_entry` with `id` already exist, then  `existing_entry.corporation` MUST be equal to `corporation` AND `existing_entry.vs_operator` MUST be equal to `operator`, else abort.
+- `id` MUST be a valid uuid. If an entry `existing_entry` with `id` already exist, then `existing_entry.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) AND `existing_entry.vs_operator` MUST be equal to `operator`, else abort.
 
 if `issuer_participant_id` is null AND `verifier_participant_id` is null, MUST abort.
 
@@ -4195,7 +4199,7 @@ if `issuer_participant_id` is not null:
 - if `issuer_participant.role` is not ISSUER, abort.
 - if `issuer_participant` is not a [[ref: active participant]], abort.
 - if `issuer_participant.vs_operator` is not equal to `operator`, abort.
-- if `issuer_participant.corporation` is not equal to `corporation`, abort.
+- if `issuer_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
 
 if `verifier_participant_id` is not null:
@@ -4204,7 +4208,7 @@ if `verifier_participant_id` is not null:
 - if `verifier_participant.role` is not VERIFIER, abort.
 - if `verifier_participant` is not a [[ref: active participant]], abort.
 - if `verifier_participant.vs_operator` is not equal to `operator`, abort.
-- if `verifier_participant.corporation` is not equal to `corporation`, abort.
+- if `verifier_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
 - if `digest_sri` is present but not a valid digest SRI, abort.
 
 Define the **primary `Participant`** `perm`: if `verifier_participant` is not null, `perm` = `verifier_participant` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_participant` (the caller is the `vs_operator` of the issuer).
@@ -4255,7 +4259,7 @@ If **Credential Verification** (`verifier_participant` is NOT null):
 
 **Step 2: Calculate amounts payer must have available**
 
-Based on the credential schema pricing configuration, calculate the total amounts the payer (`corporation`) must have available.
+Based on the credential schema pricing configuration, calculate the total amounts the payer (the signing `corporation` account) must have available.
 
 Define the following variables:
 
@@ -4486,9 +4490,9 @@ If `participant.[fee_field]` > 0:
 
 3. Execute transfers and deposits for this beneficiary:
 
-   - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `participant.corporation` (in the appropriate denom).
-   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `participant.corporation` by `payee_trust_deposit`. Increase `participant.deposit` by the same value.
-   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `corporation` (payer) by `payer_trust_deposit`. Increase `payer_participant.deposit` by the same value.
+   - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `Corporation[participant.corporation_id].policy_address` (in the appropriate denom).
+   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `participant.corporation_id` by `payee_trust_deposit`. Increase `participant.deposit` by the same value.
+   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer) by `payer_trust_deposit`. Increase `payer_participant.deposit` by the same value.
 
 4. Accumulate agent rewards:
 
@@ -4507,8 +4511,8 @@ If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0:
 
 - `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
-- Transfer `agent_fees_to_account` to `agent_participant.corporation` in [[ref: native denom]].
-- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `agent_participant.corporation` by `agent_trust_deposit`. Increase `agent_participant.deposit` by the same value.
+- Transfer `agent_fees_to_account` to `agent_participant.corporation_id` in [[ref: native denom]].
+- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `agent_participant.corporation_id` by `agent_trust_deposit`. Increase `agent_participant.deposit` by the same value.
 
 **Wallet Agent Reward:**
 
@@ -4516,8 +4520,8 @@ If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 
 
 - `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
-- Transfer `wallet_agent_fees_to_account` to `wallet_agent_participant.corporation` in [[ref: native denom]].
-- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `wallet_agent_participant.corporation` by `wallet_agent_trust_deposit`. Increase `wallet_agent_participant.deposit` by the same value.
+- Transfer `wallet_agent_fees_to_account` to `wallet_agent_participant.corporation_id` in [[ref: native denom]].
+- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `wallet_agent_participant.corporation_id` by `wallet_agent_trust_deposit`. Increase `wallet_agent_participant.deposit` by the same value.
 
 ---
 
@@ -4527,6 +4531,7 @@ If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 
 
 Create a `ParticipantSessionRecord` `cspsr`:
 
+- `cspsr.id`: auto-incremented uint64
 - `cspsr.created`: `now`
 - `cspsr.issuer_participant_id`: `issuer_participant_id`
 - `cspsr.verifier_participant_id`: `verifier_participant_id`
@@ -4536,7 +4541,7 @@ Create a `ParticipantSessionRecord` `cspsr`:
 If new, create entry `ParticipantSession` `session`:
 
 - `session.id`: `id`
-- `session.corporation`: `corporation`
+- `session.corporation_id`: `co.id`
 - `session.vs_operator`: `operator`
 - `session.modified:` : `now`
 - `session.created:` : `now`
@@ -4594,7 +4599,7 @@ This method can only be called by either:
 
 ##### [MOD-PP-MSG-12-1] Slash Participant Trust Deposit parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry;
 - `amount` (number) (*mandatory*): the amount to slash
@@ -4607,7 +4612,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
@@ -4629,7 +4634,7 @@ if `applicant_participant.validator_participant_id` is defined:
 - set `validator_participant` = `applicant_participant`
 - while `validator_participant.validator_participant_id` is defined, 
   - load `validator_participant` from `validator_participant.validator_participant_id`.
-  - if `validator_participant` is a [[ref: active participant]] and `validator_participant.corporation` is who is running the method, => return true.
+  - if `validator_participant` is a [[ref: active participant]] and `validator_participant.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), => return true.
 - end
 - return false.
 
@@ -4637,7 +4642,7 @@ if `applicant_participant.validator_participant_id` is defined:
 
 - load `CredentialSchema` `cs` from `applicant_participant.schema_id`
 - load `Ecosystem` `ecosystem` from `cs.ecosystem_id`
-- if `corporation` running the method is `ecosystem.corporation`, return true.
+- if `co.id` equals `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), return true.
 - else return false.
 
 ###### [MOD-PP-MSG-12-2-3] Slash Participant Trust Deposit fee checks
@@ -4658,7 +4663,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_participant.modified` to `now`
 - set `applicant_participant.slashed_deposit` to `applicant_participant.slashed_deposit` + `amount`
 
-use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_participant.corporation`.
+use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_participant.corporation_id`.
 
 Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
 
@@ -4670,7 +4675,7 @@ Nevertheless, to get a new `Participant` entry for a given ecosystem, it is need
 
 ##### [MOD-PP-MSG-13-1] Repay Participant Slashed Trust Deposit parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry
 
@@ -4682,12 +4687,12 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- if `applicant_participant.corporation` is not equal to `corporation`, abort.
+- if `applicant_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
 
 ###### [MOD-PP-MSG-13-2-2] Repay Participant Slashed Trust Deposit fee checks
 
@@ -4702,7 +4707,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `applicant_participant.slashed_deposit` to trust deposit of `applicant_participant.corporation`.
+use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `applicant_participant.slashed_deposit` to trust deposit of `applicant_participant.corporation_id`.
 
 - Load `Participant` entry `applicant_participant` from `id`.
 - set `applicant_participant.repaid` to `now`
@@ -4721,7 +4726,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 
 ##### [MOD-PP-MSG-14-1] Self Create Participant parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `role` (ParticipantRole) (*mandatory*): ISSUER or VERIFIER.
 - `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
@@ -4758,14 +4763,14 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 Load `Participant` `validator_participant` from `validator_participant_id`.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `role` (ParticipantRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
 - `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): no check required.
-- `did`, MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any existing `Participant` entry has non-null `did` equal to the provided `did`, its `corporation` MUST equal the signing `corporation`; else method MUST abort (per-Participant `(did, corporation)` consistency invariant: at any block height, all `Participant` entries sharing a non-null `did` are owned by the same `Corporation`).
+- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant: at any block height, all `Participant` entries sharing a `did` are owned by the same `Corporation`).
 - `effective_from` MUST be in the future AND
   - MUST be greater or equal to `validator_participant.effective_from` AND
   - if `validator_participant.effective_until` is not null, MUST be lower than `validator_participant.effective_until`
@@ -4821,7 +4826,7 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.modified` to `now`.
 - `participant.role`: `role`.
 - `participant.did`: `did`.
-- `participant.corporation`: `corporation`.
+- `participant.corporation_id`: `co.id`.
 - `participant.vs_operator`: `vs_operator`.
 - `participant.created`: `now`
 - `participant.effective_from`: `effective_from`
@@ -4850,8 +4855,8 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
 
 This method CAN be executed by:
 
-- the `vs_operator` of the `Participant` entry, acting on behalf of `participant.corporation`; or
-- any ancestor validator of the `Participant` entry in the `Participant` tree (from the direct parent up to the root `Participant` entry). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` defined in `v`, or by any `operator` authorized by `v.corporation` for this message type.
+- the `vs_operator` of the `Participant` entry, acting on behalf of `Corporation[participant.corporation_id]`; or
+- any ancestor validator of the `Participant` entry in the `Participant` tree (from the direct parent up to the root `Participant` entry). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` defined in `v`, or by any `operator` authorized by `Corporation[v.corporation_id]` for this message type.
 
 This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the `did` registered in the `Participant` entry. Typical use cases include:
 
@@ -4863,7 +4868,7 @@ The method does not modify the [[ref: VPR]] state; it only emits an event that o
 
 ##### [MOD-PP-MSG-15-1] Trigger Resolver parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry for which a trust resolution must be triggered.
 
@@ -4875,12 +4880,11 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `perm` from `id`. If no entry found, abort.
 - `perm` MUST be an [[ref: active participant]], else abort.
-- `participant.did` MUST NOT be null, else abort.
 
 ###### [MOD-PP-MSG-15-2-2] Trigger Resolver authorization checks
 
@@ -4888,7 +4892,7 @@ At least one of the two authorization paths below MUST pass, else [[ref: transac
 
 *Path 1 — vs_operator of the target `Participant` entry*
 
-- `corporation` MUST be equal to `participant.corporation`.
+- `co.id` MUST equal `participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 - `operator` MUST be equal to `participant.vs_operator`.
 - [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 - [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
@@ -4901,7 +4905,7 @@ The target `perm` itself is excluded from this walk; only its ancestors (from th
 - while `v.validator_participant_id` is defined and != `participant.id` :
   - load `v` from `v.validator_participant_id`.
   - if `v` is not an [[ref: active participant]], continue with the next iteration.
-  - if corporation != v.corporation, continue with the next iteration.
+  - if `co.id` != `v.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), continue with the next iteration.
   - if [AUTHZ-CHECK-1](#authz-check-1-operator-authorization-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver`, then authorization is granted => match.
 
 If the walk terminates without a match, Path 2 fails.
@@ -5212,9 +5216,9 @@ VPR --> ValidatorAccount: Receive trust fees.
 ApplicantBrowser <-- ValidatorVS: notify `Participant` entry added for your DID.\nDID can now issue credentials of this schema.
 ```
 
-### Trust deposit module
+### Trust Deposit Module
 
-#### Trust deposit module overview
+#### Trust Deposit Module Overview
 
 *This section is non-normative.*
 
@@ -5295,13 +5299,13 @@ Implementers MUST make sure, for each processed block reward, that the yearly ef
 
 #### [MOD-TD-MSG-1] Adjust Trust Deposit
 
-This method is used to increase or decrease the [[ref: trust deposit]] of a specific corporation account.
+This method is used to increase or decrease the [[ref: trust deposit]] of a specific [[ref: corporation]] (identified by its `corporation_id`).
 
 Only the modules that require trust deposit manipulation CAN call this method. If trust deposit has been slashed and not repaid, method execution MUST abort.
 
 ##### [MOD-TD-MSG-1-1] Adjust Trust Deposit method parameters
 
-- `corporation` (group) (*mandatory*): corporation owner of the [[ref: trust deposit]] we want to adjust.
+- `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]] we want to adjust.
 - `augend` (number) (*mandatory*): value to add to the deposit, in [[ref: denom]].
 
 ##### [MOD-TD-MSG-1-2] Adjust Trust Deposit precondition checks
@@ -5316,7 +5320,7 @@ Value checks:
 
 - `augend` (number) (*mandatory*): MUST be strictly positive or strictly negative.
 
-- load `TrustDeposit` entry `td` for `corporation`.
+- load `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`.
 
   - if `td` does not exist:
     - if `augend` is negative, [[ref: transaction]] MUST abort.
@@ -5329,7 +5333,7 @@ Value checks:
 
 Additionally:
 
-- load `TrustDeposit` entry `td` for `corporation`.
+- load `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`.
 - if `td` exists:
   - if `augend` is positive:
     - calculate `needed_deposit` = `augend` - `td.refunded`. 
@@ -5337,7 +5341,7 @@ Additionally:
   - else `needed_deposit` = 0.
 - else `needed_deposit` = `augend`.
 
-- `corporation` MUST have `needed_deposit` in its [[ref: account]], else [[ref: transaction]] MUST abort.
+- `Corporation[corporation_id].policy_address` MUST have `needed_deposit` in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
 ##### [MOD-TD-MSG-1-3] Adjust Trust Deposit execution of the method
 
@@ -5345,11 +5349,11 @@ If all precondition checks passed, method is executed in a [[ref: transaction]].
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- if a `TrustDeposit` entry `td` does not exist for this `corporation`, create entry `td`:
+- if a `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` does not exist, create entry `td`:
 
-  - transfer `augend` from `corporation` account to `TrustDeposit` account.
+  - transfer `augend` from `Corporation[corporation_id].policy_address` to `TrustDeposit` account.
   - calculate `augend_share` = `augend` / `GlobalVariables.trust_deposit_share_value`.
-  - set `td.corporation` to `corporation`;
+  - set `td.corporation_id` to `corporation_id`;
   - set `td.deposit` to `augend`;
   - set `td.share` to `augend_share`;
   - set `td.refunded` to 0.
@@ -5365,14 +5369,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
     - if `td.refunded` >= `augend` :
       - set `td.refunded` to `td.refunded` - `augend`
     - else
-      - use bank? to transfer `augend` - `td.refunded` from corporation account to corporation `TrustDeposit` account.
+      - use bank? to transfer `augend` - `td.refunded` from `Corporation[corporation_id].policy_address` to `TrustDeposit` account.
       - set `td.deposit` to `td.deposit` + `augend` - `td.refunded`
       - calculate `missing_augend_share` from missing tokens :  `missing_augend_share` = (`augend` - `td.refunded`) / `GlobalVariables.trust_deposit_share_value`.
       - set `td.share` to `td.share` + `missing_augend_share`
       - set `td.refunded` to 0
   
   - else
-    - use bank? to transfer `augend` from `account` to `TrustDeposit` account.
+    - use bank? to transfer `augend` from `Corporation[corporation_id].policy_address` to `TrustDeposit` account.
     - calculate `augend_share` = `augend` / `GlobalVariables.trust_deposit_share_value`.
     - set `td.deposit` to `td.deposit` + `augend`
     - set `td.share` to `td.share` + `augend_share`
@@ -5394,18 +5398,18 @@ If `claimable_yield` is positive, it can be claimed.
 
 ##### [MOD-TD-MSG-2-1] Reclaim Trust Deposit Yield method parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 
 ##### [MOD-TD-MSG-2-2] Reclaim Trust Deposit Yield precondition checks
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 
 ###### [MOD-TD-MSG-2-2-1] Reclaim Trust Deposit Yield basic checks
 
-- Load `TrustDeposit` entry `td` from `corporation`.
+- Load `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
 - if `td.slashed_deposit` > 0 and `td.repaid_deposit` < `td.slashed_deposit` => deposit has been slashed and not repaid, so MUST abort.
 - calculate `claimable_yield` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
 - if `claimable_yield` <= 0, [[ref: transaction]] MUST abort.
@@ -5418,12 +5422,12 @@ Fee payer running the [[ref: transaction]] MUST have the required [[ref: estimat
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-For the `TrustDeposit` entry `td` linked to `corporation`:
+For the `TrustDeposit` entry `td` linked to `co.id`:
 
-- Load `TrustDeposit` entry `td` from `corporation`.
+- Load `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 - calculate `claimable_yield` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
 - update `td.share` = `td.share` - `claimable_yield` / `GlobalVariables.trust_deposit_share_value`
-- transfer `claimable_yield` from `TrustDeposit` account to corporation account.
+- transfer `claimable_yield` from `TrustDeposit` account to `co.policy_address`.
 
 
 #### [MOD-TD-MSG-3] Void
@@ -5470,7 +5474,7 @@ This method is for network governance authority slash. For ecosystem slash, see 
 
 ##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
 
-- `corporation` (group) (*mandatory*): corporation we want to slash.
+- `corporation_id` (uint64) (*mandatory*): id of the corporation we want to slash.
 - `amount` (number) (*mandatory*): value to slash, in [[ref: denom]].
 
 ##### [MOD-TD-MSG-5-2] Slash Trust Deposit precondition checks
@@ -5482,7 +5486,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `amount` must be > 0.
-- `TrustDeposit` entry `td` MUST exist for this `corporation`, and `td.deposit` MUST be greater or equal to `amount`.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.deposit` MUST be greater or equal to `amount`.
 
 ###### [MOD-TD-MSG-5-2-2] Slash Trust Deposit fee checks
 
@@ -5494,14 +5498,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-For the `TrustDeposit` entry `td` linked to `corporation`:
+For the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`:
 
 - set `td.deposit` to `td.deposit` - `amount`.
 - set `td.share` to `td.share` - `amount` / `GlobalVariables.trust_deposit_share_value`
 - burn `amount` from `TrustDeposit` account.
 - set `td.slashed_deposit` to `td.slashed_deposit` + `amount`
 - set `td.last_slashed` to now
-- if `td.slash_count` is undefined, set it to `1`, else set it to `td.slash_count` + 1
+- set `td.slash_count` to `td.slash_count` + 1
 
 #### [MOD-TD-MSG-6] Repay Slashed Trust Deposit
 
@@ -5509,7 +5513,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-TD-MSG-6-1] Repay Slashed Trust Deposit method parameters
 
-- `corporation` (group): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `amount` (number) (*mandatory*): value to repay, in [[ref: denom]].
 
@@ -5521,16 +5525,16 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `amount` must be > 0.
-- `TrustDeposit` entry `td` MUST exist for this `corporation`, and `amount` MUST be exactly equal to `td.slashed_deposit` - `td.repaid_deposit`.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) MUST exist, and `amount` MUST be exactly equal to `td.slashed_deposit` - `td.repaid_deposit`.
 
 ###### [MOD-TD-MSG-6-2-2] Repay Slashed Trust Deposit fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- `corporation` MUST have the required `amount` in its account, else [[ref: transaction]] MUST abort.
+- `co.policy_address` MUST have the required `amount` in its account, else [[ref: transaction]] MUST abort.
 
 ##### [MOD-TD-MSG-6-3] Repay Slashed Trust Deposit execution of the method
 
@@ -5538,7 +5542,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-For the `TrustDeposit` entry `td` linked to corporation `account`:
+For the `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account):
 
 - set `td.deposit` to `td.deposit` + `amount`.
 - set `td.share` to `td.share` + `amount` / `GlobalVariables.trust_deposit_share_value`
@@ -5556,7 +5560,7 @@ Make sure to **properly protect access to the execution of this method** else it
 
 ##### [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters
 
-- `corporation` (group) (*mandatory*): corporation of the [[ref: trust deposit]] we want to burn.
+- `corporation_id` (uint64) (*mandatory*): id of the corporation of the [[ref: trust deposit]] we want to burn.
 - `amount` (number) (*mandatory*): value to burn, in [[ref: denom]].
 
 :::warning
@@ -5573,7 +5577,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `amount` must be > 0.
-- `TrustDeposit` entry `td` MUST exist for this `corporation`, and `amount` MUST be lower or equal than `td.deposit`.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `amount` MUST be lower or equal than `td.deposit`.
 
 ###### [MOD-TD-MSG-7-2-2] Burn Ecosystem Slashed Trust Deposit fee checks
 
@@ -5585,7 +5589,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-For the `TrustDeposit` entry `td` linked to `account`:
+For the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`:
 
 - set `td.deposit` to `td.deposit` - `amount`.
 - set `td.share` to `td.share` - `amount` / `GlobalVariables.trust_deposit_share_value`
@@ -5597,17 +5601,17 @@ Any [[ref: account]] CAN run this [[ref: query]]. As this method does not modify
 
 ##### [MOD-TD-QRY-1-1] Get Trust Deposit query parameters
 
-- `account` (account) (*mandatory*): the [[ref: account]] for which we want to get the [[ref: trust deposit]] value.
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] for which we want to get the [[ref: trust deposit]] value.
 
 ##### [MOD-TD-QRY-1-2] Get Trust Deposit query checks
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
-- `account` must be a valid [[ref: account]].
+- `corporation_id` must be a valid uint64.
 
 ##### [MOD-TD-QRY-1-3] Get Trust Deposit execution of the query
 
-If found, returns [[ref: trust deposit]], else return not found.
+Return the `TrustDeposit` entry whose `corporation_id` equals the supplied `corporation_id`, if any. If no entry exists, return not found.
 
 #### [MOD-TD-QRY-2] List Module Parameters
 
@@ -5634,6 +5638,8 @@ Return the list of the existing parameters and their values.
 }
 ```
 
+### Delegation Module
+
 #### [MOD-DE-MSG-1] Grant Fee Allowance
 
 This method can only be called directly by the following methods:
@@ -5643,8 +5649,8 @@ This method can only be called directly by the following methods:
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
-- `corporation` (group) (*mandatory*): the corporation that grants the fees.
-- `grantee` (account) (*mandatory*): the account that receives the fee grant from `corporation`.
+- `grantor_corporation_id` (uint64) (*mandatory*): id of the corporation that grants the fees.
+- `grantee` (account) (*mandatory*): the account that receives the fee grant from `grantor_corporation_id`.
 - `msg_types` (Msg[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
 - `expiration` (timestamp) (*optional*): when the grant expires.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum spendable
@@ -5670,7 +5676,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 Create (or update if it already exist) FeeGrant `feegrant`:
 
-- set `feegrant.grantor` to `corporation`
+- set `feegrant.grantor_corporation_id` to `grantor_corporation_id`
 - set `feegrant.grantee` to `grantee`
 - set `feegrant.msg_types` to `msg_types`
 - set `feegrant.expiration` to `expiration`
@@ -5686,16 +5692,16 @@ This method can only be called directly by the following methods:
 - [Revoke Operator Authorization](#mod-de-msg-4-revoke-operator-authorization)
 - the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration))
 
-##### [MOD-DE-MSG-2-1] Revoke Allowance method parameters
+##### [MOD-DE-MSG-2-1] Revoke Fee Allowance method parameters
 
-- `corporation` (group) (*mandatory*): the corporation.
+- `grantor_corporation_id` (uint64) (*mandatory*): id of the corporation that originally granted the fees.
 - `grantee` (account) (*mandatory*): the grantee we want to revoke.
 
 ##### [MOD-DE-MSG-2-2] Revoke Fee Allowance basic checks
 
 MUST abort if one of these conditions fails:
 
-- `corporation` (group) (*mandatory*): MUST be specified.
+- `grantor_corporation_id` (uint64) (*mandatory*): MUST be specified.
 - `grantee` (account) (*mandatory*): MUST be specified.
 
 ##### [MOD-DE-MSG-2-3] Revoke Fee Allowance fee checks
@@ -5704,7 +5710,7 @@ MUST abort if one of these conditions fails:
 
 ##### [MOD-DE-MSG-2-4] Revoke Fee Allowance execution of the method
 
-If FeeGrant entry for this (`corporation`, `grantee`) exist, delete it, else do nothing.
+If FeeGrant entry for this (`grantor_corporation_id`, `grantee`) exist, delete it, else do nothing.
 
 #### [MOD-DE-MSG-3] Grant Operator Authorization
 
@@ -5713,8 +5719,8 @@ If FeeGrant entry for this (`corporation`, `grantee`) exist, delete it, else do 
 
 ##### [MOD-DE-MSG-3-1] Grant Operator Authorization method parameters
 
-- `corporation` (group) (*mandatory*): (Signer) the signing corporation on whose behalf this message is executed.
-- `operator` (account) (*optional*): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `grantee` (account) (*mandatory*): the account that receives the authorization from `corporation`.
 - `msg_types` (Msg[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
 - `expiration` (timestamp) (*optional*): when the authorization (and its optional feegrant) expires.
@@ -5728,7 +5734,7 @@ If FeeGrant entry for this (`corporation`, `grantee`) exist, delete it, else do 
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `CreateOrUpdateParticipantSession` which is not allowed.
@@ -5742,7 +5748,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - Check if a **VS Operator Authorization** exists for `corporation` and `grantee`. If this is the case, MUST abort.
 
 ::: warning
-An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for `participant.corporation` and `participant.vs_operator`. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
+An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for `participant.corporation_id` and `participant.vs_operator`. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
 :::
 
 ##### [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks
@@ -5753,9 +5759,13 @@ An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorizat
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-Create (or update if it already exist) Authorization `authz`:
+Look up an existing `OperatorAuthorization` `authz` whose `authz.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) AND `authz.operator` equals `grantee`.
 
-- set `authz.corporation` to `corporation`
+If no such entry exists, create a new one with `authz.id = auto-incremented uint64`. If an entry already exists, reuse it and preserve `authz.id`.
+
+Then set / overwrite the following fields on `authz`:
+
+- set `authz.corporation_id` to `co.id`
 - set `authz.operator` to `grantee`
 - set `authz.msg_types` to `msg_types`
 - set `authz.expiration` to `expiration`
@@ -5765,11 +5775,11 @@ Create (or update if it already exist) Authorization `authz`:
 
 if `with_feegrant` is false:
 
-- call Revoke Fee Allowance (`corporation`, `grantee`).
+- call Revoke Fee Allowance (`co.id`, `grantee`).
 
 else if `with_feegrant` is true:
 
-- grant Fee Allowance (`corporation`, `grantee`, `msg_types`, `expiration`, `feegrant_spend_limit`, `feegrant_spend_limit_period`).
+- grant Fee Allowance (`co.id`, `grantee`, `msg_types`, `expiration`, `feegrant_spend_limit`, `feegrant_spend_limit_period`).
 
 #### [MOD-DE-MSG-4] Revoke Operator Authorization
 
@@ -5778,7 +5788,7 @@ else if `with_feegrant` is true:
 
 ##### [MOD-DE-MSG-4-1] Revoke Operator Authorization method parameters
 
-- `corporation` (group) (*mandatory*): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `grantee` (account) (*mandatory*): the account that will be revoked its authorization`.
 
@@ -5786,10 +5796,10 @@ else if `with_feegrant` is true:
 
 MUST abort if one of these conditions fails:
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- An Authorization entry MUST exist for this (`corporation`, `grantee`)
+- An `OperatorAuthorization` entry MUST exist for this (`co.id`, `grantee`) (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
 
 ##### [MOD-DE-MSG-4-3] Revoke Operator Authorization fee checks
 
@@ -5797,8 +5807,8 @@ MUST abort if one of these conditions fails:
 
 ##### [MOD-DE-MSG-4-4] Revoke Operator Authorization execution of the method
 
-- Delete Authorization entry for this (`corporation`, `grantee`).
-- revoke Fee Allowance (`corporation`, `grantee`).
+- Delete the `OperatorAuthorization` entry for this (`co.id`, `grantee`).
+- revoke Fee Allowance (`co.id`, `grantee`).
 
 #### [MOD-DE-MSG-5] Grant VS Operator Authorization
 
@@ -5807,13 +5817,13 @@ This method can only be called directly by the following Participant module meth
 - [Start Participant OP](#mod-pp-msg-1-start-participant-op)
 - [Self Create Participant](#mod-pp-msg-14-self-create-participant)
 
-It creates a new [ParticipantAuthorizationRecord](#participantauthorizationrecord) inside `VSOperatorAuthorization[corporation, vs_operator]` and, if the record enables a fee grant and its `expiration` is in the future, synchronises the on-chain `FeeGrant` for the containing VSOA.
+It creates a new [ParticipantAuthorizationRecord](#participantauthorizationrecord) inside `VSOperatorAuthorization[corporation_id, vs_operator]` and, if the record enables a fee grant and its `expiration` is in the future, synchronises the on-chain `FeeGrant` for the containing VSOA.
 
 This method does NOT read `Participant` state. All authorization configuration is provided by the caller.
 
 ##### [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters
 
-- `corporation` (group) (*mandatory*): the corporation delegating the authorization.
+- `corporation_id` (uint64) (*mandatory*): id of the corporation delegating the authorization.
 - `vs_operator` (account) (*mandatory*): the account receiving the authorization.
 - `record` ([ParticipantAuthorizationRecord](#participantauthorizationrecord)) (*mandatory*): the full record to store.
 
@@ -5821,11 +5831,11 @@ This method does NOT read `Participant` state. All authorization configuration i
 
 If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` and `vs_operator` MUST NOT be null.
+- `corporation_id` and `vs_operator` MUST NOT be null.
 - `record.participant_id` MUST NOT match an existing `ParticipantAuthorizationRecord` anywhere in the store (each record is globally unique by `participant_id`).
 - `record.msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
-- No `OperatorAuthorization` `oauthz` where `oauthz.corporation` = `corporation` and `oauthz.operator` = `vs_operator` MUST exist.
-- No other `VSOperatorAuthorization` `vsoauthz'` where `vsoauthz'.vs_operator` = `vs_operator` AND `vsoauthz'.corporation` != `corporation` MUST exist. In other words, a vs-agent VPR account cannot be controlled by multiple corporations.
+- No `OperatorAuthorization` `oauthz` where `oauthz.corporation_id` = `corporation_id` and `oauthz.operator` = `vs_operator` MUST exist.
+- No other `VSOperatorAuthorization` `vsoauthz'` where `vsoauthz'.vs_operator` = `vs_operator` AND `vsoauthz'.corporation_id` != `corporation_id` MUST exist. In other words, a vs-agent VPR account cannot be controlled by multiple corporations.
 
 ::: warning
 A **VS Operator Authorization** record CAN be granted ONLY IF no **OperatorAuthorization** exists for the same `(corporation, vs_operator)` pair. **VS Operator Authorization** and **Operator Authorization** are mutually exclusive for a given grantee.
@@ -5842,7 +5852,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Initialize the runtime balances on `record`:
   - if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
   - if `record.fee_spend_limit` is set, set `record.remaining_fee_spend := record.fee_spend_limit`.
-- Load `VSOperatorAuthorization` `vsoa` with `(corporation, vs_operator)`. If it does not exist, create a new `vsoa` with `vsoa.corporation = corporation`, `vsoa.vs_operator = vs_operator`, `vsoa.records = []`.
+- Load the `VSOperatorAuthorization` `vsoa` whose `vsoa.corporation_id = corporation_id` AND `vsoa.vs_operator = vs_operator`. If it does not exist, create a new `vsoa` with `vsoa.id = auto-incremented uint64`, `vsoa.corporation_id = corporation_id`, `vsoa.vs_operator = vs_operator`, `vsoa.records = []`. If `vsoa` already exists, reuse it and preserve `vsoa.id`.
 - Append `record` to `vsoa.records`.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
 
@@ -5856,8 +5866,8 @@ This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-o
   - if `r.with_feegrant` is true AND `r.expiration` > now():
     - if `max_expire` is null OR `r.expiration` > `max_expire`, set `max_expire` = `r.expiration`.
     - add all entries of `r.msg_types` to `feegrant_msg_types`.
-- if `max_expire` is null (no active feegrant-enabled record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation`, `vsoa.vs_operator`).
-- else: call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation`, `vsoa.vs_operator`, `feegrant_msg_types`, `max_expire`, null, null).
+- if `max_expire` is null (no active feegrant-enabled record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`).
+- else: call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`, `feegrant_msg_types`, `max_expire`, null, null).
 
 > Note: `max_expire` is bounded by the farthest `record.expiration` among feegrant-enabled records. The chain-level `FeeGrant` `msg_types` is the union of all such records' `msg_types`. Per-record spend limits are enforced at [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) time; they are not replicated on the `FeeGrant` object.
 
@@ -5894,6 +5904,10 @@ This method does NOT read `Participant` state.
 - Remove `record` from `vsoa.records`.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
 - If `vsoa.records` is now empty, delete `vsoa`.
+
+#### [MOD-DE-MSG-7] Void
+
+#### [MOD-DE-MSG-8] Void
 
 #### [MOD-DE-MSG-9] Update VS Operator Authorization Expiration
 
@@ -5934,7 +5948,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-DE-QRY-1-1] List Operator Authorizations parameters
 
-- `corporation` (group) (*optional*): filter by the corporation group that granted the authorization.
+- `corporation_id` (uint64) (*optional*): filter by the id of the corporation that granted the authorization.
 - `operator` (account) (*optional*): filter by the operator account that received the authorization.
 - `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
 
@@ -5956,7 +5970,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-DE-QRY-2-1] List VS Operator Authorizations parameters
 
-- `corporation` (group) (*optional*): filter by the corporation group that granted the authorization.
+- `corporation_id` (uint64) (*optional*): filter by the id of the corporation that granted the authorization.
 - `vs_operator` (account) (*optional*): filter by the VS operator account that received the authorization.
 - `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
 
@@ -5972,6 +5986,46 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 Return a list of `VSOperatorAuthorization` entries matching the filter criteria, or an empty list if nothing found.
 
+#### [MOD-DE-QRY-3] Get Operator Authorization
+
+Anyone CAN execute this method.
+
+##### [MOD-DE-QRY-3-1] Get Operator Authorization parameters
+
+- `id` (uint64) (*mandatory*): id of the `OperatorAuthorization` entry to retrieve.
+
+##### [MOD-DE-QRY-3-2] Get Operator Authorization checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- if a mandatory parameter is not present, [[ref: query]] MUST fail.
+- `id` MUST refer to an existing `OperatorAuthorization` entry.
+
+##### [MOD-DE-QRY-3-3] Get Operator Authorization execution
+
+Return the `OperatorAuthorization` entry whose `id` matches the supplied `id`.
+
+#### [MOD-DE-QRY-4] Get VS Operator Authorization
+
+Anyone CAN execute this method.
+
+##### [MOD-DE-QRY-4-1] Get VS Operator Authorization parameters
+
+- `id` (uint64) (*mandatory*): id of the `VSOperatorAuthorization` entry to retrieve.
+
+##### [MOD-DE-QRY-4-2] Get VS Operator Authorization checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- if a mandatory parameter is not present, [[ref: query]] MUST fail.
+- `id` MUST refer to an existing `VSOperatorAuthorization` entry.
+
+##### [MOD-DE-QRY-4-3] Get VS Operator Authorization execution
+
+Return the `VSOperatorAuthorization` entry whose `id` matches the supplied `id`, including its `records` (per-permission `ParticipantAuthorizationRecord` entries).
+
+### Digests Module
+
 #### [MOD-DI-MSG-1] Store Digest
 
 - Any authorized `operator` CAN execute this method on behalf of a `corporation`.
@@ -5979,7 +6033,7 @@ Return a list of `VSOperatorAuthorization` entries matching the filter criteria,
 
 ##### [MOD-DI-MSG-1-1] Store Digest method parameters
 
-- `corporation` (group) (*mandatory*): (Signer) the signing corporation on whose behalf this message is executed.
+- `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `digest` (string) (*mandatory*): digest to store.
 
@@ -5991,7 +6045,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (group): (Signer) signature must be verified.
+- `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-precondition-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - if `digest` is not present, abort.
@@ -6005,11 +6059,10 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-
-Create Digest `digest`:
-
-- set `digest.digest` to digest
-- set `digest.created` to now.
+- if a `Digest` entry `d` already exists with `d.digest` = `digest`, the method is a no-op (idempotent): execution returns success without modifying state.
+- else create `Digest` entry `d`:
+  - set `d.digest` to `digest`.
+  - set `d.created` to `now`.
 
 #### [MOD-DI-QRY-1] Get Digest
 
@@ -6042,30 +6095,33 @@ Return found `Digest` entry (if any) matching `digest`.
 }
 ```
 
+### Exchange Rate Module
+
 #### [MOD-XR-MSG-1] Create Exchange Rate
 
 The **Create Exchange Rate** method allows creating an `ExchangeRate` entry for a given `(base_asset_type, base_asset, quote_asset_type, quote_asset)` pair.
 
 - Only a governance proposal CAN execute this method.
 
-##### [MOD-XR-MSG-1] Create Exchange Rate method parameters
+##### [MOD-XR-MSG-1-1] Create Exchange Rate method parameters
 
-- `base_asset_type` (PricingAssetType, *mandatory*)  
-- `base_asset` (string, *mandatory*)  
-- `quote_asset_type` (PricingAssetType, *mandatory*)  
-- `quote_asset` (string, *mandatory*)  
-- `rate` (string, *mandatory*)  
-- `rate_scale` (uint32, *mandatory*)  
-- `validity_duration` (duration, *mandatory*)
+- `base_asset_type` (PricingAssetType) (*mandatory*)  
+- `base_asset` (string) (*mandatory*)  
+- `quote_asset_type` (PricingAssetType) (*mandatory*)  
+- `quote_asset` (string) (*mandatory*)  
+- `rate` (string) (*mandatory*)  
+- `rate_scale` (uint32) (*mandatory*)  
+- `validity_duration` (duration) (*mandatory*)
 
-##### [MOD-XR-MSG-1] Create Exchange Rate precondition checks
+##### [MOD-XR-MSG-1-2] Create Exchange Rate precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-XR-MSG-1] Create Exchange Rate basic checks
+###### [MOD-XR-MSG-1-2-1] Create Exchange Rate basic checks
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- if a mandatory parameter is not present, method MUST abort.
 - **Asset type validity**
   - `base_asset_type` MUST be a valid `PricingAssetType` value.
   - `quote_asset_type` MUST be a valid `PricingAssetType` value.
@@ -6108,11 +6164,11 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 - **validity_duration**
   - `validity_duration` MUST be greater or equal to `1 minute`.
   
-###### [MOD-XR-MSG-1] Create Exchange Rate fee checks
+###### [MOD-XR-MSG-1-2-2] Create Exchange Rate fee checks
 
 Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 
-##### [MOD-XR-MSG-1] Create Exchange Rate execution of the method
+##### [MOD-XR-MSG-1-3] Create Exchange Rate execution of the method
 
 Create `ExchangeRate` entry `xr`:
 
@@ -6134,35 +6190,35 @@ The **Update Exchange Rate** method allows an operator authorized by network gov
 
 - Only the `operator` designated in an `ExchangeRateAuthorization` matching the target `ExchangeRate` CAN execute this method.
 
-##### [MOD-XR-MSG-2] Update Exchange Rate method parameters
+##### [MOD-XR-MSG-2-1] Update Exchange Rate method parameters
 
 - `operator` (account) (*mandatory*): (Signer) the account pushing the new rate.
-- `id` (uint64, *mandatory*): id of the target `ExchangeRate` entry.
-- `rate` (string, *mandatory*): the new fixed-point integer rate value.
+- `id` (uint64) (*mandatory*): id of the target `ExchangeRate` entry.
+- `rate` (string) (*mandatory*): the new fixed-point integer rate value.
 
-##### [MOD-XR-MSG-2] Update Exchange Rate precondition checks
+##### [MOD-XR-MSG-2-2] Update Exchange Rate precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-XR-MSG-2] Update Exchange Rate basic checks
+###### [MOD-XR-MSG-2-2-1] Update Exchange Rate basic checks
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `operator` (account): (Signer) signature MUST be verified.
-- `id` (uint64, *mandatory*) MUST refer to an existing `ExchangeRate` entry `xr` with `xr.state` = true.
+- if a mandatory parameter is not present, method MUST abort.
+- `operator` (account): (Signer) signature must be verified.
+- `id` MUST refer to an existing `ExchangeRate` entry `xr` with `xr.state` = true.
 - `rate` MUST be strictly greater than `"0"`.
-
 - **Authorization**:
   - An `ExchangeRateAuthorization` `xrauthz` MUST exist where `xrauthz.xr_id` = `id` and `xrauthz.operator` = `operator`.
   - `xrauthz.expiration` MUST be in the future (`now() < xrauthz.expiration`).
   - If `xrauthz.min_interval` is set, then `now() - xr.updated` MUST be greater than or equal to `xrauthz.min_interval`.
   - If `xrauthz.max_deviation_bps` is set, then `|rate - xr.rate| * 10000` MUST be less than or equal to `xrauthz.max_deviation_bps * xr.rate` (i.e., the relative change between the new `rate` and `xr.rate` MUST NOT exceed `xrauthz.max_deviation_bps` basis points). Both values share the same `xr.rate_scale`, since `MOD-XR-MSG-2` does not update the scale.
 
-###### [MOD-XR-MSG-2] Update Exchange Rate fee checks
+###### [MOD-XR-MSG-2-2-2] Update Exchange Rate fee checks
 
 Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 
-##### [MOD-XR-MSG-2] Update Exchange Rate execution of the method
+##### [MOD-XR-MSG-2-3] Update Exchange Rate execution of the method
 
 Load `ExchangeRate` `xr`.
 
@@ -6170,38 +6226,38 @@ Load `ExchangeRate` `xr`.
 - `xr.expires` = block time + `xr.validity_duration`
 - `xr.updated` = block time
 
-#### [MOD-XR-MSG-3] Toggle Exchange Rate State
+#### [MOD-XR-MSG-3] Set Exchange Rate State
 
-The **Toggle Exchange Rate State** method allows an authorized actor to enable or disable an exchange rate.
+The **Set Exchange Rate State** method allows an authorized actor to enable or disable an exchange rate.
 
-##### [MOD-XR-MSG-3] Toggle Exchange Rate State method parameters
+##### [MOD-XR-MSG-3-1] Set Exchange Rate State method parameters
 
-- `id` (uint64, *mandatory*): id of the exchange rate
-- `state` (boolean, *mandatory*): true to set enabled, false to set disabled
+- `id` (uint64) (*mandatory*): id of the exchange rate.
+- `state` (boolean) (*mandatory*): true to set enabled, false to set disabled.
 
-##### [MOD-XR-MSG-3] Toggle Exchange Rate State precondition checks
+##### [MOD-XR-MSG-3-2] Set Exchange Rate State precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-XR-MSG-3] Toggle Exchange Rate State basic checks
+###### [MOD-XR-MSG-3-2-1] Set Exchange Rate State basic checks
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
   - Only a governance proposal can enable or disable an exchange rate.
+- `id` MUST refer to an existing `ExchangeRate` entry.
 
-- ExchangeRate with id `id` MUST exist.
-  
-###### [MOD-XR-MSG-3] Toggle Exchange Rate State fee checks
+###### [MOD-XR-MSG-3-2-2] Set Exchange Rate State fee checks
 
 Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 
-##### [MOD-XR-MSG-3] Toggle Exchange Rate State execution of the method
+##### [MOD-XR-MSG-3-3] Set Exchange Rate State execution of the method
 
 Load `ExchangeRate` `xr`.
 
-- set `xr.state` to !`xr.state`.
-- set `xr.updated` to block time
+- set `xr.state` to `state`.
+- set `xr.updated` to block time.
 
 #### [MOD-XR-MSG-4] Grant Exchange Rate Authorization
 
@@ -6209,7 +6265,7 @@ The **Grant Exchange Rate Authorization** method creates (or updates) an `Exchan
 
 - Only a governance proposal CAN execute this method.
 
-##### [MOD-XR-MSG-4] Grant Exchange Rate Authorization method parameters
+##### [MOD-XR-MSG-4-1] Grant Exchange Rate Authorization method parameters
 
 - `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
 - `operator` (account) (*mandatory*): the account receiving the authorization.
@@ -6217,14 +6273,15 @@ The **Grant Exchange Rate Authorization** method creates (or updates) an `Exchan
 - `min_interval` (duration) (*optional*): minimum time between two successive [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls under this authorization.
 - `max_deviation_bps` (uint32) (*optional*): maximum relative change per update, in basis points.
 
-##### [MOD-XR-MSG-4] Grant Exchange Rate Authorization precondition checks
+##### [MOD-XR-MSG-4-2] Grant Exchange Rate Authorization precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-XR-MSG-4] Grant Exchange Rate Authorization basic checks
+###### [MOD-XR-MSG-4-2-1] Grant Exchange Rate Authorization basic checks
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
   - Only a governance proposal can grant an `ExchangeRateAuthorization`.
 - `xr_id` MUST refer to an existing `ExchangeRate` entry.
@@ -6233,11 +6290,11 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 - `min_interval`, if specified, MUST be a valid, strictly positive duration.
 - `max_deviation_bps`, if specified, MUST be strictly greater than `0` and less than or equal to `10000`.
 
-###### [MOD-XR-MSG-4] Grant Exchange Rate Authorization fee checks
+###### [MOD-XR-MSG-4-2-2] Grant Exchange Rate Authorization fee checks
 
 Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 
-##### [MOD-XR-MSG-4] Grant Exchange Rate Authorization execution of the method
+##### [MOD-XR-MSG-4-3] Grant Exchange Rate Authorization execution of the method
 
 Create (or update if it already exists) `ExchangeRateAuthorization` `xrauthz` keyed by (`xr_id`, `operator`):
 
@@ -6253,28 +6310,29 @@ The **Revoke Exchange Rate Authorization** method deletes an existing `ExchangeR
 
 - Only a governance proposal CAN execute this method.
 
-##### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization method parameters
+##### [MOD-XR-MSG-5-1] Revoke Exchange Rate Authorization method parameters
 
 - `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
 - `operator` (account) (*mandatory*): the account whose authorization is revoked.
 
-##### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization precondition checks
+##### [MOD-XR-MSG-5-2] Revoke Exchange Rate Authorization precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization basic checks
+###### [MOD-XR-MSG-5-2-1] Revoke Exchange Rate Authorization basic checks
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
   - Only a governance proposal can revoke an `ExchangeRateAuthorization`.
 - An `ExchangeRateAuthorization` entry MUST exist for (`xr_id`, `operator`).
 
-###### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization fee checks
+###### [MOD-XR-MSG-5-2-2] Revoke Exchange Rate Authorization fee checks
 
 Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 
-##### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization execution of the method
+##### [MOD-XR-MSG-5-3] Revoke Exchange Rate Authorization execution of the method
 
 - Delete `ExchangeRateAuthorization` entry for (`xr_id`, `operator`).
 
@@ -6284,8 +6342,8 @@ Any [[ref: account]] CAN run this [[ref: query]].
 
 ##### [MOD-XR-QRY-1-1] Get Exchange Rate query parameters
 
-- `state` (boolean, *optional*): to force state, enabled or disabled
-- `expire_ts` (timestamp, *optional*): return only if expire_ts is greater than `expire_ts`
+- `state` (boolean) (*optional*): to force state, enabled or disabled.
+- `expires` (timestamp) (*optional*): only return entries whose `xr.expires` is strictly greater than `expires` (i.e., entries still valid at this timestamp).
 
 AND:
 
@@ -6295,10 +6353,10 @@ AND:
 
 OR:
 
-- `base_asset_type` (PricingAssetType, *mandatory*)  
-- `base_asset` (string, *mandatory*)  
-- `quote_asset_type` (PricingAssetType, *mandatory*)  
-- `quote_asset` (string, *mandatory*)  
+- `base_asset_type` (PricingAssetType) (*mandatory*)  
+- `base_asset` (string) (*mandatory*)  
+- `quote_asset_type` (PricingAssetType) (*mandatory*)  
+- `quote_asset` (string) (*mandatory*)  
 )
 
 ##### [MOD-XR-QRY-1-2] Get Exchange Rate query checks
@@ -6321,14 +6379,24 @@ Any [[ref: account]] CAN run this [[ref: query]]. As this method does not modify
 
 ##### [MOD-XR-QRY-2-1] List Exchange Rates query parameters
 
-- `base_asset_type` (PricingAssetType, *optional*)  
-- `base_asset` (string, *optional*)  
-- `quote_asset_type` (PricingAssetType, *optional*)  
-- `quote_asset` (string, *optional*)  
-- `state` (boolean, *optional*): to force state, enabled or disabled
-- `expire` (timestamp, *optional*): return only if expire is greater than `expire`
+- `base_asset_type` (PricingAssetType) (*optional*)  
+- `base_asset` (string) (*optional*)  
+- `quote_asset_type` (PricingAssetType) (*optional*)  
+- `quote_asset` (string) (*optional*)  
+- `state` (boolean) (*optional*): to force state, enabled or disabled.
+- `expires` (timestamp) (*optional*): only return entries whose `xr.expires` is strictly greater than `expires` (i.e., entries still valid at this timestamp).
+- `response_max_size` (uint32) (*optional*): maximum number of entries returned. Default 64, MUST be between 1 and 1024.
 
 ##### [MOD-XR-QRY-2-2] List Exchange Rates query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- if `base_asset_type` is set to `TU`, `base_asset` MUST be null.
+- if `base_asset_type` is set to `COIN` or `FIAT` and `base_asset` is set, `base_asset` MUST be a non-empty string.
+- if `quote_asset_type` is set to `TU`, `quote_asset` MUST be null.
+- if `quote_asset_type` is set to `COIN` or `FIAT` and `quote_asset` is set, `quote_asset` MUST be a non-empty string.
+- if `expires` is set, it MUST be a valid timestamp.
+- `response_max_size` MUST be between 1 and 1024 if set; default to 64 if unspecified.
 
 ##### [MOD-XR-QRY-2-3] List Exchange Rates execution of the query
 
@@ -6336,16 +6404,18 @@ If found, returns a list of found ExchangeRates, else return an empty list.
 
 #### [MOD-XR-QRY-3] Get Price
 
-Anyone CAN run this [[ref: query]], throgh module call or using the API.
+Anyone CAN run this [[ref: query]], through module call or using the API.
 
-##### [MOD-XR-QRY-3] Get Price Example
+##### Get Price Example
 
+```text
 base_asset_type  = TU
 base_asset       = "tu"
 quote_asset_type = COIN
 quote_asset      = "uvna"
 rate             = R
 rate_scale       = S
+```
 
 If a valid `ExchangeRate` entry exists with:
 
@@ -6356,7 +6426,7 @@ If a valid `ExchangeRate` entry exists with:
 
 then the price of **`amount` Trust Unit expressed in uvna** MUST be computed using the following formula:
 
-```
+```text
 price_uvna = floor(amount * rate / 10^rate_scale)
 ```
 
@@ -6370,11 +6440,11 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 
 ##### [MOD-XR-QRY-3-1] Get Price parameters
 
-- `base_asset_type` (PricingAssetType, *optional*)  
-- `base_asset` (string, *optional*)  
-- `quote_asset_type` (PricingAssetType, *optional*)  
-- `quote_asset` (string, *optional*)
-- `amount` (number, *mandatory*)
+- `base_asset_type` (PricingAssetType) (*mandatory*): type of the base asset.
+- `base_asset` (string) (*conditional*): identifier of the base asset. MUST be set when `base_asset_type` is COIN or FIAT, MUST be null when `base_asset_type` is TU.
+- `quote_asset_type` (PricingAssetType) (*mandatory*): type of the quote asset.
+- `quote_asset` (string) (*conditional*): identifier of the quote asset. MUST be set when `quote_asset_type` is COIN or FIAT, MUST be null when `quote_asset_type` is TU.
+- `amount` (number) (*mandatory*): amount in base-asset units to convert into quote-asset units.
 
 ##### [MOD-XR-QRY-3-2] Get Price query checks
 
