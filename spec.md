@@ -1952,6 +1952,8 @@ As a result, `accountABC` is authorized to:
 |             | Update VS Operator Authorization Expiration | N/A (Tx) | Msg | [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) |module call|
 |             | List Operator Authorizations              | /de/v1/authz/list | Query  | [[MOD-DE-QRY-1]](#mod-de-qry-1-list-operator-authorizations)   |N/A |
 |             | List VS Operator Authorizations           | /de/v1/vs-authz/list | Query  | [[MOD-DE-QRY-2]](#mod-de-qry-2-list-vs-operator-authorizations)   |N/A |
+|             | Get Operator Authorization                | /de/v1/authz/get | Query  | [[MOD-DE-QRY-3]](#mod-de-qry-3-get-operator-authorization)   |N/A |
+|             | Get VS Operator Authorization             | /de/v1/vs-authz/get | Query  | [[MOD-DE-QRY-4]](#mod-de-qry-4-get-vs-operator-authorization)   |N/A |
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + operator OR module call|
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
 | Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
@@ -5983,6 +5985,44 @@ If any of these checks fail, [[ref: query]] MUST fail.
 ##### [MOD-DE-QRY-2-3] List VS Operator Authorizations execution
 
 Return a list of `VSOperatorAuthorization` entries matching the filter criteria, or an empty list if nothing found.
+
+#### [MOD-DE-QRY-3] Get Operator Authorization
+
+Anyone CAN execute this method.
+
+##### [MOD-DE-QRY-3-1] Get Operator Authorization parameters
+
+- `id` (uint64) (*mandatory*): id of the `OperatorAuthorization` entry to retrieve.
+
+##### [MOD-DE-QRY-3-2] Get Operator Authorization checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- if a mandatory parameter is not present, [[ref: query]] MUST fail.
+- `id` MUST refer to an existing `OperatorAuthorization` entry.
+
+##### [MOD-DE-QRY-3-3] Get Operator Authorization execution
+
+Return the `OperatorAuthorization` entry whose `id` matches the supplied `id`.
+
+#### [MOD-DE-QRY-4] Get VS Operator Authorization
+
+Anyone CAN execute this method.
+
+##### [MOD-DE-QRY-4-1] Get VS Operator Authorization parameters
+
+- `id` (uint64) (*mandatory*): id of the `VSOperatorAuthorization` entry to retrieve.
+
+##### [MOD-DE-QRY-4-2] Get VS Operator Authorization checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- if a mandatory parameter is not present, [[ref: query]] MUST fail.
+- `id` MUST refer to an existing `VSOperatorAuthorization` entry.
+
+##### [MOD-DE-QRY-4-3] Get VS Operator Authorization execution
+
+Return the `VSOperatorAuthorization` entry whose `id` matches the supplied `id`, including its `records` (per-permission `ParticipantAuthorizationRecord` entries).
 
 ### Digests Module
 
