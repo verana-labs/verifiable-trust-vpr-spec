@@ -1,6 +1,6 @@
 # Verifiable Public Registry v4 Specification
 
-**Latest draft:** [spec v4-rc2](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v4-rc3](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
@@ -387,7 +387,7 @@ Example of a Json Schema credential schema:
 
 ```json
 {
-  "$id": "vpr:verana:mainnet/cs/v1/js/VPR_CREDENTIAL_SCHEMA_ID", // ignored, will be generated
+  "$id": "vpr:verana:mainnet:cs:VPR_CREDENTIAL_SCHEMA_ID", // ignored, will be generated
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ExampleCredential",
   "description": "ExampleCredential using JsonSchema",
