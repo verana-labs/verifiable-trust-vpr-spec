@@ -6145,10 +6145,10 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
   - `quote_asset` MUST be non-empty.
   
 - **Asset type / identifier consistency**
-  - If `base_asset_type = TRUST_UNIT`:
-    - `base_asset` MUST equal `"TU"`.
-  - If `quote_asset_type = TRUST_UNIT`:
-    - `quote_asset` MUST equal `"TU"`.
+  - If `base_asset_type = TU`:
+    - `base_asset` MUST equal `"tu"`.
+  - If `quote_asset_type = TU`:
+    - `quote_asset` MUST equal `"tu"`.
 
   - If `base_asset_type = COIN`:
     - `base_asset` MUST be a valid Cosmos-SDK denom string.
