@@ -1544,6 +1544,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### FeeGrant
 
+> Realization note: a `FeeGrant` is realized on-chain as a Cosmos SDK `x/feegrant` allowance (see the [Delegation Module](#delegation-module)). `remaining_spend` below is therefore **derived** — it reflects that allowance's running balance and is not necessarily persisted/decremented as a separate field.
+
 `FeeGrant`:
 
 - `grantor_corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] granting the fee allowance. Together with `grantee`, forms the composite key.
@@ -1817,6 +1819,8 @@ When an authorization is created or updated, it MAY optionally include an associ
 
 For any **delegable message** executed by an `operator` on behalf of a `corporation`, the following precondition checks MUST be performed before any method-specific checks. If any check fails, the [[ref: transaction]] MUST abort.
 
+> Note: the **fee-grant** checks ([[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) and the fee-payment part of [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)) are realized by the corporation's `x/feegrant` allowance during standard transaction-fee processing — when the grantee elects corporation-paid fees by setting the transaction's fee `granter` to the corporation's `policy_address` (see the [Delegation Module](#delegation-module) note) — and not as VPR message-handler preconditions. The other checks (operator/VS-operator existence, message-type membership, cycle reset, and the operation `spend_limit`) remain VPR method preconditions.
+
 ##### [AUTHZ-CHECK-1] Operator Authorization checks
 
 1. An `OperatorAuthorization` `oauthz` MUST exist where `oauthz.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), `oauthz.operator` = `operator`, and `oauthz.msg_types` includes the current message type.
@@ -1831,6 +1835,8 @@ For any **delegable message** executed by an `operator` on behalf of a `corporat
 ##### [AUTHZ-CHECK-2] Fee Grant checks
 
 If the transaction fees are paid by the `corporation` account (via fee grant) instead of the `operator` account:
+
+> Realization: this check is performed by the corporation's `x/feegrant` allowance during standard transaction-fee processing (see the [Delegation Module](#delegation-module) note), not by the VPR message handler. The allowance enforces steps 1–3 below — existence + message-type filter (step 1), cycle reset (step 2), and sufficiency (step 3) — and the standard fee-deduction path performs the debit from the corporation's account. Steps 1–3 therefore specify the behaviour the allowance MUST realize, not separate handler logic; `fg.remaining_spend` reflects the allowance's running balance (see the [FeeGrant](#feegrant) entity).
 
 1. A `FeeGrant` `fg` MUST exist where `fg.grantor_corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), `fg.grantee` = `operator`, and `fg.msg_types` includes the current message type.
 2. If `fg.expiration` is set:
@@ -1862,6 +1868,8 @@ Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission
 ##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
 
 If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `ParticipantAuthorizationRecord` `record` looked up in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
+
+> Realization: the corporation's fee **payment** is handled by the same `x/feegrant` allowance as [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) — here the **aggregate** VS-operator `FeeGrant`, which carries the union of the records' `msg_types` and **no** aggregate spend limit (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). The **per-record** `fee_spend_limit` in step 3 is NOT expressible in that aggregate allowance and is therefore enforced by the VPR method as an additional, record-scoped cap on top of the payment.
 
 1. `record.with_feegrant` MUST be true, else abort.
 2. The cycle / expiration check from [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 4 has already been performed against the same `record`; `record.remaining_fee_spend` is therefore current.
@@ -5702,6 +5710,11 @@ Create (or update if it already exist) FeeGrant `feegrant`:
 - if `spend_limit` is set, set `feegrant.remaining_spend` to `spend_limit`
 - set `feegrant.period` to `period`
 
+Additionally, realize the on-chain allowance (see the [Delegation Module](#delegation-module) note): create (or update if one already exists) the `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee`, as an `AllowedMsgAllowance` over `msg_types` wrapping:
+
+- a `PeriodicAllowance` (`period`; per-period limit `period_spend_limit = spend_limit`; initial `period_can_spend = spend_limit`; first `period_reset = expiration`; no absolute expiration, so it auto-renews until revoked) when both `spend_limit` and `period` are set; or
+- a `BasicAllowance` (`spend_limit` when set, otherwise unlimited; `expiration` when set) otherwise.
+
 #### [MOD-DE-MSG-2] Revoke Fee Allowance
 
 This method can only be called directly by the following methods:
@@ -5729,6 +5742,8 @@ MUST abort if one of these conditions fails:
 ##### [MOD-DE-MSG-2-4] Revoke Fee Allowance execution of the method
 
 If FeeGrant entry for this (`grantor_corporation_id`, `grantee`) exist, delete it, else do nothing.
+
+In the same [[ref: transaction]], also revoke the corresponding `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee`, if one exists (see the [Delegation Module](#delegation-module) note).
 
 #### [MOD-DE-MSG-3] Grant Operator Authorization
 
