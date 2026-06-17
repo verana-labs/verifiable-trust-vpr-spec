@@ -1307,10 +1307,8 @@ cspsr  o-- "0..1" csp: verifier_participant_id
 cspsr  o-- "0..1" csp: wallet_agent_participant_id
 cspsr  o-- "0..1" csp: agent_participant_id
 
-oauthz "1" --- "0..n" da: fee_spend_limit
 oauthz "1" --- "0..n" da: spend_limit
 oauthz "1" --- "0..n" da: remaining_spend
-oauthz "1" --- "0..n" da: remaining_fee_spend
 
 par "1" --- "0..n" da: spend_limit
 par "1" --- "0..n" da: fee_spend_limit
@@ -1537,10 +1535,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the grantee is allowed to spend
   as a direct consequence of executing authorized messages.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
-- `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of fees that can be paid using this authorization.
-- `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
-- `expiration` (timestamp) (*optional*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the authorization is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the authorization auto-renews until the corporation revokes it).
-- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit`. If set, `expiration` MUST also be set.
+- `expiration` (timestamp) (*optional*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the authorization is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, `remaining_spend` is reset to `spend_limit` and `expiration` is advanced to `now() + period` (the authorization auto-renews until the corporation revokes it).
+- `period` (duration) (*optional*): reset period for `spend_limit`. If set, `expiration` MUST also be set.
 
 ### FeeGrant
 
@@ -1825,7 +1821,6 @@ For any **delegable message** executed by an `operator` on behalf of a `corporat
 2. If `oauthz.expiration` is set:
    - if `oauthz.period` is set and `now() >= oauthz.expiration`:
      - if `oauthz.spend_limit` is set, set `oauthz.remaining_spend := oauthz.spend_limit`.
-     - if `oauthz.fee_spend_limit` is set, set `oauthz.remaining_fee_spend := oauthz.fee_spend_limit`.
      - set `oauthz.expiration := now() + oauthz.period`.
    - else, `oauthz.expiration` MUST be strictly greater than `now()`. Abort otherwise.
 3. If `oauthz.spend_limit` is set, `oauthz.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `oauthz.remaining_spend` (per matching `denom` entry).
