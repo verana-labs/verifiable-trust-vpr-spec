@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "spec-up": "^0.10.8"
+    "spec-up": "^0.12.2"
   },
   "name": "verifiable-trust-vpr-spec",
   "version": "4.0",
@@ -11,7 +11,6 @@
   },
   "license": "Creative Commons Attribution-ShareAlike 4.0 International Public License",
   "homepage": "https://github.com/verana-labs/verifiable-trust-vpr-spec",
-  
   "bugs": {
     "url": "https://github.com/verana-labs/verifiable-trust-vpr-spec/issues"
   },
@@ -19,9 +18,9 @@
     "render": "npm run build",
     "edit": "npm run dev",
     "build": "npm run clean && npm run build:specs",
-    "build:specs": "node -e \"require('spec-up')({ nowatch: true })\"",
+    "build:specs": "node -e \"import('spec-up').then(m => m.default({ nowatch: true }))\"",
     "dev": "npm run clean && npm run dev:specs",
-    "dev:specs": "node -e \"require('spec-up')()\"",
+    "dev:specs": "node -e \"import('spec-up').then(m => m.default())\"",
     "clean": "rm -rf build && mkdir build"
   }
 }
