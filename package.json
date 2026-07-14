@@ -3,8 +3,8 @@
     "spec-up": "^0.12.2"
   },
   "name": "verifiable-trust-vpr-spec",
-  "version": "4.0",
-  "description": "Verifiable Public Registry v4 Specification",
+  "version": "5.0",
+  "description": "Verifiable Public Registry v5 Specification",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/verana-labs/verifiable-trust-vpr-spec.git"
@@ -17,7 +17,7 @@
   "scripts": {
     "render": "npm run build",
     "edit": "npm run dev",
-    "build": "npm run clean && npm run build:specs",
+    "build": "npm run clean && npm run build:specs && node scripts/inject-favicon.js",
     "build:specs": "node -e \"import('spec-up').then(m => m.default({ nowatch: true }))\"",
     "dev": "npm run clean && npm run dev:specs",
     "dev:specs": "node -e \"import('spec-up').then(m => m.default())\"",

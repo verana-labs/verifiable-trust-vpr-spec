@@ -13,7 +13,11 @@ It provides:
 
 Its goal is to support open, transparent governance of trust ecosystems and enable global, decentralized identity management.
 
-Browsable spec: [https://verana-labs.github.io/verifiable-trust-vpr-spec/](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+Browsable spec (latest draft): [https://verana-labs.github.io/verifiable-trust-vpr-spec/](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+
+Latest stable (v4): [https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/)
+
+Previous stable (v3): [https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
 
 ## How to contribute
 
