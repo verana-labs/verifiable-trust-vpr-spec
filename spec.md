@@ -1668,7 +1668,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 - `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
 - `main_fiat_currency` (string) (*mandatory*): ISO-4217 code of the [[ref: main fiat currency]], defined at network launch. Used to denominate the trust unit peg value, distribution budgets, and slash obligations.
-- `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in [[ref: main fiat currency]] at genesis (index start), e.g. 0.01. Immutable: the index only moves through decay.
+- `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in [[ref: main fiat currency]] at genesis (index start): 1.00, so that at genesis one trust unit equals one unit of [[ref: main fiat currency]] and a trust score reads directly as recent fiat-equivalent spend. Immutable: the index only moves through decay.
 - `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default: a value giving the index a half-life of 18–24 months. A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash obligations are never recomputed.
 - `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day.
 - `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
@@ -6418,7 +6418,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 
 - `trust_deposit_rate`(number) (*mandatory*): 0.05.
 - `main_fiat_currency` (string) (*mandatory*): to be defined at network launch (ISO-4217 code).
-- `tu_peg_value_genesis` (decimal) (*mandatory*): 0.01.
+- `tu_peg_value_genesis` (decimal) (*mandatory*): 1.00.
 - `tu_decay_rate` (decimal) (*mandatory*): value giving an index half-life of 18–24 months.
 - `epoch_length` (duration) (*mandatory*): 1 day.
 - `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.05.
