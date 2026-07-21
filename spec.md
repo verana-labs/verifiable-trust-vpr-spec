@@ -1313,7 +1313,6 @@ entity "GlobalVariables" as gv {
 
 entity "TrustDeposit" as td {
   +tu: decimal
-  +ecosystem_tu: map<uint64, decimal>
   +slashed_amount: decimal
   +repaid_amount: decimal
   last_slashed: timestamp
@@ -1557,7 +1556,6 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 - `corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] this trust deposit belongs to.
 - `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit. Increased only by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.4/year at an 18–24 month half-life): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
-- `ecosystem_tu` (map<uint64, decimal>) (*mandatory*): per-[[ref: ecosystem]] breakdown of `tu`: for each ecosystem id, the trust units minted in the context of that ecosystem. Invariant: the sum of all `ecosystem_tu` values MUST equal `tu`. Used to scope ecosystem-level slashing to the portion of the deposit that was created in that specific ecosystem.
 - `slashed_amount` (decimal) (*mandatory*): cumulative slash obligation, denominated in [[ref: main fiat currency]] and **fixed at slash time** (`slashed_tu × tu_peg_value(t_slash)`); trust scores decay, **obligations do not**. Initialized to 0; incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit). MUST never be null.
 - `repaid_amount` (decimal) (*mandatory*): part of `slashed_amount`, in [[ref: main fiat currency]], that has been repaid. Initialized to 0; incremented by [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit). While `slashed_amount` - `repaid_amount` > 0, all the corporation's `Participant` entries MUST be considered non-trustable and no trust units can be minted to this deposit.
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed; null until the first slash.
@@ -3751,15 +3749,14 @@ Change value of provided `effective_until` if needed, and abort if needed:
 
 Fees and Trust Deposits — settle the escrow (mint-at-validation):
 
-- define `ecosystem_id`: the id of the [[ref: ecosystem]] that owns `cs`.
 - if `(cs.pricing_asset_type, cs.pricing_asset)` is `(COIN, [[ref: native denom]])`:
   - calculate `validator_deposit_bound` = `applicant_participant.op_current_fees` × `GlobalVariables.trust_deposit_rate`, and `applicant_deposit_bound` = `applicant_participant.op_current_deposit`;
   - transfer `applicant_participant.op_current_fees` − `validator_deposit_bound` from the escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address`.
 - else (pricing in an arbitrary COIN or in FIAT):
   - calculate `validator_deposit_bound` = `applicant_participant.op_current_deposit` / 2 and `applicant_deposit_bound` = `applicant_participant.op_current_deposit` / 2 (the applicant escrowed both, see fee checks);
   - transfer the full amount `applicant_participant.op_current_fees` in the pricing [[ref: denom]] (0 if FIAT) from the escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address`.
-- use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_participant.corporation_id`, `ecosystem_id`, `source_account` = escrow account, `amount` = `validator_deposit_bound`); set `applicant_participant.op_validator_tu` to `applicant_participant.op_validator_tu` + the returned `minted_tu`.
-- use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `ecosystem_id`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`); set `applicant_participant.tu` to `applicant_participant.tu` + the returned `minted_tu`.
+- use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_participant.corporation_id`, `source_account` = escrow account, `amount` = `validator_deposit_bound`); set `applicant_participant.op_validator_tu` to `applicant_participant.op_validator_tu` + the returned `minted_tu`.
+- use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`); set `applicant_participant.tu` to `applicant_participant.tu` + the returned `minted_tu`.
 
 Update `Participant` `applicant_participant`:
 
@@ -4515,11 +4512,11 @@ If `participant.[fee_field]` > 0:
   if `wallet_agent_participant_id` is set:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
-3. Execute transfers and mints for this beneficiary (`ecosystem_id` = the id of the [[ref: ecosystem]] that owns `cs`):
+3. Execute transfers and mints for this beneficiary:
 
    - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `Corporation[participant.corporation_id].policy_address` (in the appropriate denom).
-   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `participant.corporation_id`, `ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `payee_trust_deposit`). Increase `participant.tu` by the returned `minted_tu`.
-   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer), `ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `payer_trust_deposit`). Increase `payer_participant.tu` by the returned `minted_tu`.
+   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `payee_trust_deposit`). Increase `participant.tu` by the returned `minted_tu`.
+   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer), `source_account` = the payer `corporation` account, `amount` = `payer_trust_deposit`). Increase `payer_participant.tu` by the returned `minted_tu`.
 
 4. Accumulate agent rewards:
 
@@ -4539,7 +4536,7 @@ If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0:
 - `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
 - Transfer `agent_fees_to_account` to `agent_participant.corporation_id` in [[ref: native denom]].
-- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `agent_participant.corporation_id`, `ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `agent_trust_deposit`). Increase `agent_participant.tu` by the returned `minted_tu`.
+- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `agent_participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `agent_trust_deposit`). Increase `agent_participant.tu` by the returned `minted_tu`.
 
 **Wallet Agent Reward:**
 
@@ -4548,7 +4545,7 @@ If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 
 - `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
 - Transfer `wallet_agent_fees_to_account` to `wallet_agent_participant.corporation_id` in [[ref: native denom]].
-- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `wallet_agent_participant.corporation_id`, `ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `wallet_agent_trust_deposit`). Increase `wallet_agent_participant.tu` by the returned `minted_tu`.
+- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `wallet_agent_participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `wallet_agent_trust_deposit`). Increase `wallet_agent_participant.tu` by the returned `minted_tu`.
 
 ---
 
@@ -4686,14 +4683,13 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Participant` entry `applicant_participant` from `id`.
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
-- Load `CredentialSchema` `cs` from `applicant_participant.schema_id` and define `ecosystem_id` = `cs.ecosystem_id`.
 - set `applicant_participant.slashed` to `now`
 - set `applicant_participant.modified` to `now`
 - set `applicant_participant.tu` to `applicant_participant.tu` - `tu_amount`
 - calculate `slashed_fiat` = `tu_amount` × `tu_peg_value(now)` — the obligation in [[ref: main fiat currency]], **fixed at slash time** (trust scores decay, debts do not).
 - set `applicant_participant.slashed_amount` to `applicant_participant.slashed_amount` + `slashed_fiat`
 
-use [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units) Remove Ecosystem Slashed Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `ecosystem_id`, `tu_amount`) to remove the slashed trust units from the ecosystem-scoped portion of the corporation's trust deposit.
+use [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units) Remove Ecosystem Slashed Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `tu_amount`) to remove the slashed trust units from the corporation's trust deposit. The ecosystem scoping is enforced by the `tu_amount` ≤ `applicant_participant.tu` bound above: an ecosystem can only slash trust units accumulated through its own `Participant` entries.
 
 Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
 
@@ -4740,9 +4736,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 
 - Load `Participant` entry `applicant_participant` from `id`.
-- Load `CredentialSchema` `cs` from `applicant_participant.schema_id` and define `ecosystem_id` = `cs.ecosystem_id`.
 - calculate `outstanding` and `repay_amount` as in fee checks.
-- process the repayment as a fresh mint: use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `ecosystem_id`, `source_account` = the `corporation` account, `amount` = `repay_amount`). The [[ref: native denom]] is routed to the [[ref: distribution pool]]; the trust units are minted at the **current** peg value — restoring trust costs more native denom when the token price is low.
+- process the repayment as a fresh mint: use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `source_account` = the `corporation` account, `amount` = `repay_amount`). The [[ref: native denom]] is routed to the [[ref: distribution pool]]; the trust units are minted at the **current** peg value — restoring trust costs more native denom when the token price is low.
 - set `applicant_participant.repaid` to `now`
 - set `applicant_participant.modified` to `now`
 - set `applicant_participant.repaid_amount` to `applicant_participant.repaid_amount` + `outstanding`.
@@ -5257,7 +5252,7 @@ ApplicantBrowser <-- ValidatorVS: notify `Participant` entry added for your DID.
 
 *This section is non-normative.*
 
-Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (tracked per [[ref: ecosystem]]), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible.
+Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (per-ecosystem attribution is derivable from the corporation's `Participant` entries), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible.
 
 Because the [[ref: trust unit peg value]] declines each [[ref: epoch]], a deposit that is not fed by new paid activity loses fiat value at exactly `tu_decay_rate` ("trust decay"): trust is a subscription. Decay is implemented through the single global index — there are **no per-account updates**: a deposit's fiat value at time `T` is `td.tu × tu_peg_value(T)`, and relative rankings compare raw `td.tu` directly (the common factor cancels).
 
@@ -5282,7 +5277,6 @@ Only the modules that require trust deposit manipulation CAN call this method (i
 ##### [MOD-TD-MSG-1-1] Mint Trust Units method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]].
-- `ecosystem_id` (uint64) (*mandatory*): id of the [[ref: ecosystem]] in whose context the deposit-bound amount was spent. Used for the `ecosystem_tu` attribution.
 - `source_account` (account) (*mandatory*): account funding the mint (payer account, or escrow account at validation time).
 - `amount` (number) (*mandatory*): deposit-bound amount, in [[ref: native denom]].
 
@@ -5309,11 +5303,10 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - if a `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` does not exist, create entry `td`:
   - set `td.corporation_id` to `corporation_id`;
-  - set `td.tu` to 0; set `td.ecosystem_tu` to an empty map;
+  - set `td.tu` to 0;
   - set `td.slashed_amount` to 0; set `td.repaid_amount` to 0; set `td.slash_count` to 0.
 - calculate `minted_tu` = `amount` / `price_tu_in_native_denom(now)` (equivalently `amount` × `P(now)` / `tu_peg_value(now)`).
 - set `td.tu` to `td.tu` + `minted_tu`.
-- set `td.ecosystem_tu[ecosystem_id]` to `td.ecosystem_tu[ecosystem_id]` + `minted_tu` (0 if absent).
 - transfer `amount` from `source_account` to the [[ref: distribution pool]] account.
 - return `minted_tu` to the calling module (which records it on the relevant `Participant.tu` / `Participant.op_validator_tu`).
 
@@ -5396,7 +5389,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 For the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`:
 
 - set `td.tu` to `td.tu` - `tu_amount`.
-- reduce the entries of `td.ecosystem_tu` **pro-rata** to their balances so that their sum equals the new `td.tu` (rounding differences assigned to the largest entry).
 - calculate `slashed_fiat` = `tu_amount` × `tu_peg_value(now)` — the obligation in [[ref: main fiat currency]], fixed at slash time.
 - set `td.slashed_amount` to `td.slashed_amount` + `slashed_fiat`.
 - set `td.last_slashed` to `now`.
@@ -5446,14 +5438,13 @@ For the `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (wher
 - calculate `repay_amount` = `outstanding` / `P(now)` as in fee checks.
 - calculate `minted_tu` = `outstanding` / `tu_peg_value(now)`.
 - set `td.tu` to `td.tu` + `minted_tu`.
-- attribute `minted_tu` in `td.ecosystem_tu` **pro-rata** to the existing entries; if the deposit is empty, credit it under ecosystem id 0 (network).
 - transfer `repay_amount` from `co.policy_address` to the [[ref: distribution pool]] account.
 - set `td.repaid_amount` to `td.repaid_amount` + `outstanding`.
 - set `td.last_repaid` to `now`.
 
 #### [MOD-TD-MSG-7] Remove Ecosystem Slashed Trust Units
 
-Remove [[ref: trust units]] minted in the context of a given [[ref: ecosystem]] from the trust deposit of a given [[ref: corporation]]. This method can only be called by the participant module when performing an ecosystem-level slash ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)): an ecosystem governance authority can only slash the portion of a deposit that was **created in its own ecosystem** (`td.ecosystem_tu[ecosystem_id]`), never the rest of the deposit.
+Remove [[ref: trust units]] from the trust deposit of a given [[ref: corporation]]. This method can only be called by the participant module when performing an ecosystem-level slash ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)). The ecosystem scoping — an ecosystem governance authority can only slash the portion of a deposit that was **created in the context of its own ecosystem**, never the rest of the deposit — is enforced by the caller: [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) bounds the slash by the targeted `Participant` entry's `tu` (per-ecosystem attribution is derivable from `Participant` entries; no separate breakdown is stored on `TrustDeposit`).
 
 :::warning
 Make sure to **properly protect access to the execution of this method** else it may lead to very destructive actions.
@@ -5462,7 +5453,6 @@ Make sure to **properly protect access to the execution of this method** else it
 ##### [MOD-TD-MSG-7-1] Remove Ecosystem Slashed Trust Units method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation of the [[ref: trust deposit]].
-- `ecosystem_id` (uint64) (*mandatory*): id of the [[ref: ecosystem]] performing the slash.
 - `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] to remove.
 
 ##### [MOD-TD-MSG-7-2] Remove Ecosystem Slashed Trust Units precondition checks
@@ -5474,7 +5464,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `tu_amount` must be > 0.
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.ecosystem_tu[ecosystem_id]` MUST be greater or equal to `tu_amount`.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.tu` MUST be greater or equal to `tu_amount`.
 
 ###### [MOD-TD-MSG-7-2-2] Remove Ecosystem Slashed Trust Units fee checks
 
@@ -5487,7 +5477,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 For the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`:
 
 - set `td.tu` to `td.tu` - `tu_amount`.
-- set `td.ecosystem_tu[ecosystem_id]` to `td.ecosystem_tu[ecosystem_id]` - `tu_amount`.
 
 The fiat-fixed obligation of an ecosystem-level slash is recorded on the corresponding `Participant` entry by [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit).
 
