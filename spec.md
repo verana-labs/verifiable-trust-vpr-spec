@@ -34,7 +34,7 @@ The **Verifiable Public Registry (VPR)** is a decentralized "registry of registr
 
 The VPR exposes a standardized query API that Verifiable Services and Verifiable User Agents use during trust resolution to confirm, in real time, whether a given participant is authorized to perform a specific action under a specific credential schema. This is what makes the trust in [Verifiable Trust](https://verana-labs.github.io/verifiable-trust-spec/) actually verifiable.
 
-The VPR is VID-method-agnostic — it stores registrations, not validations — leaving trust decisions and cryptographic verification where they belong: with the relying parties. It supports flexible permission management modes (open, ecosystem-controlled, or grantor-delegated), enabling ecosystems to tailor governance to their specific requirements.
+The VPR is VID type agnostic — it stores registrations, not validations — leaving trust decisions and cryptographic verification where they belong: with the relying parties. It supports flexible permission management modes (open, ecosystem-controlled, or grantor-delegated), enabling ecosystems to tailor governance to their specific requirements.
 
 This specification defines the data model, API, and normative requirements for implementing and interacting with a Verifiable Public Registry.
 
@@ -150,7 +150,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]]. A DID is a type of [[ref: VID]].
 
 [[def: verifiable identifier, VID, VIDs]]:
-~ An identifier bound to cryptographic verification material that allows proving control of the identifier, as introduced by the Trust Spanning Protocol (TSP). This specification uses VID wherever an entity identifier is required, for forward compatibility with TSP; [[ref: DIDs]] are VIDs, and all examples in this specification use DIDs.
+~ Any identifier bound to at least one cryptographic key pair, so that control over the identifier can be cryptographically verified, as defined by the [ToIP Trust Spanning Protocol](https://trustoverip.org/blog/2023/01/05/the-toip-trust-spanning-protocol/) (TSP). [[ref: DIDs]] are one **type** of VID; autonomous identifiers (AIDs) and HTTPS URLs backed by X.509 certificates are other examples. This specification names identifier attributes `vid` and uses VID wherever an entity identifier is required, so that in the future any VID type can be used — not only DIDs. Initially, userspace software is expected to support only [[ref: DIDs]], and all examples in this specification use DIDs.
 
 [[def: decentralized identifier communication, DIDComm]]:
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
@@ -307,7 +307,7 @@ In an [[ref: VPR]], any [[ref: corporation]] can create an `Ecosystem` entry to 
 - one or more [[ref: ecosystem governance framework]] document(s);
 - zero or more [[ref: credential schemas]].
 
-The Verifiable Public Registry (VPR) is agnostic to the specific VID methods used. Trust resolution is performed externally, outside the VPR, allowing flexibility and interoperability across ecosystems.
+The Verifiable Public Registry (VPR) is agnostic to the specific VID types used. Trust resolution is performed externally, outside the VPR, allowing flexibility and interoperability across ecosystems.
 
 ```plantuml
 
