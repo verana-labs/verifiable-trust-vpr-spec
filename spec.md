@@ -34,13 +34,13 @@ The **Verifiable Public Registry (VPR)** is a decentralized "registry of registr
 
 The VPR exposes a standardized query API that Verifiable Services and Verifiable User Agents use during trust resolution to confirm, in real time, whether a given participant is authorized to perform a specific action under a specific credential schema. This is what makes the trust in [Verifiable Trust](https://verana-labs.github.io/verifiable-trust-spec/) actually verifiable.
 
-The VPR is DID-method-agnostic — it stores registrations, not validations — leaving trust decisions and cryptographic verification where they belong: with the relying parties. It supports flexible permission management modes (open, ecosystem-controlled, or grantor-delegated), enabling ecosystems to tailor governance to their specific requirements.
+The VPR is VID-method-agnostic — it stores registrations, not validations — leaving trust decisions and cryptographic verification where they belong: with the relying parties. It supports flexible permission management modes (open, ecosystem-controlled, or grantor-delegated), enabling ecosystems to tailor governance to their specific requirements.
 
 This specification defines the data model, API, and normative requirements for implementing and interacting with a Verifiable Public Registry.
 
 ## About this Document
 
-In order to fully understand the concepts developed in this document, you should have some basic knowledge of [[ref:DID]], [[ref:DIDComm]], [[ref:VS]], [[ref:ecosystem]], ledger-based applications, and more generally, all terms present in the [Terminology](#terminology) section.
+In order to fully understand the concepts developed in this document, you should have some basic knowledge of [[ref:VID]], [[ref:DIDComm]], [[ref:VS]], [[ref:ecosystem]], ledger-based applications, and more generally, all terms present in the [Terminology](#terminology) section.
 
 :::note
 Before exploring this spec, it is highly recommended to **first read** the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/).
@@ -66,7 +66,7 @@ An ecosystem typically expose APIs that are consumed by services that would like
 A Verifiable Public Registry (VPR) is a “registry of registries”, a public service that provides foundational infrastructure for decentralized trust ecosystems. It offers:
 
 - [[ref: corporation]] lifecycle and directory:
-  - corporation onboarding, with associated [[ref: DID]] and [[ref: corporation governance framework]] publication
+  - corporation onboarding, with associated [[ref: VID]] and [[ref: corporation governance framework]] publication
   - multi-member governance through an on-chain `policy_address` (e.g., a Cosmos SDK group policy account)
   - a public corporation directory queryable by indexers, [[ref: verifiable services]], and [[ref: verifiable user agents]]
   - corporations are the foundational actors of the VPR: they control [[ref: participants]] and may themselves control [[ref: ecosystems]].
@@ -114,7 +114,7 @@ package "Verifiable Public Registry" as vpr {
 
 ```
 
-Participant directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: verifiable services]], and index them.
+Participant directory is intended to be **crawled by indexers**, which resolve the listed VIDs, identify associated [[ref: verifiable services]], and index them.
 
 Indexers may expose this data through APIs for querying the indexed services or use it to build a search engine for querying the database of indexed [[ref: verifiable services]].
 
@@ -132,7 +132,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A [[ref: account]] that starts a [[ref: onboarding process]].
 
 [[def: corporation, corporations]]:
-~ A legal/organizational entity that controls Participants in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` is a VPR-level entity with VPR-specific attributes (DID, governance framework, lifecycle) anchored on-chain by a `policy_address` account that signs on its behalf.
+~ A legal/organizational entity that controls Participants in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` is a VPR-level entity with VPR-specific attributes (VID, governance framework, lifecycle) anchored on-chain by a `policy_address` account that signs on its behalf.
 
 [[def: corporation governance framework, CGF]]:
 ~ The governance framework (GF) of a [[ref: corporation]].
@@ -209,7 +209,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A read-only action that perform some reading in an [[ref: VPR]] and returns value.
 
 [[def: subject, subjects]]:
-~ A thing about which claims are made. Example subjects include human beings, animals, things, and organization, a [[ref: DID]]...
+~ A thing about which claims are made. Example subjects include human beings, animals, things, and organization, a [[ref: VID]]...
 
 [[def: transaction, transactions]]:
 ~ An action that modifies the ledger of an [[ref: VPR]] and which execution requires transaction fees.
@@ -266,7 +266,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ a public, normally decentralized, ledger-based network, which provides: ecosystem features, that can be used by all its [[ref: participants]]: create ecosystems, for each ecosystem, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
 
 [[def: verifiable service, verifiable services, VS, VSs]]:
-~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
+~ A service, identified by a resolvable [[ref: VID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
 
 [[def: verifiable user agent, verifiable user agents, VUA, VUAs]]:
 ~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: VT Spec]].
@@ -303,11 +303,11 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 In an [[ref: VPR]], any [[ref: corporation]] can create an `Ecosystem` entry to represent an [[ref: ecosystem]] it controls. Each `Ecosystem` entry MUST provide, at a minimum:
 
-- an ecosystem controlled resolvable [[ref: DID]];
+- an ecosystem controlled resolvable [[ref: VID]];
 - one or more [[ref: ecosystem governance framework]] document(s);
 - zero or more [[ref: credential schemas]].
 
-The Verifiable Public Registry (VPR) is agnostic to the specific DID methods used. Trust resolution is performed externally, outside the VPR, allowing flexibility and interoperability across ecosystems.
+The Verifiable Public Registry (VPR) is agnostic to the specific VID methods used. Trust resolution is performed externally, outside the VPR, allowing flexibility and interoperability across ecosystems.
 
 ```plantuml
 
@@ -315,7 +315,7 @@ The Verifiable Public Registry (VPR) is agnostic to the specific DID methods use
 scale max 800 width
  
 object "Ecosystem" as tra #3fbdb6 {
-    ecosystem did
+    ecosystem vid
     ecosystem credential schemas
     ecosystem governance framework docs
 }
@@ -511,7 +511,7 @@ vg --> verifier : creates schema participant
 
 *This section is non-normative.*
 
-A [[ref: corporation]] is the VPR-level entity that represents an authority acting in the registry. A `Corporation` carries VPR-specific attributes — a [[ref: DID]], a [[ref: corporation governance framework]] (CGF), and lifecycle metadata — and is anchored on-chain by a `policy_address` account that signs on its behalf. The `Corporation` entry has its own `id`, and every other VPR entity points to it through a `corporation_id` foreign key.
+A [[ref: corporation]] is the VPR-level entity that represents an authority acting in the registry. A `Corporation` carries VPR-specific attributes — a [[ref: VID]], a [[ref: corporation governance framework]] (CGF), and lifecycle metadata — and is anchored on-chain by a `policy_address` account that signs on its behalf. The `Corporation` entry has its own `id`, and every other VPR entity points to it through a `corporation_id` foreign key.
 
 A corporation interacts with the VPR in two complementary ways:
 
@@ -567,11 +567,11 @@ pA ..> eA : in
 
 The same `Corporation` entry is the single entry point for the corporation's governance (the CGF), authorization delegation (via `OperatorAuthorization` to one or more `operator` accounts), and trust-deposit accounting (`TrustDeposit`). See the [Corporation Module](#corporation-module) for the methods that manage `Corporation` entries.
 
-### DID Indexing
+### VID Indexing
 
 *This section is non-normative.*
 
-The `Participant` registry is the foundation for building **searchable indexes of [[ref: verifiable services]] and the verifiable metadata they expose**. Crawlers iterate over `Participant` entries, resolve each service identifier (currently a [[ref: DID]], extensible in the future), verify that the service is a [[ref: verifiable service]], and extract its verifiable metadata — most notably the credentials presented through [[ref: linked-vp]] — together with the [[ref: ecosystem]] memberships, [[ref: credential schema]] permissions, and [[ref: trust deposit]] level associated with the controlling [[ref: corporation]].
+The `Participant` registry is the foundation for building **searchable indexes of [[ref: verifiable services]] and the verifiable metadata they expose**. Crawlers iterate over `Participant` entries, resolve each service identifier (currently a [[ref: VID]], extensible in the future), verify that the service is a [[ref: verifiable service]], and extract its verifiable metadata — most notably the credentials presented through [[ref: linked-vp]] — together with the [[ref: ecosystem]] memberships, [[ref: credential schema]] permissions, and [[ref: trust deposit]] level associated with the controlling [[ref: corporation]].
 
 Unlike a traditional web index, this index is **trust-typed**: every entry carries cryptographically verifiable claims about *what* the service is, *who* operates it, and *under which governance frameworks* it is accredited. This unlocks a class of discovery use cases that traditional search engines cannot serve.
 
@@ -631,8 +631,8 @@ object "Governance /\nAudit / Analytics" as gov #f5b7b1
 object "User" as user
 
 didd <|-- crawler : iterate Participant registry
-crawler --|> dts1 : resolve DID, fetch linked-vps,\nindex verifiable metadata
-crawler --|> dts2 : resolve DID, fetch linked-vps,\nindex verifiable metadata
+crawler --|> dts1 : resolve VID, fetch linked-vps,\nindex verifiable metadata
+crawler --|> dts2 : resolve VID, fetch linked-vps,\nindex verifiable metadata
 crawler --|> index : create / update index
 
 aiagent --|> index : query (find counterparts\nby credentials presented)
@@ -716,19 +716,19 @@ participant "Verifiable Public Registry" as VPR #3fbdb6
 ApplicantAccount --> VPR: start onboarding process with Validator
 VPR <-- VPR: create applicant Participant entry\n(op_state = PENDING)
 ApplicantAccount <-- VPR: applicant Participant entry created
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in\napplicant_participant.validator_participant\nby creating a DIDComm connection
+ApplicantBrowser --> ValidatorVS: connect to validator VS VID found in\napplicant_participant.validator_participant\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
 ApplicantBrowser --> ValidatorVS: I want to proceed with applicant_participant.id=...
 ValidatorVS --> ValidatorVS: load applicant Participant with this id\nand verify validator_participant_id refers to me
 ApplicantBrowser <-- ValidatorVS: request proof of control\nof applicant_participant.corporation_id account (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proof of operator account
 ApplicantBrowser <-- ValidatorVS: proof accepted, you are an operator\nof the applicant Participant, I trust you.
-ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
-ApplicantBrowser --> ValidatorVS: send DID
-ValidatorVS --> ValidatorVS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be registered on your `ISSUER` `Participant` entry (blind sign)
+ApplicantBrowser <-- ValidatorVS: which VID do you want to register as an issuer?
+ApplicantBrowser --> ValidatorVS: send VID
+ValidatorVS --> ValidatorVS: resolve VID and get pub keys
+ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the VID to be registered on your `ISSUER` `Participant` entry (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proofs
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of this DID, I trust you.
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of this VID, I trust you.
 note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
 ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
@@ -736,7 +736,7 @@ note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
 ApplicantBrowser <-- ValidatorVS: You are a legitimate candidate. I'll now finalize your `ISSUER` `Participant` entry.
 ValidatorAccount --> VPR #3fbdb6: set applicant_participant.op_state to VALIDATED\n(finalize the `ISSUER` `Participant` entry)
 VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify `ISSUER` `Participant` entry validated for your corporation and DID.\nDID can now issue credentials of this schema.
+ApplicantBrowser <-- ValidatorVS: notify `ISSUER` `Participant` entry validated for your corporation and VID.\nDID can now issue credentials of this schema.
 ```
 
 The **total amount** paid by the applicant consists of:
@@ -1400,13 +1400,13 @@ Several entities deviate from this convention and document their own key scheme 
 
 ### Corporation
 
-A `Corporation` is the VPR-level entity representing an authority that acts in the registry. It carries a DID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
+A `Corporation` is the VPR-level entity representing an authority that acts in the registry. It carries a VID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
 
 `Corporation`:
 
 - `id` (uint64) (*mandatory*) (key): the id of the Corporation.
 - `policy_address` (account) (*mandatory*): the on-chain account that signs on behalf of this Corporation. MUST be **globally unique** across all `Corporation` entries (1:1): at any block height, no two `Corporation` entries MAY share the same `policy_address`. (Can be, for example, a Cosmos SDK `group_policy_address`; see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation).)
-- `did` (string) (*mandatory*): the DID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `did` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `did` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-new-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks).
+- `vid` (string) (*mandatory*): the VID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `vid` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `vid` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-new-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks).
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
@@ -1419,8 +1419,8 @@ A `Corporation` is the VPR-level entity representing an authority that acts in t
 `Ecosystem`:
 
 - `id` (uint64) (*mandatory*) (key): the id of the ecosystem.
-- `did` (string) (*mandatory*): the did of the ecosystem. MAY be shared with other `Ecosystem` entries (a single DID MAY be the `did` of several ecosystems); per-Ecosystem DID uniqueness is NOT enforced because the `Ecosystem` identity is its `id`. However, per-Ecosystem `(did, corporation_id)` consistency IS enforced: at any block height, all `Ecosystem` entries with equal `did` MUST share the same `corporation_id`. Enforced at create time by [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-new-ecosystem-basic-checks) and at rotation time by [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks).
-- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that controls this entry. Constrained by the per-Ecosystem `(did, corporation_id)` consistency invariant above.
+- `vid` (string) (*mandatory*): the vid of the ecosystem. MAY be shared with other `Ecosystem` entries (a single VID MAY be the `vid` of several ecosystems); per-Ecosystem VID uniqueness is NOT enforced because the `Ecosystem` identity is its `id`. However, per-Ecosystem `(vid, corporation_id)` consistency IS enforced: at any block height, all `Ecosystem` entries with equal `vid` MUST share the same `corporation_id`. Enforced at create time by [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-new-ecosystem-basic-checks) and at rotation time by [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks).
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that controls this entry. Constrained by the per-Ecosystem `(vid, corporation_id)` consistency invariant above.
 - `created` (timestamp) (*mandatory*): timestamp this Ecosystem has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Ecosystem has been modified.
 - `archived` (boolean) (*mandatory*): whether this Ecosystem is archived. Initialized to `false` at creation by [[MOD-ES-MSG-1-3]](#mod-es-msg-1-3-create-new-ecosystem-execution) and toggled by [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem). MUST never be null.
@@ -1499,8 +1499,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `id` (uint64) (*mandatory*) (key): the id of the participant.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `role` (ParticipantRole) (*mandatory*): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER. Set at create time and never rotated thereafter.
-- `did` (string) (*mandatory*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]]. MAY be shared with other `Participant` entries (a single DID MAY be the `did` of several participants); per-Participant DID uniqueness is NOT enforced because the `Participant` identity is its `id`. However, per-Participant `(did, corporation_id)` consistency IS enforced: at any block height, all `Participant` entries with equal `did` MUST share the same `corporation_id`. Enforced by the create-time basic checks of [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks), and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks). `Participant.did` is set at create time and is not rotated thereafter.
-- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns this permission. Constrained by the per-Participant `(did, corporation_id)` consistency invariant above.
+- `vid` (string) (*mandatory*): [[ref: VID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]]. MAY be shared with other `Participant` entries (a single VID MAY be the `vid` of several participants); per-Participant VID uniqueness is NOT enforced because the `Participant` identity is its `id`. However, per-Participant `(vid, corporation_id)` consistency IS enforced: at any block height, all `Participant` entries with equal `vid` MUST share the same `corporation_id`. Enforced by the create-time basic checks of [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks), and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks). `Participant.vid` is set at create time and is not rotated thereafter.
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns this permission. Constrained by the per-Participant `(vid, corporation_id)` consistency invariant above.
 - `vs_operator` (account) (*mandatory*): verifiable service agent account. This is the account that will have the right to create or update permission sessions.
 - `created` (timestamp) (*mandatory*): timestamp this `Participant` has been created.
 - `adjusted` (timestamp) (*optional*): timestamp this `Participant` has last been adjusted; null until the first adjustment.
@@ -1712,7 +1712,7 @@ Get an `Ecosystem`
     "corporation_id": 0,
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
-    "did": "string",
+    "vid": "string",
     "id": "string",
     "language": "string",
     "modified": "2025-01-14T19:40:37.967Z",
@@ -1745,7 +1745,7 @@ Get an `Ecosystem`
     "corporation_id": 0,
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
-    "did": "string",
+    "vid": "string",
     "id": "string",
     "language": "string",
     "modified": "2025-01-14T19:40:37.967Z",
@@ -1773,7 +1773,7 @@ Get an `Ecosystem`
     "corporation_id": 0,
     "created": "2025-01-14T19:40:37.967Z",
     "deposit": "string",
-    "did": "string",
+    "vid": "string",
     "id": "string",
     "language": "string",
     "modified": "2025-01-14T19:40:37.967Z",
@@ -2047,7 +2047,7 @@ Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR /
 
 ### Corporation Module
 
-This module manages [[ref: corporation]] entries — the VPR-level entity that carries a DID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A `Corporation` entry MUST exist before its `policy_address` can sign as the `corporation` in any other VPR Create-* method, and before its `id` can be referenced as `corporation_id` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
+This module manages [[ref: corporation]] entries — the VPR-level entity that carries a VID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A `Corporation` entry MUST exist before its `policy_address` can sign as the `corporation` in any other VPR Create-* method, and before its `id` can be referenced as `corporation_id` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
 
 **Group lifecycle operations:** Membership management (adding/removing members), proposal submission, voting, and proposal execution are handled directly via the Cosmos SDK `x/group` module. VPR does not wrap these operations. Implementations MUST refer to the `x/group` specification for `MsgUpdateGroupMembers`, `MsgSubmitProposal`, `MsgVote`, `MsgWithdrawProposal`, and `MsgExec`. Discovery queries (`GroupsByMember`, `ProposalsByGroupPolicy`, `VotesByProposal`) from `x/group` apply directly. Because `group_policy_as_admin` is always `true` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)), the group policy address is the admin of the group — not the account that created it. Therefore all group lifecycle operations, including member updates, MUST go through the group's own proposal and voting process (`MsgSubmitProposal` → `MsgVote` → `MsgExec`); no account can bypass this by calling group admin messages directly.
 
@@ -2068,7 +2068,7 @@ An [[ref: account]] that would like to create a new [[ref: corporation]] MUST ca
 - `decision_policy` (DecisionPolicy): (*mandatory*) the decision policy for the group policy. MUST be either a `ThresholdDecisionPolicy` (minimum weighted sum of YES votes) or a `PercentageDecisionPolicy` (minimum percentage of total weight).
 
 > `group_policy_as_admin` is not a caller parameter — it is always set to `true` by the implementation. The group policy address becomes the admin of both the group and the group policy immediately upon creation; the `signer` account retains no admin rights thereafter.
-- `did` (string) (*mandatory*): the DID of the Corporation.
+- `vid` (string) (*mandatory*): the VID of the Corporation.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the v1 [[ref: CGF]] document.
@@ -2086,8 +2086,8 @@ If any of these precondition checks fail, method MUST abort.
 - `signer` (account): (Signer) signature must be verified. No further restriction — any [[ref: account]] MAY be the signer.
 - `members`: MUST contain at least one entry. Each entry's `address` MUST be a valid account address. Each entry's `weight` MUST be a non-zero decimal string representing a positive number (e.g. `"1"`, `"10"`).
 - `decision_policy`: MUST be a valid `ThresholdDecisionPolicy` or `PercentageDecisionPolicy`.
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `did` MUST NOT already be the `did` of any existing `Corporation` entry; if some `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant: a DID is the `did` of at most one `Corporation`).
+- `vid` (string) (*mandatory*): MUST be a valid [[ref: VID]] (e.g. a [[ref: DID]] conforming to the DID Syntax as specified in [[spec-norm:DID-CORE]]).
+- `vid` MUST NOT already be the `vid` of any existing `Corporation` entry; if some `Corporation` entry already holds this `vid`, method MUST abort (per-Corporation `vid` uniqueness invariant: a VID is the `vid` of at most one `Corporation`).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
@@ -2108,7 +2108,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `co.id`: auto-incremented uint64
 - `co.policy_address`: `group_policy_address`
-- `co.did`: `did`
+- `co.vid`: `vid`
 - `co.created`: current timestamp
 - `co.modified`: `co.created`
 - `co.language`: `language`
@@ -2142,7 +2142,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `did` (string) (*mandatory*): the new DID of the Corporation.
+- `vid` (string) (*mandatory*): the new VID of the Corporation.
 
 > Note: `language` is set at creation time by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation) and is **immutable** thereafter; it cannot be updated through this method.
 
@@ -2158,8 +2158,8 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - A `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account MUST exist; if none exists, method MUST abort.
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `did` MUST NOT already be the `did` of any **other** `Corporation` entry (i.e., any `Corporation` entry whose `id` differs from `co.id`); if some other `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant). Rotating to the same value `co.did` already holds is a no-op and MUST be allowed.
+- `vid` (string) (*mandatory*): MUST be a valid [[ref: VID]] (e.g. a [[ref: DID]] conforming to the DID Syntax as specified in [[spec-norm:DID-CORE]]).
+- `vid` MUST NOT already be the `vid` of any **other** `Corporation` entry (i.e., any `Corporation` entry whose `id` differs from `co.id`); if some other `Corporation` entry already holds this `vid`, method MUST abort (per-Corporation `vid` uniqueness invariant). Rotating to the same value `co.vid` already holds is a no-op and MUST be allowed.
 
 ###### [MOD-CO-MSG-2-2-2] Update Corporation fee checks
 
@@ -2173,7 +2173,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - load `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account and set:
 
-- `co.did`: `did`
+- `co.vid`: `vid`
 - `co.modified`: current timestamp
 
 #### [MOD-CO-MSG-3] Update Module Parameters
@@ -2280,7 +2280,7 @@ An authorized `operator` that would like to create a [[ref: ecosystem]] MUST cal
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `did` (string) (*mandatory*): the did of the ecosystem that is creating the ecosystem.
+- `vid` (string) (*mandatory*): the vid of the ecosystem that is creating the ecosystem.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
@@ -2298,14 +2298,14 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)); else method MUST abort (per-Ecosystem `(did, corporation_id)` consistency invariant: at any block height, all `Ecosystem` entries sharing a `did` are controlled by the same `Corporation`).
+- `vid` (string) (*mandatory*): MUST be a valid [[ref: VID]] (e.g. a [[ref: DID]] conforming to the DID Syntax as specified in [[spec-norm:DID-CORE]]).
+- if any existing `Ecosystem` entry has `vid` equal to the provided `vid`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)); else method MUST abort (per-Ecosystem `(vid, corporation_id)` consistency invariant: at any block height, all `Ecosystem` entries sharing a `vid` are controlled by the same `Corporation`).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL .
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`.
 
 :::note
-Several `Ecosystem` entries MAY share the same ecosystem DID. The identifier of an `Ecosystem` is its `id`, and the Verifiable Trust Spec includes the `id` of the `Ecosystem` in the DID Document. Per-Ecosystem DID uniqueness is therefore NOT required: proof of control of the DID is verified by resolving the DID outside of the context of the VPR. However, **all `Ecosystem` entries sharing the same `did` MUST be controlled by the same `Corporation`** — see the basic-check bullet above. Proof of control of the shared DID is, by construction, held by that single controlling `Corporation`, and the corresponding `Corporation` entry (if any whose own `did` equals this value) is unique by the per-Corporation `did` uniqueness invariant (although the Corporation that *owns* the DID per Corp.did and the Corporation that *controls* the Ecosystems claiming it need not coincide).
+Several `Ecosystem` entries MAY share the same ecosystem VID. The identifier of an `Ecosystem` is its `id`, and the Verifiable Trust Spec includes the `id` of the `Ecosystem` in the DID Document. Per-Ecosystem VID uniqueness is therefore NOT required: proof of control of the VID is verified by resolving the VID outside of the context of the VPR. However, **all `Ecosystem` entries sharing the same `vid` MUST be controlled by the same `Corporation`** — see the basic-check bullet above. Proof of control of the shared VID is, by construction, held by that single controlling `Corporation`, and the corresponding `Corporation` entry (if any whose own `vid` equals this value) is unique by the per-Corporation `vid` uniqueness invariant (although the Corporation that *owns* the VID per Corp.vid and the Corporation that *controls* the Ecosystems claiming it need not coincide).
 :::
 
 ###### [MOD-ES-MSG-1-2-2] Create New Ecosystem fee checks
@@ -2321,7 +2321,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - create and persist a new `Ecosystem` entry `ecosystem`:
 
 - `ecosystem.id` : auto-incremented uint64
-- `ecosystem.did`: `did`
+- `ecosystem.vid`: `vid`
 - `ecosystem.corporation_id`: `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account)
 - `ecosystem.created`: current timestamp
 - `ecosystem.modified`: `ecosystem.created`
@@ -2358,7 +2358,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
-- `did` (string) (*mandatory*): the did of the ecosystem.
+- `vid` (string) (*mandatory*): the vid of the ecosystem.
 
 ##### [MOD-ES-MSG-2-2] Update Ecosystem precondition checks
 
@@ -2372,8 +2372,8 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `Ecosystem` entry `ecosystem` with id `id` MUST exist and `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any **other** `Ecosystem` entry (i.e., any `Ecosystem` entry whose `id` differs from the supplied `id`) has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id`; else method MUST abort (per-Ecosystem `(did, corporation_id)` consistency invariant). Rotating `ecosystem.did` to a value already held by another `Ecosystem` controlled by a different `Corporation` is forbidden.
+- `vid` (string) (*mandatory*): MUST be a valid [[ref: VID]] (e.g. a [[ref: DID]] conforming to the DID Syntax as specified in [[spec-norm:DID-CORE]]).
+- if any **other** `Ecosystem` entry (i.e., any `Ecosystem` entry whose `id` differs from the supplied `id`) has `vid` equal to the provided `vid`, its `corporation_id` MUST equal `co.id`; else method MUST abort (per-Ecosystem `(vid, corporation_id)` consistency invariant). Rotating `ecosystem.vid` to a value already held by another `Ecosystem` controlled by a different `Corporation` is forbidden.
 
 ###### [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks
 
@@ -2387,7 +2387,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - load `Ecosystem` entry `ecosystem` from `id` and set:
 
-- `ecosystem.did`: `did`
+- `ecosystem.vid`: `vid`
 - `ecosystem.modified`: current timestamp
 
 #### [MOD-ES-MSG-3] Archive Ecosystem
@@ -3278,7 +3278,7 @@ An [[ref: onboarding process]] is run by [[ref: applicants]] that want to:
 In all cases, the process is very similar. Example execution of an [[ref: onboarding process]]:
 
 1. The [[ref: applicant]] starts an [[ref: onboarding process]] by running [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The process MAY be subject to paying `validation_fees`, as defined in the [[ref: validator]]'s Participant entry.
-2. The [[ref: applicant]] connects to the [[ref: validator]]'s [[ref: VS]] (identified by its [[ref: DID]]) and executes the validation steps required for the [[ref: onboarding process]] to conclude.
+2. The [[ref: applicant]] connects to the [[ref: validator]]'s [[ref: VS]] (identified by its [[ref: VID]]) and executes the validation steps required for the [[ref: onboarding process]] to conclude.
 3. If the [[ref: applicant]] qualifies, the [[ref: validator]] runs [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) to update the Participant entry; the [[ref: applicant]] is then granted the new `Participant` entries and/or issued a credential.
 
 Once in the `VALIDATED` state, a Participant entry remains valid for a specific period (e.g., 365 days), configured in the [[ref: credential schema]] for credential-schema-related onboarding, or set by the [[ref: ecosystem]] for user-agent onboarding.
@@ -3312,7 +3312,7 @@ An Applicant that would like to start an onboarding process MUST execute this me
 - `validation_fees` (number) (*optional*): Requested validation_fees for this participant (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
+- `vid` (string) (*mandatory*): MUST be a valid [[ref: VID]] (e.g. a [[ref: DID]] conforming to the DID Syntax as specified in [[spec-norm:DID-CORE]]).
 
 The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) that will be created for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode (the corporation signs and pays for its own `Participant`-related transactions directly). VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
 
@@ -3352,12 +3352,12 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this `Participant` entry (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant: at any block height, all `Participant` entries sharing a `did` are owned by the same `Corporation`).
+- `vid` (string) (*mandatory*): MUST be a valid [[ref: VID]] (e.g. a [[ref: DID]] conforming to the DID Syntax as specified in [[spec-norm:DID-CORE]]).
+- if any existing `Participant` entry has `vid` equal to the provided `vid`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(vid, corporation_id)` consistency invariant: at any block height, all `Participant` entries sharing a `vid` are owned by the same `Corporation`).
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-op-parameters).
 
 :::note
-A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the onboarding process is REQUIRED or not.
+A holder MAY directly connect to the VID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the onboarding process is REQUIRED or not.
 :::
 
 ###### [MOD-PP-MSG-1-2-2] Start Participant OP permission checks
@@ -3499,13 +3499,13 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
 
 This action must be initiated by the [[ref: applicant]].
 
-During an onboarding process, if the associated `validator_participant` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
+During an onboarding process, if the associated `validator_participant` includes a specific `vid`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
 
 Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by the [[ref: validator]] to complete one or more of the following tasks:
 
 1. **Prove control** over the `vs_operator` [[ref: account]] specified in the `Participant` entry (e.g., via blind signature or cryptographic challenge).
 2. **Provide requested information**, such as filling out forms, submitting documents, or other forms of disclosure as required by the validation [[ref: VS]].
-3. If the requested `Participant` entry includes a [[ref: VS]] DID, the [[ref: applicant]] should prove control over the corresponding [[ref: DID]] to the validator's [[ref: VS]].
+3. If the requested `Participant` entry includes a [[ref: VS]] VID, the [[ref: applicant]] should prove control over the corresponding [[ref: VID]] to the validator's [[ref: VS]].
 
 Once the [[ref: validator]] determines that the process is complete, they may terminate the onboarding process and create the `Participant` entry accordingly. This `Participant`-entry configuration usually includes:
 
@@ -3860,7 +3860,7 @@ An [[ref: account]] that would like to create a `Participant` entry MUST call th
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
 - `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this `Participant` entry. **Required** for payment delegation.
-- `did` (string) (*mandatory*): [[ref: DID]] of the VS.
+- `vid` (string) (*mandatory*): [[ref: VID]] of the VS.
 - `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running an onboarding process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean an onboarding process must take place. For enabling onboarding processes, at least one of the two issuer, verifier mode must be different than OPEN.
@@ -3893,8 +3893,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant).
+- `vid` (string) (*mandatory*): MUST be a valid [[ref: VID]] (e.g. a [[ref: DID]] conforming to the DID Syntax as specified in [[spec-norm:DID-CORE]]).
+- if any existing `Participant` entry has `vid` equal to the provided `vid`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(vid, corporation_id)` consistency invariant).
 - `effective_from` must be in the future.
 - `effective_until`, if not null, must be greater than `effective_from`
 - `validation_fees` (number) (*mandatory*): MUST be >= 0.
@@ -3945,7 +3945,7 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.schema_id`: `schema_id`.
 - `participant.modified` to `now`.
 - `participant.role`: ECOSYSTEM.
-- `participant.did`: `did`.
+- `participant.vid`: `vid`.
 - `participant.corporation_id`: `co.id`.
 - `participant.vs_operator`: `vs_operator`.
 - `participant.created`: `now`
@@ -4767,7 +4767,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `role` (ParticipantRole) (*mandatory*): ISSUER or VERIFIER.
 - `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): the account we want to authorize to create `ParticipantSession` entries linked to this `Participant` entry. **Required** for payment delegation.
-- `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
+- `vid` (string) (*mandatory*): [[ref: VID]] of the VS grantee service.
 - `effective_from` (timestamp) (*optional*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
 - `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
@@ -4805,8 +4805,8 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
 - `role` (ParticipantRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
 - `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): no check required.
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant: at any block height, all `Participant` entries sharing a `did` are owned by the same `Corporation`).
+- `vid` (string) (*mandatory*): MUST be a valid [[ref: VID]] (e.g. a [[ref: DID]] conforming to the DID Syntax as specified in [[spec-norm:DID-CORE]]).
+- if any existing `Participant` entry has `vid` equal to the provided `vid`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(vid, corporation_id)` consistency invariant: at any block height, all `Participant` entries sharing a `vid` are owned by the same `Corporation`).
 - `effective_from` MUST be in the future AND
   - MUST be greater or equal to `validator_participant.effective_from` AND
   - if `validator_participant.effective_until` is not null, MUST be lower than `validator_participant.effective_until`
@@ -4861,7 +4861,7 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.schema_id`: `validator_participant.schema_id`
 - `participant.modified` to `now`.
 - `participant.role`: `role`.
-- `participant.did`: `did`.
+- `participant.vid`: `vid`.
 - `participant.corporation_id`: `co.id`.
 - `participant.vs_operator`: `vs_operator`.
 - `participant.created`: `now`
@@ -4894,7 +4894,7 @@ This method CAN be executed by:
 - the `vs_operator` of the `Participant` entry, acting on behalf of `Corporation[participant.corporation_id]`; or
 - any ancestor validator of the `Participant` entry in the `Participant` tree (from the direct parent up to the root `Participant` entry). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` defined in `v`, or by any `operator` authorized by `Corporation[v.corporation_id]` for this message type.
 
-This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the `did` registered in the `Participant` entry. Typical use cases include:
+This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the `vid` registered in the `Participant` entry. Typical use cases include:
 
 - a new [[ref: verifiable service]] has been onboarded and its credentials are now present in the DID Document, so trust can be (re-)evaluated;
 - an issuer has revoked a credential issued to a holder: the issuer (acting as the validator of the corresponding HOLDER `Participant` entry) notifies the trust resolver to re-evaluate trust for the revoked HOLDER `Participant` entry;
@@ -4958,7 +4958,7 @@ This method does not modify the state of the [[ref: VPR]]. It MUST emit an event
 
 - `participant_id`: equal to `id`.
 
-> Note: the identity of the signers (`corporation`, `operator`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `Participant` entry queried by `participant_id` to resolve `did`, `corporation`, `vs_operator`, and ancestor chain without duplicating them in the event payload.
+> Note: the identity of the signers (`corporation`, `operator`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `Participant` entry queried by `participant_id` to resolve `vid`, `corporation`, `vs_operator`, and ancestor chain without duplicating them in the event payload.
 
 #### [MOD-PP-QRY-1] List Participants
 
@@ -4969,7 +4969,7 @@ Generic query used for (at least):
 - find all `Participant` entries (all or limit to active) of a given schema;
 - for a given validator, get PENDING onboarding processes;
 - find all `Participant` entries of a given grantee;
-- find all `Participant` entries of a given did;
+- find all `Participant` entries of a given vid;
 - find all ISSUER_GRANTOR active participants, so that I can apply to an ISSUER `Participant` entry;
 ...
 
@@ -4977,7 +4977,7 @@ Generic query used for (at least):
 
 - `schema_id` (number) (*optional*): the schema id.
 - `grantee` (account) (*optional*): the grantee account.
-- `did` (string) (*optional*): the did the `Participant` entry refers to.
+- `vid` (string) (*optional*): the vid the `Participant` entry refers to.
 - `participant_id` (number) (*optional*): limit to `Participant` entries where the `validator_participant_id` is `participant_id`.
 - `role` (ParticipantRole) (*optional*): if we want to limit to a specific `Participant` role.
 - `only_valid` (boolean) (*optional*): if set to true, only return active participants.
@@ -5199,7 +5199,7 @@ autonumber stop
 autonumber "<font color='#7677ed'><b>(connects to Certification Entity Validation VS)"
 Applicant --> CE: share id of Participant
 autonumber stop
-Applicant <-- CE: Request proof of account and DID ownership (blind sign)
+Applicant <-- CE: Request proof of account and VID ownership (blind sign)
 Applicant --> CE: send blind sign proofs 
 note over Applicant, CE #EEEEEE: (*optional*) repeat the following until tasks completed
 Applicant <-- CE: Form fill-ins, request proof documents
@@ -5212,7 +5212,7 @@ CE --> VPR #3fbdb6: Update Validation Entry. Applicant VALIDATED, Credential Iss
 autonumber stop
 ```
 
-##### Add a DID to the List of Granted Issuers of a Credential Schema
+##### Add a VID to the List of Granted Issuers of a Credential Schema
 
 *This section is non-normative.*
 
@@ -5229,27 +5229,27 @@ participant "Verifiable Public Registry" as VPR #3fbdb6
 ApplicantAccount --> VPR: Start Participant OP
 VPR <-- VPR: create `Participant` entry.
 ApplicantAccount <-- VPR: `Participant` entry created,\nassigned participant.validator_participant_id from ISSUER_GRANTOR `Participant` entries.
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validator_participant.did\nby creating a DIDComm connection
+ApplicantBrowser --> ValidatorVS: connect to validator VS VID found in validator_participant.vid\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
 ApplicantBrowser --> ValidatorVS: I want to proceed with participant.id=...
 ValidatorVS --> ValidatorVS: load perm with id=...\nand verify the associated participant.validator_participant_id is referring to me
 ApplicantBrowser <-- ValidatorVS: request proof of control\nof participant.applicant account (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proof of account
 ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof validation entry, I trust you.
-ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
-ApplicantBrowser --> ValidatorVS: send DID
-ValidatorVS --> ValidatorVS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be added in an ISSUER `Participant` entry (blind sign)
+ApplicantBrowser <-- ValidatorVS: which VID do you want to register as an issuer?
+ApplicantBrowser --> ValidatorVS: send VID
+ValidatorVS --> ValidatorVS: resolve VID and get pub keys
+ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the VID to be added in an ISSUER `Participant` entry (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proofs
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of the DID, I trust you.
+ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of the VID, I trust you.
 note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
 ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
 note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorVS: Your are a legitimate issuer. I'll now create an ISSUER `Participant` entry for your account and DID.
+ApplicantBrowser <-- ValidatorVS: Your are a legitimate issuer. I'll now create an ISSUER `Participant` entry for your account and VID.
 ValidatorAccount --> VPR #3fbdb6: Set Participant OP to Validated\nset validation.state to VALIDATED\n.
 VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify `Participant` entry added for your DID.\nDID can now issue credentials of this schema.
+ApplicantBrowser <-- ValidatorVS: notify `Participant` entry added for your VID.\nDID can now issue credentials of this schema.
 ```
 
 ### Trust Deposit Module
