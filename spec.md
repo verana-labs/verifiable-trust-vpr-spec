@@ -147,7 +147,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A `Participant` entry, linked to a [[ref: credential schema]], that represents, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], or [[ref: verifier grantor]] of a [[ref: credential schema]].
 
 [[def: decentralized identifier, DID, DIDs]]:
-~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]].
+~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]]. A DID is a type of [[ref: VID]].
+
+[[def: verifiable identifier, VID, VIDs]]:
+~ An identifier bound to cryptographic verification material that allows proving control of the identifier, as introduced by the Trust Spanning Protocol (TSP). This specification uses VID wherever an entity identifier is required, for forward compatibility with TSP; [[ref: DIDs]] are VIDs, and all examples in this specification use DIDs.
 
 [[def: decentralized identifier communication, DIDComm]]:
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
@@ -215,16 +218,31 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ Fees required, in [[ref: denom]], to execute a [[ref: transaction]] in an [[ref: VPR]].
 
 [[def: trust deposit, trust deposits]]:
-~ A financial deposit that is used as a trust guarantee. For a given [[ref: corporation]], its trust deposit is increased when running onboarding process (either as an [[ref: applicant]] or as a [[ref: validator]]).
+~ The [[ref: trust unit]] balance of a [[ref: corporation]], used as its trust guarantee and the basis of its trust score. A trust deposit grows through paid usage: whenever a deposit-bound amount of [[ref: native denom]] is spent by or for a corporation (onboarding processes, credential issuance, presentation,...), trust units are minted to its deposit at the current [[ref: trust unit peg value]]. Trust units in a deposit are non-transferable and non-convertible; a trust deposit can be slashed but never withdrawn.
 
 [[def: trust fee, trust fees]]:
 ~ Fees paid by a [[ref: participant]] that are distributed to other [[ref: participants]].
 
 [[def: network fee, network fees]]:
-~ Fees paid by a [[ref: participant]] that are distributed to network validators and trust deposit holders.
+~ Fees paid by a [[ref: participant]] for transaction execution, routed to the [[ref: distribution pool]].
 
 [[def: trust unit, trust units, TU, TUs]]:
-~ A fake denom that is not usable as a token (cannot be transferred, or used for paying in transactions). Trust unit is used to define fees in Permissions. Fees defined in trust units are automatically converted to [[ref: native denom]] when a transaction is executed, using an exchange rate `TU/[[ref: native denom]]`. Trust unit is used to compensate [[ref: native denom]] fluctuation.
+~ A non-transferable, non-convertible accounting unit that is the only balance held in a [[ref: trust deposit]]. Trust units are minted when a deposit-bound amount of [[ref: native denom]] is spent: the [[ref: native denom]] amount is routed to the [[ref: distribution pool]] (never held in reserve) and the corresponding trust units are credited to the payer's [[ref: trust deposit]] at the current [[ref: trust unit peg value]]. Trust units are **not** a token and **not** a pricing asset: they cannot be transferred, cannot be redeemed for tokens, and cannot be used to define fees. Their sole use is the computation of trust scores, which decay over time through the declining [[ref: trust unit peg value]] index.
+
+[[def: trust unit peg value, tu_peg_value]]:
+~ The value of one [[ref: trust unit]] expressed in the [[ref: main fiat currency]]. Set at genesis and declining **deterministically** each [[ref: epoch]] by `tu_decay_rate` (a protocol schedule, **not** oracle-fed). Because trust units are minted at the current peg value, a static trust deposit balance loses fiat value at exactly `tu_decay_rate`: maintaining a trust score requires ongoing paid activity ("trust decay").
+
+[[def: main fiat currency]]:
+~ The ISO-4217 fiat currency, defined at network launch, used to denominate the [[ref: trust unit peg value]], distribution budgets, and slash obligations. Fee pricing MAY use other fiat currencies (multi-fiat), but protocol-level accounting uses the main fiat currency.
+
+[[def: epoch, epochs]]:
+~ A fixed-length period (`epoch_length`, e.g. 1 day) at whose boundary the [[ref: trust unit peg value]] index is updated and the [[ref: distribution pool]] is paid out.
+
+[[def: distribution pool]]:
+~ The module account that collects, each [[ref: epoch]], all deposit-bound [[ref: native denom]] amounts and [[ref: network fees]]. At epoch end it is paid out in a fixed order (validator budgets, council budget, foundation budget, capped yield to bonded native denom holders) and the **residual is burned**.
+
+[[def: bonded tokens, bonded native denom]]:
+~ [[ref: native denom]] bonded through the standard staking module (subject to `unbonding_period`) in order to accrue the capped, fee-funded, pro-rata yield from the [[ref: distribution pool]]. Bonding confers **no consensus power and no governance power**: it is reward accounting only.
 
 [[def:ecosystem, ecosystems]]
 ~ An approved list of [[ref: participants]] that are authorized to issue/verify certain credentials in an ecosystem.
@@ -1263,20 +1281,27 @@ entity "GlobalVariables" as gv {
   +credential_schema_verifier_validation_validity_period_max_days: number
   +credential_schema_holder_validation_validity_period_max_days: number
   +credential_schema_trust_deposit: number
-  +trust_deposit_share_value: number
   +trust_deposit_rate:number
-  +trust_deposit_max_yield_rate:number
-  +trust_deposit_block_reward_share:number
+  +main_fiat_currency: string
+  +tu_peg_value_genesis: decimal
+  +tu_decay_rate: decimal
+  +epoch_length: duration
   +user_agent_reward_rate:number
   +wallet_user_agent_reward_rate:number
+  +validator_node_budget: decimal
+  +validator_target_uptime: decimal
+  +validator_min_uptime: decimal
+  +council_budget: decimal
+  +foundation_budget: decimal
+  +bonded_holder_max_yield_rate: decimal
+  +unbonding_period: duration
 }
 
 entity "TrustDeposit" as td {
-  +share: number
-  +deposit: number
-  +refunded: number
-  +slashed_deposit: number
-  +repaid_deposit: number
+  +tu: decimal
+  +ecosystem_tu: map<uint64, decimal>
+  +slashed_amount: decimal
+  +repaid_amount: decimal
   last_slashed: timestamp
   last_repaid: timestamp
   +slash_count: number
@@ -1516,15 +1541,14 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `TrustDeposit`:
 
-- `share` (number) (*mandatory*): share of the module total deposit.
 - `corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] this trust deposit belongs to.
-- `deposit` (number) (*mandatory*): amount of deposit in `denom`.
-- `refunded` (number) (*mandatory*): amount of refunded trust deposit, in `denom`. Refunded trust deposit is reused as funding for the next trust deposit spending before drawing additional funds from the corporation account.
-- `slashed_deposit` (number) (*mandatory*): amount of slashed deposit in `denom`. Initialized to 0 at creation by [[MOD-TD-MSG-1-3]](#mod-td-msg-1-3-adjust-trust-deposit-execution-of-the-method) and incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit). MUST never be null.
-- `repaid_deposit` (number) (*mandatory*): part of the slashed trust deposit, in `denom`, that has been repaid. Initialized to 0 at creation by [[MOD-TD-MSG-1-3]](#mod-td-msg-1-3-adjust-trust-deposit-execution-of-the-method) and incremented by [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit). MUST never be null.
+- `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit. Increased only by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.4/year at an 18–24 month half-life): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
+- `ecosystem_tu` (map<uint64, decimal>) (*mandatory*): per-[[ref: ecosystem]] breakdown of `tu`: for each ecosystem id, the trust units minted in the context of that ecosystem. Invariant: the sum of all `ecosystem_tu` values MUST equal `tu`. Used to scope ecosystem-level slashing to the portion of the deposit that was created in that specific ecosystem.
+- `slashed_amount` (decimal) (*mandatory*): cumulative slash obligation, denominated in [[ref: main fiat currency]] and **fixed at slash time** (`slashed_tu × tu_peg_value(t_slash)`); trust scores decay, **obligations do not**. Initialized to 0; incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit). MUST never be null.
+- `repaid_amount` (decimal) (*mandatory*): part of `slashed_amount`, in [[ref: main fiat currency]], that has been repaid. Initialized to 0; incremented by [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit). While `slashed_amount` - `repaid_amount` > 0, all the corporation's `Participant` entries MUST be considered non-trustable and no trust units can be minted to this deposit.
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed; null until the first slash.
 - `last_repaid` (timestamp) (*optional*): last time this trust deposit has been repaid; null until the first repay.
-- `slash_count` (number) (*mandatory*): number of times this account has been slashed. Initialized to 0 at creation by [[MOD-TD-MSG-1-3]](#mod-td-msg-1-3-adjust-trust-deposit-execution-of-the-method) and incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit). MUST never be null.
+- `slash_count` (number) (*mandatory*): number of times this account has been slashed. Initialized to 0; incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit). MUST never be null.
 
 ### DenomAmount
 
@@ -1628,14 +1652,25 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 - `credential_schema_verifier_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an verifier validation can be valid for.
 - `credential_schema_holder_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an [[ref: holder]] validation can be valid for.
 
-**Trust Deposit:**
+**Trust Deposit and Trust Unit Index:**
 
-- `trust_deposit_share_value`(number) (*mandatory*): Value of one share of trust deposit, in [[ref: native denom]]. Default an initial value: 1. Increase over time, when yield is produced.
-- `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05)
-- `trust_deposit_max_yield_rate`(number) (*mandatory*): Maximum yearly yield, in percent, that a trust deposit holder can obtain by receiving block rewards.
-- `trust_deposit_block_reward_share`(number) (*mandatory*): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)
-- `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 20% (0.20)
-- `user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating user agent rewards from trust fees. Default value: 20% (0.20)
+- `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
+- `main_fiat_currency` (string) (*mandatory*): ISO-4217 code of the [[ref: main fiat currency]], defined at network launch. Used to denominate the trust unit peg value, distribution budgets, and slash obligations.
+- `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in [[ref: main fiat currency]] at genesis (index start), e.g. 0.01. Immutable: the index only moves through decay.
+- `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default: a value giving the index a half-life of 18–24 months. A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash obligations are never recomputed.
+- `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day.
+- `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
+- `user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating user agent rewards from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
+
+**Distribution:**
+
+- `validator_node_budget` (decimal) (*mandatory*): target payment per active validator node per [[ref: epoch]], in [[ref: main fiat currency]] (sized to cover node operating costs). Docked by uptime, see the [Distribution section](#distribution).
+- `validator_target_uptime` (decimal) (*mandatory*): signed-block ratio at or above which a node receives its full epoch payment. Example value: 0.99.
+- `validator_min_uptime` (decimal) (*mandatory*): signed-block ratio below which the epoch payment is zero. Example value: 0.90.
+- `council_budget` (decimal) (*mandatory*): council treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through governance proposals.
+- `foundation_budget` (decimal) (*mandatory*): foundation treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through governance proposals.
+- `bonded_holder_max_yield_rate` (decimal) (*mandatory*): yearly cap on the fee-funded yield paid to [[ref: bonded tokens]], expressed as a fraction of the bonded amount. No oracle needed.
+- `unbonding_period` (duration) (*mandatory*): staking exit delay for [[ref: bonded tokens]]. Default value: 28 days.
 
 ## Module Requirements
 
@@ -6523,15 +6558,25 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `credential_schema_verifier_validation_validity_period_max_days` (number) (*mandatory*): 3650.
 - `credential_schema_holder_validation_validity_period_max_days` (number) (*mandatory*): 3650.
 
-**Trust Deposit:**
+**Trust Deposit and Trust Unit Index:**
 
-- `trust_deposit_share_value`(number) (*mandatory*): 1.
 - `trust_deposit_rate`(number) (*mandatory*): 0.05.
-- `trust_deposit_max_yield_rate`(number) (*mandatory*): 0.20
-- `trust_deposit_block_reward_share`(number) (*mandatory*): 0.20
+- `main_fiat_currency` (string) (*mandatory*): to be defined at network launch (ISO-4217 code).
+- `tu_peg_value_genesis` (decimal) (*mandatory*): 0.01.
+- `tu_decay_rate` (decimal) (*mandatory*): value giving an index half-life of 18–24 months.
+- `epoch_length` (duration) (*mandatory*): 1 day.
+- `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.05.
+- `user_agent_reward_rate`(number) (*mandatory*): 0.05.
 
-- `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.10.
-- `user_agent_reward_rate`(number) (*mandatory*): 0.10.
+**Distribution:**
+
+- `validator_node_budget` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]].
+- `validator_target_uptime` (decimal) (*mandatory*): 0.99.
+- `validator_min_uptime` (decimal) (*mandatory*): 0.90.
+- `council_budget` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]].
+- `foundation_budget` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]].
+- `bonded_holder_max_yield_rate` (decimal) (*mandatory*): to be defined in the governance framework.
+- `unbonding_period` (duration) (*mandatory*): 28 days.
 
 ## References
 
