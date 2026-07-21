@@ -1629,7 +1629,7 @@ Represents an on-chain exchange rate between two assets.
 
 - `id` (uint64) (*mandatory*) (key): the id of this `ExchangeRate`.
 - `base_asset_type` (PricingAssetType) (*mandatory*): Type of the base asset.
-- `base_asset` (string) (*conditional*): Identifier of the base asset. MUST be set when `base_asset_type` is COIN or FIAT, MUST be null when `base_asset_type` is TU.
+- `base_asset` (string) (*mandatory*): Identifier of the base asset (a [[ref: denom]] for COIN, an ISO-4217 code for FIAT).
 - `quote_asset_type` (PricingAssetType) (*mandatory*): Type of the quote asset.
 - `quote_asset` (string) (*mandatory*): Identifier of the quote asset.
 - `rate` (string) (*mandatory*): Fixed-point integer representing the exchange rate from base asset to quote asset.
@@ -1643,7 +1643,7 @@ Represents an on-chain exchange rate between two assets.
 
 Represents the authorization granted by network governance to a specific operator account to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) Update Exchange Rate on a given `ExchangeRate` entry.
 
-Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price) Get Price and used across the protocol (trust deposit pricing, fees). Therefore, ownership and update permission of an `ExchangeRate` is scoped to the network (governance), not to a corporation. `ExchangeRateAuthorization` is the on-chain record that designates which operator account is authorized to push fresh values for a given `ExchangeRate`, and under what runtime constraints.
+Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price) Get Price and used across the protocol (trust unit minting, fee settlement, distribution budgets, slash repayment). Therefore, ownership and update permission of an `ExchangeRate` is scoped to the network (governance), not to a corporation. `ExchangeRateAuthorization` is the on-chain record that designates which operator account is authorized to push fresh values for a given `ExchangeRate`, and under what runtime constraints.
 
 `ExchangeRateAuthorization`:
 
@@ -6045,6 +6045,8 @@ Return found `Digest` entry (if any) matching `digest`.
 
 ### Exchange Rate Module
 
+Exchange rates MAY be defined for multiple fiat currencies and coins (multi-fiat pricing is supported). A valid, non-expired rate between the [[ref: native denom]] and the [[ref: main fiat currency]] is REQUIRED for protocol-level operations (trust unit minting, distribution payouts, slash repayment): while it is expired, those operations MUST halt until a fresh rate is pushed.
+
 #### [MOD-XR-MSG-1] Create Exchange Rate
 
 The **Create Exchange Rate** method allows creating an `ExchangeRate` entry for a given `(base_asset_type, base_asset, quote_asset_type, quote_asset)` pair.
@@ -6079,11 +6081,6 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
   - `quote_asset` MUST be non-empty.
   
 - **Asset type / identifier consistency**
-  - If `base_asset_type = TU`:
-    - `base_asset` MUST equal `"tu"`.
-  - If `quote_asset_type = TU`:
-    - `quote_asset` MUST equal `"tu"`.
-
   - If `base_asset_type = COIN`:
     - `base_asset` MUST be a valid Cosmos-SDK denom string.
     - `base_asset` MUST correspond to an asset that exists on-chain (i.e., denom is recognized by the chain and can be held in balances).
@@ -6339,9 +6336,7 @@ Any [[ref: account]] CAN run this [[ref: query]]. As this method does not modify
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
-- if `base_asset_type` is set to `TU`, `base_asset` MUST be null.
 - if `base_asset_type` is set to `COIN` or `FIAT` and `base_asset` is set, `base_asset` MUST be a non-empty string.
-- if `quote_asset_type` is set to `TU`, `quote_asset` MUST be null.
 - if `quote_asset_type` is set to `COIN` or `FIAT` and `quote_asset` is set, `quote_asset` MUST be a non-empty string.
 - if `expires` is set, it MUST be a valid timestamp.
 - `response_max_size` MUST be between 1 and 1024 if set; default to 64 if unspecified.
@@ -6357,8 +6352,8 @@ Anyone CAN run this [[ref: query]], through module call or using the API.
 ##### Get Price Example
 
 ```text
-base_asset_type  = TU
-base_asset       = "tu"
+base_asset_type  = FIAT
+base_asset       = "USD"
 quote_asset_type = COIN
 quote_asset      = "uvna"
 rate             = R
@@ -6367,12 +6362,12 @@ rate_scale       = S
 
 If a valid `ExchangeRate` entry exists with:
 
-- `base_asset_type = TU`
-- `base_asset = "tu"`
+- `base_asset_type = FIAT`
+- `base_asset = "USD"`
 - `quote_asset_type = COIN`
 - `quote_asset = "uvna"`
 
-then the price of **`amount` Trust Unit expressed in uvna** MUST be computed using the following formula:
+then the price of **`amount` USD expressed in uvna** MUST be computed using the following formula:
 
 ```text
 price_uvna = floor(amount * rate / 10^rate_scale)
@@ -6389,9 +6384,9 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 ##### [MOD-XR-QRY-3-1] Get Price parameters
 
 - `base_asset_type` (PricingAssetType) (*mandatory*): type of the base asset.
-- `base_asset` (string) (*conditional*): identifier of the base asset. MUST be set when `base_asset_type` is COIN or FIAT, MUST be null when `base_asset_type` is TU.
+- `base_asset` (string) (*mandatory*): identifier of the base asset (a [[ref: denom]] for COIN, an ISO-4217 code for FIAT).
 - `quote_asset_type` (PricingAssetType) (*mandatory*): type of the quote asset.
-- `quote_asset` (string) (*conditional*): identifier of the quote asset. MUST be set when `quote_asset_type` is COIN or FIAT, MUST be null when `quote_asset_type` is TU.
+- `quote_asset` (string) (*mandatory*): identifier of the quote asset (a [[ref: denom]] for COIN, an ISO-4217 code for FIAT).
 - `amount` (number) (*mandatory*): amount in base-asset units to convert into quote-asset units.
 
 ##### [MOD-XR-QRY-3-2] Get Price query checks
