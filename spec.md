@@ -3418,26 +3418,20 @@ if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native d
   - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in [[ref: native denom]].
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, "tu")`:
-
-- `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) in [[ref: native denom]];
-  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
-
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
   - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the applicant's surcharge **plus** the validator's deposit-bound portion, funded by the applicant since the validator receives a non-native asset that cannot be deposit-bound).
 
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(FIAT, <fiat_currency>)`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = 0 in [[ref: native denom]].
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+  - the required `validation_fees_in_denom` = 0 in [[ref: native denom]] (fiat-priced fees are settled off-chain).
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the applicant's surcharge **plus** the validator's deposit-bound portion, funded by the applicant since the fee itself is settled off-chain).
 
 :::note
-Trust deposit MUST always be paid in [[ref: native denom]]
+Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation (see [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)); on cancellation the escrow is refunded as-is (see [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)).
 :::
 
 ###### [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks
@@ -3459,8 +3453,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Participant` entry `validator_participant` of the selected validator.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
-- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) and transfer the corresponding amount to `TrustDeposit` module.
-- send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
+- send `validation_fees_in_denom` + `validation_trust_deposit_in_native_denom` to the validation escrow [[ref: account]], if greater than 0. No [[ref: trust units]] are minted at this stage (mint-at-validation, see [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
 
 - define `now`: current timestamp.
 
@@ -3473,7 +3466,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.role`: `role`.
   - `applicant_participant.created`: `now`
   - `applicant_participant.modified`: `now`
-  - `applicant_participant.deposit`: `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.tu`: 0.
   - `applicant_participant.validation_fees`: `validation_fees`.
   - `applicant_participant.issuance_fees`: `issuance_fees`.
   - `applicant_participant.verification_fees`: `verification_fees`.
@@ -3481,9 +3474,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.op_last_state_change`: `now`
   - `applicant_participant.op_state`: PENDING.
   - `applicant_participant.op_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom` (held in escrow).
   - `applicant_participant.op_summary_digest`: null.
-  - `applicant_participant.op_validator_deposit`: 0.
+  - `applicant_participant.op_validator_tu`: 0.
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -3578,26 +3571,20 @@ if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native d
   - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in [[ref: native denom]].
   - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
 
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(TU, "tu")`:
-
-- `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) in [[ref: native denom]];
-  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
-
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
   - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the applicant's surcharge **plus** the validator's deposit-bound portion, funded by the applicant since the validator receives a non-native asset that cannot be deposit-bound).
 
-else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(FIAT, [[ref: denom]])`:
+else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(FIAT, <fiat_currency>)`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = 0 in [[ref: native denom]].
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+  - the required `validation_fees_in_denom` = 0 in [[ref: native denom]] (fiat-priced fees are settled off-chain).
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the applicant's surcharge **plus** the validator's deposit-bound portion, funded by the applicant since the fee itself is settled off-chain).
 
 :::note
-Trust deposit MUST always be paid in [[ref: native denom]]
+Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the renewal onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation; on cancellation the escrow is refunded as-is.
 :::
 
 ###### [MOD-PP-MSG-2-3] Renew Participant OP execution
@@ -3610,8 +3597,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
-- use [MOD-TD-MSG-1] to increase by `validation_trust_deposit_in_native_denom` the [[ref: trust deposit]] of `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) and transfer the corresponding amount to `TrustDeposit` module.
-- send `validation_fees_in_denom` to validation escrow [[ref: account]], if greater than 0.
+- send `validation_fees_in_denom` + `validation_trust_deposit_in_native_denom` to the validation escrow [[ref: account]], if greater than 0. No [[ref: trust units]] are minted at this stage (mint-at-validation, see [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
 
 - define `now`: current timestamp.
 
@@ -3619,9 +3605,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
   - `applicant_participant.op_state`: PENDING.
   - `applicant_participant.op_last_state_change`: current timestamp.
-  - `applicant_participant.deposit`: `applicant_participant.deposit` + `validation_trust_deposit_in_native_denom`.
   - `applicant_participant.op_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
+  - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom` (held in escrow; `applicant_participant.tu` is only incremented at validation time).
   - `applicant_participant.modified`: `now`
 
 #### [MOD-PP-MSG-3] Set Participant OP to Validated
@@ -3765,12 +3750,17 @@ Change value of provided `effective_until` if needed, and abort if needed:
   - `effective_until` MUST be greater than `applicant_participant.effective_until` else MUST abort
   - if `op_exp` is not null, verify that provided `effective_until` is lower or equal to `op_exp` else MUST abort.
 
-Fees and Trust Deposits:
+Fees and Trust Deposits — settle the escrow (mint-at-validation):
 
-- transfer the full amount `applicant_participant.op_current_fees` in the proper [[ref: denom]] from escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address`;
-- Increase validator perm trust deposit: use [MOD-TD-MSG-1] to increase by `applicant_participant.op_current_deposit` the [[ref: trust deposit]] of `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) and transfer the corresponding amount to `TrustDeposit` module. Set `applicant_participant.op_validator_deposit` to `applicant_participant.op_validator_deposit` + `applicant_participant.op_current_deposit`.
-
-> Important: if `applicant_participant.op_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.op_current_deposit` available for paying the trust deposit.
+- define `ecosystem_id`: the id of the [[ref: ecosystem]] that owns `cs`.
+- if `(cs.pricing_asset_type, cs.pricing_asset)` is `(COIN, [[ref: native denom]])`:
+  - calculate `validator_deposit_bound` = `applicant_participant.op_current_fees` × `GlobalVariables.trust_deposit_rate`, and `applicant_deposit_bound` = `applicant_participant.op_current_deposit`;
+  - transfer `applicant_participant.op_current_fees` − `validator_deposit_bound` from the escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address`.
+- else (pricing in an arbitrary COIN or in FIAT):
+  - calculate `validator_deposit_bound` = `applicant_participant.op_current_deposit` / 2 and `applicant_deposit_bound` = `applicant_participant.op_current_deposit` / 2 (the applicant escrowed both, see fee checks);
+  - transfer the full amount `applicant_participant.op_current_fees` in the pricing [[ref: denom]] (0 if FIAT) from the escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address`.
+- use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_participant.corporation_id`, `ecosystem_id`, `source_account` = escrow account, `amount` = `validator_deposit_bound`); set `applicant_participant.op_validator_tu` to `applicant_participant.op_validator_tu` + the returned `minted_tu`.
+- use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `ecosystem_id`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`); set `applicant_participant.tu` to `applicant_participant.tu` + the returned `minted_tu`.
 
 Update `Participant` `applicant_participant`:
 
@@ -3851,7 +3841,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `applicant_participant.op_current_fees` to 0;
 
 - if `applicant_participant.op_current_deposit` > 0:
-  - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_participant.corporation_id` by `applicant_participant.op_current_deposit`
+  - transfer `applicant_participant.op_current_deposit` in [[ref: native denom]] back from the escrow [[ref: account]] to the [[ref: applicant]] corporation account. No trust deposit adjustment is needed: nothing was minted while PENDING (mint-at-validation).
   - set `applicant_participant.op_current_deposit` to 0.
 
 If `applicant_participant.op_state` was set to TERMINATED (i.e. `applicant_participant.op_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The call is a no-op if no record exists. If `applicant_participant.op_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
@@ -3964,7 +3954,7 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.validation_fees`: `validation_fees`
 - `participant.issuance_fees`: `issuance_fees`
 - `participant.verification_fees`: `verification_fees`
-- `participant.deposit`: 0
+- `participant.tu`: 0
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -4388,31 +4378,6 @@ Required balance check:
 
 ---
 
-**Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(TU, "tu")`**
-
-Pricing is in Trust Units. Convert to native denom for all on-chain payments.
-
-Calculate:
-
-- `total_fees_in_native_denom` = getPrice(`TU`, `"tu"`, `COIN`, `[[ref: native denom]]`, `total_fees_in_pricing_asset`)
-- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
-- `total_payees_trust_deposit` = `total_payer_trust_deposit`
-- `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
-
-if `agent_participant_id` is set:
-
-- `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-
-if `wallet_agent_participant_id` is set:
-
-- `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
-
-Required balance check:
-
-- `corporation` MUST have available balance ≥ `total_fees_in_native_denom` + `total_payer_trust_deposit` + `total_user_agent_reward` + `total_wallet_agent_reward` in [[ref: native denom]].
-
----
-
 **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
 
 Pricing is in an arbitrary on-chain coin (e.g., USDC). Fees to payees are paid in that coin; deposits and agent rewards are converted to native denom.
@@ -4465,8 +4430,8 @@ Required balance check:
 ---
 
 :::warning
-- Trust deposits MUST always be paid in [[ref: native denom]].
-- When paying with COIN ≠ [[ref: native denom]] or with FIAT, payer pays trust deposits on behalf of payees (since payees receive non-native assets that cannot be directly staked).
+- Deposit-bound amounts MUST always be paid in [[ref: native denom]] (trust units are minted from native denom only).
+- When paying with COIN ≠ [[ref: native denom]] or with FIAT, the payer pays the deposit-bound amounts on behalf of payees (since payees receive non-native assets that cannot be deposit-bound).
 :::
 
 ##### [MOD-PP-MSG-10-4] Create or Update Participant Session execution
@@ -4524,19 +4489,6 @@ If `participant.[fee_field]` > 0:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
   
-   **Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(TU, "tu")`**
-   
-   - `fee_in_native_denom` = getPrice(`TU`, `"tu"`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
-   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
-   - `payee_trust_deposit` = `payer_trust_deposit`
-   - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
-
-  if `agent_participant_id` is set:
-    - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-
-  if `wallet_agent_participant_id` is set:
-    - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
-
    **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
    
    - `fee_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
@@ -4564,11 +4516,11 @@ If `participant.[fee_field]` > 0:
   if `wallet_agent_participant_id` is set:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
-3. Execute transfers and deposits for this beneficiary:
+3. Execute transfers and mints for this beneficiary (`ecosystem_id` = the id of the [[ref: ecosystem]] that owns `cs`):
 
    - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `Corporation[participant.corporation_id].policy_address` (in the appropriate denom).
-   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `participant.corporation_id` by `payee_trust_deposit`. Increase `participant.deposit` by the same value.
-   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer) by `payer_trust_deposit`. Increase `payer_participant.deposit` by the same value.
+   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `participant.corporation_id`, `ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `payee_trust_deposit`). Increase `participant.tu` by the returned `minted_tu`.
+   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer), `ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `payer_trust_deposit`). Increase `payer_participant.tu` by the returned `minted_tu`.
 
 4. Accumulate agent rewards:
 
@@ -4588,7 +4540,7 @@ If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0:
 - `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
 - Transfer `agent_fees_to_account` to `agent_participant.corporation_id` in [[ref: native denom]].
-- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `agent_participant.corporation_id` by `agent_trust_deposit`. Increase `agent_participant.deposit` by the same value.
+- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `agent_participant.corporation_id`, `ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `agent_trust_deposit`). Increase `agent_participant.tu` by the returned `minted_tu`.
 
 **Wallet Agent Reward:**
 
@@ -4597,7 +4549,7 @@ If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 
 - `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
 - Transfer `wallet_agent_fees_to_account` to `wallet_agent_participant.corporation_id` in [[ref: native denom]].
-- Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `wallet_agent_participant.corporation_id` by `wallet_agent_trust_deposit`. Increase `wallet_agent_participant.deposit` by the same value.
+- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `wallet_agent_participant.corporation_id`, `ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `wallet_agent_trust_deposit`). Increase `wallet_agent_participant.tu` by the returned `minted_tu`.
 
 ---
 
@@ -4678,7 +4630,7 @@ This method can only be called by either:
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry;
-- `amount` (number) (*mandatory*): the amount to slash
+- `tu_amount` (decimal) (*mandatory*): the amount of [[ref: trust units]] to slash
 
 ##### [MOD-PP-MSG-12-2] Slash Participant Trust Deposit precondition checks
 
@@ -4693,7 +4645,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `amount` MUST be lower or equal to `applicant_participant.deposit` else MUST abort.
+- `tu_amount` MUST be strictly positive and lower or equal to `applicant_participant.tu` else MUST abort (an ecosystem can only slash trust units accumulated in the context of its own `Participant` entries — never the rest of the corporation's deposit).
 
 :::note
 Even if the `Participant` entry has expired or is revoked, it is still possible to slash it.
@@ -4735,11 +4687,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Participant` entry `applicant_participant` from `id`.
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
+- Load `CredentialSchema` `cs` from `applicant_participant.schema_id` and define `ecosystem_id` = `cs.ecosystem_id`.
 - set `applicant_participant.slashed` to `now`
 - set `applicant_participant.modified` to `now`
-- set `applicant_participant.slashed_deposit` to `applicant_participant.slashed_deposit` + `amount`
+- set `applicant_participant.tu` to `applicant_participant.tu` - `tu_amount`
+- calculate `slashed_fiat` = `tu_amount` × `tu_peg_value(now)` — the obligation in [[ref: main fiat currency]], **fixed at slash time** (trust scores decay, debts do not).
+- set `applicant_participant.slashed_amount` to `applicant_participant.slashed_amount` + `slashed_fiat`
 
-use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_participant.corporation_id`.
+use [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units) Remove Ecosystem Slashed Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `ecosystem_id`, `tu_amount`) to remove the slashed trust units from the ecosystem-scoped portion of the corporation's trust deposit.
 
 Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
 
@@ -4773,7 +4728,9 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 ###### [MOD-PP-MSG-13-2-2] Repay Participant Slashed Trust Deposit fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- `corporation` MUST have at least `applicant_participant.slashed_deposit` in its account balance, else [[ref: transaction]] MUST abort.
+- calculate `outstanding` = `applicant_participant.slashed_amount` - `applicant_participant.repaid_amount` (in [[ref: main fiat currency]]). `outstanding` MUST be strictly positive.
+- a valid (non-expired) exchange rate between [[ref: native denom]] and [[ref: main fiat currency]] MUST be available through [Get Price](#mod-xr-qry-3-get-price).
+- calculate `repay_amount` = `outstanding` / `P(now)` in [[ref: native denom]], where `P(now)` is the current [[ref: native denom]] price in [[ref: main fiat currency]]. `corporation` MUST have at least `repay_amount` in its account balance, else [[ref: transaction]] MUST abort.
 
 ##### [MOD-PP-MSG-13-3] Repay Participant Slashed Trust Deposit execution
 
@@ -4783,12 +4740,15 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 
-use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `applicant_participant.slashed_deposit` to trust deposit of `applicant_participant.corporation_id`.
-
 - Load `Participant` entry `applicant_participant` from `id`.
+- Load `CredentialSchema` `cs` from `applicant_participant.schema_id` and define `ecosystem_id` = `cs.ecosystem_id`.
+- calculate `outstanding` and `repay_amount` as in fee checks.
+- process the repayment as a fresh mint: use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `ecosystem_id`, `source_account` = the `corporation` account, `amount` = `repay_amount`). The [[ref: native denom]] is routed to the [[ref: distribution pool]]; the trust units are minted at the **current** peg value — restoring trust costs more native denom when the token price is low.
 - set `applicant_participant.repaid` to `now`
 - set `applicant_participant.modified` to `now`
-- set `applicant_participant.repaid_deposit` to `applicant_participant.slashed_deposit`.
+- set `applicant_participant.repaid_amount` to `applicant_participant.repaid_amount` + `outstanding`.
+
+> Note: for the mint above, the "no outstanding obligation" precondition of [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) is evaluated **after** accounting for this repayment (the repayment itself is the path that clears the obligation).
 
 #### [MOD-PP-MSG-14] Self Create Participant
 
@@ -4910,7 +4870,7 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.validation_fees`: `validation_fees` if specified and `role` is ISSUER, else 0.
 - `participant.issuance_fees`: 0
 - `participant.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
-- `participant.deposit`: 0
+- `participant.tu`: 0
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
