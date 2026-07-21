@@ -5298,213 +5298,71 @@ ApplicantBrowser <-- ValidatorVS: notify `Participant` entry added for your DID.
 
 *This section is non-normative.*
 
-Concept: the [[ref: trust deposit]] is used to lock trust value as a stake. To process application messages that perform state changes, several modules methods are requiring a trust deposit to be sent, from the executing account, to the trust deposit module.
+Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (tracked per [[ref: ecosystem]]), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible.
 
-We will use a similar method [than the one described here](https://docs.cosmos.network/main/build/modules/staking#delegator-shares) to manage trust deposit and yield calculation and easy way.
+Because the [[ref: trust unit peg value]] declines each [[ref: epoch]], a deposit that is not fed by new paid activity loses fiat value at exactly `tu_decay_rate` ("trust decay"): trust is a subscription. Decay is implemented through the single global index — there are **no per-account updates**: a deposit's fiat value at time `T` is `td.tu × tu_peg_value(T)`, and relative rankings compare raw `td.tu` directly (the common factor cancels).
 
-*Example*:
+Trust deposits generate **no yield**: the fee-funded yield of the [[ref: VPR]] accrues to [[ref: bonded tokens]] through the [Distribution](#distribution) mechanism, not to trust deposit holders.
 
-In our example, we suppose a VPR is just starting and no trust transaction have taken place yet. For this reason:
+#### Trust Unit Index
 
-- `TrustDeposit` module has a balance of `0`: `TrustDeposit.deposit` : `0`.
-- `GlobalVariables.trust_deposit_share_value` has a value of `1`.
+The module maintains a single global index, the [[ref: trust unit peg value]] `tu_peg_value(t)`, expressed in [[ref: main fiat currency]] per trust unit:
 
-*Operation #1*:
+- At genesis, `tu_peg_value` MUST be initialized to `GlobalVariables.tu_peg_value_genesis`.
+- At each [[ref: epoch]] boundary (every `GlobalVariables.epoch_length`), the index MUST be updated: `tu_peg_value = tu_peg_value × (1 - GlobalVariables.tu_decay_rate)`.
+- A governance change of `tu_decay_rate` is **prospective only**: it takes effect from the **next epoch**. The index path already elapsed MUST NOT be recomputed: past mints, scores, and fiat-fixed slash obligations are unaffected; only the future decline steepens or flattens.
+- The price of one trust unit in [[ref: native denom]] is derived from the oracle: `price_tu_in_native_denom(t) = tu_peg_value(t) / P(t)`, where `P(t)` is the current [[ref: native denom]] price in [[ref: main fiat currency]] obtained through [Get Price](#mod-xr-qry-3-get-price). If no valid (non-expired) exchange rate is available, minting and repayment operations MUST abort.
+- Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic for `tu_peg_value` and all `tu` balances: raw balances grow as the index declines (~×1.4/year at an 18–24 month half-life). A redenomination MAY be performed at a chain upgrade.
 
-an account `account1` wants to create a transaction that requires:
+#### [MOD-TD-MSG-1] Mint Trust Units
 
-- 10 `denom` to be sent to the `account1` trust deposit;
-- 5 `denom` for network fees.
+This method credits [[ref: trust units]] to the [[ref: trust deposit]] of a specific [[ref: corporation]] in exchange for a deposit-bound [[ref: native denom]] amount, and routes that amount to the [[ref: distribution pool]].
 
-*First, the Trust Deposit*: execution of the method will perform the following (we consider this account had no `TrustDeposit` entry yet):
+Only the modules that require trust deposit manipulation CAN call this method (it is not directly executable by an [[ref: account]]). Callers MUST only invoke it for amounts that are **final**: escrowed amounts of PENDING onboarding processes MUST NOT be minted (they are minted at validation time, or refunded on cancellation — see [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) and [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)).
 
-- 10 `denom` are sent to the `TrustDeposit` module.
-  - `TrustDeposit.deposit` = `TrustDeposit.deposit` + `10`
+##### [MOD-TD-MSG-1-1] Mint Trust Units method parameters
 
-- a `TrustDeposit` entry `td1` is created for `account1` running the service with:
-  - `td1.deposit` = `10`
-  - `td1.shares` = `10` / `GlobalVariables.trust_deposit_share_value` = `10`
+- `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]].
+- `ecosystem_id` (uint64) (*mandatory*): id of the [[ref: ecosystem]] in whose context the deposit-bound amount was spent. Used for the `ecosystem_tu` attribution.
+- `source_account` (account) (*mandatory*): account funding the mint (payer account, or escrow account at validation time).
+- `amount` (number) (*mandatory*): deposit-bound amount, in [[ref: native denom]].
 
-*Second, fee distribution*: let's suppose that `trust_deposit_block_reward_share` is set to `0.30` so that 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holders. For this specific transaction:
-
-- 30% * 5 = 1.5 `denom` will be sent to `TrustDeposit` module, which will increase the `GlobalVariables.trust_deposit_share_value`:
-
-- `TrustDeposit.deposit` = `11.5`
-- `GlobalVariables.trust_deposit_share_value` = `1.15`.
-
-Now, `account1` can (optionally) reclaim the difference between the `GlobalVariables.trust_deposit_share_value` \* `tt.share` minus `tt.denom`, which represents the trust (yield) gains.
-
-*Operation #2*:
-
-Another account `account2` wants to create a transaction that requires:
-
-- 20 `denom` to be sent to the `account2` trust deposit;
-- 10 `denom` for network fees.
-
-*First, Trust Deposit*:
-
-- 20 `denom` are sent to the `TrustDeposit` module.
-  - `TrustDeposit.deposit` = `31.5`
-
-- a `TrustDeposit` entry `td2` is created for `account2`:
-  - `td2.deposit` = `20`
-  - `td2.shares` = `20` / `GlobalVariables.trust_deposit_share_value` = `20` / `1.15` ~=  `17.39...`
-
-*Second, fee distribution*: let's suppose `trust_deposit_block_reward_share` is set to `0.30` so that 70% of transaction fees are distributed to validators, and 30% of transaction fees are distributed to trust deposit holders. For this specific transaction:
-
-- 30% * 10 = 3 `denom` will be sent to `TrustDeposit` module, which will increase the `GlobalVariables.trust_deposit_share_value`:
-
-- `TrustDeposit.deposit` = `34.5`
-- `GlobalVariables.trust_deposit_share_value` = `1.15` * `34.5` / `31.5` ~= `1.2595...`
-
-*After the 2 operations*:
-
-- `account1` real deposit (based on share) is `account1.share` \* `GlobalVariables.trust_deposit_share_value` ~= `12.595...`, available withdrawable yield is `account1.share` \* `GlobalVariables.trust_deposit_share_value` - `account1.deposit` ~= `2.595...`
-- `account2` real deposit (based on share) is `account2.share` \* `GlobalVariables.trust_deposit_share_value` ~= `21.90...`, available withdrawable yield is `account2.share` \* `GlobalVariables.trust_deposit_share_value` - `account2.deposit` ~= `1.90...`
-
-#### Trust Deposit Yield
-
-The following global parameters are used to tune the Trust Deposit yield generation, in case the VPR is implemented as a ledger:
-
-- `trust_deposit_max_yield_rate`(number) (*mandatory*): Maximum yearly yield, in percent, that a trust deposit holder can obtain by receiving block rewards.
-- `trust_deposit_block_reward_share`(number) (*mandatory*): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)
-
-Each time there is a block reward to be distributed, `trust_deposit_block_reward_share` percent MUST be directed to trust deposit holders, based on their trust deposit share.
-
-Implementers MUST make sure, for each processed block reward, that the yearly effective yield is lower or equal than `trust_deposit_max_yield_rate`.
-
-#### [MOD-TD-MSG-1] Adjust Trust Deposit
-
-This method is used to increase or decrease the [[ref: trust deposit]] of a specific [[ref: corporation]] (identified by its `corporation_id`).
-
-Only the modules that require trust deposit manipulation CAN call this method. If trust deposit has been slashed and not repaid, method execution MUST abort.
-
-##### [MOD-TD-MSG-1-1] Adjust Trust Deposit method parameters
-
-- `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]] we want to adjust.
-- `augend` (number) (*mandatory*): value to add to the deposit, in [[ref: denom]].
-
-##### [MOD-TD-MSG-1-2] Adjust Trust Deposit precondition checks
+##### [MOD-TD-MSG-1-2] Mint Trust Units precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-TD-MSG-1-2-1] Adjust Trust Deposit basic checks
+###### [MOD-TD-MSG-1-2-1] Mint Trust Units basic checks
 
 - if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
+- `amount` MUST be strictly positive.
+- load `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`. If `td` exists and `td.slashed_amount` - `td.repaid_amount` > 0, the deposit has been slashed and not repaid: [[ref: transaction]] MUST abort.
+- a valid (non-expired) exchange rate between [[ref: native denom]] and [[ref: main fiat currency]] MUST be available through [Get Price](#mod-xr-qry-3-get-price), else [[ref: transaction]] MUST abort.
 
-Value checks:
+###### [MOD-TD-MSG-1-2-2] Mint Trust Units fee checks
 
-- `augend` (number) (*mandatory*): MUST be strictly positive or strictly negative.
+- `source_account` MUST have `amount` in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-- load `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`.
-
-  - if `td` does not exist:
-    - if `augend` is negative, [[ref: transaction]] MUST abort.
-  - else
-    - if `augend` is negative and `td.refunded` - `augend` is greater than `td.deposit` transaction MUST abort. (`td.refunded` trust deposit cannot be greater than `td.deposit`).
-
-###### [MOD-TD-MSG-1-2-2] Adjust Trust Deposit fee checks
-
-- Fee payer the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]]
-
-Additionally:
-
-- load `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`.
-- if `td` exists:
-  - if `augend` is positive:
-    - calculate `needed_deposit` = `augend` - `td.refunded`. 
-    - if `needed_deposit` < 0: `needed_deposit` = 0.
-  - else `needed_deposit` = 0.
-- else `needed_deposit` = `augend`.
-
-- `Corporation[corporation_id].policy_address` MUST have `needed_deposit` in its [[ref: account]], else [[ref: transaction]] MUST abort.
-
-##### [MOD-TD-MSG-1-3] Adjust Trust Deposit execution of the method
+##### [MOD-TD-MSG-1-3] Mint Trust Units execution of the method
 
 If all precondition checks passed, method is executed in a [[ref: transaction]].
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - if a `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` does not exist, create entry `td`:
-
-  - transfer `augend` from `Corporation[corporation_id].policy_address` to `TrustDeposit` account.
-  - calculate `augend_share` = `augend` / `GlobalVariables.trust_deposit_share_value`.
   - set `td.corporation_id` to `corporation_id`;
-  - set `td.deposit` to `augend`;
-  - set `td.share` to `augend_share`;
-  - set `td.refunded` to 0.
-  - set `td.slashed_deposit` to 0.
-  - set `td.repaid_deposit` to 0.
-  - set `td.slash_count` to 0.
+  - set `td.tu` to 0; set `td.ecosystem_tu` to an empty map;
+  - set `td.slashed_amount` to 0; set `td.repaid_amount` to 0; set `td.slash_count` to 0.
+- calculate `minted_tu` = `amount` / `price_tu_in_native_denom(now)` (equivalently `amount` × `P(now)` / `tu_peg_value(now)`).
+- set `td.tu` to `td.tu` + `minted_tu`.
+- set `td.ecosystem_tu[ecosystem_id]` to `td.ecosystem_tu[ecosystem_id]` + `minted_tu` (0 if absent).
+- transfer `amount` from `source_account` to the [[ref: distribution pool]] account.
+- return `minted_tu` to the calling module (which records it on the relevant `Participant.tu` / `Participant.op_validator_tu`).
 
-- else if `td.slashed_deposit` > 0 and `td.repaid_deposit` < `td.slashed_deposit` => deposit has been slashed and not repaid, so MUST abort.
+:::note
+There is no negative adjustment path: trust units are never un-minted. Refunds only exist at the escrow level, **before** minting (Option: mint-at-validation). Trust units only decrease through slashing.
+:::
 
-- else if `augend` > 0:
-  
-  - if `td.refunded` > 0:
-    - if `td.refunded` >= `augend` :
-      - set `td.refunded` to `td.refunded` - `augend`
-    - else
-      - use bank? to transfer `augend` - `td.refunded` from `Corporation[corporation_id].policy_address` to `TrustDeposit` account.
-      - set `td.deposit` to `td.deposit` + `augend` - `td.refunded`
-      - calculate `missing_augend_share` from missing tokens :  `missing_augend_share` = (`augend` - `td.refunded`) / `GlobalVariables.trust_deposit_share_value`.
-      - set `td.share` to `td.share` + `missing_augend_share`
-      - set `td.refunded` to 0
-  
-  - else
-    - use bank? to transfer `augend` from `Corporation[corporation_id].policy_address` to `TrustDeposit` account.
-    - calculate `augend_share` = `augend` / `GlobalVariables.trust_deposit_share_value`.
-    - set `td.deposit` to `td.deposit` + `augend`
-    - set `td.share` to `td.share` + `augend_share`
-
-- else if `augend` < 0:
-  - set `td.refunded` to `td.refunded` - `augend`
-
-The last case, `augend` < 0, is to refund trust deposit (e.g. when canceling an onboarding process). The refunded amount is added to `td.refunded` and is reused for the next trust deposit spending.
-
-#### [MOD-TD-MSG-2] Reclaim Trust Deposit Yield
-
-This method is used to reclaim yield. If trust deposit has been slashed and not repaid, method execution MUST abort.
-
-For a given `TrustDeposit` entry `td`, claimable yield is calculated like this:
-
-`claimable_yield` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
-
-If `claimable_yield` is positive, it can be claimed.
-
-##### [MOD-TD-MSG-2-1] Reclaim Trust Deposit Yield method parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-
-##### [MOD-TD-MSG-2-2] Reclaim Trust Deposit Yield precondition checks
-
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-
-###### [MOD-TD-MSG-2-2-1] Reclaim Trust Deposit Yield basic checks
-
-- Load `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
-- if `td.slashed_deposit` > 0 and `td.repaid_deposit` < `td.slashed_deposit` => deposit has been slashed and not repaid, so MUST abort.
-- calculate `claimable_yield` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
-- if `claimable_yield` <= 0, [[ref: transaction]] MUST abort.
-
-###### [MOD-TD-MSG-2-2-2] Reclaim Trust Deposit Yield fee checks
-
-Fee payer running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
-
-##### [MOD-TD-MSG-2-3] Reclaim Trust Deposit Yield execution of the method
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-For the `TrustDeposit` entry `td` linked to `co.id`:
-
-- Load `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
-- calculate `claimable_yield` = `td.share` * `GlobalVariables.trust_deposit_share_value` - `td.deposit`.
-- update `td.share` = `td.share` - `claimable_yield` / `GlobalVariables.trust_deposit_share_value`
-- transfer `claimable_yield` from `TrustDeposit` account to `co.policy_address`.
-
+#### [MOD-TD-MSG-2] Void
 
 #### [MOD-TD-MSG-3] Void
 
@@ -5525,6 +5383,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 ###### [MOD-TD-MSG-4-2-1] Update Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+- `tu_peg_value_genesis` MUST NOT be updatable: the index only moves through decay.
+- an update of `tu_decay_rate` MUST be applied prospectively, from the next [[ref: epoch]] (see [Trust Unit Index](#trust-unit-index)).
 
 ###### [MOD-TD-MSG-4-2-2] Update Module Parameters fee checks
 
@@ -5542,16 +5402,16 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 #### [MOD-TD-MSG-5] Slash Trust Deposit
 
-This method is used by the network governance authority to **globally slash** a corporation `account` trust deposit.
+This method is used by the network governance authority to **globally slash** the trust deposit of a [[ref: corporation]].
 
-This method can only be called by a governance proposal. A globally slashed account MUST repay the slashed deposit in order to continue to use the services provided by the VPR. When and account is slashed, and while slashed deposit has not been repaid, all account linked permissions MUST be considered non trustable.
+This method can only be called by a governance proposal. Slashing removes [[ref: trust units]] and records an obligation denominated in [[ref: main fiat currency]], **fixed at slash time**: reputation decays, **debts do not**. A slashed corporation MUST repay the obligation in order to continue to use the services provided by the VPR. While the obligation is unrepaid, all the corporation's `Participant` entries MUST be considered non-trustable and no trust units can be minted to its deposit.
 
 This method is for network governance authority slash. For ecosystem slash, see [Slash Participant Trust Deposit](#mod-pp-msg-12-slash-participant-trust-deposit).
 
 ##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation we want to slash.
-- `amount` (number) (*mandatory*): value to slash, in [[ref: denom]].
+- `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] to slash.
 
 ##### [MOD-TD-MSG-5-2] Slash Trust Deposit precondition checks
 
@@ -5561,8 +5421,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `amount` must be > 0.
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.deposit` MUST be greater or equal to `amount`.
+- `tu_amount` must be > 0.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.tu` MUST be greater or equal to `tu_amount`.
 
 ###### [MOD-TD-MSG-5-2-2] Slash Trust Deposit fee checks
 
@@ -5576,22 +5436,25 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 For the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`:
 
-- set `td.deposit` to `td.deposit` - `amount`.
-- set `td.share` to `td.share` - `amount` / `GlobalVariables.trust_deposit_share_value`
-- burn `amount` from `TrustDeposit` account.
-- set `td.slashed_deposit` to `td.slashed_deposit` + `amount`
-- set `td.last_slashed` to now
-- set `td.slash_count` to `td.slash_count` + 1
+- set `td.tu` to `td.tu` - `tu_amount`.
+- reduce the entries of `td.ecosystem_tu` **pro-rata** to their balances so that their sum equals the new `td.tu` (rounding differences assigned to the largest entry).
+- calculate `slashed_fiat` = `tu_amount` × `tu_peg_value(now)` — the obligation in [[ref: main fiat currency]], fixed at slash time.
+- set `td.slashed_amount` to `td.slashed_amount` + `slashed_fiat`.
+- set `td.last_slashed` to `now`.
+- set `td.slash_count` to `td.slash_count` + 1.
+
+:::note
+Nothing is burned here: [[ref: trust units]] are not a token. The economic penalty is the loss of trust score plus the fiat-fixed repayment obligation.
+:::
 
 #### [MOD-TD-MSG-6] Repay Slashed Trust Deposit
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. Repayment is made in [[ref: native denom]] worth the **outstanding fiat obligation at current rates**, and is processed as a fresh mint: the [[ref: native denom]] is routed to the [[ref: distribution pool]] and the equivalent [[ref: trust units]] (at the current peg value) are credited back to the deposit. Restoring trust therefore costs **more native denom when the token price is low**.
 
 ##### [MOD-TD-MSG-6-1] Repay Slashed Trust Deposit method parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `amount` (number) (*mandatory*): value to repay, in [[ref: denom]].
 
 ##### [MOD-TD-MSG-6-2] Repay Slashed Trust Deposit precondition checks
 
@@ -5604,13 +5467,14 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `amount` must be > 0.
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) MUST exist, and `amount` MUST be exactly equal to `td.slashed_deposit` - `td.repaid_deposit`.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) MUST exist.
+- calculate `outstanding` = `td.slashed_amount` - `td.repaid_amount`. `outstanding` MUST be strictly positive.
+- a valid (non-expired) exchange rate between [[ref: native denom]] and [[ref: main fiat currency]] MUST be available through [Get Price](#mod-xr-qry-3-get-price).
 
 ###### [MOD-TD-MSG-6-2-2] Repay Slashed Trust Deposit fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- `co.policy_address` MUST have the required `amount` in its account, else [[ref: transaction]] MUST abort.
+- calculate `repay_amount` = `outstanding` / `P(now)` in [[ref: native denom]], where `P(now)` is the current [[ref: native denom]] price in [[ref: main fiat currency]]. `co.policy_address` MUST have `repay_amount` in its account, else [[ref: transaction]] MUST abort.
 
 ##### [MOD-TD-MSG-6-3] Repay Slashed Trust Deposit execution of the method
 
@@ -5620,56 +5484,53 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 For the `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account):
 
-- set `td.deposit` to `td.deposit` + `amount`.
-- set `td.share` to `td.share` + `amount` / `GlobalVariables.trust_deposit_share_value`
-- add `amount` to `TrustDeposit` account.
-- set `td.repaid_deposit` to `td.repaid_deposit` + `amount`
-- set `td.last_repaid` to now
+- calculate `repay_amount` = `outstanding` / `P(now)` as in fee checks.
+- calculate `minted_tu` = `outstanding` / `tu_peg_value(now)`.
+- set `td.tu` to `td.tu` + `minted_tu`.
+- attribute `minted_tu` in `td.ecosystem_tu` **pro-rata** to the existing entries; if the deposit is empty, credit it under ecosystem id 0 (network).
+- transfer `repay_amount` from `co.policy_address` to the [[ref: distribution pool]] account.
+- set `td.repaid_amount` to `td.repaid_amount` + `outstanding`.
+- set `td.last_repaid` to `now`.
 
-#### [MOD-TD-MSG-7] Burn Ecosystem Slashed Trust Deposit
+#### [MOD-TD-MSG-7] Remove Ecosystem Slashed Trust Units
 
-Burn the portion of the trust deposit of a given account. This method can only be called by the permission module when performing an ecosystem-related slash.
+Remove [[ref: trust units]] minted in the context of a given [[ref: ecosystem]] from the trust deposit of a given [[ref: corporation]]. This method can only be called by the participant module when performing an ecosystem-level slash ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)): an ecosystem governance authority can only slash the portion of a deposit that was **created in its own ecosystem** (`td.ecosystem_tu[ecosystem_id]`), never the rest of the deposit.
 
 :::warning
 Make sure to **properly protect access to the execution of this method** else it may lead to very destructive actions.
 :::
 
-##### [MOD-TD-MSG-7-1] Burn Ecosystem Slashed Trust Deposit method parameters
+##### [MOD-TD-MSG-7-1] Remove Ecosystem Slashed Trust Units method parameters
 
-- `corporation_id` (uint64) (*mandatory*): id of the corporation of the [[ref: trust deposit]] we want to burn.
-- `amount` (number) (*mandatory*): value to burn, in [[ref: denom]].
+- `corporation_id` (uint64) (*mandatory*): id of the corporation of the [[ref: trust deposit]].
+- `ecosystem_id` (uint64) (*mandatory*): id of the [[ref: ecosystem]] performing the slash.
+- `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] to remove.
 
-:::warning
-**Alternative approach**: For security and consistency, implementers MAY choose to reference the **ID of the slashed permission**, load it and use its defined `slashed_deposit` value as the slashing amount.
-The decision between this method and specifying the amount directly is left to implementers.
-:::
-
-##### [MOD-TD-MSG-7-2] Burn Ecosystem Slashed Trust Deposit precondition checks
+##### [MOD-TD-MSG-7-2] Remove Ecosystem Slashed Trust Units precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-TD-MSG-7-2-1] Burn Ecosystem Slashed Trust Deposit basic checks
+###### [MOD-TD-MSG-7-2-1] Remove Ecosystem Slashed Trust Units basic checks
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `amount` must be > 0.
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `amount` MUST be lower or equal than `td.deposit`.
+- `tu_amount` must be > 0.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.ecosystem_tu[ecosystem_id]` MUST be greater or equal to `tu_amount`.
 
-###### [MOD-TD-MSG-7-2-2] Burn Ecosystem Slashed Trust Deposit fee checks
+###### [MOD-TD-MSG-7-2-2] Remove Ecosystem Slashed Trust Units fee checks
 
 Fee payer running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]] else [[ref: transaction]] MUST abort.
 
-##### [MOD-TD-MSG-7-3] Burn Ecosystem Slashed Trust Deposit execution of the method
+##### [MOD-TD-MSG-7-3] Remove Ecosystem Slashed Trust Units execution of the method
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- define `now`: current timestamp.
-
 For the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`:
 
-- set `td.deposit` to `td.deposit` - `amount`.
-- set `td.share` to `td.share` - `amount` / `GlobalVariables.trust_deposit_share_value`
-- burn `amount` from `TrustDeposit` account.
+- set `td.tu` to `td.tu` - `tu_amount`.
+- set `td.ecosystem_tu[ecosystem_id]` to `td.ecosystem_tu[ecosystem_id]` - `tu_amount`.
+
+The fiat-fixed obligation of an ecosystem-level slash is recorded on the corresponding `Participant` entry by [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit).
 
 #### [MOD-TD-QRY-1] Get Trust Deposit
 
@@ -5687,7 +5548,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-TD-QRY-1-3] Get Trust Deposit execution of the query
 
-Return the `TrustDeposit` entry whose `corporation_id` equals the supplied `corporation_id`, if any. If no entry exists, return not found.
+Return the `TrustDeposit` entry whose `corporation_id` equals the supplied `corporation_id`, if any, together with the current `tu_peg_value` (so consumers can derive the fiat score `tu × tu_peg_value`). If no entry exists, return not found.
 
 #### [MOD-TD-QRY-2] List Module Parameters
 
@@ -5713,6 +5574,44 @@ Return the list of the existing parameters and their values.
   }
 }
 ```
+
+### Distribution
+
+#### Distribution Overview
+
+*This section is non-normative.*
+
+All deposit-bound [[ref: native denom]] (see [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and all [[ref: network fees]] flow into a single [[ref: distribution pool]]. At each [[ref: epoch]] boundary the pool is paid out in a fixed order — budgets first, then a capped yield, then **the residual is burned**. Structural sell pressure is therefore **bounded by construction** (operating budgets plus a capped yield), while the burn is the elastic residual that grows automatically with adoption. Because budgets and the burn are fiat-denominated, the burn is **self-damping** (price up → fewer tokens burned) and **countercyclical** (price down → more tokens burned).
+
+#### [DIST-1] Epoch payout order
+
+At each [[ref: epoch]] boundary, the [[ref: distribution pool]] balance MUST be paid out in the following order. Fiat-denominated amounts are converted to [[ref: native denom]] at the current oracle rate ([Get Price](#mod-xr-qry-3-get-price)); if no valid rate is available, the payout MUST be skipped and retried at the next epoch (amounts remain in the pool).
+
+1. **Validators** — each active validator node receives `validator_node_budget` (in [[ref: main fiat currency]], oracle-converted), **docked by uptime**. The KPI is the node's signed-block ratio over the elapsed epoch, obtained from consensus signing info (objective, no oracle):
+   - ratio ≥ `validator_target_uptime`: full payment;
+   - `validator_min_uptime` ≤ ratio < `validator_target_uptime`: linear pro-ration between zero and full payment;
+   - ratio < `validator_min_uptime`: zero.
+   Docked amounts remain in the pool (they join the burn residual). Persistent under-performance escalates to the council's governance processes (term review) — separate from payment docking.
+2. **Council treasury** — `council_budget` (oracle-converted).
+3. **Foundation treasury** — `foundation_budget` (oracle-converted).
+4. **Bonded token holders** — a **capped, fee-funded, pro-rata** yield: it accrues only to [[ref: native denom]] bonded through the standard staking module (subject to `unbonding_period`), pro-rata to the bonded amount, and hard-capped at `bonded_holder_max_yield_rate` per year (a fraction of the bonded amount — no oracle needed). Per epoch, the payout equals min(pool remainder after budgets, sum of per-holder caps).
+5. **Residual → burned.** Whatever remains after 1–4 MUST be burned. Burn is not a parameter: it is the automatic pool residual.
+
+If the pool balance is insufficient to cover items 1–3 (bootstrap phase), the available balance MUST be distributed in order (validators first) and the shortfall is covered off-protocol by treasuries or vesting grants — **never by token emission**: the [[ref: native denom]] supply is fixed at genesis and strictly non-increasing.
+
+Payouts SHOULD stream linearly over the epoch rather than in a single burst; treasuries are expected to publish sale policies (e.g. TWAP-based).
+
+#### [DIST-2] Bonding
+
+Bonding uses the chain's standard staking module for reward accounting (O(1) distribution accumulator, yield follows time-in-bond, exit behind `unbonding_period`). **Bonding confers no consensus power and no governance power**: the network remains council-run Proof-of-Authority, one member one vote; bonded tokens are reward accounting only. Validators are ordinary holders too: they MAY bond their own tokens and earn the capped yield on top of the node budget, under exactly the same rules and cap as everyone else.
+
+:::todo
+**Open design question**: the exact integration between the PoA validator set and the staking module used for bonding (custom staking hooks vs. a dedicated bonding module reusing the distribution accumulator) is intentionally left open at this stage and will be specified later.
+:::
+
+:::note
+**Pending legal review**: distribution of fee revenue to passive bonded holders is dividend-like and strengthens a securities analysis of the token. The cap, the fee funding (no emission), and the bonding requirement mitigate but do not settle this. This mechanism MUST NOT be activated before legal counsel has reviewed it.
+:::
 
 ### Delegation Module
 
