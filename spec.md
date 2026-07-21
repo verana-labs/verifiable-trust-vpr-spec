@@ -474,19 +474,19 @@ package "Pay per validation Fee Structure" as cs {
 
     object "Ecosystem A - Credential Schema Root Participant" as tr #3fbdb6 {
         did:example:ecosystemA
-        Grantor applicant validation cost: 1000 VNA
+        Grantor applicant validation cost: 100 VNA
     }
     object "Issuer Grantor B - Credential Schema Participant" as ig {
         did:example:igB
-        Issuer applicant validation cost: 1000 VNA
+        Issuer applicant validation cost: 100 VNA
     }
     object "Issuer C - Credential Schema Participant" as issuer #7677ed  {
         did:example:iC
-        Holder applicant validation cost: 10 VNA
+        Holder applicant validation cost: 1 VNA
     }
     object "Verifier Grantor D -  Credential Schema Participant" as vg {
         did:example:vgD
-        Verifier applicant validation cost: 200 VNA
+        Verifier applicant validation cost: 20 VNA
     }
     object "Verifier E - Credential Schema Participant" as verifier #00b0f0 {
         did:example:vE
@@ -747,7 +747,7 @@ The **total amount** paid by the applicant consists of:
 
 While the onboarding process is PENDING, both the validation fees **and** the deposit-bound amount are **held in the escrow account**: no trust units are minted and nothing enters the [[ref: distribution pool]]. If the process is cancelled, the escrowed amount is refunded as-is — this is the only refund path; trust deposits themselves are never freed.
 
-Example, using 5% for `trust_deposit_rate` and validation fees of 1000 VNA:
+Example, using 5% for `trust_deposit_rate` and validation fees of 100 VNA:
 
 ```plantuml
 
@@ -758,16 +758,16 @@ scale max 1200 width
 
 package "Applicant" as issuer #7677ed {
     object "A Account" as issuera {
-         \t-1050 VNA
+         \t-105 VNA
     }
 }
 
 object "Escrow Account" as escrow {
-    \t1000 VNA validation fees
-    \t+50 VNA deposit-bound
+    \t100 VNA validation fees
+    \t+5 VNA deposit-bound
 }
 
-issuera -r-> escrow: \t+1050 VNA
+issuera -r-> escrow: \t+105 VNA
 
 
 @enduml
@@ -786,15 +786,15 @@ scale max 1200 width
 
 package "Issuer Grantor B (validator)" as ig {
     object "IG Account" as iga {
-        \t+950 VNA
+        \t+95 VNA
     }
     object "IG Trust Deposit" as igtd {
-        \tmint TU worth 50 VNA
+        \tmint TU worth 5 VNA
     }
 }
 package "Applicant" as a #7677ed {
     object "A Trust Deposit" as atd {
-        \tmint TU worth 50 VNA
+        \tmint TU worth 5 VNA
     }
 }
 object "Escrow Account" as escrow
@@ -802,8 +802,8 @@ object "Distribution Pool" as pool #cccccc
 
 
 
-escrow -r-> iga: \t+950 VNA
-escrow --> pool: \t+100 VNA (deposit-bound)
+escrow -r-> iga: \t+95 VNA
+escrow --> pool: \t+10 VNA (deposit-bound)
 pool ..> igtd: \tmint
 pool ..> atd: \tmint
 
@@ -826,21 +826,21 @@ package "Ecosystem #A - Credential Schema #1" as cs {
 
     object "Ecosystem #A - Credential Schema #1 Root Participant" as tr #3fbdb6 {
         did:example:ecosystemA
-        issuance cost: 10 VNA
-        verification cost: 20 VNA
+        issuance cost: 2 VNA
+        verification cost: 3 VNA
     }
     object "Issuer Grantor #B - Credential Schema #1 Participant" as ig {
         did:example:igB
-        issuance cost: 5 VNA
-        verification cost: 5 VNA
+        issuance cost: 1 VNA
+        verification cost: 1.5 VNA
     }
     object "Issuer #C - Credential Schema #1 Participant" as issuer #7677ed  {
         did:example:iC
-        verification cost: 30 VNA
+        verification cost: 5 VNA
     }
     object "Verifier Grantor #D - Credential #1 Schema Participant" as vg {
         did:example:vgD
-        verification cost: 2 VNA
+        verification cost: 0.5 VNA
     }
     object "Verifier #E - Credential Schema #1 Participant" as verifier #00b0f0 {
         did:example:vE
@@ -887,7 +887,7 @@ If not, they **must reject** the issuance or verification request.
 Note: The **User Agent** and **Wallet User Agent** may refer to the same implementation.
 :::
 
-Distribution example for the issuance by `ISSUER` #C of a credential, using the `Participant` tree above, 5% for `trust_deposit_rate`, 5% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`. Total fees along the tree: 10 + 5 = 15 VNA; the issuer pays 15 × (1 + 0.05 + 0.05 + 0.05) = 17.25 VNA. Deposit-bound amounts (payer surcharge and 5% of each payee share, agents included) total 1.575 VNA, routed to the [[ref: distribution pool]] with the equivalent trust units minted to each party's deposit.
+Distribution example for the issuance by `ISSUER` #C of a credential, using the `Participant` tree above, 5% for `trust_deposit_rate`, 5% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`. Total fees along the tree: 2 + 1 = 3 VNA; the issuer pays 3 × (1 + 0.05 + 0.05 + 0.05) = 3.45 VNA. Deposit-bound amounts (payer surcharge and 5% of each payee share, agents included) total 0.315 VNA, routed to the [[ref: distribution pool]] with the equivalent trust units minted to each party's deposit.
 
 ```plantuml
 
@@ -897,69 +897,69 @@ scale max 800 width
 
 package "Ecosystem #A" as tr #3fbdb6 {
     object "E Account" as tra {
-         \t+9.5 VNA
+         \t+1.9 VNA
     }
     object "E Trust Deposit" as trtd {
-         \tmint TU worth 0.5 VNA
+         \tmint TU worth 0.1 VNA
     }
 }
 
 package "Issuer Grantor #B" as ig {
     object "IG Account" as iga {
-        \t+4.75 VNA
+        \t+0.95 VNA
     }
     object "IG Trust Deposit" as igtd {
-        \tmint TU worth 0.25 VNA
+        \tmint TU worth 0.05 VNA
     }
 }
 package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
-         \t-17.25 VNA
+         \t-3.45 VNA
     }
     object "I Trust Deposit" as issuertd {
-         \tmint TU worth 0.75 VNA
+         \tmint TU worth 0.15 VNA
     }
 
 }
 
 package "User Agent" as ua {
     object "UA Account" as uaa {
-         \t+0.7125 VNA
+         \t+0.1425 VNA
     }
     object "UA Trust Deposit" as uatd {
-        \tmint TU worth 0.0375 VNA
+        \tmint TU worth 0.0075 VNA
     }
 
 }
 package "Wallet User Agent" as wua {
     object "WUA Account" as wuaa {
-         \t+0.7125 VNA
+         \t+0.1425 VNA
     }
     object "WUA Trust Deposit" as wuatd {
-        \tmint TU worth 0.0375 VNA
+        \tmint TU worth 0.0075 VNA
     }
 
 }
 
 object "Distribution Pool" as pool #cccccc {
-    \t+1.575 VNA (deposit-bound)
+    \t+0.315 VNA (deposit-bound)
 }
 
-issuera -r-> tr: \t+10 VNA
+issuera -r-> tr: \t+2 VNA
 
-issuera -r-> ig: \t+5 VNA
+issuera -r-> ig: \t+1 VNA
 
-issuera -d-> ua: \t+0.75 VNA
+issuera -d-> ua: \t+0.15 VNA
 
-issuera -d-> wua: \t+0.75 VNA
+issuera -d-> wua: \t+0.15 VNA
 
-issuera --> pool:  \t+0.75 VNA
+issuera --> pool:  \t+0.15 VNA
 
 @enduml
 
 ```
 
-Distribution example for the verification by `VERIFIER` #E of a credential issued by `ISSUER` #C, using the `Participant` tree above, 5% for `trust_deposit_rate`, 5% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`. Total fees along the tree: 20 + 2 + 5 + 30 = 57 VNA; the verifier pays 57 × 1.15 = 65.55 VNA. Deposit-bound amounts total 5.985 VNA, routed to the [[ref: distribution pool]] with the equivalent trust units minted to each party's deposit.
+Distribution example for the verification by `VERIFIER` #E of a credential issued by `ISSUER` #C, using the `Participant` tree above, 5% for `trust_deposit_rate`, 5% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`. Total fees along the tree: 3 + 0.5 + 1.5 + 5 = 10 VNA; the verifier pays 10 × 1.15 = 11.5 VNA. Deposit-bound amounts total 1.05 VNA, routed to the [[ref: distribution pool]] with the equivalent trust units minted to each party's deposit.
 
 ```plantuml
 
@@ -969,85 +969,85 @@ scale max 800 width
 
 package "Ecosystem #A" as tr #3fbdb6 {
     object "E Account" as tra {
-         \t+19 VNA
+         \t+2.85 VNA
     }
     object "E Trust Deposit" as trtd {
-         \tmint TU worth 1 VNA
+         \tmint TU worth 0.15 VNA
     }
 }
 
 package "Issuer Grantor #B" as ig {
     object "IG Account" as iga {
-        \t+4.75 VNA
+        \t+1.425 VNA
     }
     object "IG Trust Deposit" as igtd {
-        \tmint TU worth 0.25 VNA
+        \tmint TU worth 0.075 VNA
     }
 }
 package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
-         \t+28.5 VNA
+         \t+4.75 VNA
     }
     object "I Trust Deposit" as issuertd {
-         \tmint TU worth 1.5 VNA
+         \tmint TU worth 0.25 VNA
     }
 
 }
 package "Verifier Grantor #D" as vg {
     object "VG Account" as vga {
-        \t+1.9 VNA
+        \t+0.475 VNA
     }
     object "VG Trust Deposit" as vgtd {
-        \tmint TU worth 0.1 VNA
+        \tmint TU worth 0.025 VNA
     }
 
 }
 package "Verifier #E" as verifier #00b0f0 {
     object "V Account" as verifiera {
-        \t-65.55 VNA
+        \t-11.5 VNA
     }
     object "V Trust Deposit" as verifiertd {
-        \tmint TU worth 2.85 VNA
+        \tmint TU worth 0.5 VNA
     }
 
 }
 package "User Agent" as ua {
     object "UA Account" as uaa {
-         \t+2.7075 VNA
+         \t+0.475 VNA
     }
     object "UA Trust Deposit" as uatd {
-        \tmint TU worth 0.1425 VNA
+        \tmint TU worth 0.025 VNA
     }
 
 }
 package "Wallet User Agent" as wua {
     object "WUA Account" as wuaa {
-         \t+2.7075 VNA
+         \t+0.475 VNA
     }
     object "WUA Trust Deposit" as wuatd {
-        \tmint TU worth 0.1425 VNA
+        \tmint TU worth 0.025 VNA
     }
 
 }
 
 object "Distribution Pool" as pool #cccccc {
-    \t+5.985 VNA (deposit-bound)
+    \t+1.05 VNA (deposit-bound)
 }
 
 
-verifiera -r-> tr: \t+20 VNA
+verifiera -r-> tr: \t+3 VNA
 
-verifiera -r-> vg: \t+2 VNA
+verifiera -r-> vg: \t+0.5 VNA
 
-verifiera -r-> ig: \t+5 VNA
+verifiera -r-> ig: \t+1.5 VNA
 
-verifiera -d-> issuer: \t+30 VNA
+verifiera -d-> issuer: \t+5 VNA
 
-verifiera -d-> ua: \t+2.85 VNA
+verifiera -d-> ua: \t+0.5 VNA
 
-verifiera -d-> wua: \t+2.85 VNA
+verifiera -d-> wua: \t+0.5 VNA
 
-verifiera --> pool:  \t+2.85 VNA
+verifiera --> pool:  \t+0.5 VNA
 
 @enduml
 
