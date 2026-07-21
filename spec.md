@@ -652,17 +652,17 @@ user <|-- search : show enriched\nsearch results
 
 *This section is non-normative.*
 
-In a [[ref: VPR]], each [[ref: corporation]] is associated with a [[ref: trust deposit]].
+In a [[ref: VPR]], each [[ref: corporation]] is associated with a [[ref: trust deposit]], which holds [[ref: trust units]] (TU).
 
-This [[ref: trust deposit]] is automatically funded through transactions involving **trust operations**, such as onboarding processes, credential issuance, or presentation...
+The trust deposit is automatically funded through transactions involving **trust operations**, such as onboarding processes, credential issuance, or presentation: each time a deposit-bound amount of [[ref: native denom]] is spent, the [[ref: native denom]] is routed to the [[ref: distribution pool]] and the equivalent trust units, computed at the current [[ref: trust unit peg value]], are minted to the corporation's trust deposit. No [[ref: native denom]] is ever held in reserve: trust units are **not collateralized**.
 
 The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
 
 - The more a [[ref: corporation]] uses the [[ref: VPR]], the more its [[ref: trust deposit]] grows.
-- Trust deposits **generate yield**: block execution fees are distributed not only to network validators, but also to **trust deposit holders**.
-- **network-level penalties**: If a participant violates the [[ref: governance framework]] of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority.
-- **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), their **ecosystem-specific trust deposit can be slashed** by the corresponding ecosystem governance authority.
-- A slashed deposit must be **refilled** to continue using the services that triggered the penalty.
+- **Trust is a subscription**: because the [[ref: trust unit peg value]] declines each [[ref: epoch]] by `tu_decay_rate`, a static deposit loses fiat value over time. The trust score therefore reflects **recent** paid usage: earned, never bought, and gone if not maintained.
+- **network-level penalties**: If a participant violates the [[ref: governance framework]] of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority. The obligation is recorded in [[ref: main fiat currency]] **at slash time**: trust scores decay, **debts do not**.
+- **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), the **portion of its trust deposit minted in the context of that ecosystem** can be slashed by the corresponding ecosystem governance authority.
+- While a slash obligation is unrepaid, all the corporation's `Participant` entries are **non-trustable** and no new trust units can be minted to its deposit. Repayment is made in [[ref: native denom]] worth the fiat obligation at current rates: restoring trust costs **more tokens when the token is cheap**.
 - Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size.
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
@@ -671,11 +671,11 @@ This system ensures that participation in the trust ecosystem is backed by econo
 
 *This section is non-normative.*
 
-A [[ref: trust deposit]] cannot be withdrawn. This is a deliberate design choice, motivated by the following rationale:
+A [[ref: trust deposit]] cannot be withdrawn. This is structural, not merely a policy choice:
 
-- **Lasting accountability to the ecosystem.** A trust deposit is bound to the ecosystem it was accumulated in. Choosing to stop using that ecosystem does not release a participant from its obligations toward it — a participant cannot simply walk away and harm the ecosystem because they no longer need it. Since the accumulated deposit cannot be moved, the participant remains economically accountable: any harmful behavior can still be slashed, lowering their trust score.
-- **Sustained token demand.** Making deposits non-withdrawable locks value into the system, creating ongoing demand for the token rather than allowing it to flow back out.
-- **No exit-and-rejoin arbitrage.** Token value fluctuates over time, so a deposit made in the past typically represents more value today. If deposits were withdrawable, a participant could leave the ecosystem solely to withdraw their appreciated deposit and then rejoin — gaming the mechanism. Non-withdrawability removes this incentive.
+- **Trust units are not money.** Trust units are non-transferable and non-convertible; the [[ref: native denom]] spent to mint them was distributed or burned through the [[ref: distribution pool]] and is not held in reserve. There is no redemption path, and therefore **no run risk**.
+- **Lasting accountability to the ecosystem.** A trust deposit is bound to the ecosystems it was accumulated in. Choosing to stop using an ecosystem does not release a participant from its obligations toward it — a participant cannot simply walk away and harm the ecosystem because they no longer need it. Since the accumulated trust units cannot be moved or cashed out, the participant remains economically accountable: any harmful behavior can still be slashed, lowering their trust score and creating a fiat-fixed repayment obligation.
+- **Recurring demand instead of locked value.** Trust decay makes trust a subscription: keeping a trust score requires ongoing paid activity, which creates recurring demand for the token that scales with adoption — rather than a one-time locked amount that could be gamed through exit-and-rejoin timing.
 
 #### Onboarding Process Trust Fees
 
@@ -739,13 +739,15 @@ VPR --> ValidatorAccount: Receive trust fees.
 ApplicantBrowser <-- ValidatorVS: notify `ISSUER` `Participant` entry validated for your corporation and DID.\nDID can now issue credentials of this schema.
 ```
 
-The **total fees** paid by the applicant consist of:
+The **total amount** paid by the applicant consists of:
 
 - The validation [[ref: trust fees]] defined in the validator's `Participant` entry (the one acting as the validator in the onboarding process), **plus**
-- an additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant's [[ref: trust deposit]]** when the onboarding process begins, **plus**
+- an additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]] (the applicant's deposit-bound amount), **plus**
 - [[ref: network fees]] (not part of the escrowed amount).
 
-Example, using 5% for `trust_deposit_rate`:
+While the onboarding process is PENDING, both the validation fees **and** the deposit-bound amount are **held in the escrow account**: no trust units are minted and nothing enters the [[ref: distribution pool]]. If the process is cancelled, the escrowed amount is refunded as-is — this is the only refund path; trust deposits themselves are never freed.
+
+Example, using 5% for `trust_deposit_rate` and validation fees of 1000 VNA:
 
 ```plantuml
 
@@ -756,49 +758,54 @@ scale max 1200 width
 
 package "Applicant" as issuer #7677ed {
     object "A Account" as issuera {
-         \t-1050 TUs
+         \t-1050 VNA
     }
-    object "A Trust Deposit" as issuertd {
-         \t+50 TUs
-    }
-
 }
 
-object "Escrow Account" as escrow
+object "Escrow Account" as escrow {
+    \t1000 VNA validation fees
+    \t+50 VNA deposit-bound
+}
 
-issuera -r-> escrow: \t+1000 TUs
-issuera --> issuertd:  \t+50 TUs
+issuera -r-> escrow: \t+1050 VNA
 
 
 @enduml
 
 ```
 
-Upon completion of the onboarding process, **escrowed trust fees are distributed to the validator** as follows:
+Upon completion of the onboarding process (VALIDATED), **the escrow is settled** as follows:
 
-- A portion defined by `trust_deposit_rate` is allocated to the **validator’s trust deposit**.  
-- The remaining amount is **transferred directly to the validator’s wallet**.
+- the validator receives its validation fees minus their deposit-bound portion (`trust_deposit_rate`) **directly in its wallet**;
+- the deposit-bound amounts — `trust_deposit_rate` of the validation fees for the validator, plus the applicant's surcharge — are converted: [[ref: trust units]] are minted to the validator's and the applicant's trust deposits at the current [[ref: trust unit peg value]], and the corresponding [[ref: native denom]] is routed to the [[ref: distribution pool]].
 
 ```plantuml
 
 @startuml
 scale max 1200 width
 
-package "Issuer Grantor B" as ig {
+package "Issuer Grantor B (validator)" as ig {
     object "IG Account" as iga {
-        \t+950 TUs
+        \t+950 VNA
     }
     object "IG Trust Deposit" as igtd {
-        \t+50 TUs
+        \tmint TU worth 50 VNA
+    }
+}
+package "Applicant" as a #7677ed {
+    object "A Trust Deposit" as atd {
+        \tmint TU worth 50 VNA
     }
 }
 object "Escrow Account" as escrow
+object "Distribution Pool" as pool #cccccc
 
 
 
-escrow -r-> ig: \t+1000 TUs \t\t\t\t\t
-ig --> iga: \t+950 TUs
-ig --> igtd: \t+50 TUs
+escrow -r-> iga: \t+950 VNA
+escrow --> pool: \t+100 VNA (deposit-bound)
+pool ..> igtd: \tmint
+pool ..> atd: \tmint
 
 @enduml
 
@@ -808,7 +815,7 @@ ig --> igtd: \t+50 TUs
 
 *This section is non-normative.*
 
-**Pay-per-issuance** and **pay-per-verification** [[ref: trust fees]] are defined **on each `Participant` entry** for each role within the ecosystem.
+**Pay-per-issuance** and **pay-per-verification** [[ref: trust fees]] are defined **on each `Participant` entry** for each role within the ecosystem. Fees are priced in the credential schema's pricing asset — a COIN (e.g. the [[ref: native denom]] or a stablecoin) or a FIAT currency; [[ref: trust units]] are **not** a pricing asset. In the examples below, the schema prices fees in VNA (the native denom).
 
 ```plantuml
 
@@ -819,21 +826,21 @@ package "Ecosystem #A - Credential Schema #1" as cs {
 
     object "Ecosystem #A - Credential Schema #1 Root Participant" as tr #3fbdb6 {
         did:example:ecosystemA
-        issuance cost: 10 TUs
-        verification cost: 20 TUs
+        issuance cost: 10 VNA
+        verification cost: 20 VNA
     }
     object "Issuer Grantor #B - Credential Schema #1 Participant" as ig {
         did:example:igB
-        issuance cost: 5 TUs
-        verification cost: 5 TUs
+        issuance cost: 5 VNA
+        verification cost: 5 VNA
     }
     object "Issuer #C - Credential Schema #1 Participant" as issuer #7677ed  {
         did:example:iC
-        verification cost: 30 TUs
+        verification cost: 30 VNA
     }
     object "Verifier Grantor #D - Credential #1 Schema Participant" as vg {
         did:example:vgD
-        verification cost: 2 TUs
+        verification cost: 2 VNA
     }
     object "Verifier #E - Credential Schema #1 Participant" as verifier #00b0f0 {
         did:example:vE
@@ -862,7 +869,7 @@ Key Points for "Pay-Per" Business Models
 
 - In such cases, an `ISSUER` (or `VERIFIER`) `Participant` **must pay**:
   - the corresponding **issuance** (or **verification**) trust fees for each involved `Participant` entry along the `Participant` tree;
-  - an additional amount equal to the `trust_deposit_rate` of the calculated trust fees, allocated to the **payer's [[ref: trust deposit]]**;
+  - an additional amount equal to the `trust_deposit_rate` of the calculated trust fees, which is deposit-bound: minted as [[ref: trust units]] to the **payer's [[ref: trust deposit]]**;
   - (optional) an amount equal to `wallet_user_agent_reward_rate` of the calculated trust fees, used to **reward the Wallet User Agent**;
   - (optional) an amount equal to `user_agent_reward_rate` of the calculated trust fees, used to **reward the User Agent**.
 
@@ -870,8 +877,8 @@ Fee Distribution Model
 
 Trust fees are **consistently distributed** across participants:
 
-- A portion defined by `trust_deposit_rate` is allocated to the **participant’s trust deposit**.  
-- The remaining portion is **transferred directly to the participant’s wallet**.
+- A portion defined by `trust_deposit_rate` of each payee's share is deposit-bound: it is minted as [[ref: trust units]] to the **payee's trust deposit** and the corresponding [[ref: native denom]] is routed to the [[ref: distribution pool]].
+- The remaining portion is **transferred directly to the payee's wallet** — ordinary flow-through revenue, neither burned nor restricted.
 
 :::note
 Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment.  
@@ -880,7 +887,7 @@ If not, they **must reject** the issuance or verification request.
 Note: The **User Agent** and **Wallet User Agent** may refer to the same implementation.
 :::
 
-Distribution example for the issuance by `ISSUER` #C of a credential, using the `Participant` tree above, 5% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
+Distribution example for the issuance by `ISSUER` #C of a credential, using the `Participant` tree above, 5% for `trust_deposit_rate`, 5% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`. Total fees along the tree: 10 + 5 = 15 VNA; the issuer pays 15 × (1 + 0.05 + 0.05 + 0.05) = 17.25 VNA. Deposit-bound amounts (payer surcharge and 5% of each payee share, agents included) total 1.575 VNA, routed to the [[ref: distribution pool]] with the equivalent trust units minted to each party's deposit.
 
 ```plantuml
 
@@ -890,65 +897,69 @@ scale max 800 width
 
 package "Ecosystem #A" as tr #3fbdb6 {
     object "E Account" as tra {
-         \t+9.5 TUs
+         \t+9.5 VNA
     }
     object "E Trust Deposit" as trtd {
-         \t+0.5 TUs
+         \tmint TU worth 0.5 VNA
     }
 }
 
 package "Issuer Grantor #B" as ig {
     object "IG Account" as iga {
-        \t+4.75 TUs
+        \t+4.75 VNA
     }
     object "IG Trust Deposit" as igtd {
-        \t+0.25 TUs
+        \tmint TU worth 0.25 VNA
     }
 }
 package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
-         \t-18.75 TUs
+         \t-17.25 VNA
     }
     object "I Trust Deposit" as issuertd {
-         \t+0.75 TUs
+         \tmint TU worth 0.75 VNA
     }
 
 }
 
 package "User Agent" as ua {
     object "UA Account" as uaa {
-         \t+1.425 TUs
+         \t+0.7125 VNA
     }
     object "UA Trust Deposit" as uatd {
-        \t+0.075 TUs
+        \tmint TU worth 0.0375 VNA
     }
 
 }
 package "Wallet User Agent" as wua {
     object "WUA Account" as wuaa {
-         \t+1.425 TUs
+         \t+0.7125 VNA
     }
     object "WUA Trust Deposit" as wuatd {
-        \t+0.075 TUs
+        \tmint TU worth 0.0375 VNA
     }
 
 }
 
-issuera -r-> tr: \t+10 TUs
+object "Distribution Pool" as pool #cccccc {
+    \t+1.575 VNA (deposit-bound)
+}
 
-issuera -r-> ig: \t+5 TUs
+issuera -r-> tr: \t+10 VNA
 
-issuera -d-> ua: \t+1.5 TUs
+issuera -r-> ig: \t+5 VNA
 
-issuera -d-> wua: \t+1.5 TUs
+issuera -d-> ua: \t+0.75 VNA
 
-issuera --> issuertd:  \t+0.75 TUs
+issuera -d-> wua: \t+0.75 VNA
+
+issuera --> pool:  \t+0.75 VNA
 
 @enduml
 
 ```
 
-Distribution example for the verification by `VERIFIER` #E of a credential issued by `ISSUER` #C, using the `Participant` tree above, 5% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
+Distribution example for the verification by `VERIFIER` #E of a credential issued by `ISSUER` #C, using the `Participant` tree above, 5% for `trust_deposit_rate`, 5% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`. Total fees along the tree: 20 + 2 + 5 + 30 = 57 VNA; the verifier pays 57 × 1.15 = 65.55 VNA. Deposit-bound amounts total 5.985 VNA, routed to the [[ref: distribution pool]] with the equivalent trust units minted to each party's deposit.
 
 ```plantuml
 
@@ -958,81 +969,85 @@ scale max 800 width
 
 package "Ecosystem #A" as tr #3fbdb6 {
     object "E Account" as tra {
-         \t+19 TUs
+         \t+19 VNA
     }
     object "E Trust Deposit" as trtd {
-         \t+1 TUs
+         \tmint TU worth 1 VNA
     }
 }
 
 package "Issuer Grantor #B" as ig {
     object "IG Account" as iga {
-        \t+4.75 TUs
+        \t+4.75 VNA
     }
     object "IG Trust Deposit" as igtd {
-        \t+0.25 TUs
+        \tmint TU worth 0.25 VNA
     }
 }
 package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
-         \t+28.5 TUs
+         \t+28.5 VNA
     }
     object "I Trust Deposit" as issuertd {
-         \t+1.5 TUs
+         \tmint TU worth 1.5 VNA
     }
 
 }
 package "Verifier Grantor #D" as vg {
     object "VG Account" as vga {
-        \t+1.9 TUs
+        \t+1.9 VNA
     }
     object "VG Trust Deposit" as vgtd {
-        \t+0.1 TUs
+        \tmint TU worth 0.1 VNA
     }
 
 }
 package "Verifier #E" as verifier #00b0f0 {
     object "V Account" as verifiera {
-        \t-71.25 TUs
+        \t-65.55 VNA
     }
     object "V Trust Deposit" as verifiertd {
-        \t+2.85 TUs
+        \tmint TU worth 2.85 VNA
     }
 
 }
 package "User Agent" as ua {
     object "UA Account" as uaa {
-         \t+5.415 TUs
+         \t+2.7075 VNA
     }
     object "UA Trust Deposit" as uatd {
-        \t+0.285 TUs
+        \tmint TU worth 0.1425 VNA
     }
 
 }
 package "Wallet User Agent" as wua {
     object "WUA Account" as wuaa {
-         \t+5.415 TUs
+         \t+2.7075 VNA
     }
     object "WUA Trust Deposit" as wuatd {
-        \t+0.285 TUs
+        \tmint TU worth 0.1425 VNA
     }
 
 }
 
+object "Distribution Pool" as pool #cccccc {
+    \t+5.985 VNA (deposit-bound)
+}
 
-verifiera -r-> tr: \t+20 TUs
 
-verifiera -r-> vg: \t+2 TUs
+verifiera -r-> tr: \t+20 VNA
 
-verifiera -r-> ig: \t+5 TUs
+verifiera -r-> vg: \t+2 VNA
 
-verifiera -d-> issuer: \t+30 TUs
+verifiera -r-> ig: \t+5 VNA
 
-verifiera -d-> ua: \t+5.7 TUs
+verifiera -d-> issuer: \t+30 VNA
 
-verifiera -d-> wua: \t+5.7 TUs
+verifiera -d-> ua: \t+2.85 VNA
 
-verifiera --> verifiertd:  \t+2.85 TUs
+verifiera -d-> wua: \t+2.85 VNA
+
+verifiera --> pool:  \t+2.85 VNA
 
 @enduml
 
@@ -1183,7 +1198,6 @@ entity "DenomAmount" as da {
 }
 
 enum "PricingAssetType" as pricingassettype {
-  TU
   COIN
   FIAT
 }
@@ -1226,13 +1240,13 @@ entity "Participant" as csp {
   +validation_fees: number
   +issuance_fees: number
   +verification_fees: number
-  +deposit: number
-  +slashed_deposit: number
-  +repaid_deposit: number
+  +tu: decimal
+  +slashed_amount: decimal
+  +repaid_amount: decimal
   revoked: timestamp
   op_exp: timestamp
   +op_last_state_change: timestamp
-  op_validator_deposit: number
+  op_validator_tu: decimal
   +op_current_fees: number
   +op_current_deposit: number
   op_summary_digest: string
@@ -1459,8 +1473,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission. HOLDER permission is used to check credential revocation status; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
-- `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
-- `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
+- `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for pricing business fees. Can be COIN (a token available on the VPR chain) or FIAT (fees are priced in a fiat currency; the fee itself is settled off-chain, while deposit-bound amounts and agent rewards are settled on-chain in [[ref: native denom]] at the oracle rate). [[ref: Trust units]] are **not** a pricing asset: a decaying unit cannot label prices. Note that in all cases, deposit-bound amounts are always paid in [[ref: native denom]] and minted as [[ref: trust units]].
+- `pricing_asset` (string) (*mandatory*): examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,... (multi-fiat pricing is supported; protocol-level accounting uses the [[ref: main fiat currency]]).
 - `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestSRI` for credentials issued under this schema. Valid values are defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
 
 ### SchemaAuthorizationPolicy
@@ -1498,17 +1512,17 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`corporation` grantee of this perm) for running an onboarding process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
-- `deposit` (number) (*mandatory*): accumulated *grantee* deposit in the context of the *use* of this permission (including the onboarding process), in [[ ref: native denom ]]. Usually, it is incremented when for example, for a ISSUER type `Participant` `perm`, issuer issues credentials that require paying issuance fees: an additional % of the fees is charged to issuer and sent to its deposit, corresponding deposit amount increases this `participant.deposit` value as well. If `perm` is, let's say revoked, then corresponding `participant.deposit` value is freed from `participant.grantee` Trust Deposit.
-- `slashed_deposit` (number) (*mandatory*): part of the deposit in [[ ref: native denom ]] that has been slashed.
-- `repaid_deposit` (number) (*mandatory*): part of the slashed deposit in [[ ref: native denom ]] that has been repaid.
+- `tu` (decimal) (*mandatory*): accumulated [[ref: trust units]] minted to the grantee corporation's [[ref: trust deposit]] in the context of the *use* of this `Participant` entry (including its onboarding process). For example, for an ISSUER type `Participant` `perm`, when the issuer pays issuance fees, the deposit-bound portion is minted as trust units to the corporation's trust deposit and this `participant.tu` value is incremented by the same amount. Trust units are never freed on revocation or expiry; this value is only reduced by ecosystem-level slashing ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
+- `slashed_amount` (decimal) (*mandatory*): cumulative ecosystem-level slash obligation attached to this `Participant` entry, denominated in [[ref: main fiat currency]] and fixed at slash time.
+- `repaid_amount` (decimal) (*mandatory*): part of `slashed_amount`, in [[ref: main fiat currency]], that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the onboarding process of this permission, ie *parent node* in the `Participant` tree.
 - `op_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
 - `op_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Participant` expiration timestamp.
 - `op_last_state_change` (timestamp) (*mandatory*)
-- `op_validator_deposit`: number (*optional*): accumulated validator trust deposit, in [[ref: denom]].
+- `op_validator_tu`: (decimal) (*optional*): accumulated [[ref: trust units]] minted to the validator's trust deposit in the context of onboarding processes of this `Participant` entry.
 - `op_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon onboarding process completion, in [[ref: denom]].
-- `op_current_deposit` (number) (*mandatory*): current action trust deposit, in [[ref: denom]].
+- `op_current_deposit` (number) (*mandatory*): current action deposit-bound amount, in [[ref: native denom]], **held in the escrow account** while the onboarding process is PENDING. No trust units are minted and nothing is routed to the [[ref: distribution pool]] while PENDING: upon completion (VALIDATED), this amount is converted to trust units (minted to the applicant's and validator's deposits) and the [[ref: native denom]] is routed to the [[ref: distribution pool]]; upon cancellation, it is refunded as-is from escrow.
 - `op_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
