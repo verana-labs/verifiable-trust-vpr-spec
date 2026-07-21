@@ -147,7 +147,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A `Participant` entry, linked to a [[ref: credential schema]], that represents, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], or [[ref: verifier grantor]] of a [[ref: credential schema]].
 
 [[def: decentralized identifier, DID, DIDs]]:
-~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]].
+~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]]. A DID is a type of [[ref: VID]].
+
+[[def: verifiable identifier, VID, VIDs]]:
+~ A digital identifier bound to cryptographic key material, such that another party can verify control of the identifier and resolve it to keys (and, when in public use, endpoint addresses), as specified in the [Trust Spanning Protocol (TSP) Specification](https://trustoverip.github.io/tswg-tsp-specification/). [[ref: DIDs]] are one **type** of VID; other examples include KERI AIDs and X.509-backed identifiers. Provided for reference: this specification currently uses [[ref: DIDs]] only.
 
 [[def: decentralized identifier communication, DIDComm]]:
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
