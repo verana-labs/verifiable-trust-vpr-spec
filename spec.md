@@ -1555,7 +1555,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 `TrustDeposit`:
 
 - `corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] this trust deposit belongs to.
-- `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit. Increased only by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.4/year at an 18–24 month half-life): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
+- `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit. Increased only by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.44/year at the default `tu_decay_rate`): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
 - `slashed_amount` (decimal) (*mandatory*): cumulative slash obligation, denominated in [[ref: main fiat currency]] and **fixed at slash time** (`slashed_tu × tu_peg_value(t_slash)`); trust scores decay, **obligations do not**. Initialized to 0; incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit). MUST never be null.
 - `repaid_amount` (decimal) (*mandatory*): part of `slashed_amount`, in [[ref: main fiat currency]], that has been repaid. Initialized to 0; incremented by [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit). While `slashed_amount` - `repaid_amount` > 0, all the corporation's `Participant` entries MUST be considered non-trustable and no trust units can be minted to this deposit.
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed; null until the first slash.
@@ -1669,7 +1669,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 - `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
 - `main_fiat_currency` (string) (*mandatory*): ISO-4217 code of the [[ref: main fiat currency]], defined at network launch. Used to denominate the trust unit peg value, distribution budgets, and slash obligations.
 - `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in [[ref: main fiat currency]] at genesis (index start): 1.00, so that at genesis one trust unit equals one unit of [[ref: main fiat currency]] and a trust score reads directly as recent fiat-equivalent spend. Immutable: the index only moves through decay.
-- `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default: a value giving the index a half-life of 18–24 months. A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash obligations are never recomputed.
+- `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default value: 0.001 (0.1% per epoch; with the default 1-day `epoch_length`, an index half-life of ≈ 693 days ≈ 23 months). A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash obligations are never recomputed.
 - `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day.
 - `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
 - `user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating user agent rewards from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
@@ -5266,7 +5266,7 @@ The module maintains a single global index, the [[ref: trust unit peg value]] `t
 - At each [[ref: epoch]] boundary (every `GlobalVariables.epoch_length`), the index MUST be updated: `tu_peg_value = tu_peg_value × (1 - GlobalVariables.tu_decay_rate)`.
 - A governance change of `tu_decay_rate` is **prospective only**: it takes effect from the **next epoch**. The index path already elapsed MUST NOT be recomputed: past mints, scores, and fiat-fixed slash obligations are unaffected; only the future decline steepens or flattens.
 - The price of one trust unit in [[ref: native denom]] is derived from the oracle: `price_tu_in_native_denom(t) = tu_peg_value(t) / P(t)`, where `P(t)` is the current [[ref: native denom]] price in [[ref: main fiat currency]] obtained through [Get Price](#mod-xr-qry-3-get-price). If no valid (non-expired) exchange rate is available, minting and repayment operations MUST abort.
-- Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic for `tu_peg_value` and all `tu` balances: raw balances grow as the index declines (~×1.4/year at an 18–24 month half-life). A redenomination MAY be performed at a chain upgrade.
+- Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic for `tu_peg_value` and all `tu` balances: raw balances grow as the index declines (~×1.44/year at the default `tu_decay_rate`). A redenomination MAY be performed at a chain upgrade.
 
 #### [MOD-TD-MSG-1] Mint Trust Units
 
@@ -6419,7 +6419,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `trust_deposit_rate`(number) (*mandatory*): 0.05.
 - `main_fiat_currency` (string) (*mandatory*): to be defined at network launch (ISO-4217 code).
 - `tu_peg_value_genesis` (decimal) (*mandatory*): 1.00.
-- `tu_decay_rate` (decimal) (*mandatory*): value giving an index half-life of 18–24 months.
+- `tu_decay_rate` (decimal) (*mandatory*): 0.001 (0.1% per epoch; ≈ 23-month index half-life with a 1-day epoch).
 - `epoch_length` (duration) (*mandatory*): 1 day.
 - `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.05.
 - `user_agent_reward_rate`(number) (*mandatory*): 0.05.
