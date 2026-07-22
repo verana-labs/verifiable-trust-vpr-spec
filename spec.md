@@ -660,9 +660,9 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 
 - The more a [[ref: corporation]] uses the [[ref: VPR]], the more its [[ref: trust deposit]] grows.
 - **Trust is a subscription**: because the [[ref: trust unit peg value]] declines each [[ref: epoch]] by `tu_decay_rate`, a static deposit loses fiat value over time. The trust score therefore reflects **recent** paid usage: earned, never bought, and gone if not maintained.
-- **network-level penalties**: If a participant violates the [[ref: governance framework]] of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority. The obligation is recorded in [[ref: main fiat currency]] **at slash time**: trust scores decay, **debts do not**.
+- **network-level penalties**: If a participant violates the [[ref: governance framework]] of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority. The obligation is recorded in [[ref: main fiat currency]] at the **mint-time cost basis** of the slashed trust units — what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**, and misbehavior costs the same whether the deposit was funded yesterday or a year ago.
 - **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), the **portion of its trust deposit minted in the context of that ecosystem** can be slashed by the corresponding ecosystem governance authority.
-- While a slash obligation is unrepaid, all the corporation's `Participant` entries are **non-trustable** and no new trust units can be minted to its deposit. Repayment is made in [[ref: native denom]] worth the fiat obligation at current rates: restoring trust costs **more tokens when the token is cheap**.
+- While a slash obligation is unrepaid, all the corporation's `Participant` entries are **non-trustable** and no new trust units can be minted to its deposit. Repayment is made in [[ref: native denom]] worth the cost-basis obligation at current rates, and **restores the slashed trust units** at their decayed current value: the gap between the basis paid and the value restored is the penalty premium, and restoring trust costs **more tokens when the token is cheap**.
 - Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size.
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
@@ -1241,7 +1241,9 @@ entity "Participant" as csp {
   +issuance_fees: number
   +verification_fees: number
   +tu: decimal
+  +fiat_cost: decimal
   +slashed_amount: decimal
+  +slashed_tu: decimal
   +repaid_amount: decimal
   revoked: timestamp
   op_exp: timestamp
@@ -1313,7 +1315,9 @@ entity "GlobalVariables" as gv {
 
 entity "TrustDeposit" as td {
   +tu: decimal
+  +fiat_cost: decimal
   +slashed_amount: decimal
+  +slashed_tu: decimal
   +repaid_amount: decimal
   last_slashed: timestamp
   last_repaid: timestamp
@@ -1512,7 +1516,9 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `tu` (decimal) (*mandatory*): accumulated [[ref: trust units]] minted to the grantee corporation's [[ref: trust deposit]] in the context of the *use* of this `Participant` entry (including its onboarding process). For example, for an ISSUER type `Participant` `perm`, when the issuer pays issuance fees, the deposit-bound portion is minted as trust units to the corporation's trust deposit and this `participant.tu` value is incremented by the same amount. Trust units are never freed on revocation or expiry; this value is only reduced by ecosystem-level slashing ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
-- `slashed_amount` (decimal) (*mandatory*): cumulative ecosystem-level slash obligation attached to this `Participant` entry, denominated in [[ref: main fiat currency]] and fixed at slash time.
+- `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of `tu`, in [[ref: main fiat currency]]: the sum of the fiat value, at mint time, of the trust units accumulated through this `Participant` entry. Maintained in parallel with `tu`; used to denominate ecosystem-level slash obligations at mint-time cost.
+- `slashed_amount` (decimal) (*mandatory*): cumulative ecosystem-level slash obligation attached to this `Participant` entry, denominated in [[ref: main fiat currency]] and equal to the **mint-time cost basis** of the slashed trust units (pro-rata of `fiat_cost`).
+- `slashed_tu` (decimal) (*mandatory*): outstanding slashed [[ref: trust units]] of this `Participant` entry, restored upon full repayment ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit)).
 - `repaid_amount` (decimal) (*mandatory*): part of `slashed_amount`, in [[ref: main fiat currency]], that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the onboarding process of this permission, ie *parent node* in the `Participant` tree.
@@ -1555,8 +1561,10 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 `TrustDeposit`:
 
 - `corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] this trust deposit belongs to.
-- `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit. Increased only by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.44/year at the default `tu_decay_rate`): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
-- `slashed_amount` (decimal) (*mandatory*): cumulative slash obligation, denominated in [[ref: main fiat currency]] and **fixed at slash time** (`slashed_tu × tu_peg_value(t_slash)`); trust scores decay, **obligations do not**. Initialized to 0; incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit). MUST never be null.
+- `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit. Increased by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and by slash repayment (restoration, [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.44/year at the default `tu_decay_rate`): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
+- `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of the current `tu` balance, in [[ref: main fiat currency]]: the sum of the fiat value of every mint at mint time. Increased by [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) and by slash repayment; decreased pro-rata by slashing. Because the [[ref: trust unit peg value]] only declines, `fiat_cost` ≥ `tu × tu_peg_value(now)` always: the basis never understates the current value.
+- `slashed_amount` (decimal) (*mandatory*): cumulative network-level slash obligation, denominated in [[ref: main fiat currency]] and equal to the **mint-time cost basis** of the slashed trust units (pro-rata of `fiat_cost`, [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) — what was originally paid for them, **not** their decayed value at slash time: trust scores decay, **liabilities do not**. Initialized to 0. MUST never be null.
+- `slashed_tu` (decimal) (*mandatory*): outstanding network-level slashed [[ref: trust units]], restored to `tu` upon full repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)). Initialized to 0; increased by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit); reset to 0 on repayment.
 - `repaid_amount` (decimal) (*mandatory*): part of `slashed_amount`, in [[ref: main fiat currency]], that has been repaid. Initialized to 0; incremented by [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit). While `slashed_amount` - `repaid_amount` > 0, all the corporation's `Participant` entries MUST be considered non-trustable and no trust units can be minted to this deposit.
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed; null until the first slash.
 - `last_repaid` (timestamp) (*optional*): last time this trust deposit has been repaid; null until the first repay.
@@ -3756,7 +3764,7 @@ Fees and Trust Deposits — settle the escrow (mint-at-validation):
   - calculate `validator_deposit_bound` = `applicant_participant.op_current_deposit` / 2 and `applicant_deposit_bound` = `applicant_participant.op_current_deposit` / 2 (the applicant escrowed both, see fee checks);
   - transfer the full amount `applicant_participant.op_current_fees` in the pricing [[ref: denom]] from the escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address` (for COIN pricing this already equals the fee minus its deposit-bound portion, see fee checks; 0 if FIAT).
 - use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_participant.corporation_id`, `source_account` = escrow account, `amount` = `validator_deposit_bound`); set `applicant_participant.op_validator_tu` to `applicant_participant.op_validator_tu` + the returned `minted_tu`.
-- use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`); set `applicant_participant.tu` to `applicant_participant.tu` + the returned `minted_tu`.
+- use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`); set `applicant_participant.tu` to `applicant_participant.tu` + the returned `minted_tu` and `applicant_participant.fiat_cost` to `applicant_participant.fiat_cost` + the returned `minted_fiat`.
 
 Update `Participant` `applicant_participant`:
 
@@ -4515,8 +4523,8 @@ If `participant.[fee_field]` > 0:
 3. Execute transfers and mints for this beneficiary:
 
    - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `Corporation[participant.corporation_id].policy_address` (in the appropriate denom).
-   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `payee_trust_deposit`). Increase `participant.tu` by the returned `minted_tu`.
-   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer), `source_account` = the payer `corporation` account, `amount` = `payer_trust_deposit`). Increase `payer_participant.tu` by the returned `minted_tu`.
+   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `payee_trust_deposit`). Increase `participant.tu` by the returned `minted_tu` and `participant.fiat_cost` by the returned `minted_fiat`.
+   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer), `source_account` = the payer `corporation` account, `amount` = `payer_trust_deposit`). Increase `payer_participant.tu` by the returned `minted_tu` and `payer_participant.fiat_cost` by the returned `minted_fiat`.
 
 4. Accumulate agent rewards:
 
@@ -4536,7 +4544,7 @@ If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0:
 - `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
 - Transfer `agent_fees_to_account` to `agent_participant.corporation_id` in [[ref: native denom]].
-- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `agent_participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `agent_trust_deposit`). Increase `agent_participant.tu` by the returned `minted_tu`.
+- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `agent_participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `agent_trust_deposit`). Increase `agent_participant.tu` by the returned `minted_tu` and `agent_participant.fiat_cost` by the returned `minted_fiat`.
 
 **Wallet Agent Reward:**
 
@@ -4545,7 +4553,7 @@ If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 
 - `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
 - Transfer `wallet_agent_fees_to_account` to `wallet_agent_participant.corporation_id` in [[ref: native denom]].
-- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `wallet_agent_participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `wallet_agent_trust_deposit`). Increase `wallet_agent_participant.tu` by the returned `minted_tu`.
+- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `wallet_agent_participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `wallet_agent_trust_deposit`). Increase `wallet_agent_participant.tu` by the returned `minted_tu` and `wallet_agent_participant.fiat_cost` by the returned `minted_fiat`.
 
 ---
 
@@ -4683,13 +4691,15 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Participant` entry `applicant_participant` from `id`.
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
+- calculate `slashed_fiat` = `applicant_participant.fiat_cost` × `tu_amount` / `applicant_participant.tu` — the obligation in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 - set `applicant_participant.slashed` to `now`
 - set `applicant_participant.modified` to `now`
 - set `applicant_participant.tu` to `applicant_participant.tu` - `tu_amount`
-- calculate `slashed_fiat` = `tu_amount` × `tu_peg_value(now)` — the obligation in [[ref: main fiat currency]], **fixed at slash time** (trust scores decay, debts do not).
+- set `applicant_participant.fiat_cost` to `applicant_participant.fiat_cost` - `slashed_fiat`
+- set `applicant_participant.slashed_tu` to `applicant_participant.slashed_tu` + `tu_amount`
 - set `applicant_participant.slashed_amount` to `applicant_participant.slashed_amount` + `slashed_fiat`
 
-use [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units) Remove Ecosystem Slashed Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `tu_amount`) to remove the slashed trust units from the corporation's trust deposit. The ecosystem scoping is enforced by the `tu_amount` ≤ `applicant_participant.tu` bound above: an ecosystem can only slash trust units accumulated through its own `Participant` entries.
+use [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units) Remove Ecosystem Slashed Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `tu_amount`, `fiat_amount` = `slashed_fiat`) to remove the slashed trust units and their cost basis from the corporation's trust deposit. The ecosystem scoping is enforced by the `tu_amount` ≤ `applicant_participant.tu` bound above: an ecosystem can only slash trust units accumulated through its own `Participant` entries.
 
 Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
 
@@ -4737,12 +4747,17 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Participant` entry `applicant_participant` from `id`.
 - calculate `outstanding` and `repay_amount` as in fee checks.
-- process the repayment as a fresh mint: use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `source_account` = the `corporation` account, `amount` = `repay_amount`). The [[ref: native denom]] is routed to the [[ref: distribution pool]]; the trust units are minted at the **current** peg value — restoring trust costs more native denom when the token price is low.
+- transfer `repay_amount` from the `corporation` account to the [[ref: distribution pool]] account.
+- restore the slashed trust units at their original cost basis:
+  - set `applicant_participant.tu` to `applicant_participant.tu` + `applicant_participant.slashed_tu`;
+  - set `applicant_participant.fiat_cost` to `applicant_participant.fiat_cost` + `outstanding`;
+  - for the `TrustDeposit` entry `td` whose `td.corporation_id` equals `applicant_participant.corporation_id` (via the trust deposit module): set `td.tu` to `td.tu` + `applicant_participant.slashed_tu`; set `td.fiat_cost` to `td.fiat_cost` + `outstanding`;
+  - set `applicant_participant.slashed_tu` to 0.
 - set `applicant_participant.repaid` to `now`
 - set `applicant_participant.modified` to `now`
 - set `applicant_participant.repaid_amount` to `applicant_participant.repaid_amount` + `outstanding`.
 
-> Note: for the mint above, the "no outstanding obligation" precondition of [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) is evaluated **after** accounting for this repayment (the repayment itself is the path that clears the obligation).
+> Note: no fresh trust units are minted by repayment. The restored units re-enter at their decayed current value; the difference between the cost basis paid and that value is the penalty premium, and the [[ref: native denom]] paid is distributed via the [[ref: distribution pool]] like any other deposit-bound flow.
 
 #### [MOD-PP-MSG-14] Self Create Participant
 
@@ -5252,7 +5267,7 @@ ApplicantBrowser <-- ValidatorVS: notify `Participant` entry added for your DID.
 
 *This section is non-normative.*
 
-Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (per-ecosystem attribution is derivable from the corporation's `Participant` entries), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible.
+Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (per-ecosystem attribution is derivable from the corporation's `Participant` entries), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. Alongside each `tu` balance, the module tracks its cumulative [[ref: main fiat currency]] **cost basis** (`fiat_cost`): slashing liabilities are denominated at mint-time cost, not at decayed value. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible.
 
 Because the [[ref: trust unit peg value]] declines each [[ref: epoch]], a deposit that is not fed by new paid activity loses fiat value at exactly `tu_decay_rate` ("trust decay"): trust is a subscription. Decay is implemented through the single global index — there are **no per-account updates**: a deposit's fiat value at time `T` is `td.tu × tu_peg_value(T)`, and relative rankings compare raw `td.tu` directly (the common factor cancels).
 
@@ -5303,12 +5318,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - if a `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` does not exist, create entry `td`:
   - set `td.corporation_id` to `corporation_id`;
-  - set `td.tu` to 0;
-  - set `td.slashed_amount` to 0; set `td.repaid_amount` to 0; set `td.slash_count` to 0.
+  - set `td.tu` to 0; set `td.fiat_cost` to 0;
+  - set `td.slashed_amount` to 0; set `td.slashed_tu` to 0; set `td.repaid_amount` to 0; set `td.slash_count` to 0.
 - calculate `minted_tu` = `amount` / `price_tu_in_native_denom(now)` (equivalently `amount` × `P(now)` / `tu_peg_value(now)`).
+- calculate `minted_fiat` = `minted_tu` × `tu_peg_value(now)` (= `amount` × `P(now)`) — the [[ref: main fiat currency]] cost of this mint.
 - set `td.tu` to `td.tu` + `minted_tu`.
+- set `td.fiat_cost` to `td.fiat_cost` + `minted_fiat`.
 - transfer `amount` from `source_account` to the [[ref: distribution pool]] account.
-- return `minted_tu` to the calling module (which records it on the relevant `Participant.tu` / `Participant.op_validator_tu`).
+- return `minted_tu` and `minted_fiat` to the calling module (which records them on the relevant `Participant` entry: `tu` and `fiat_cost`, or `op_validator_tu`).
 
 :::note
 There is no negative adjustment path: trust units are never un-minted. Refunds only exist at the escrow level, **before** minting (Option: mint-at-validation). Trust units only decrease through slashing.
@@ -5356,7 +5373,7 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 This method is used by the network governance authority to **globally slash** the trust deposit of a [[ref: corporation]].
 
-This method can only be called by a governance proposal. Slashing removes [[ref: trust units]] and records an obligation denominated in [[ref: main fiat currency]], **fixed at slash time**: reputation decays, **debts do not**. A slashed corporation MUST repay the obligation in order to continue to use the services provided by the VPR. While the obligation is unrepaid, all the corporation's `Participant` entries MUST be considered non-trustable and no trust units can be minted to its deposit.
+This method can only be called by a governance proposal. Slashing removes [[ref: trust units]] and records an obligation denominated in [[ref: main fiat currency]], equal to their **mint-time cost basis** — what was originally paid for them, not their decayed value: reputation decays, **liabilities do not** (misbehavior against the network costs the same whether the deposit was funded yesterday or a year ago). A slashed corporation MUST repay the obligation in order to continue to use the services provided by the VPR. While the obligation is unrepaid, all the corporation's `Participant` entries MUST be considered non-trustable and no trust units can be minted to its deposit.
 
 This method is for network governance authority slash. For ecosystem slash, see [Slash Participant Trust Deposit](#mod-pp-msg-12-slash-participant-trust-deposit).
 
@@ -5388,19 +5405,21 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 For the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`:
 
+- calculate `slashed_fiat` = `td.fiat_cost` × `tu_amount` / `td.tu` — the obligation in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units. Since the [[ref: trust unit peg value]] only declines, `slashed_fiat` ≥ `tu_amount × tu_peg_value(now)`: the obligation never understates (and usually exceeds) the slashed units' current value.
 - set `td.tu` to `td.tu` - `tu_amount`.
-- calculate `slashed_fiat` = `tu_amount` × `tu_peg_value(now)` — the obligation in [[ref: main fiat currency]], fixed at slash time.
+- set `td.fiat_cost` to `td.fiat_cost` - `slashed_fiat`.
+- set `td.slashed_tu` to `td.slashed_tu` + `tu_amount`.
 - set `td.slashed_amount` to `td.slashed_amount` + `slashed_fiat`.
 - set `td.last_slashed` to `now`.
 - set `td.slash_count` to `td.slash_count` + 1.
 
 :::note
-Nothing is burned here: [[ref: trust units]] are not a token. The economic penalty is the loss of trust score plus the fiat-fixed repayment obligation.
+Nothing is burned here: [[ref: trust units]] are not a token. The economic penalty is the loss of trust score plus the cost-basis repayment obligation — which, because the peg only declines, is always at least (and typically more than) the slashed units' current value.
 :::
 
 #### [MOD-TD-MSG-6] Repay Slashed Trust Deposit
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`. Repayment is made in [[ref: native denom]] worth the **outstanding fiat obligation at current rates**, and is processed as a fresh mint: the [[ref: native denom]] is routed to the [[ref: distribution pool]] and the equivalent [[ref: trust units]] (at the current peg value) are credited back to the deposit. Restoring trust therefore costs **more native denom when the token price is low**.
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. Repayment is made in [[ref: native denom]] worth the **outstanding cost-basis obligation at current rates**, routed to the [[ref: distribution pool]]; the **slashed trust units are restored** at their original basis. No fresh trust units are minted: the restored units re-enter at their decayed current value, and the difference between the cost basis paid and that value is the **penalty premium**. Restoring trust also costs **more native denom when the token price is low**.
 
 ##### [MOD-TD-MSG-6-1] Repay Slashed Trust Deposit method parameters
 
@@ -5436,9 +5455,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 For the `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account):
 
 - calculate `repay_amount` = `outstanding` / `P(now)` as in fee checks.
-- calculate `minted_tu` = `outstanding` / `tu_peg_value(now)`.
-- set `td.tu` to `td.tu` + `minted_tu`.
 - transfer `repay_amount` from `co.policy_address` to the [[ref: distribution pool]] account.
+- restore the slashed trust units at their original cost basis:
+  - set `td.tu` to `td.tu` + `td.slashed_tu`;
+  - set `td.fiat_cost` to `td.fiat_cost` + `outstanding`;
+  - set `td.slashed_tu` to 0.
 - set `td.repaid_amount` to `td.repaid_amount` + `outstanding`.
 - set `td.last_repaid` to `now`.
 
@@ -5454,6 +5475,7 @@ Make sure to **properly protect access to the execution of this method** else it
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation of the [[ref: trust deposit]].
 - `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] to remove.
+- `fiat_amount` (decimal) (*mandatory*): cost basis of the removed trust units, in [[ref: main fiat currency]], as computed by the caller ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
 
 ##### [MOD-TD-MSG-7-2] Remove Ecosystem Slashed Trust Units precondition checks
 
@@ -5477,8 +5499,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 For the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`:
 
 - set `td.tu` to `td.tu` - `tu_amount`.
+- set `td.fiat_cost` to `td.fiat_cost` - `fiat_amount`.
 
-The fiat-fixed obligation of an ecosystem-level slash is recorded on the corresponding `Participant` entry by [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit).
+The cost-basis obligation of an ecosystem-level slash is recorded on the corresponding `Participant` entry by [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit); upon repayment ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit)), the removed trust units and their basis are restored to both the `Participant` entry and the `TrustDeposit`.
 
 #### [MOD-TD-QRY-1] Get Trust Deposit
 
