@@ -3418,19 +3418,19 @@ if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native d
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the applicant's surcharge **plus** the validator's deposit-bound portion, funded by the applicant since the validator receives a non-native asset that cannot be deposit-bound).
+  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` × (1 - `GlobalVariables.trust_deposit_rate`) in specified (cs.pricing_asset_type, cs.pricing_asset) — the wallet portion of the fee. The deposit-bound portion of the fee is **not** paid in the pricing asset:
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge, both minted as trust units at validation).
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(FIAT, <fiat_currency>)`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
   - the required `validation_fees_in_denom` = 0 in [[ref: native denom]] (fiat-priced fees are settled off-chain).
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the applicant's surcharge **plus** the validator's deposit-bound portion, funded by the applicant since the fee itself is settled off-chain).
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge). The off-chain settlement SHOULD be for `validation_fees` × (1 - `GlobalVariables.trust_deposit_rate`) so that the net economics match the on-chain pricing cases.
 
 :::note
 Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation (see [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)); on cancellation the escrow is refunded as-is (see [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)).
 
-**Why `* 2`, while 100% of the validation fees is still required:** [[ref: trust units]] can only be minted from [[ref: native denom]]. When fees are priced in the native denom, the validator's deposit-bound portion is carved **out of the fee itself** (the validator receives `fees × (1 - trust_deposit_rate)` in its wallet and the rest is minted), so the applicant only adds its own surcharge. When fees are priced in an arbitrary coin or in fiat, the protocol cannot carve a portion out of a non-native (or off-chain) payment nor swap it: the fee goes to the validator **whole**, in the pricing asset, and **both** deposit-bound amounts — the applicant's surcharge **and** the validator's portion — must be funded separately by the applicant, in native denom. The applicant's total cost is therefore `fees + 2 × trust_deposit_rate × value(fees)` instead of `fees × (1 + trust_deposit_rate)`, and the validator receives its full fee plus trust units: ecosystems choosing a non-native pricing asset should set fee levels accordingly.
+**Why `* 2`:** [[ref: trust units]] can only be minted from [[ref: native denom]], but the fee split is the same for every pricing asset: the validator nets `fees × (1 - trust_deposit_rate)` as wallet revenue plus trust units worth `trust_deposit_rate` of the fee, and the applicant pays `fees × (1 + trust_deposit_rate)` in total. With native pricing, the validator's deposit-bound portion is carved out of the fee payment itself, so the native escrow is `fees + surcharge`. With an arbitrary COIN, that portion cannot be carved out of the non-native payment: the applicant pays `trust_deposit_rate` **less** in the pricing asset and supplies the native-denom equivalent instead — hence `* 2` (the validator's portion plus the applicant's own surcharge). With FIAT, the fee settles off-chain and the chain only collects the `* 2` native part; the off-chain settlement SHOULD be reduced by the deposit-bound portion likewise. Net economics are identical in all cases.
 :::
 
 ###### [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks
@@ -3573,19 +3573,19 @@ if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native d
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
-  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` in specified (cs.pricing_asset_type, cs.pricing_asset)
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validation_fees_in_denom`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the applicant's surcharge **plus** the validator's deposit-bound portion, funded by the applicant since the validator receives a non-native asset that cannot be deposit-bound).
+  - the required `validation_fees_in_denom` = `validator_participant.validation_fees` × (1 - `GlobalVariables.trust_deposit_rate`) in specified (cs.pricing_asset_type, cs.pricing_asset) — the wallet portion of the fee. The deposit-bound portion of the fee is **not** paid in the pricing asset:
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge, both minted as trust units at validation).
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(FIAT, <fiat_currency>)`:
 
 - `corporation` MUST have an available balance in its [[ref: account]], to cover the following trust fees.
   - the required `validation_fees_in_denom` = 0 in [[ref: native denom]] (fiat-priced fees are settled off-chain).
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the applicant's surcharge **plus** the validator's deposit-bound portion, funded by the applicant since the fee itself is settled off-chain).
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_participant.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge). The off-chain settlement SHOULD be for `validation_fees` × (1 - `GlobalVariables.trust_deposit_rate`) so that the net economics match the on-chain pricing cases.
 
 :::note
 Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the renewal onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation; on cancellation the escrow is refunded as-is.
 
-The `* 2` factor for non-native pricing follows the same rationale as in [[MOD-PP-MSG-1-2-3]](#mod-pp-msg-1-2-3-start-participant-op-fee-checks): the validator's deposit-bound portion cannot be carved out of a non-native (or off-chain) fee, so the applicant funds it in native denom alongside its own surcharge.
+The `* 2` factor for non-native pricing follows the same rationale as in [[MOD-PP-MSG-1-2-3]](#mod-pp-msg-1-2-3-start-participant-op-fee-checks): the validator's deposit-bound portion cannot be carved out of a non-native (or off-chain) fee payment, so the applicant pays that portion less in the pricing asset and funds its native-denom equivalent instead, alongside its own surcharge. Net economics match the native-denom case.
 :::
 
 ###### [MOD-PP-MSG-2-3] Renew Participant OP execution
@@ -3758,7 +3758,7 @@ Fees and Trust Deposits — settle the escrow (mint-at-validation):
   - transfer `applicant_participant.op_current_fees` − `validator_deposit_bound` from the escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address`.
 - else (pricing in an arbitrary COIN or in FIAT):
   - calculate `validator_deposit_bound` = `applicant_participant.op_current_deposit` / 2 and `applicant_deposit_bound` = `applicant_participant.op_current_deposit` / 2 (the applicant escrowed both, see fee checks);
-  - transfer the full amount `applicant_participant.op_current_fees` in the pricing [[ref: denom]] (0 if FIAT) from the escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address`.
+  - transfer the full amount `applicant_participant.op_current_fees` in the pricing [[ref: denom]] from the escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address` (for COIN pricing this already equals the fee minus its deposit-bound portion, see fee checks; 0 if FIAT).
 - use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_participant.corporation_id`, `source_account` = escrow account, `amount` = `validator_deposit_bound`); set `applicant_participant.op_validator_tu` to `applicant_participant.op_validator_tu` + the returned `minted_tu`.
 - use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`); set `applicant_participant.tu` to `applicant_participant.tu` + the returned `minted_tu`.
 
@@ -4431,7 +4431,7 @@ Required balance check:
 
 :::warning
 - Deposit-bound amounts MUST always be paid in [[ref: native denom]] (trust units are minted from native denom only).
-- When paying with COIN ≠ [[ref: native denom]] or with FIAT, the payer pays the deposit-bound amounts on behalf of payees (since payees receive non-native assets that cannot be deposit-bound).
+- When paying with COIN ≠ [[ref: native denom]] or with FIAT, the payer pays the deposit-bound amounts on behalf of payees (since payees receive non-native assets that cannot be deposit-bound), and pays correspondingly less in the pricing asset: net economics match the native-denom case. For FIAT pricing, the off-chain settlement SHOULD likewise be for the fee minus its deposit-bound portion.
 :::
 
 ##### [MOD-PP-MSG-10-4] Create or Update Participant Session execution
