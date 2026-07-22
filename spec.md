@@ -3429,8 +3429,6 @@ else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(
 
 :::note
 Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation (see [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)); on cancellation the escrow is refunded as-is (see [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)).
-
-**Why `* 2`:** [[ref: trust units]] can only be minted from [[ref: native denom]], but the fee split is the same for every pricing asset: the validator nets `fees × (1 - trust_deposit_rate)` as wallet revenue plus trust units worth `trust_deposit_rate` of the fee, and the applicant pays `fees × (1 + trust_deposit_rate)` in total. With native pricing, the validator's deposit-bound portion is carved out of the fee payment itself, so the native escrow is `fees + surcharge`. With an arbitrary COIN, that portion cannot be carved out of the non-native payment: the applicant pays `trust_deposit_rate` **less** in the pricing asset and supplies the native-denom equivalent instead — hence `* 2` (the validator's portion plus the applicant's own surcharge). With FIAT, the fee settles off-chain and the chain only collects the `* 2` native part; the off-chain settlement SHOULD be reduced by the deposit-bound portion likewise. Net economics are identical in all cases.
 :::
 
 ###### [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks
