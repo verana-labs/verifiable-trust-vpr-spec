@@ -3429,6 +3429,8 @@ else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(
 
 :::note
 Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation (see [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)); on cancellation the escrow is refunded as-is (see [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)).
+
+**Why `* 2`, while 100% of the validation fees is still required:** [[ref: trust units]] can only be minted from [[ref: native denom]]. When fees are priced in the native denom, the validator's deposit-bound portion is carved **out of the fee itself** (the validator receives `fees × (1 - trust_deposit_rate)` in its wallet and the rest is minted), so the applicant only adds its own surcharge. When fees are priced in an arbitrary coin or in fiat, the protocol cannot carve a portion out of a non-native (or off-chain) payment nor swap it: the fee goes to the validator **whole**, in the pricing asset, and **both** deposit-bound amounts — the applicant's surcharge **and** the validator's portion — must be funded separately by the applicant, in native denom. The applicant's total cost is therefore `fees + 2 × trust_deposit_rate × value(fees)` instead of `fees × (1 + trust_deposit_rate)`, and the validator receives its full fee plus trust units: ecosystems choosing a non-native pricing asset should set fee levels accordingly.
 :::
 
 ###### [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks
@@ -3582,6 +3584,8 @@ else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(
 
 :::note
 Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the renewal onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation; on cancellation the escrow is refunded as-is.
+
+The `* 2` factor for non-native pricing follows the same rationale as in [[MOD-PP-MSG-1-2-3]](#mod-pp-msg-1-2-3-start-participant-op-fee-checks): the validator's deposit-bound portion cannot be carved out of a non-native (or off-chain) fee, so the applicant funds it in native denom alongside its own surcharge.
 :::
 
 ###### [MOD-PP-MSG-2-3] Renew Participant OP execution
