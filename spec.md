@@ -3582,8 +3582,6 @@ else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(
 
 :::note
 Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the renewal onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation; on cancellation the escrow is refunded as-is.
-
-The `* 2` factor for non-native pricing follows the same rationale as in [[MOD-PP-MSG-1-2-3]](#mod-pp-msg-1-2-3-start-participant-op-fee-checks): the validator's deposit-bound portion cannot be carved out of a non-native (or off-chain) fee payment, so the applicant pays that portion less in the pricing asset and funds its native-denom equivalent instead, alongside its own surcharge. Net economics match the native-denom case.
 :::
 
 ###### [MOD-PP-MSG-2-3] Renew Participant OP execution
