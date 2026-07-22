@@ -3472,6 +3472,10 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.created`: `now`
   - `applicant_participant.modified`: `now`
   - `applicant_participant.tu`: 0.
+  - `applicant_participant.fiat_cost`: 0.
+  - `applicant_participant.slashed_tu`: 0.
+  - `applicant_participant.slashed_amount`: 0.
+  - `applicant_participant.repaid_amount`: 0.
   - `applicant_participant.validation_fees`: `validation_fees`.
   - `applicant_participant.issuance_fees`: `issuance_fees`.
   - `applicant_participant.verification_fees`: `verification_fees`.
@@ -3799,7 +3803,7 @@ This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-At any time, [[ref: applicant]] of an onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and escrewed [[ref: trust fees]] are refunded. If `op_exp` is not null, `op_state` is set back to VALIDATED, else `op_state` is set to TERMINATED.
+At any time, [[ref: applicant]] of an onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and the escrowed [[ref: trust fees]] and deposit-bound amount are refunded. If `op_exp` is not null, `op_state` is set back to VALIDATED, else `op_state` is set to TERMINATED.
 
 ##### [MOD-PP-MSG-6-1] Cancel Participant OP Last Request parameters
 
@@ -3822,7 +3826,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - Load `Participant` entry `applicant_participant` with this id. It MUST exist.
 - `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 - `applicant_participant.op_state` MUST be PENDING.
-- if `applicant_participant.deposit` has been slashed and not repaid, MUST abort
+- if `applicant_participant.slashed_amount` - `applicant_participant.repaid_amount` > 0 (entry slashed and not repaid), MUST abort
 
 ###### [MOD-PP-MSG-6-2-2] Cancel Participant OP Last Request fee checks
 
@@ -3959,6 +3963,10 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.issuance_fees`: `issuance_fees`
 - `participant.verification_fees`: `verification_fees`
 - `participant.tu`: 0
+- `participant.fiat_cost`: 0
+- `participant.slashed_tu`: 0
+- `participant.slashed_amount`: 0
+- `participant.repaid_amount`: 0
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -4880,6 +4888,10 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.issuance_fees`: 0
 - `participant.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
 - `participant.tu`: 0
+- `participant.fiat_cost`: 0
+- `participant.slashed_tu`: 0
+- `participant.slashed_amount`: 0
+- `participant.repaid_amount`: 0
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
