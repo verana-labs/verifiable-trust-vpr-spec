@@ -1450,7 +1450,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission. HOLDER permission is used to check credential revocation status; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
-- `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestSRI` for credentials issued under this schema. Valid values are defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
+- `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestJCS` of credentials issued under this schema, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
 
 ### SchemaAuthorizationPolicy
 
@@ -1547,8 +1547,12 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### Digest
 
-- `digest` (string) (*mandatory*) (key): digest to store. Globally unique across all `Digest` entries.
-- `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted.
+- `digest` (string) (*mandatory*) (key): digest to store, expressed as a Subresource Integrity string (example: `sha384-MzNNbQTWCSUSi0bbz7dbua+RcENv7C6FvlmYJ1Y+I727HsPOHdzwELMYO9Mz68M26`). Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential's `digestJCS`, computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
+- `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential.
+
+:::note
+A `Digest` entry records only the digest and the timestamp at which it was first persisted: it does not record which [[ref: account]] anchored it, and the VPR does not verify a digest against any content.
+:::
 
 ### OperatorAuthorization
 
@@ -2678,7 +2682,7 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*).
 - `pricing_asset_type` (PricingAssetType) (*mandatory*).
 - `pricing_asset` (string) (*mandatory*).
-- `digest_algorithm` (string) (*mandatory*): valid values are defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
+- `digest_algorithm` (string) (*mandatory*): MUST be one of the lowercase tokens `sha384` or `sha512`, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
 
 ##### [MOD-CS-MSG-1-2] Create New Credential Schema precondition checks
 
@@ -2701,7 +2705,7 @@ If any of these precondition checks fail, method MUST abort.
 - `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*). MUST be a valid IssuerOnboardingMode.
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*). MUST be a valid VerifierOnboardingMode.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*). MUST be a valid HolderOnboardingMode.
-- `digest_algorithm` (string) (*mandatory*) MUST be a valid digest algorithm as defined in the [Verifiable Trust spec](https://verana-labs.github.io/verifiable-trust-spec/).
+- `digest_algorithm` (string) (*mandatory*) MUST be one of the lowercase tokens `sha384` or `sha512`, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
 
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"EUR"`, `"GBP"`,...
