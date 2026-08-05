@@ -2846,15 +2846,9 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 #### [MOD-CS-MSG-5] Void
 
-`SchemaAuthorizationPolicy` and its management methods are postponed to v5.
-
 #### [MOD-CS-MSG-6] Void
 
-`SchemaAuthorizationPolicy` and its management methods are postponed to v5.
-
 #### [MOD-CS-MSG-7] Void
-
-`SchemaAuthorizationPolicy` and its management methods are postponed to v5.
 
 #### [MOD-CS-QRY-1] List Credential Schemas
 
@@ -2938,11 +2932,7 @@ Return the list of the existing parameters and their values.
 
 #### [MOD-CS-QRY-5] Void
 
-`SchemaAuthorizationPolicy` is postponed to v5.
-
 #### [MOD-CS-QRY-6] Void
-
-`SchemaAuthorizationPolicy` is postponed to v5.
 
 ### Participant Module
 
