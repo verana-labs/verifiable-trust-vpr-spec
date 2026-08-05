@@ -5880,6 +5880,7 @@ MUST abort if one of these conditions fails:
 This method can only be called directly by the following Participant module methods, with no signer check:
 
 - [Start Participant OP](#mod-pp-msg-1-start-participant-op)
+- [Create Root Participant](#mod-pp-msg-7-create-root-participant)
 - [Self Create Participant](#mod-pp-msg-14-self-create-participant)
 
 It creates a new [ParticipantAuthorizationRecord](#participantauthorizationrecord) inside `VSOperatorAuthorization[corporation_id, vs_operator]` and, if the record enables a fee grant and its `expiration` is in the future, synchronises the on-chain `FeeGrant` for the containing VSOA.
