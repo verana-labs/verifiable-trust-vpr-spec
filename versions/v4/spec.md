@@ -1100,25 +1100,6 @@ entity "CredentialSchema" as cs {
   +digest_algorithm: string
 }
 
-enum "SchemaAuthorizationPolicyRole" as sapr {
-  ISSUER
-  VERIFIER
-}
-
-
-entity "SchemaAuthorizationPolicy" as sap {
-  *id: uint64
-  +created: timestamp
-  +version: integer
-  +role: sapr
-  +url: string
-  +digest_sri: string
-  +revoked: boolean
-  +effective_from: timestamp
-  effective_until: timestamp
-}
-
-
 enum "IssuerOnboardingMode" as iom {
   OPEN
   GRANTOR_ONBOARDING_PROCESS
@@ -1308,8 +1289,6 @@ csp o-- cs: schema_id
 csp o-- "0..1" csp: validator_participant_id
 cs o-- tr: ecosystem_id
 
-cs o-- "0..n" sap: policies
-
 csps --- "1..n" cspsr : session_records
 
 cspsr  o-- "0..1" csp: issuer_participant_id
@@ -1451,21 +1430,6 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
 - `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestJCS` of credentials issued under this schema, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
-
-### SchemaAuthorizationPolicy
-
-`SchemaAuthorizationPolicy`:
-
-- `id` (uint64) (*mandatory*) (key): the id of this `SchemaAuthorizationPolicy`.
-- `schema_id` (uint64) (*mandatory*): id of the `CredentialSchema` this policy applies to.
-- `created` (timestamp) (*mandatory*): timestamp when this policy entry was created.
-- `version` (integer) (*mandatory*): version number of this policy for the given `(schema_id, role)`.
-- `role` (SchemaAuthorizationPolicyRole) (*mandatory*): role this policy applies to (`ISSUER` or `VERIFIER`).
-- `url` (string) (*mandatory*): URL where the policy document is published.
-- `digest_sri` (string) (*mandatory*): SRI hash of the policy document, used to guarantee integrity and immutability.
-- `effective_from` (timestamp) (*mandatory*): timestamp from which this policy version is in force.
-- `effective_until` (timestamp) (*optional*): timestamp until which this policy version is in force, if time-limited.
-- `revoked` (boolean) (*mandatory*): indicates whether this policy version has been revoked and must no longer be used.
 
 ### Participant
 
@@ -1953,15 +1917,10 @@ As a result, `accountABC` is authorized to:
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation + operator |
 |                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |corporation + operator |
 |                                | Update CS Module Parameters             |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |governance proposal |
-|                  | Create Schema Authorization Policy                  | N/A (Tx)               | Msg  | [[MOD-CS-MSG-5]](#mod-cs-msg-5-create-schema-authorization-policy) | corporation + operator |
-|                  | Increase Active Schema Authorization Policy Version | N/A (Tx)               | Msg  | [[MOD-CS-MSG-6]](#mod-cs-msg-6-increase-active-schema-authorization-policy-version) | corporation + operator |
-|                  | Revoke Schema Authorization Policy                  | N/A (Tx)               | Msg  | [[MOD-CS-MSG-7]](#mod-cs-msg-7-revoke-schema-authorization-policy) | corporation + operator |
 |                                | List Credential Schemas                 | /cs/v1/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |N/A  |
 |                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |N/A  |
 |                                | Render Json Schema                      | /cs/v1/js/{id}               | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |N/A  |
 |                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-CS-QRY-4]](#mod-cs-qry-4-list-module-parameters)   |N/A  |
-|                  | Get Schema Authorization Policy                         | /cs/v1/sap/get         | Query | [[MOD-CS-QRY-5]](#mod-cs-qry-5-get-schema-authorization-policy) | N/A |
-|                  | List Schema Authorization Policies                      | /cs/v1/sap/list        | Query | [[MOD-CS-QRY-6]](#mod-cs-qry-6-list-schema-authorization-policies) | N/A |
 | Participant                    | Start Participant OP                     |     N/A (Tx)                       | Msg    | [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op)    |corporation + operator |
 |                                | Renew a Participant OP                   |       N/A (Tx)                     | Msg    | [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)    |corporation + operator |
 |                                | Set Participant OP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)    |corporation + operator |
@@ -2885,148 +2844,17 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
 
-#### [MOD-CS-MSG-5] Create Schema Authorization Policy
+#### [MOD-CS-MSG-5] Void
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+`SchemaAuthorizationPolicy` and its management methods are postponed to v5.
 
-This message creates a **draft** `SchemaAuthorizationPolicy` for a given `(schema_id, role)`, or overwrites the existing draft policy if one already exists.  
-A draft policy is defined as a policy with `effective_from == null` and MUST NOT be revoked.
+#### [MOD-CS-MSG-6] Void
 
-Accordingly, if a credential schema defines one or more active policies for the ISSUER or VERIFIER role, the corresponding corporation that grants the ISSUER or VERIFIER role for this schema (ISSUER_GRANTOR, VERIFIER_GRANTOR, or ECOSYSTEM, depending on how schema issuer and verifier modes have been configured) MUST issue an IAC or VAC credential to the candidate upon successful completion of the onboarding process. Refer to the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec) for more information.
+`SchemaAuthorizationPolicy` and its management methods are postponed to v5.
 
-##### [MOD-CS-MSG-5-1] Create Schema Authorization Policy parameters
+#### [MOD-CS-MSG-7] Void
 
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
-- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
-- `url` (string): URL where the policy document is published (*mandatory*).
-- `digest_sri` (string): SRI digest of the policy document (*mandatory*).
-
-##### [MOD-CS-MSG-5-2] Create Schema Authorization Policy precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-CS-MSG-5-2-1] Create Schema Authorization Policy basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `corporation`.
-- `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
-- `url` MUST be a non-empty valid URI.
-- `digest_sri` MUST be non-empty.
-- there MUST NOT exist more than one policy for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
-
-###### [MOD-CS-MSG-5-2-2] Create Schema Authorization Policy fee checks
-
-Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
-
-##### [MOD-CS-MSG-5-3] Create Schema Authorization Policy execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs:
-
-- if a draft policy exists for `(schema_id, role)`:
-  - update the existing policy by setting:
-    - `url = url`
-    - `digest_sri = digest_sri`
-- otherwise, create and persist a new `SchemaAuthorizationPolicy` entry `sap`:
-  - `sap.id`: auto-incremented uint64
-  - `sap.schema_id`: `schema_id`
-  - `sap.role`: `role`
-  - `sap.version`: max existing version for `(schema_id, role)` + 1, or `1` if none exist
-  - `sap.url`: `url`
-  - `sap.digest_sri`: `digest_sri`
-  - `sap.created`: current timestamp
-  - `sap.effective_from`: `null`
-  - `sap.effective_until`: `null`
-  - `sap.revoked`: `false`
-
-#### [MOD-CS-MSG-6] Increase Active Schema Authorization Policy Version
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-This message activates the current draft `SchemaAuthorizationPolicy` for the given `(schema_id, role)` and deactivates any previously active version. Deactivation does not constitute revocation; credentials issued under earlier policies MAY continue to be considered valid.
-
-##### [MOD-CS-MSG-6-1] Increase Active Schema Authorization Policy Version parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
-- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
-
-##### [MOD-CS-MSG-6-2] Increase Active Schema Authorization Policy Version precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-CS-MSG-6-2-1] Basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `corporation`.
-- exactly one draft policy MUST exist for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
-- the draft policy MUST have non-empty `url` and `digest_sri`.
-
-###### [MOD-CS-MSG-6-2-2] Fee checks
-
-Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
-
-##### [MOD-CS-MSG-6-3] Increase Active Schema Authorization Policy Version execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks atomically in a [[ref: transaction]]:
-
-- let `draft` be the unique policy with `effective_from == null` and `revoked == false`.
-- let `prev_active` be the active policy for `(schema_id, role)`, if any.
-- set `draft.effective_from = now`.
-- if `prev_active` exists:
-  - set `prev_active.effective_until = now`.
-
-#### [MOD-CS-MSG-7] Revoke Schema Authorization Policy
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-This message revokes a previously enabled `SchemaAuthorizationPolicy` version. Revoked means previously issued credential that refer to this policy are automatically considered revoked.
-
-##### [MOD-CS-MSG-7-1] Revoke Schema Authorization Policy parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
-- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
-- `version` (integer): policy version to revoke (*mandatory*).
-
-##### [MOD-CS-MSG-7-2] Revoke Schema Authorization Policy precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-CS-MSG-7-2-1] Basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- a policy MUST exist for `(schema_id, role, version)`.
-- the targeted policy MUST have `effective_from != null` (a policy that has never been enabled MUST NOT be revoked).
-- the targeted policy MUST NOT already be revoked.
-
-###### [MOD-CS-MSG-7-2-2] Fee checks
-
-Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
-
-##### [MOD-CS-MSG-7-3] Revoke Schema Authorization Policy execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following task in a [[ref: transaction]]:
-
-- set `revoked = true` on the targeted `SchemaAuthorizationPolicy` entry.
+`SchemaAuthorizationPolicy` and its management methods are postponed to v5.
 
 #### [MOD-CS-QRY-1] List Credential Schemas
 
@@ -3108,75 +2936,13 @@ Return the list of the existing parameters and their values.
 }
 ```
 
-#### [MOD-CS-QRY-5] Get Schema Authorization Policy
+#### [MOD-CS-QRY-5] Void
 
-This query returns a single `SchemaAuthorizationPolicy` identified by its unique `id`.
+`SchemaAuthorizationPolicy` is postponed to v5.
 
-##### [MOD-CS-QRY-5-1] Get Schema Authorization Policy parameters
+#### [MOD-CS-QRY-6] Void
 
-- `id` (uint64): unique identifier of the `SchemaAuthorizationPolicy` (*mandatory*).
-
-##### [MOD-CS-QRY-5-2] Get Schema Authorization Policy precondition checks
-
-If any of these precondition checks fail, query MUST abort.
-
-- `id` MUST be provided.
-- a `SchemaAuthorizationPolicy` entry with the given `id` MUST exist.
-
-##### [MOD-CS-QRY-5-3] Get Schema Authorization Policy execution
-
-If all precondition checks pass, the query MUST return the corresponding
-`SchemaAuthorizationPolicy` entry:
-
-- `id`
-- `schema_id`
-- `role`
-- `version`
-- `url`
-- `digest_sri`
-- `created`
-- `effective_from`
-- `effective_until`
-- `revoked`
-
-
-#### [MOD-CS-QRY-6] List Schema Authorization Policies
-
-This query returns the list of `SchemaAuthorizationPolicy` entries associated
-with a given `(schema_id, role)` pair.
-
-##### [MOD-CS-QRY-6-1] List Schema Authorization Policies parameters
-
-- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
-- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
-
-##### [MOD-CS-QRY-6-2] List Schema Authorization Policies precondition checks
-
-If any of these precondition checks fail, query MUST abort.
-
-- `schema_id` MUST be provided.
-- `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
-- `schema_id` MUST reference an existing `CredentialSchema` entry.
-
-##### [MOD-CS-QRY-6-3] List Schema Authorization Policies execution
-
-If all precondition checks pass, the query MUST return the list of
-`SchemaAuthorizationPolicy` entries matching `(schema_id, role)`.
-
-Returned entries MUST include at least the following fields:
-
-- `id`
-- `schema_id`
-- `role`
-- `version`
-- `url`
-- `digest_sri`
-- `created`
-- `effective_from`
-- `effective_until`
-- `revoked`
-
-Entries MUST be ordered by ascending `version`.
+`SchemaAuthorizationPolicy` is postponed to v5.
 
 ### Participant Module
 
