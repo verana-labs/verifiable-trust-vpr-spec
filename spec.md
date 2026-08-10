@@ -15,6 +15,7 @@
 ~ [Ariel Gentile](https://www.linkedin.com/in/aogentile/)
 ~ [Mathieu Gauthron](https://www.linkedin.com/in/mathieugauthron/)
 ~ [Pratik Kumar](https://www.linkedin.com/in/pratik-kumar-/)
+~ [Tarun Vadde](https://www.linkedin.com/in/tarunvadde/)
 
 **Participate:**
 
