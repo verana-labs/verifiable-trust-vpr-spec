@@ -15,6 +15,7 @@
 ~ [Ariel Gentile](https://www.linkedin.com/in/aogentile/)
 ~ [Mathieu Gauthron](https://www.linkedin.com/in/mathieugauthron/)
 ~ [Pratik Kumar](https://www.linkedin.com/in/pratik-kumar-/)
+~ [Tarun Vadde](https://www.linkedin.com/in/tarunvadde/)
 
 **Participate:**
 
@@ -4007,7 +4008,7 @@ if `issuer_participant_id` is not null:
 - if `issuer_participant` is not a [[ref: active participant]], abort.
 - if `issuer_participant.vs_operator` is not equal to `operator`, abort.
 - if `issuer_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
-- if `digest_sri` is present but not a valid digest SRI, abort.
+- if `digest` is present and longer than 256 characters, abort.
 
 if `verifier_participant_id` is not null:
 
@@ -4016,7 +4017,7 @@ if `verifier_participant_id` is not null:
 - if `verifier_participant` is not a [[ref: active participant]], abort.
 - if `verifier_participant.vs_operator` is not equal to `operator`, abort.
 - if `verifier_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
-- if `digest_sri` is present but not a valid digest SRI, abort.
+- if `digest` is present and longer than 256 characters, abort.
 
 Define the **primary `Participant`** `perm`: if `verifier_participant` is not null, `perm` = `verifier_participant` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_participant` (the caller is the `vs_operator` of the issuer).
 
