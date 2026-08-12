@@ -3175,7 +3175,7 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 
 We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different OP with differents validators for the same `schema_id`, `role`.
 
-Find all `Participant` entries `participants[]` for `schema_id`, `role`, `validator_participant_id`, `corporation` with op_state = VALIDATED or PENDING.
+Find all `Participant` entries `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation` with op_state = VALIDATED or PENDING.
 
 if size of `participants[]` > 0, it means there is already an existing onboarding process in this context, so MUST abort.
 
