@@ -4604,7 +4604,7 @@ Else update:
 
 then, add the `cspsr` to `session.session_records`
 
-if current transaction if for issuance of a credential, persist the digest SRI by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest).
+if current transaction if for issuance of a credential, persist the credential's `digestJCS` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest).
 
 :::warning
 `session.authz[]` can contain null `issuer_participant_id` OR `verifier_participant_id`
