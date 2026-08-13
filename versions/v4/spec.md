@@ -1843,7 +1843,7 @@ Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission
 1. A `ParticipantAuthorizationRecord` `record` MUST exist for `participant_id`. Abort if not found.
 2. `record` MUST belong to `VSOperatorAuthorization[co.id, operator]` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), that is: the containing `VSOperatorAuthorization` MUST have `co.id` as its `corporation_id` and `operator` as its `vs_operator`. Abort otherwise.
 3. `msg_type` MUST be in `record.msg_types`. Abort otherwise.
-4. Cycle / expiration check:
+4. Cycle / expiration check. If `record.expiration` is set:
    - if `record.period` is set and `now() >= record.expiration`:
      - if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
      - if `record.fee_spend_limit` is set, set `record.remaining_fee_spend := record.fee_spend_limit`.
