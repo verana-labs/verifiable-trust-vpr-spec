@@ -21,7 +21,9 @@ Previous stable (v3): [https://verana-labs.github.io/verifiable-trust-vpr-spec/i
 
 ## How to contribute
 
-Clone repo and get started by browsing the index.html file for a rendered spec-up html.
+Clone the repo. Then run `npm install` and `npm run render` to build the HTML.
+The render writes `index.html` in the repo root, and `versions/v4/index.html` for v4.
+Git does not track these files. CI builds them again on each deploy.
 
 Contribute by editing [spec.md](spec.md) in a new branch.
 
