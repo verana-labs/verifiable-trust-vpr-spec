@@ -234,7 +234,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
 
 [[def: active participant, active participants]]:
-~ A participant of a given role, which effective_from timestamp is lower than current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
+~ A participant of a given role, which effective_from timestamp is lower than or equal to current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
 
 [[def: future participant, future participants]]:
 ~ A participant of a given role, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.
@@ -1482,7 +1482,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `adjusted` (timestamp) (*optional*): timestamp this `Participant` has last been adjusted; null until the first adjustment.
 - `slashed` (timestamp) (*optional*): timestamp this `Participant` has last been slashed; null until the first slash.
 - `repaid` (timestamp) (*optional*): timestamp this `Participant` has last been repaid; null until the first repay.
-- `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` is effective.
+- `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` is effective. It is null if, and only if, the entry has never been validated by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated): that is, `op_state` is PENDING (an onboarding process started by [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and not yet validated), or `op_state` is TERMINATED after cancellation ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)) of a never-validated onboarding process. Entries created by [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) always have `effective_from` set at creation time.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit has been set for this permission.
 - `modified` (timestamp) (*mandatory*): timestamp this Participant has been modified.
 - `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`corporation` grantee of this perm) for running an onboarding process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
@@ -3417,13 +3417,39 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 
 ###### [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks
 
-We want to make sure that 2 onboarding processes cannot be active at the same time in the same context. This does not prevent a `corporation` from running different OP with differents validators for the same `schema_id`, `role`.
+An applicant `corporation` MUST NOT have two onboarding processes running at the same time for the same `did` and `role` with the same validator. This does not prevent a `corporation` from running concurrent OPs with different validators for the same `did` and `role`, nor concurrent OPs with the same validator for different `did`s. A completed (VALIDATED) onboarding process does not prevent starting a new one: overlapping *effectiveness* of the resulting `Participant` entries is prevented at validation time by [MOD-PP-MSG-3-2-4](#mod-pp-msg-3-2-4-set-participant-op-to-validated-overlap-checks).
 
-Find all `Participant` entries `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation` with op_state = VALIDATED or PENDING.
+Find all `Participant` entries `participants[]` where:
 
-if size of `participants[]` > 0, it means there is already an existing onboarding process in this context, so MUST abort.
+- `p.validator_participant_id` = `validator_participant_id`,
+- `p.role` = `role`,
+- `p.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account),
+- `p.did` = `did`,
+- `p.revoked` is null and `p.slashed` is null,
+- `p.op_state` = PENDING.
+
+if size of `participants[]` > 0, an onboarding process is already running in this context, so [[ref: transaction]] MUST abort.
+
+Additionally, if any `Participant` entry matches the same conditions except with `op_state` = VALIDATED, and has `effective_until` = NULL, [[ref: transaction]] MUST abort: that entry never expires, so a successor entry could never pass [MOD-PP-MSG-3-2-4](#mod-pp-msg-3-2-4-set-participant-op-to-validated-overlap-checks); `corporation` MUST first use [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set an `effective_until`.
+
+> Note: no `schema_id` condition is needed: all `Participant` entries sharing a `validator_participant_id` share its `schema_id` by construction. No `repaid` condition is needed either: `repaid` implies `slashed`.
 
 > note: this check was not present in v3.
+
+###### [MOD-PP-MSG-1-2-5] Start Participant OP unrepaid slash checks
+
+A `corporation` with an unrepaid slash MUST NOT start an onboarding process: in the ecosystem where it was slashed (ecosystem slash, see [MOD-PP-MSG-12](#mod-pp-msg-12-slash-participant-trust-deposit)), or anywhere on the VPR (network slash, see [MOD-TD-MSG-5](#mod-td-msg-5-slash-trust-deposit)).
+
+- define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `validator_participant.schema_id`).
+- if any `Participant` entry `p` exists where:
+  - `p.corporation_id` = `co.id`,
+  - `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit`,
+  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
+
+  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
+- if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_deposit` > `td.repaid_deposit`, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
+
+> Note: the condition `p.repaid_deposit` < `p.slashed_deposit` (rather than `p.repaid` is null) keeps this check correct when an entry is slashed again after a previous repayment.
 
 ##### [MOD-PP-MSG-1-3] Start Participant OP execution
 
@@ -3511,6 +3537,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - If validator `Participant` is not valid anymore, applicant MUST perform a new onboarding process with another validator.
 - Renewal does not allow changing the `participant.validation_fees`, `participant.issuance_fees`, `participant.verification_fees`. To change these values, applicant MUST start a new onboarding process.
 - if `applicant_participant` is revoked, slashed, or repaid, method MUST fail.
+- if `corporation` has an unrepaid ecosystem slash in the ecosystem of the related schema, or an unrepaid network slash, method MUST fail (see [MOD-PP-MSG-2-2-4](#mod-pp-msg-2-2-4-renew-participant-op-unrepaid-slash-checks)).
 
 ##### [MOD-PP-MSG-2-1] Renew Participant OP parameters
 
@@ -3574,6 +3601,19 @@ else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin 
 :::note
 Trust deposit MUST always be paid in [[ref: native denom]]
 :::
+
+###### [MOD-PP-MSG-2-2-4] Renew Participant OP unrepaid slash checks
+
+Same as [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks), with `ecosystem_id` resolved from the entry being renewed:
+
+- define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `applicant_participant.schema_id`).
+- if any `Participant` entry `p` exists where:
+  - `p.corporation_id` = `co.id`,
+  - `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit`,
+  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
+
+  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
+- if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_deposit` > `td.repaid_deposit`, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
 
 ###### [MOD-PP-MSG-2-3] Renew Participant OP execution
 
@@ -3696,15 +3736,22 @@ If `validator_participant` is not a [[ref: active participant]] (expired, revoke
 
 ###### [MOD-PP-MSG-3-2-4] Set Participant OP to Validated overlap checks
 
-We want to make sure that 2 `Participant` entries cannot be active at the same time for the same `validator_participant_id`. That should not occur in this method, but better do the check anyway.
+Two `Participant` entries of the same applicant (`corporation_id`, `did`) MUST NOT be effective at the same time under the same `validator_participant_id` for the same `role`. That should not occur if [MOD-PP-MSG-1-2-4](#mod-pp-msg-1-2-4-start-participant-op-overlap-checks) is enforced, but better do the check anyway.
 
-Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation`.
+Find all [[ref: active participants]] and [[ref: future participants]] `participants[]` where:
 
-for each `Participant` entry `p` from `participants[]`:
+- `p.id` is not equal to `applicant_participant.id`,
+- `p.validator_participant_id` = `applicant_participant.validator_participant_id`,
+- `p.role` = `applicant_participant.role`,
+- `p.corporation_id` = `applicant_participant.corporation_id`,
+- `p.did` = `applicant_participant.did`.
 
-- if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
-- if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
+for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
+
+- `p` is a [[ref: active participant]] (the entry being validated becomes effective at `now` and would overlap it), OR
+- `p` is a [[ref: future participant]] and (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`).
+
+> Note: excluding `applicant_participant` itself is required: on a renewal, the entry being validated is itself a [[ref: active participant]] and would otherwise always match. No `schema_id` condition is needed: all `Participant` entries sharing a `validator_participant_id` share its `schema_id` by construction.
 
 > note: this check was not present in v3.
 
@@ -3846,8 +3893,8 @@ An [[ref: account]] that would like to create a `Participant` entry MUST call th
 - `schema_id` (uint64) (*mandatory*)
 - `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this `Participant` entry. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS.
-- `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
+- `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-PP-MSG-7-2-1](#mod-pp-msg-7-2-1-create-root-participant-basic-checks)).
 - `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running an onboarding process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean an onboarding process must take place. For enabling onboarding processes, at least one of the two issuer, verifier mode must be different than OPEN.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
@@ -3881,8 +3928,9 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant).
 - likewise, if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id`, and if a `Corporation` entry exists whose own `did` equals the provided `did`, its `id` MUST equal `co.id`; else method MUST abort ([DID ownership invariant](#did-ownership-invariant)).
-- `effective_from` must be in the future.
-- `effective_until`, if not null, must be greater than `effective_from`
+- define `effective_from_r`: `effective_from` if present, else the current block timestamp.
+- if `effective_from` is present, it MUST NOT be lower than the current block timestamp.
+- `effective_until`, if not null, MUST be greater than `effective_from_r`.
 - `validation_fees` (number) (*mandatory*): MUST be >= 0.
 - `issuance_fees` (number) (*mandatory*): MUST be >= 0.
 - `verification_fees` (number) (*mandatory*): MUST be >= 0.
@@ -3903,17 +3951,20 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PP-MSG-7-2-4] Create Root Participant overlap checks
 
-We want to make sure that 2 `Participant` entries cannot be active at the same time. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
+Two root ECOSYSTEM `Participant` entries of the same `corporation` MUST NOT be effective at the same time for the same `schema_id`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
-Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, ECOSYSTEM,  `corporation`.
+Find all [[ref: active participants]] and [[ref: future participants]] `participants[]` where:
 
-> Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM-role `Participant` entries it is NULL.
+- `p.schema_id` = `schema_id`,
+- `p.role` = ECOSYSTEM,
+- `p.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 
-for each `Participant` entry `p` from `participants[]`:
+> Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM-role `Participant` entries it is NULL. There is no `did` condition either: a root entry represents the ecosystem itself for the schema.
 
-- if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
-- if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
+for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
+
+- (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`), AND
+- (`p.effective_until` is NULL or `p.effective_until` is greater than `effective_from_r`).
 
 > note: this check was not present in v3.
 
@@ -3935,7 +3986,7 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.corporation_id`: `co.id`.
 - `participant.vs_operator`: `vs_operator`.
 - `participant.created`: `now`
-- `participant.effective_from`: `effective_from`
+- `participant.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
 - `participant.effective_until`: `effective_until`
 - `participant.validation_fees`: `validation_fees`
 - `participant.issuance_fees`: `issuance_fees`
@@ -4014,15 +4065,23 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 
 ###### [MOD-PP-MSG-8-2-4] Set Participant Effective Until overlap checks
 
-We want to make sure that 2 `Participant` entries cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
+Adjusting `effective_until` MUST NOT make this entry's effectiveness period overlap the period of a sibling entry of the same applicant (`corporation_id`, `did`) with the same `schema_id`, `role` and `validator_participant_id`.
 
-Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `schema_id`, `role`, `validator_participant_id`, `corporation`.
+Find all [[ref: active participants]] and [[ref: future participants]] `participants[]` where:
 
-for each `Participant` entry `p` from `participants[]`:
+- `p.id` is not equal to `applicant_participant.id`,
+- `p.schema_id` = `applicant_participant.schema_id`,
+- `p.role` = `applicant_participant.role`,
+- `p.validator_participant_id` = `applicant_participant.validator_participant_id` (both NULL for root ECOSYSTEM entries),
+- `p.corporation_id` = `applicant_participant.corporation_id`,
+- `p.did` = `applicant_participant.did`.
 
-- if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
-- if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
+for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
+
+- `p.effective_from` is lower than `effective_until` (the new value being set), AND
+- `p.effective_until` is NULL or `p.effective_until` is greater than `applicant_participant.effective_from`.
+
+> Note: excluding `applicant_participant` itself is required, as the entry being adjusted would otherwise always match. `schema_id` is kept in this check's conditions because `validator_participant_id` is NULL for root ECOSYSTEM entries and therefore cannot imply the schema.
 
 > note: this check was not present in v3.
 
@@ -4723,7 +4782,7 @@ Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS 
 
 This method can only be called by the `corporation` that wants to repay the deposit of a slashed `Participant` entry they own. This won't make the `Participant` entry re-usable: it will be needed for the `corporation` associated to this `Participant` entry to request a new `Participant` entry, as slashed `Participant` entries cannot be revived (same happens for revoked, etc.).
 
-Nevertheless, to get a new `Participant` entry for a given ecosystem, it is needed, using this method, to repay the deposit of a slashed `Participant` entry first.
+Nevertheless, to get a new `Participant` entry for a given ecosystem, it is needed, using this method, to repay the deposit of a slashed `Participant` entry first. This is enforced by the unrepaid slash checks of [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks), [MOD-PP-MSG-2-2-4](#mod-pp-msg-2-2-4-renew-participant-op-unrepaid-slash-checks) and [MOD-PP-MSG-14-2-5](#mod-pp-msg-14-2-5-self-create-participant-unrepaid-slash-checks).
 
 ##### [MOD-PP-MSG-13-1] Repay Participant Slashed Trust Deposit parameters
 
@@ -4745,11 +4804,12 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
 - if `applicant_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
+- `applicant_participant.slashed_deposit` MUST be greater than `applicant_participant.repaid_deposit`, else abort (nothing to repay).
 
 ###### [MOD-PP-MSG-13-2-2] Repay Participant Slashed Trust Deposit fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- `corporation` MUST have at least `applicant_participant.slashed_deposit` in its account balance, else [[ref: transaction]] MUST abort.
+- `corporation` MUST have at least `applicant_participant.slashed_deposit` - `applicant_participant.repaid_deposit` in its account balance, else [[ref: transaction]] MUST abort.
 
 ##### [MOD-PP-MSG-13-3] Repay Participant Slashed Trust Deposit execution
 
@@ -4758,8 +4818,9 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
+- define `owed`: `applicant_participant.slashed_deposit` - `applicant_participant.repaid_deposit`.
 
-use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `applicant_participant.slashed_deposit` to trust deposit of `applicant_participant.corporation_id`.
+use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `owed` to trust deposit of `applicant_participant.corporation_id`.
 
 - Load `Participant` entry `applicant_participant` from `id`.
 - set `applicant_participant.repaid` to `now`
@@ -4784,8 +4845,8 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): the account we want to authorize to create `ParticipantSession` entries linked to this `Participant` entry. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
-- `effective_from` (timestamp) (*mandatory*): timestamp from when (exclusive) this Perm is effective. MUST be in the future.
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from`.
+- `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-PP-MSG-14-2-1](#mod-pp-msg-14-2-1-self-create-participant-basic-checks)).
 - `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
 - `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing an onboarding process to obtain a credential, in the denom specified in the credential schema. Default to 0.
 
@@ -4824,12 +4885,12 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant: at any block height, all `Participant` entries sharing a `did` are owned by the same `Corporation`).
 - likewise, if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id`, and if a `Corporation` entry exists whose own `did` equals the provided `did`, its `id` MUST equal `co.id`; else method MUST abort ([DID ownership invariant](#did-ownership-invariant)).
-- `effective_from` MUST be in the future AND
-  - MUST be greater or equal to `validator_participant.effective_from` AND
-  - if `validator_participant.effective_until` is not null, MUST be lower than `validator_participant.effective_until`
+- define `effective_from_r`: `effective_from` if present, else the current block timestamp.
+- if `effective_from` is present, it MUST NOT be lower than the current block timestamp.
+- `effective_from_r` MUST be greater or equal to `validator_participant.effective_from` AND, if `validator_participant.effective_until` is not null, MUST be lower than `validator_participant.effective_until`. Note that when `effective_from` is absent and `validator_participant` is a [[ref: future participant]], this check aborts: the caller MUST pass an explicit `effective_from` greater or equal to `validator_participant.effective_from`.
 - `effective_until`:
   - if null, `validator_participant.effective_until` MUST be NULL
-  - else if not null, must be greater than `effective_from` AND if `validator_participant.effective_until` is not null, MUST be lower or equal to `validator_participant.effective_until`
+  - else if not null, must be greater than `effective_from_r` AND if `validator_participant.effective_until` is not null, MUST be lower or equal to `validator_participant.effective_until`
 - `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and the `Participant` entry MUST be an ISSUER.
 - `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and the `Participant` entry MUST be an ISSUER.
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-14-1](#mod-pp-msg-14-1-self-create-participant-parameters).
@@ -4850,17 +4911,36 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PP-MSG-14-2-4] Self Create Participant overlap checks
 
-We want to make sure that 2 `Participant` entries cannot be active at the same time for the same `validator_participant_id`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
+Two `Participant` entries of the same applicant (`corporation_id`, `did`) MUST NOT be effective at the same time under the same `validator_participant_id` for the same `role`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
-Find all [[ref: active participants]] `participants[]` (not revoked, not slashed, not repaid) for `cs.id`, `role`, `validator_participant_id`, `corporation`.
+Find all [[ref: active participants]] and [[ref: future participants]] `participants[]` where:
 
-for each `Participant` entry `p` from `participants[]`:
+- `p.validator_participant_id` = `validator_participant_id`,
+- `p.role` = `role`,
+- `p.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account),
+- `p.did` = `did`.
 
-- if `p.effective_until` is greater than `effective_from`, method execution MUST abort.
-- if `p.effective_from` is lower than `effective_until`, method execution MUST abort.
-- if `p.effective_until` is NULL (never expire), creation of a new `Participant` entry doesn't make any sense and method execution MUST abort.
+for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
+
+- (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`), AND
+- (`p.effective_until` is NULL or `p.effective_until` is greater than `effective_from_r`).
+
+> Note: no `schema_id` condition is needed: all `Participant` entries sharing a `validator_participant_id` share its `schema_id` by construction.
 
 > note: this check was not present in v3.
+
+###### [MOD-PP-MSG-14-2-5] Self Create Participant unrepaid slash checks
+
+Same as [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks):
+
+- define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `validator_participant.schema_id`).
+- if any `Participant` entry `p` exists where:
+  - `p.corporation_id` = `co.id`,
+  - `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit`,
+  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
+
+  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
+- if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_deposit` > `td.repaid_deposit`, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
 
 ##### [MOD-PP-MSG-14-3] Self Create Participant execution
 
@@ -4882,7 +4962,7 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.corporation_id`: `co.id`.
 - `participant.vs_operator`: `vs_operator`.
 - `participant.created`: `now`
-- `participant.effective_from`: `effective_from`
+- `participant.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
 - `participant.effective_until`: `effective_until`
 - `participant.validation_fees`: `validation_fees` if specified and `role` is ISSUER, else 0.
 - `participant.issuance_fees`: 0
