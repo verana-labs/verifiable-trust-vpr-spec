@@ -728,7 +728,7 @@ The **total fees** paid by the applicant consist of:
 - an additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]], which is **allocated to the applicant's [[ref: trust deposit]]** when the onboarding process begins, **plus**
 - [[ref: network fees]] (not part of the escrowed amount).
 
-Example, using 20% for `trust_deposit_rate`:
+Example, using 5% for `trust_deposit_rate`:
 
 ```plantuml
 
@@ -739,10 +739,10 @@ scale max 1200 width
 
 package "Applicant" as issuer #7677ed {
     object "A Account" as issuera {
-         \t-1200 TUs
+         \t-1050 TUs
     }
     object "A Trust Deposit" as issuertd {
-         \t+200 TUs
+         \t+50 TUs
     }
 
 }
@@ -750,7 +750,7 @@ package "Applicant" as issuer #7677ed {
 object "Escrow Account" as escrow
 
 issuera -r-> escrow: \t+1000 TUs
-issuera --> issuertd:  \t+200 TUs
+issuera --> issuertd:  \t+50 TUs
 
 
 @enduml
@@ -769,10 +769,10 @@ scale max 1200 width
 
 package "Issuer Grantor B" as ig {
     object "IG Account" as iga {
-        \t+800 TUs
+        \t+950 TUs
     }
     object "IG Trust Deposit" as igtd {
-        \t+200 TUs
+        \t+50 TUs
     }
 }
 object "Escrow Account" as escrow
@@ -780,8 +780,8 @@ object "Escrow Account" as escrow
 
 
 escrow -r-> ig: \t+1000 TUs \t\t\t\t\t
-ig --> iga: \t+800 TUs
-ig --> igtd: \t+200 TUs
+ig --> iga: \t+950 TUs
+ig --> igtd: \t+50 TUs
 
 @enduml
 
@@ -863,7 +863,7 @@ If not, they **must reject** the issuance or verification request.
 Note: The **User Agent** and **Wallet User Agent** may refer to the same implementation.
 :::
 
-Distribution example for the issuance by `ISSUER` #C of a credential, using the `Participant` tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
+Distribution example for the issuance by `ISSUER` #C of a credential, using the `Participant` tree above, 5% for `trust_deposit_rate`, 5% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
 
 ```plantuml
 
@@ -873,46 +873,46 @@ scale max 800 width
 
 package "Ecosystem #A" as tr #3fbdb6 {
     object "E Account" as tra {
-         \t+8 TUs
+         \t+9.5 TUs
     }
     object "E Trust Deposit" as trtd {
-         \t+2 TUs
+         \t+0.5 TUs
     }
 }
 
 package "Issuer Grantor #B" as ig {
     object "IG Account" as iga {
-        \t+4 TUs
+        \t+4.75 TUs
     }
     object "IG Trust Deposit" as igtd {
-        \t+1 TUs
+        \t+0.25 TUs
     }
 }
 package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
-         \t-21 TUs
+         \t-17.25 TUs
     }
     object "I Trust Deposit" as issuertd {
-         \t+3 TUs
+         \t+0.75 TUs
     }
 
 }
 
 package "User Agent" as ua {
     object "UA Account" as uaa {
-         \t+1.2 TUs
+         \t+0.7125 TUs
     }
     object "UA Trust Deposit" as uatd {
-        \t+0.3 TUs
+        \t+0.0375 TUs
     }
 
 }
 package "Wallet User Agent" as wua {
     object "WUA Account" as wuaa {
-         \t+1.2 TUs
+         \t+0.7125 TUs
     }
     object "WUA Trust Deposit" as wuatd {
-        \t+0.3 TUs
+        \t+0.0375 TUs
     }
 
 }
@@ -921,17 +921,17 @@ issuera -r-> tr: \t+10 TUs
 
 issuera -r-> ig: \t+5 TUs
 
-issuera -d-> ua: \t+1.5 TUs
+issuera -d-> ua: \t+0.75 TUs
 
-issuera -d-> wua: \t+1.5 TUs
+issuera -d-> wua: \t+0.75 TUs
 
-issuera --> issuertd:  \t+3 TUs
+issuera --> issuertd:  \t+0.75 TUs
 
 @enduml
 
 ```
 
-Distribution example for the verification by `VERIFIER` #E of a credential issued by `ISSUER` #C, using the `Participant` tree above, 20% for `trust_deposit_rate`, 10% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
+Distribution example for the verification by `VERIFIER` #E of a credential issued by `ISSUER` #C, using the `Participant` tree above, 5% for `trust_deposit_rate`, 5% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`.
 
 ```plantuml
 
@@ -941,63 +941,63 @@ scale max 800 width
 
 package "Ecosystem #A" as tr #3fbdb6 {
     object "E Account" as tra {
-         \t+16 TUs
+         \t+19 TUs
     }
     object "E Trust Deposit" as trtd {
-         \t+4 TUs
+         \t+1 TUs
     }
 }
 
 package "Issuer Grantor #B" as ig {
     object "IG Account" as iga {
-        \t+4 TUs
+        \t+4.75 TUs
     }
     object "IG Trust Deposit" as igtd {
-        \t+1 TUs
+        \t+0.25 TUs
     }
 }
 package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
-         \t+24 TUs
+         \t+28.5 TUs
     }
     object "I Trust Deposit" as issuertd {
-         \t+6 TUs
+         \t+1.5 TUs
     }
 
 }
 package "Verifier Grantor #D" as vg {
     object "VG Account" as vga {
-        \t+1.6 TUs
+        \t+1.9 TUs
     }
     object "VG Trust Deposit" as vgtd {
-        \t+0.4 TUs
+        \t+0.1 TUs
     }
 
 }
 package "Verifier #E" as verifier #00b0f0 {
     object "V Account" as verifiera {
-        \t-79.8 TUs
+        \t-65.55 TUs
     }
     object "V Trust Deposit" as verifiertd {
-        \t+11.4 TUs
+        \t+2.85 TUs
     }
 
 }
 package "User Agent" as ua {
     object "UA Account" as uaa {
-         \t+4.56 TUs
+         \t+2.7075 TUs
     }
     object "UA Trust Deposit" as uatd {
-        \t+1.14 TUs
+        \t+0.1425 TUs
     }
 
 }
 package "Wallet User Agent" as wua {
     object "WUA Account" as wuaa {
-         \t+4.56 TUs
+         \t+2.7075 TUs
     }
     object "WUA Trust Deposit" as wuatd {
-        \t+1.14 TUs
+        \t+0.1425 TUs
     }
 
 }
@@ -1011,11 +1011,11 @@ verifiera -r-> ig: \t+5 TUs
 
 verifiera -d-> issuer: \t+30 TUs
 
-verifiera -d-> ua: \t+5.7 TUs
+verifiera -d-> ua: \t+2.85 TUs
 
-verifiera -d-> wua: \t+5.7 TUs
+verifiera -d-> wua: \t+2.85 TUs
 
-verifiera --> verifiertd:  \t+11.4 TUs
+verifiera --> verifiertd:  \t+2.85 TUs
 
 @enduml
 
@@ -1613,7 +1613,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 **Trust Deposit:**
 
 - `trust_deposit_share_value`(number) (*mandatory*): Value of one share of trust deposit, in [[ref: native denom]]. Default an initial value: 1. Increase over time, when yield is produced.
-- `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 20% (0.20)
+- `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05)
 - `trust_deposit_max_yield_rate`(number) (*mandatory*): Maximum yearly yield, in percent, that a trust deposit holder can obtain by receiving block rewards.
 - `trust_deposit_block_reward_share`(number) (*mandatory*): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)
 - `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 5% (0.05)
@@ -6389,7 +6389,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 **Trust Deposit:**
 
 - `trust_deposit_share_value`(number) (*mandatory*): 1.
-- `trust_deposit_rate`(number) (*mandatory*): 0.20.
+- `trust_deposit_rate`(number) (*mandatory*): 0.05.
 - `trust_deposit_max_yield_rate`(number) (*mandatory*): 0.20
 - `trust_deposit_block_reward_share`(number) (*mandatory*): 0.20
 
