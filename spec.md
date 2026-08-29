@@ -1263,7 +1263,6 @@ entity "GlobalVariables" as gv {
   +credential_schema_issuer_validation_validity_period_max_days: number
   +credential_schema_verifier_validation_validity_period_max_days: number
   +credential_schema_holder_validation_validity_period_max_days: number
-  +credential_schema_trust_deposit: number
   +trust_deposit_share_value: number
   +trust_deposit_rate:number
   +trust_deposit_max_yield_rate:number
@@ -1477,7 +1476,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `role` (ParticipantRole) (*mandatory*): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER. Set at create time and never rotated thereafter.
 - `did` (string) (*mandatory*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]]. MAY be shared with other `Participant` entries (a single DID MAY be the `did` of several participants); per-Participant DID uniqueness is NOT enforced because the `Participant` identity is its `id`. However, per-Participant `(did, corporation_id)` consistency IS enforced: at any block height, all `Participant` entries with equal `did` MUST share the same `corporation_id`. Enforced by the create-time basic checks of [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks), and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks). `Participant.did` is set at create time and is not rotated thereafter. Corollary of the [DID ownership invariant](#did-ownership-invariant), which further requires consistency with any `Corporation.did` and `Ecosystem.did` claims on the same DID.
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns this permission. Constrained by the per-Participant `(did, corporation_id)` consistency invariant above.
-- `vs_operator` (account) (*mandatory*): verifiable service agent account. This is the account that will have the right to create or update permission sessions.
+- `vs_operator` (account) (*optional*): verifiable service agent account, set at creation by [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) or [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant); null when none was specified. This is the account that will have the right to create or update participant sessions for this entry, subject to [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 - `created` (timestamp) (*mandatory*): timestamp this `Participant` has been created.
 - `adjusted` (timestamp) (*optional*): timestamp this `Participant` has last been adjusted; null until the first adjustment.
 - `slashed` (timestamp) (*optional*): timestamp this `Participant` has last been slashed; null until the first slash.
@@ -1653,8 +1652,8 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 - `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 20% (0.20)
 - `trust_deposit_max_yield_rate`(number) (*mandatory*): Maximum yearly yield, in percent, that a trust deposit holder can obtain by receiving block rewards.
 - `trust_deposit_block_reward_share`(number) (*mandatory*): Percentage of block reward that must be distributed to trust deposit holders. Default value: 20% (0.20)
-- `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 20% (0.20)
-- `user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating user agent rewards from trust fees. Default value: 20% (0.20)
+- `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 5% (0.05)
+- `user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating user agent rewards from trust fees. Default value: 5% (0.05)
 
 ## Module Requirements
 
@@ -2712,7 +2711,7 @@ If any of these precondition checks fail, method MUST abort.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"EUR"`, `"GBP"`,...
 
 :::note
-When pricing_currency is set to FIAT, pricing_asset MUST be an ISO-4217 currency code.
+When `pricing_asset_type` is set to FIAT, `pricing_asset` MUST be an ISO-4217 currency code.
 The number of decimals and minor unit semantics MUST follow the ISO-4217 standard for that currency.
 FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-chain coins.
 FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.
@@ -6638,8 +6637,8 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `trust_deposit_max_yield_rate`(number) (*mandatory*): 0.20
 - `trust_deposit_block_reward_share`(number) (*mandatory*): 0.20
 
-- `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.10.
-- `user_agent_reward_rate`(number) (*mandatory*): 0.10.
+- `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.05.
+- `user_agent_reward_rate`(number) (*mandatory*): 0.05.
 
 ## References
 
