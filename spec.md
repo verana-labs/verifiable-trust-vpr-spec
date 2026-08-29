@@ -239,6 +239,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: future participant, future participants]]:
 ~ A participant of a given role, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.
 
+[[def: expired participant, expired participants]]:
+~ A participant of a given role, which effective_from timestamp is lower than or equal to current timestamp, and (effective_until timestamp is not null and lower than or equal to current timestamp), and revoked is null and slashed is null.
+
 [[def: onboarding process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
 
@@ -3560,7 +3563,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PP-MSG-2-2-2] Renew Participant OP permission checks
 
-- Load `Participant` entry `applicant_participant`. `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else MUST abort. `applicant_participant` MUST be a [[ref: active participant]].
+- Load `Participant` entry `applicant_participant`. `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else MUST abort. `applicant_participant` MUST be an [[ref: active participant]] or an [[ref: expired participant]].
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: active participant]], else MUST abort.
 
 ###### [MOD-PP-MSG-2-2-3] Renew Participant OP fee checks
