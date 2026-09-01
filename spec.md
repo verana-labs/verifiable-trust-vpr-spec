@@ -1367,7 +1367,7 @@ Three entity types bind a DID in the VPR: `Corporation` (its declared `did`), `E
 - every `Ecosystem` entry whose `did` equals the DID — resolving to its `corporation_id`;
 - every `Participant` entry whose `did` equals the DID — resolving to its `corporation_id`.
 
-A DID claimed by at least one entity therefore has a single, well-defined **owner `Corporation`**. The per-Corporation `did` uniqueness invariant and the per-Ecosystem / per-Participant `(did, corporation_id)` consistency invariants are corollaries of this global invariant. It is enforced at every DID-binding message: [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-new-corporation-basic-checks) / [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks) (Corporation create / `did` rotation), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-new-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks) (Ecosystem create / `did` rotation), and [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks) / [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks) / [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks) (Participant creation; `Participant.did` is set at create time and never rotated).
+A DID claimed by at least one entity therefore has a single, well-defined **owner `Corporation`**. The per-Corporation `did` uniqueness invariant and the per-Ecosystem / per-Participant `(did, corporation_id)` consistency invariants are corollaries of this global invariant. It is enforced at every DID-binding message: [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-corporation-basic-checks) / [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks) (Corporation create / `did` rotation), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks) (Ecosystem create / `did` rotation), and [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks) / [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks) / [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks) (Participant creation; `Participant.did` is set at create time and never rotated).
 
 > Rationale: a DID is attached to a single agent and thus controlled by a single organization; two Corporations claiming the same DID anywhere in the registry is always an error or an attack. The invariant also gives off-chain consumers (indexers, resolvers, trust graphs) a total *owner Corporation* function over the indexed DID universe.
 
@@ -1380,8 +1380,8 @@ A `Corporation` is the VPR-level entity representing an authority that acts in t
 `Corporation`:
 
 - `id` (uint64) (*mandatory*) (key): the id of the Corporation.
-- `policy_address` (account) (*mandatory*): the on-chain account that signs on behalf of this Corporation. MUST be **globally unique** across all `Corporation` entries (1:1): at any block height, no two `Corporation` entries MAY share the same `policy_address`. (Can be, for example, a Cosmos SDK `group_policy_address`; see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation).)
-- `did` (string) (*mandatory*): the DID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `did` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `did` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-new-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks). Additionally subject to the [DID ownership invariant](#did-ownership-invariant): the DID MUST NOT be claimed by any `Ecosystem` or `Participant` entry owned by another `Corporation`.
+- `policy_address` (account) (*mandatory*): the on-chain account that signs on behalf of this Corporation. MUST be **globally unique** across all `Corporation` entries (1:1): at any block height, no two `Corporation` entries MAY share the same `policy_address`. (Can be, for example, a Cosmos SDK `group_policy_address`; see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation).)
+- `did` (string) (*mandatory*): the DID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `did` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `did` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks). Additionally subject to the [DID ownership invariant](#did-ownership-invariant): the DID MUST NOT be claimed by any `Ecosystem` or `Participant` entry owned by another `Corporation`.
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
@@ -1394,11 +1394,11 @@ A `Corporation` is the VPR-level entity representing an authority that acts in t
 `Ecosystem`:
 
 - `id` (uint64) (*mandatory*) (key): the id of the ecosystem.
-- `did` (string) (*mandatory*): the did of the ecosystem. MAY be shared with other `Ecosystem` entries (a single DID MAY be the `did` of several ecosystems); per-Ecosystem DID uniqueness is NOT enforced because the `Ecosystem` identity is its `id`. However, per-Ecosystem `(did, corporation_id)` consistency IS enforced: at any block height, all `Ecosystem` entries with equal `did` MUST share the same `corporation_id`. Enforced at create time by [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-new-ecosystem-basic-checks) and at rotation time by [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks). Corollary of the [DID ownership invariant](#did-ownership-invariant), which further requires consistency with any `Corporation.did` and `Participant.did` claims on the same DID.
+- `did` (string) (*mandatory*): the did of the ecosystem. MAY be shared with other `Ecosystem` entries (a single DID MAY be the `did` of several ecosystems); per-Ecosystem DID uniqueness is NOT enforced because the `Ecosystem` identity is its `id`. However, per-Ecosystem `(did, corporation_id)` consistency IS enforced: at any block height, all `Ecosystem` entries with equal `did` MUST share the same `corporation_id`. Enforced at create time by [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) and at rotation time by [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks). Corollary of the [DID ownership invariant](#did-ownership-invariant), which further requires consistency with any `Corporation.did` and `Participant.did` claims on the same DID.
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that controls this entry. Constrained by the per-Ecosystem `(did, corporation_id)` consistency invariant above.
 - `created` (timestamp) (*mandatory*): timestamp this Ecosystem has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Ecosystem has been modified.
-- `archived` (boolean) (*mandatory*): whether this Ecosystem is archived. Initialized to `false` at creation by [[MOD-ES-MSG-1-3]](#mod-es-msg-1-3-create-new-ecosystem-execution) and toggled by [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem). MUST never be null.
+- `archived` (boolean) (*mandatory*): whether this Ecosystem is archived. Initialized to `false` at creation by [[MOD-ES-MSG-1-3]](#mod-es-msg-1-3-create-ecosystem-execution) and toggled by [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem). MUST never be null.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
 - `active_version` (int): (*mandatory*) active governance framework version.
 
@@ -1438,7 +1438,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `ecosystem_id` (uint64) (*mandatory*): the id of the ecosystem that controls this `CredentialSchema` entry.
 - `created` (timestamp) (*mandatory*): timestamp this CredentialSchema has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this CredentialSchema has been modified.
-- `archived` (boolean) (*mandatory*): whether this CredentialSchema is archived. Initialized to `false` at creation by [[MOD-CS-MSG-1-3]](#mod-cs-msg-1-3-create-new-credential-schema-execution) and toggled by [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema). MUST never be null.
+- `archived` (boolean) (*mandatory*): whether this CredentialSchema is archived. Initialized to `false` at creation by [[MOD-CS-MSG-1-3]](#mod-cs-msg-1-3-create-credential-schema-execution) and toggled by [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema). MUST never be null.
 - `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
 - `issuer_grantor_validation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor onboarding process expires and must be renewed.
 - `verifier_grantor_validation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor onboarding process expires and must be renewed.
@@ -1900,9 +1900,9 @@ If the [[ref: transaction]] fees are paid by the `corporation` account (via fee 
 
 ##### [AUTHZ-CHECK-5] Corporation Registration check
 
-A `Corporation` entry `co` MUST exist whose `co.policy_address` equals the signing `corporation` account. If none exists, the [[ref: transaction]] MUST abort with an error indicating that the signing account has not yet been registered as the `policy_address` of a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)). The resolved `co.id` is the `corporation_id` used by the message.
+A `Corporation` entry `co` MUST exist whose `co.policy_address` equals the signing `corporation` account. If none exists, the [[ref: transaction]] MUST abort with an error indicating that the signing account has not yet been registered as the `policy_address` of a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)). The resolved `co.id` is the `corporation_id` used by the message.
 
-> Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation), whose explicit purpose is to register a new `Corporation` and bind a `policy_address` to it. That method enforces the inverse precondition (no `Corporation` entry MUST yet exist for that `policy_address`) in its own basic checks.
+> Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), whose explicit purpose is to register a new `Corporation` and bind a `policy_address` to it. That method enforces the inverse precondition (no `Corporation` entry MUST yet exist for that `policy_address`) in its own basic checks.
 
 This check applies to every delegable message that invokes [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks). As a result, all Create-* methods (and every other delegable Msg) implicitly require the signing `corporation` account to be the `policy_address` of a registered `Corporation`.
 
@@ -1932,13 +1932,13 @@ As a result, `accountABC` is authorized to:
 
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      | Signers |
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
-| Corporation               | Create New Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)   | any account |
+| Corporation               | Create Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)   | any account |
 |                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + operator |
 |                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters)   | governance proposal |
 |                                | Get Corporation                              | /co/v1/get                       | Query  | [[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)   | N/A |
 |                                | List Corporations                            | /co/v1/list                      | Query  | [[MOD-CO-QRY-2]](#mod-co-qry-2-list-corporations)   | N/A |
 |                                | List Corporation Module Parameters           | /co/v1/params                    | Query  | [[MOD-CO-QRY-3]](#mod-co-qry-3-list-module-parameters)   | N/A |
-| Ecosystem                 | Create an Ecosystem                 |    N/A (Tx)                    | Msg    | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-new-ecosystem)   | corporation + operator |
+| Ecosystem                 | Create Ecosystem                 |    N/A (Tx)                    | Msg    | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem)   | corporation + operator |
 |                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)   |corporation + operator |
 |                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem)   |corporation + operator |
 |                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters)   |governance proposal |
@@ -1949,7 +1949,7 @@ As a result, `accountABC` is authorized to:
 |                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + operator |
 |                                | Get Governance Framework Version             | /gf/v1/get                       | Query  | [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version)   | N/A |
 |                                | List Governance Framework Versions           | /gf/v1/list                      | Query  | [[MOD-GF-QRY-2]](#mod-gf-qry-2-list-governance-framework-versions)   | N/A |
-| Credential Schema              | Create a Credential Schema              |       N/A (Tx)                   | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-new-credential-schema)   |corporation + operator |
+| Credential Schema              | Create Credential Schema              |       N/A (Tx)                   | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema)   |corporation + operator |
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation + operator |
 |                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |corporation + operator |
 |                                | Update CS Module Parameters             |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |governance proposal |
@@ -2016,17 +2016,17 @@ Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR /
 
 ### Corporation Module
 
-This module manages [[ref: corporation]] entries — the VPR-level entity that carries a DID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A `Corporation` entry MUST exist before its `policy_address` can sign as the `corporation` in any other VPR Create-* method, and before its `id` can be referenced as `corporation_id` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)).
+This module manages [[ref: corporation]] entries — the VPR-level entity that carries a DID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A `Corporation` entry MUST exist before its `policy_address` can sign as the `corporation` in any other VPR Create-* method, and before its `id` can be referenced as `corporation_id` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)).
 
-**Group lifecycle operations:** Membership management (adding/removing members), proposal submission, voting, and proposal execution are handled directly via the Cosmos SDK `x/group` module. VPR does not wrap these operations. Implementations MUST refer to the `x/group` specification for `MsgUpdateGroupMembers`, `MsgSubmitProposal`, `MsgVote`, `MsgWithdrawProposal`, and `MsgExec`. Discovery queries (`GroupsByMember`, `ProposalsByGroupPolicy`, `VotesByProposal`) from `x/group` apply directly. Because `group_policy_as_admin` is always `true` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation)), the group policy address is the admin of the group — not the account that created it. Therefore all group lifecycle operations, including member updates, MUST go through the group's own proposal and voting process (`MsgSubmitProposal` → `MsgVote` → `MsgExec`); no account can bypass this by calling group admin messages directly.
+**Group lifecycle operations:** Membership management (adding/removing members), proposal submission, voting, and proposal execution are handled directly via the Cosmos SDK `x/group` module. VPR does not wrap these operations. Implementations MUST refer to the `x/group` specification for `MsgUpdateGroupMembers`, `MsgSubmitProposal`, `MsgVote`, `MsgWithdrawProposal`, and `MsgExec`. Discovery queries (`GroupsByMember`, `ProposalsByGroupPolicy`, `VotesByProposal`) from `x/group` apply directly. Because `group_policy_as_admin` is always `true` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)), the group policy address is the admin of the group — not the account that created it. Therefore all group lifecycle operations, including member updates, MUST go through the group's own proposal and voting process (`MsgSubmitProposal` → `MsgVote` → `MsgExec`); no account can bypass this by calling group admin messages directly.
 
-#### [MOD-CO-MSG-1] Create New Corporation
+#### [MOD-CO-MSG-1] Create Corporation
 
 Any [[ref: account]] CAN execute this method to atomically create a new on-chain `policy_address` account (in this implementation, a Cosmos SDK [[ref: group]] policy account) and register a `Corporation` VPR entry bound to it, in a single [[ref: transaction]]. This eliminates any window between policy-address creation and VPR registration, ensuring [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) can never observe an unregistered `policy_address`.
 
 There is no special "admin" role required to create a corporation: the signer is just the [[ref: account]] that submits the transaction, and that account holds no ongoing privileges over the resulting Corporation, group, or group policy.
 
-##### [MOD-CO-MSG-1-1] Create New Corporation parameters
+##### [MOD-CO-MSG-1-1] Create Corporation parameters
 
 An [[ref: account]] that would like to create a new [[ref: corporation]] MUST call this method by specifying:
 
@@ -2044,11 +2044,11 @@ An [[ref: account]] that would like to create a new [[ref: corporation]] MUST ca
 
 Provided document MUST be of the same language as the primary `language` of the Corporation.
 
-##### [MOD-CO-MSG-1-2] Create New Corporation precondition checks
+##### [MOD-CO-MSG-1-2] Create Corporation precondition checks
 
 If any of these precondition checks fail, method MUST abort.
 
-###### [MOD-CO-MSG-1-2-1] Create New Corporation basic checks
+###### [MOD-CO-MSG-1-2-1] Create Corporation basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
 
@@ -2062,11 +2062,11 @@ If any of these precondition checks fail, method MUST abort.
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`.
 
-###### [MOD-CO-MSG-1-2-2] Create New Corporation fee checks
+###### [MOD-CO-MSG-1-2-2] Create Corporation fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
 
-##### [MOD-CO-MSG-1-3] Create New Corporation execution
+##### [MOD-CO-MSG-1-3] Create Corporation execution
 
 If all precondition checks passed, method is executed.
 
@@ -2114,7 +2114,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `did` (string) (*mandatory*): the new DID of the Corporation.
 
-> Note: `language` is set at creation time by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-new-corporation) and is **immutable** thereafter; it cannot be updated through this method.
+> Note: `language` is set at creation time by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and is **immutable** thereafter; it cannot be updated through this method.
 
 ##### [MOD-CO-MSG-2-2] Update Corporation precondition checks
 
@@ -2241,11 +2241,11 @@ Return the list of parameters of this module as a json file:
 
 ### Ecosystem Module
 
-#### [MOD-ES-MSG-1] Create New Ecosystem
+#### [MOD-ES-MSG-1] Create Ecosystem
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-##### [MOD-ES-MSG-1-1] Create New Ecosystem parameters
+##### [MOD-ES-MSG-1-1] Create Ecosystem parameters
 
 An authorized `operator` that would like to create a [[ref: ecosystem]] MUST call this method by specifying:
 
@@ -2258,11 +2258,11 @@ An authorized `operator` that would like to create a [[ref: ecosystem]] MUST cal
 
 Provided document must be of the same language that the primary language of the ecosystem.
 
-##### [MOD-ES-MSG-1-2] Create New Ecosystem precondition checks
+##### [MOD-ES-MSG-1-2] Create Ecosystem precondition checks
 
 If any of these precondition checks fail, method MUST abort.
 
-###### [MOD-ES-MSG-1-2-1] Create New Ecosystem basic checks
+###### [MOD-ES-MSG-1-2-1] Create Ecosystem basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
 
@@ -2280,11 +2280,11 @@ If any of these precondition checks fail, method MUST abort.
 Several `Ecosystem` entries MAY share the same ecosystem DID. The identifier of an `Ecosystem` is its `id`, and the Verifiable Trust Spec includes the `id` of the `Ecosystem` in the DID Document. Per-Ecosystem DID uniqueness is therefore NOT required: proof of control of the DID is verified by resolving the DID outside of the context of the VPR. However, **all `Ecosystem` entries sharing the same `did` MUST be controlled by the same `Corporation`** — see the basic-check bullet above. Proof of control of the shared DID is, by construction, held by that single controlling `Corporation`, and the corresponding `Corporation` entry (if any whose own `did` equals this value) is unique by the per-Corporation `did` uniqueness invariant (and, by the [DID ownership invariant](#did-ownership-invariant), when a `Corporation` entry whose own `did` equals this value exists, it is necessarily the same `Corporation` that controls the Ecosystems claiming it).
 :::
 
-###### [MOD-ES-MSG-1-2-2] Create New Ecosystem fee checks
+###### [MOD-ES-MSG-1-2-2] Create Ecosystem fee checks
 
 Fee payer MUST have an available balance to cover the [[ref: estimated transaction fees]].
 
-##### [MOD-ES-MSG-1-3] Create New Ecosystem execution
+##### [MOD-ES-MSG-1-3] Create Ecosystem execution
 
 If all precondition checks passed, method is executed.
 
@@ -2503,7 +2503,7 @@ Return the list of the existing parameters and their values.
 
 This module handles [[ref: governance framework]] documents and version activation for both [[ref: ecosystems]] and [[ref: corporations]]. Methods are polymorphic over the owning subject: every message takes an optional `ecosystem_id` parameter to designate whose governance framework is being modified — if set, the target subject is that `Ecosystem` (and the signing `corporation` MUST be its controller, i.e., the `Corporation` resolved from the signing account MUST equal `Ecosystem.corporation_id`); if not set, the target subject is the signing `corporation`'s own [[ref: CGF]] (a Corporation may only edit its own CGF, so no extra parameter is needed).
 
-The initial `GovernanceFrameworkVersion` and its first `GovernanceFrameworkDocument` are created atomically by [Create New Ecosystem](#mod-es-msg-1-create-new-ecosystem) (and, by parallel construction, by [Create New Corporation](#mod-co-msg-1-create-new-corporation)). After that, subsequent versions and documents are added through this module.
+The initial `GovernanceFrameworkVersion` and its first `GovernanceFrameworkDocument` are created atomically by [Create Ecosystem](#mod-es-msg-1-create-ecosystem) (and, by parallel construction, by [Create Corporation](#mod-co-msg-1-create-corporation)). After that, subsequent versions and documents are added through this module.
 
 #### [MOD-GF-MSG-1] Add Governance Framework Document
 
@@ -2660,11 +2660,11 @@ Return the list of `GovernanceFrameworkVersion` entries matching the filter, wit
 
 ### Credential Schema Module
 
-#### [MOD-CS-MSG-1] Create New Credential Schema
+#### [MOD-CS-MSG-1] Create Credential Schema
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-##### [MOD-CS-MSG-1-1] Create New Credential Schema parameters
+##### [MOD-CS-MSG-1-1] Create Credential Schema parameters
 
 An [[ref: account]] that would like to create a [[ref: credential schema]] MUST call this method by specifying:
 
@@ -2684,11 +2684,11 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `pricing_asset` (string) (*mandatory*).
 - `digest_algorithm` (string) (*mandatory*): MUST be one of the lowercase tokens `sha384` or `sha512`, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
 
-##### [MOD-CS-MSG-1-2] Create New Credential Schema precondition checks
+##### [MOD-CS-MSG-1-2] Create Credential Schema precondition checks
 
 If any of these precondition checks fail, method MUST abort.
 
-###### [MOD-CS-MSG-1-2-1] Create New Credential Schema basic checks
+###### [MOD-CS-MSG-1-2-1] Create Credential Schema basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
 
@@ -2717,11 +2717,11 @@ FIAT amounts MUST be expressed in minor units and MUST NOT be represented as on-
 FIAT metadata SHOULD be pulled from a standard library. It MUST NOT be stored on chain.
 :::
 
-###### [MOD-CS-MSG-1-2-2] Create New Credential Schema fee checks
+###### [MOD-CS-MSG-1-2-2] Create Credential Schema fee checks
 
 Fee payer MUST have an available balance in its [[ref: account]], to cover the required [[ref: estimated transaction fees]].
 
-##### [MOD-CS-MSG-1-3] Create New Credential Schema execution
+##### [MOD-CS-MSG-1-3] Create Credential Schema execution
 
 If all precondition checks passed, method is executed.
 
