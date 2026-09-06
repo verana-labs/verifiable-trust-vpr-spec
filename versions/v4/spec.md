@@ -3747,6 +3747,14 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.issuance_fees`: `issuance_fees`
 - `participant.verification_fees`: `verification_fees`
 - `participant.deposit`: 0
+- `participant.op_state`: VALIDATED
+- `participant.op_last_state_change`: `now`
+- `participant.op_current_fees`: 0
+- `participant.op_current_deposit`: 0
+- `participant.issuance_fee_discount`: 0
+- `participant.verification_fee_discount`: 0
+
+> Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -4723,6 +4731,14 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.issuance_fees`: 0
 - `participant.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
 - `participant.deposit`: 0
+- `participant.op_state`: VALIDATED
+- `participant.op_last_state_change`: `now`
+- `participant.op_current_fees`: 0
+- `participant.op_current_deposit`: 0
+- `participant.issuance_fee_discount`: 0
+- `participant.verification_fee_discount`: 0
+
+> Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
