@@ -3227,6 +3227,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.corporation_id`: `co.id`.
   - `applicant_participant.vs_operator`: `vs_operator`.
   - `applicant_participant.role`: `role`.
+  - `applicant_participant.did`: `did`.
   - `applicant_participant.created`: `now`
   - `applicant_participant.modified`: `now`
   - `applicant_participant.deposit`: `validation_trust_deposit_in_native_denom`.
@@ -3240,6 +3241,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom`.
   - `applicant_participant.op_summary_digest`: null.
   - `applicant_participant.op_validator_deposit`: 0.
+  - `applicant_participant.issuance_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
+  - `applicant_participant.verification_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
