@@ -1,6 +1,6 @@
 # Verifiable Public Registry v5 Specification
 
-**Latest draft:** [spec v5-draft1](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v5-draft2](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/)
 
@@ -3539,6 +3539,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.corporation_id`: `co.id`.
   - `applicant_participant.vs_operator`: `vs_operator`.
   - `applicant_participant.role`: `role`.
+  - `applicant_participant.did`: `did`.
   - `applicant_participant.created`: `now`
   - `applicant_participant.modified`: `now`
   - `applicant_participant.tu`: 0.
@@ -3552,6 +3553,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.op_current_fees` (number): `validation_fees_in_denom`.
   - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom` (held in escrow).
   - `applicant_participant.op_summary_digest`: null.
+  - `applicant_participant.issuance_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
+  - `applicant_participant.verification_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -3601,6 +3604,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 - Requesting a renewal has no effect on `Participant` expiration or issued credentials.
 - Renewal is only possible with the same validator.
+- Renewal only applies to entries managed by an [[ref: onboarding process]]: root ([[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant)) and self-created ([[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) entries cannot renew; use [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until) to adjust their `effective_until`.
 - If validator `Participant` is not valid anymore, applicant MUST perform a new onboarding process with another validator.
 - Renewal does not allow changing the `participant.validation_fees`, `participant.issuance_fees`, `participant.verification_fees`. To change these values, applicant MUST start a new onboarding process.
 - if `applicant_participant` is revoked, slashed, or repaid, method MUST fail.
@@ -3629,6 +3633,45 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - Load `Participant` entry `applicant_participant`. `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else MUST abort. `applicant_participant` MUST be a [[ref: active participant]].
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: trustable participant]], else MUST abort.
+- Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`. It MUST exist.
+
+- if `applicant_participant.role` (ParticipantRole) is equal to ISSUER:
+
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be ISSUER_GRANTOR, else MUST abort.
+
+  - else if `cs.issuer_onboarding_mode` is equal to ECOSYSTEM_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+
+  - else MUST abort.
+
+- else if `applicant_participant.role` (ParticipantRole) is equal to ISSUER_GRANTOR:
+
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS:  `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+
+  - else abort.
+
+- else if `applicant_participant.role` (ParticipantRole) is equal to VERIFIER:
+
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be VERIFIER_GRANTOR, else MUST abort.
+
+  - else if `cs.verifier_onboarding_mode` is equal to ECOSYSTEM_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+
+  - else abort.
+
+- else if `applicant_participant.role` (ParticipantRole) is equal to VERIFIER_GRANTOR:
+
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+
+  - else abort.
+
+- else if `applicant_participant.role` (ParticipantRole) is equal to HOLDER:
+
+  - if `cs.holder_onboarding_mode` is equal to ISSUER_ONBOARDING_PROCESS: `validator_participant.role` MUST be ISSUER, else MUST abort.
+
+  - else abort.
+
+- else MUST abort.
+
+> Note: these are the same mode/role compatibility checks as [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-participant-op-permission-checks), with `role` read from `applicant_participant.role`. Because onboarding modes are immutable ([[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)), a self-created entry ([[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) can never renew: its mode is OPEN, which always falls through to abort. Root ECOSYSTEM entries are blocked by the `validator_participant` existence check above (`validator_participant_id` is null).
 
 ###### [MOD-PP-MSG-2-2-3] Renew Participant OP fee checks
 
@@ -4052,6 +4095,14 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.verification_fees`: `verification_fees`
 - `participant.tu`: 0
 - `participant.fiat_cost`: 0
+- `participant.op_state`: VALIDATED
+- `participant.op_last_state_change`: `now`
+- `participant.op_current_fees`: 0
+- `participant.op_current_deposit`: 0
+- `participant.issuance_fee_discount`: 0
+- `participant.verification_fee_discount`: 0
+
+> Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -4940,6 +4991,14 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
 - `participant.tu`: 0
 - `participant.fiat_cost`: 0
+- `participant.op_state`: VALIDATED
+- `participant.op_last_state_change`: `now`
+- `participant.op_current_fees`: 0
+- `participant.op_current_deposit`: 0
+- `participant.issuance_fee_discount`: 0
+- `participant.verification_fee_discount`: 0
+
+> Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
