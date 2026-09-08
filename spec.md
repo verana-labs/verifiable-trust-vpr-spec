@@ -3536,6 +3536,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 - Requesting a renewal has no effect on `Participant` expiration or issued credentials.
 - Renewal is only possible with the same validator.
+- Renewal only applies to entries managed by an [[ref: onboarding process]]: root ([[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant)) and self-created ([[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) entries cannot renew; use [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until) to adjust their `effective_until`.
 - If validator `Participant` is not valid anymore, applicant MUST perform a new onboarding process with another validator.
 - Renewal does not allow changing the `participant.validation_fees`, `participant.issuance_fees`, `participant.verification_fees`. To change these values, applicant MUST start a new onboarding process.
 - if `applicant_participant` is revoked, slashed, or repaid, method MUST fail.
@@ -3564,6 +3565,45 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - Load `Participant` entry `applicant_participant`. `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else MUST abort. `applicant_participant` MUST be a [[ref: active participant]].
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: active participant]], else MUST abort.
+- Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`. It MUST exist.
+
+- if `applicant_participant.role` (ParticipantRole) is equal to ISSUER:
+
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be ISSUER_GRANTOR, else MUST abort.
+
+  - else if `cs.issuer_onboarding_mode` is equal to ECOSYSTEM_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+
+  - else MUST abort.
+
+- else if `applicant_participant.role` (ParticipantRole) is equal to ISSUER_GRANTOR:
+
+  - if `cs.issuer_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS:  `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+
+  - else abort.
+
+- else if `applicant_participant.role` (ParticipantRole) is equal to VERIFIER:
+
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be VERIFIER_GRANTOR, else MUST abort.
+
+  - else if `cs.verifier_onboarding_mode` is equal to ECOSYSTEM_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+
+  - else abort.
+
+- else if `applicant_participant.role` (ParticipantRole) is equal to VERIFIER_GRANTOR:
+
+  - if `cs.verifier_onboarding_mode` is equal to GRANTOR_ONBOARDING_PROCESS: `validator_participant.role` MUST be ECOSYSTEM, else MUST abort.
+
+  - else abort.
+
+- else if `applicant_participant.role` (ParticipantRole) is equal to HOLDER:
+
+  - if `cs.holder_onboarding_mode` is equal to ISSUER_ONBOARDING_PROCESS: `validator_participant.role` MUST be ISSUER, else MUST abort.
+
+  - else abort.
+
+- else MUST abort.
+
+> Note: these are the same mode/role compatibility checks as [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-participant-op-permission-checks), with `role` read from `applicant_participant.role`. Because onboarding modes are immutable ([[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)), a self-created entry ([[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) can never renew: its mode is OPEN, which always falls through to abort. Root ECOSYSTEM entries are blocked by the `validator_participant` existence check above (`validator_participant_id` is null).
 
 ###### [MOD-PP-MSG-2-2-3] Renew Participant OP fee checks
 
