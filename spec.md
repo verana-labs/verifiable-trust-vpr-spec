@@ -254,6 +254,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: active participant, active participants]]:
 ~ A participant of a given role, which effective_from timestamp is lower than or equal to current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
 
+[[def: trustable participant, trustable participants]]:
+~ An [[ref: active participant]] for which [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) passes for (`corporation_id`, ecosystem of `schema_id`).
+
 [[def: future participant, future participants]]:
 ~ A participant of a given role, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and slashed is null.
 
@@ -663,7 +666,7 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 - **Trust is a subscription**: because the [[ref: trust unit peg value]] declines each [[ref: epoch]] by `tu_decay_rate`, a static deposit loses fiat value over time. The trust score therefore reflects **recent** paid usage: earned, never bought, and gone if not maintained.
 - **network-level penalties**: If a participant violates the [[ref: governance framework]] of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority. The obligation is recorded in [[ref: main fiat currency]] at the **mint-time cost basis** of the slashed trust units — what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**, and misbehavior costs the same whether the deposit was funded yesterday or a year ago.
 - **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), the **portion of its trust deposit minted in the context of that ecosystem** can be slashed by the corresponding ecosystem governance authority.
-- While a slash obligation is unrepaid, the corporation's `Participant` entries are **non-trustable** and no new trust units can be minted: within the slashing ecosystem for an ecosystem slash, network-wide for a network slash. Repayment is made in [[ref: native denom]] worth the cost-basis obligation at current rates, and **restores the slashed trust units** at their decayed current value: the gap between the basis paid and the value restored is the penalty premium, and restoring trust costs **more tokens when the token is cheap**.
+- While a slash obligation is unrepaid, the corporation's `Participant` entries are **non-trustable** and no new trust units can be minted: within the slashing ecosystem for an ecosystem slash, network-wide for a network slash. Obligations are recorded on-chain as public `SlashObligation` entries. Repayment is made in [[ref: native denom]] worth the cost-basis obligation at current rates, and **restores the slashed trust units** at their decayed current value: the gap between the basis paid and the value restored is the penalty premium, and restoring trust costs **more tokens when the token is cheap**.
 - Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size.
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
@@ -1243,13 +1246,9 @@ entity "Participant" as csp {
   +verification_fees: number
   +tu: decimal
   +fiat_cost: decimal
-  +slashed_amount: decimal
-  +slashed_tu: decimal
-  +repaid_amount: decimal
   revoked: timestamp
   op_exp: timestamp
   +op_last_state_change: timestamp
-  op_validator_tu: decimal
   +op_current_fees: number
   +op_current_deposit: number
   op_summary_digest: string
@@ -1317,12 +1316,24 @@ entity "GlobalVariables" as gv {
 entity "TrustDeposit" as td {
   +tu: decimal
   +fiat_cost: decimal
-  +slashed_amount: decimal
-  +slashed_tu: decimal
-  +repaid_amount: decimal
   last_slashed: timestamp
   last_repaid: timestamp
   +slash_count: number
+}
+entity "SlashObligation" as so {
+  *id: uint64
+  +corporation_id: uint64
+  +scope: SlashScope
+  ecosystem_id: uint64
+  +tu: decimal
+  +fiat_obligation: decimal
+  +entries: SlashObligationEntry[]
+  +created: timestamp
+  repaid: timestamp
+}
+enum "SlashScope" as slashscope {
+  NETWORK
+  ECOSYSTEM
 }
 
 corp --o fg: grantor_corporation_id
@@ -1384,6 +1395,8 @@ csps o-- account: vs_operator
 
 valstate --o csp: op_state
 corp --o td: corporation_id
+so --> corp: corporation_id
+so o-- slashscope: scope
 
 @enduml
 
@@ -1522,25 +1535,21 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `vs_operator` (account) (*optional*): verifiable service agent account, set at creation by [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) or [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant); null when none was specified. This is the account that will have the right to create or update participant sessions for this entry, subject to [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 - `created` (timestamp) (*mandatory*): timestamp this `Participant` has been created.
 - `adjusted` (timestamp) (*optional*): timestamp this `Participant` has last been adjusted; null until the first adjustment.
-- `slashed` (timestamp) (*optional*): timestamp this `Participant` has last been slashed; null until the first slash.
-- `repaid` (timestamp) (*optional*): timestamp this `Participant` has last been repaid; null until the first repay.
+- `slashed` (timestamp) (*optional*): timestamp this `Participant` has been slashed by [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit); null until then.
+- `repaid` (timestamp) (*optional*): `repaid` timestamp of the latest repaid `SlashObligation` covering this `Participant` ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)); null if none. Maintained by the trust deposit module.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` is effective. It is null if, and only if, the entry has never been validated by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated): that is, `op_state` is PENDING (an onboarding process started by [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and not yet validated), or `op_state` is TERMINATED after cancellation ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)) of a never-validated onboarding process. Entries created by [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) always have `effective_from` set at creation time.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit has been set for this permission.
 - `modified` (timestamp) (*mandatory*): timestamp this Participant has been modified.
 - `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`corporation` grantee of this perm) for running an onboarding process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
-- `tu` (decimal) (*mandatory*): accumulated [[ref: trust units]] minted to the grantee corporation's [[ref: trust deposit]] in the context of the *use* of this `Participant` entry (including its onboarding process). For example, for an ISSUER type `Participant` `perm`, when the issuer pays issuance fees, the deposit-bound portion is minted as trust units to the corporation's trust deposit and this `participant.tu` value is incremented by the same amount. Trust units are never freed on revocation or expiry; this value is only reduced by ecosystem-level slashing ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
-- `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of `tu`, in [[ref: main fiat currency]]: the sum of the fiat value, at mint time, of the trust units accumulated through this `Participant` entry. Maintained in parallel with `tu`; used to denominate ecosystem-level slash obligations at mint-time cost.
-- `slashed_amount` (decimal) (*mandatory*): cumulative ecosystem-level slash obligation attached to this `Participant` entry, denominated in [[ref: main fiat currency]] and equal to the **mint-time cost basis** of the slashed trust units (pro-rata of `fiat_cost`).
-- `slashed_tu` (decimal) (*mandatory*): outstanding slashed [[ref: trust units]] of this `Participant` entry, restored upon full repayment ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit)).
-- `repaid_amount` (decimal) (*mandatory*): part of `slashed_amount`, in [[ref: main fiat currency]], that has been repaid.
+- `tu` (decimal) (*mandatory*): accumulated [[ref: trust units]] minted to the grantee corporation's [[ref: trust deposit]] in the context of the *use* of this `Participant` entry, including its onboarding process and the validation mints it receives as a validator. Never freed on revocation or expiry; reduced only by slashing ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) and restored by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)).
+- `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of `tu`, in [[ref: main fiat currency]]: the sum of the fiat value, at mint time, of the trust units accumulated through this `Participant` entry. Maintained by the trust deposit module together with `tu`; used to denominate slash obligations at mint-time cost.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the onboarding process of this permission, ie *parent node* in the `Participant` tree.
 - `op_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
 - `op_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Participant` expiration timestamp.
 - `op_last_state_change` (timestamp) (*mandatory*)
-- `op_validator_tu`: (decimal) (*optional*): accumulated [[ref: trust units]] minted to the validator's trust deposit in the context of onboarding processes of this `Participant` entry.
 - `op_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon onboarding process completion, in [[ref: denom]].
 - `op_current_deposit` (number) (*mandatory*): current action deposit-bound amount, in [[ref: native denom]], **held in the escrow account** while the onboarding process is PENDING. No trust units are minted and nothing is routed to the [[ref: distribution pool]] while PENDING: upon completion (VALIDATED), this amount is converted to trust units (minted to the applicant's and validator's deposits) and the [[ref: native denom]] is routed to the [[ref: distribution pool]]; upon cancellation, it is refunded as-is from escrow.
 - `op_summary_digest` (string) (*optional*): an optional digest SRI, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
@@ -1576,14 +1585,29 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 `TrustDeposit`:
 
 - `corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] this trust deposit belongs to.
-- `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit. Increased by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and by slash repayment (restoration, [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.44/year at the default `tu_decay_rate`): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
-- `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of the current `tu` balance, in [[ref: main fiat currency]]: the sum of the fiat value of every mint at mint time. Increased by [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) and by slash repayment; decreased pro-rata by slashing. Because the [[ref: trust unit peg value]] only declines, `fiat_cost` ≥ `tu × tu_peg_value(now)` always: the basis never understates the current value.
-- `slashed_amount` (decimal) (*mandatory*): cumulative network-level slash obligation, denominated in [[ref: main fiat currency]] and equal to the **mint-time cost basis** of the slashed trust units (pro-rata of `fiat_cost`, [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) — what was originally paid for them, **not** their decayed value at slash time: trust scores decay, **liabilities do not**. Initialized to 0. MUST never be null.
-- `slashed_tu` (decimal) (*mandatory*): outstanding network-level slashed [[ref: trust units]], restored to `tu` upon full repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)). Initialized to 0; increased by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit); reset to 0 on repayment.
-- `repaid_amount` (decimal) (*mandatory*): part of `slashed_amount`, in [[ref: main fiat currency]], that has been repaid. Initialized to 0; incremented by [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit). While `slashed_amount` - `repaid_amount` > 0, all the corporation's `Participant` entries MUST be considered non-trustable and no trust units can be minted to this deposit.
+- `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit, equal to the sum of `tu` over the corporation's `Participant` entries. Increased by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.44/year at the default `tu_decay_rate`): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
+- `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of the current `tu` balance, in [[ref: main fiat currency]], equal to the sum of `fiat_cost` over the corporation's `Participant` entries. Because the [[ref: trust unit peg value]] only declines, `fiat_cost` ≥ `tu × tu_peg_value(now)` always.
 - `last_slashed` (timestamp) (*optional*): last time this trust deposit has been slashed; null until the first slash.
 - `last_repaid` (timestamp) (*optional*): last time this trust deposit has been repaid; null until the first repay.
-- `slash_count` (number) (*mandatory*): number of times this account has been slashed. Initialized to 0; incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit). MUST never be null.
+- `slash_count` (number) (*mandatory*): number of times this account has been slashed. Initialized to 0; incremented by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) and [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash). MUST never be null.
+
+The trust deposit module owns the per-`Participant` ledger fields `tu`, `fiat_cost` and `repaid` (created with `tu` = 0 and `fiat_cost` = 0 on first mint) and the `SlashObligation` entries; the participant module calls the trust deposit module, never the reverse.
+
+Invariants: `td.tu` = Σ `p.tu` and `td.fiat_cost` = Σ `p.fiat_cost` over all `Participant` entries `p` with `p.corporation_id` = `td.corporation_id`; all four values are ≥ 0. Divisions in [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) and [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) round down. Every write goes through [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation) or [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash), which update the `TrustDeposit` and the `Participant` entries together.
+
+### SlashObligation
+
+`SlashObligation`:
+
+- `id` (uint64) (*mandatory*) (key): id of this obligation.
+- `corporation_id` (uint64) (*mandatory*): id of the slashed [[ref: corporation]].
+- `scope` (SlashScope) (*mandatory*): NETWORK ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) or ECOSYSTEM ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
+- `ecosystem_id` (uint64) (*optional*): id of the slashing `Ecosystem`. Set if, and only if, `scope` is ECOSYSTEM.
+- `tu` (decimal) (*mandatory*): slashed [[ref: trust units]], equal to the sum of `entries[].tu`.
+- `fiat_obligation` (decimal) (*mandatory*): mint-time cost basis of the slashed trust units, in [[ref: main fiat currency]], equal to the sum of `entries[].fiat_cost`. Fixed at slash time; never recomputed.
+- `entries` (SlashObligationEntry[]) (*mandatory*): per-`Participant` breakdown, each with `participant_id` (uint64), `tu` (decimal) and `fiat_cost` (decimal). One entry for an ECOSYSTEM slash; one per `Participant` entry with a non-zero `tu` for a NETWORK slash.
+- `created` (timestamp) (*mandatory*): slash timestamp.
+- `repaid` (timestamp) (*optional*): repayment timestamp ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)); null while the obligation is **open**.
 
 ### DenomAmount
 
@@ -1962,6 +1986,10 @@ A `Corporation` entry `co` MUST exist whose `co.policy_address` equals the signi
 
 This check applies to every delegable message that invokes [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks). As a result, all Create-* methods (and every other delegable Msg) implicitly require the signing `corporation` account to be the `policy_address` of a registered `Corporation`.
 
+#### [OBLIG-CHECK] Open Slash Obligation Check
+
+Given a `corporation_id` and an `ecosystem_id`, the check FAILS if a `SlashObligation` entry `so` exists where `so.corporation_id` = `corporation_id`, `so.repaid` is null, and (`so.scope` is NETWORK, or `so.scope` is ECOSYSTEM and `so.ecosystem_id` = `ecosystem_id`). Else it passes.
+
 #### Example
 
 A corporation `corporationABC` wants to authorize an operator account `accountABC` to execute the  
@@ -2028,7 +2056,6 @@ As a result, `accountABC` is authorized to:
 |                                | Create or update Participant Session     |           N/A (Tx)              | Msg    | [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)  |corporation + operator |
 |                                | Update Participant Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-PP-MSG-11]](#mod-pp-msg-11-update-participant-module-parameters) |governance proposal |
 |                                | Slash Participant Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) |corporation + operator |
-|                                | Repay Participant Slashed Trust Deposit  |     N/A (Tx)                | Msg    | [[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit) |corporation + operator |
 |                                | Self Create Participant (OPEN mode)      |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) |corporation + operator  |
 |                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver) |corporation + operator |
 |                                | List Participants                        | /pp/v1/list                | Query  | [[MOD-PP-QRY-1]](#mod-pp-qry-1-list-participants)    |N/A |
@@ -2039,10 +2066,11 @@ As a result, `accountABC` is authorized to:
 | Trust Deposit                  | Mint Trust Units                    |   N/A (Tx)                       | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)   | module call |
 |                                | Update TD Module Parameters             |      N/A (Tx)               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |governance proposal |
 |                                | Slash Trust Deposit             |           N/A (Tx)               | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |governance proposal |
-|                                | Repay Slashed Trust Deposit          |         N/A (Tx)                    | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)   |corporation + operator |
-|                                | Remove Ecosystem Slashed Trust Units          |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units)   | module call|
+|                                | Repay Slash Obligation          |         N/A (Tx)                    | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)   |corporation + operator |
+|                                | Record Ecosystem Slash          |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)   | module call|
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |N/A |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |N/A |
+|                                | List Slash Obligations                  | /td/v1/obligations/list       | Query  | [[MOD-TD-QRY-3]](#mod-td-qry-3-list-slash-obligations)   |N/A  |
 | Delegation  | Grant Fee Allowance         |   N/A (Tx)  | Msg  | [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)   |module call|
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
 |             | Grant Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
@@ -3391,7 +3419,7 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 ###### [MOD-PP-MSG-1-2-2] Start Participant OP permission checks
 
-- Load `Participant` entry `validator_participant` from `validator_participant_id`. It MUST be a [[ref: active participant]] else transaction MUST abort.
+- Load `Participant` entry `validator_participant` from `validator_participant_id`. It MUST be a [[ref: trustable participant]] else transaction MUST abort.
 - Load `CredentialSchema` entry `cs` from `validator_participant.schema_id`. It MUST exist.
 
 - if `role` (ParticipantRole) is equal to ISSUER:
@@ -3428,7 +3456,7 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
   
   - else abort.
 
-At the end, if a [[ref: active participant]] `validator_participant` is not found, [[ref: transaction]] MUST abort.
+At the end, if a [[ref: trustable participant]] `validator_participant` is not found, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PP-MSG-1-2-3] Start Participant OP fee checks
 
@@ -3480,7 +3508,7 @@ if size of `participants[]` > 0, an onboarding process is already running in thi
 
 Additionally, if any `Participant` entry matches the same conditions except with `op_state` = VALIDATED, and has `effective_until` = NULL, [[ref: transaction]] MUST abort: that entry never expires, so a successor entry could never pass [MOD-PP-MSG-3-2-4](#mod-pp-msg-3-2-4-set-participant-op-to-validated-overlap-checks); `corporation` MUST first use [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set an `effective_until`.
 
-> Note: no `schema_id` condition is needed: all `Participant` entries sharing a `validator_participant_id` share its `schema_id` by construction. No `repaid` condition is needed either: `repaid` implies `slashed`.
+> Note: no `schema_id` condition is needed: all `Participant` entries sharing a `validator_participant_id` share its `schema_id` by construction.
 
 > note: this check was not present in v3.
 
@@ -3489,15 +3517,7 @@ Additionally, if any `Participant` entry matches the same conditions except with
 A `corporation` with an unrepaid slash MUST NOT start an onboarding process: in the ecosystem where it was slashed (ecosystem slash, see [MOD-PP-MSG-12](#mod-pp-msg-12-slash-participant-trust-deposit)), or anywhere on the VPR (network slash, see [MOD-TD-MSG-5](#mod-td-msg-5-slash-trust-deposit)).
 
 - define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `validator_participant.schema_id`).
-- if any `Participant` entry `p` exists where:
-  - `p.corporation_id` = `co.id`,
-  - `p.slashed_amount` - `p.repaid_amount` > 0,
-  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
-
-  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
-- if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_amount` - `td.repaid_amount` > 0, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
-
-> Note: the condition `p.slashed_amount` - `p.repaid_amount` > 0 (rather than `p.repaid` is null) keeps this check correct when an entry is slashed again after a previous repayment.
+- [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) MUST pass for (`co.id`, `ecosystem_id`), else [[ref: transaction]] MUST abort: `corporation` MUST first repay using [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation).
 
 ##### [MOD-PP-MSG-1-3] Start Participant OP execution
 
@@ -3523,9 +3543,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.modified`: `now`
   - `applicant_participant.tu`: 0.
   - `applicant_participant.fiat_cost`: 0.
-  - `applicant_participant.slashed_tu`: 0.
-  - `applicant_participant.slashed_amount`: 0.
-  - `applicant_participant.repaid_amount`: 0.
   - `applicant_participant.validation_fees`: `validation_fees`.
   - `applicant_participant.issuance_fees`: `issuance_fees`.
   - `applicant_participant.verification_fees`: `verification_fees`.
@@ -3535,7 +3552,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.op_current_fees` (number): `validation_fees_in_denom`.
   - `applicant_participant.op_current_deposit` (number): `validation_trust_deposit_in_native_denom` (held in escrow).
   - `applicant_participant.op_summary_digest`: null.
-  - `applicant_participant.op_validator_tu`: 0.
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -3612,7 +3628,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 ###### [MOD-PP-MSG-2-2-2] Renew Participant OP permission checks
 
 - Load `Participant` entry `applicant_participant`. `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else MUST abort. `applicant_participant` MUST be a [[ref: active participant]].
-- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: active participant]], else MUST abort.
+- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`. It MUST exist, and be a [[ref: trustable participant]], else MUST abort.
 
 ###### [MOD-PP-MSG-2-2-3] Renew Participant OP fee checks
 
@@ -3652,13 +3668,7 @@ Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the re
 Same as [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks), with `ecosystem_id` resolved from the entry being renewed:
 
 - define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `applicant_participant.schema_id`).
-- if any `Participant` entry `p` exists where:
-  - `p.corporation_id` = `co.id`,
-  - `p.slashed_amount` - `p.repaid_amount` > 0,
-  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
-
-  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
-- if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_amount` - `td.repaid_amount` > 0, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
+- [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) MUST pass for (`co.id`, `ecosystem_id`), else [[ref: transaction]] MUST abort: `corporation` MUST first repay using [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation).
 
 ###### [MOD-PP-MSG-2-3] Renew Participant OP execution
 
@@ -3767,15 +3777,14 @@ Now, let's verify `effective_until`:
 
 ###### [MOD-PP-MSG-3-2-2] Set Participant OP to Validated validator perms
 
-- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]].
+- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: trustable participant]].
 - `co.id` MUST equal `validator_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 
-If `validator_participant` is not a [[ref: active participant]] (expired, revoked, slashed...) then applicant MUST start a new onboarding process.
+If `validator_participant` is not a [[ref: trustable participant]] (expired, revoked, slashed...) then applicant MUST start a new onboarding process.
 
 ###### [MOD-PP-MSG-3-2-3] Set Participant OP to Validated fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
-- if `applicant_participant.op_current_fees` is not in [[ref: native denom]], `corporation` account MUST have `applicant_participant.op_current_deposit` available in [[ref: native denom]] on its account for paying the trust deposit.
 
 ###### [MOD-PP-MSG-3-2-4] Set Participant OP to Validated overlap checks
 
@@ -3838,8 +3847,8 @@ Fees and Trust Deposits — settle the escrow (mint-at-validation):
 - else (pricing in an arbitrary COIN or in FIAT):
   - calculate `validator_deposit_bound` = `applicant_participant.op_current_deposit` / 2 and `applicant_deposit_bound` = `applicant_participant.op_current_deposit` / 2 (the applicant escrowed both, see fee checks);
   - transfer the full amount `applicant_participant.op_current_fees` in the pricing [[ref: denom]] from the escrow [[ref: account]] to the validator corporation account `Corporation[validator_participant.corporation_id].policy_address` (for COIN pricing this already equals the fee minus its deposit-bound portion, see fee checks; 0 if FIAT).
-- use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_participant.corporation_id`, `source_account` = escrow account, `amount` = `validator_deposit_bound`); set `applicant_participant.op_validator_tu` to `applicant_participant.op_validator_tu` + the returned `minted_tu`.
-- use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`); set `applicant_participant.tu` to `applicant_participant.tu` + the returned `minted_tu` and `applicant_participant.fiat_cost` to `applicant_participant.fiat_cost` + the returned `minted_fiat`.
+- if `validator_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_participant.corporation_id`, `participant_id` = `validator_participant.id`, `ecosystem_id` = `cs.ecosystem_id`, `source_account` = escrow account, `amount` = `validator_deposit_bound`).
+- if `applicant_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `participant_id` = `applicant_participant.id`, `ecosystem_id` = `cs.ecosystem_id`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`).
 
 Update `Participant` `applicant_participant`:
 
@@ -4014,6 +4023,10 @@ for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUS
 
 > note: this check was not present in v3.
 
+###### [MOD-PP-MSG-7-2-5] Create Root Participant unrepaid slash checks
+
+- [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) MUST pass for (`co.id`, `cs.ecosystem_id`) (where `cs` is the `CredentialSchema` entry loaded from `schema_id`), else [[ref: transaction]] MUST abort.
+
 ##### [MOD-PP-MSG-7-3] Create Root Participant execution
 
 If all precondition checks passed, method is executed.
@@ -4039,9 +4052,6 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.verification_fees`: `verification_fees`
 - `participant.tu`: 0
 - `participant.fiat_cost`: 0
-- `participant.slashed_tu`: 0
-- `participant.slashed_amount`: 0
-- `participant.repaid_amount`: 0
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -4358,7 +4368,7 @@ if `issuer_participant_id` is not null:
 
 - Load `issuer_participant` from `issuer_participant_id`.
 - if `issuer_participant.role` is not ISSUER, abort.
-- if `issuer_participant` is not a [[ref: active participant]], abort.
+- if `issuer_participant` is not a [[ref: trustable participant]], abort.
 - if `issuer_participant.vs_operator` is not equal to `operator`, abort.
 - if `issuer_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
 - if `digest` is present and longer than 256 characters, abort.
@@ -4367,7 +4377,7 @@ if `verifier_participant_id` is not null:
 
 - Load `verifier_participant` from `verifier_participant_id`.
 - if `verifier_participant.role` is not VERIFIER, abort.
-- if `verifier_participant` is not a [[ref: active participant]], abort.
+- if `verifier_participant` is not a [[ref: trustable participant]], abort.
 - if `verifier_participant.vs_operator` is not equal to `operator`, abort.
 - if `verifier_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
 - if `digest` is present and longer than 256 characters, abort.
@@ -4381,13 +4391,13 @@ agent:
 
 - Load `agent_participant` from `agent_participant_id`.
 - if `agent_participant.role` is not ISSUER, abort.
-- if `agent_participant` is not a [[ref: active participant]], abort.
+- if `agent_participant` is not a [[ref: trustable participant]], abort.
 
 wallet_agent:
 
 - Load `wallet_agent_participant` from `wallet_agent_participant_id`.
 - if `wallet_agent_participant.role` is not ISSUER, abort.
-- if `wallet_agent_participant` is not a [[ref: active participant]], abort.
+- if `wallet_agent_participant` is not a [[ref: trustable participant]], abort.
 
 :::warning
 we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a `Participant` entry that is not controlled by its owner.
@@ -4614,8 +4624,8 @@ If `participant.[fee_field]` > 0:
 3. Execute transfers and mints for this beneficiary:
 
    - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `Corporation[participant.corporation_id].policy_address` (in the appropriate denom).
-   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `payee_trust_deposit`). Increase `participant.tu` by the returned `minted_tu` and `participant.fiat_cost` by the returned `minted_fiat`.
-   - Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer), `source_account` = the payer `corporation` account, `amount` = `payer_trust_deposit`). Increase `payer_participant.tu` by the returned `minted_tu` and `payer_participant.fiat_cost` by the returned `minted_fiat`.
+   - if `payee_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `participant.corporation_id`, `participant_id` = `participant.id`, `ecosystem_id` = `cs.ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `payee_trust_deposit`).
+   - if `payer_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer), `participant_id` = `payer_participant.id`, `ecosystem_id` = `cs.ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `payer_trust_deposit`).
 
 4. Accumulate agent rewards:
 
@@ -4635,7 +4645,7 @@ If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0:
 - `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
 - Transfer `agent_fees_to_account` to `agent_participant.corporation_id` in [[ref: native denom]].
-- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `agent_participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `agent_trust_deposit`). Increase `agent_participant.tu` by the returned `minted_tu` and `agent_participant.fiat_cost` by the returned `minted_fiat`.
+- if `agent_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `agent_participant.corporation_id`, `participant_id` = `agent_participant.id`, `ecosystem_id` = `CredentialSchema[agent_participant.schema_id].ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `agent_trust_deposit`).
 
 **Wallet Agent Reward:**
 
@@ -4644,7 +4654,7 @@ If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 
 - `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
 - Transfer `wallet_agent_fees_to_account` to `wallet_agent_participant.corporation_id` in [[ref: native denom]].
-- Use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `wallet_agent_participant.corporation_id`, `source_account` = the payer `corporation` account, `amount` = `wallet_agent_trust_deposit`). Increase `wallet_agent_participant.tu` by the returned `minted_tu` and `wallet_agent_participant.fiat_cost` by the returned `minted_fiat`.
+- if `wallet_agent_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `wallet_agent_participant.corporation_id`, `participant_id` = `wallet_agent_participant.id`, `ecosystem_id` = `CredentialSchema[wallet_agent_participant.schema_id].ecosystem_id`, `source_account` = the payer `corporation` account, `amount` = `wallet_agent_trust_deposit`).
 
 ---
 
@@ -4785,71 +4795,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - calculate `slashed_fiat` = `applicant_participant.fiat_cost` × `tu_amount` / `applicant_participant.tu` — the obligation in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 - set `applicant_participant.slashed` to `now`
 - set `applicant_participant.modified` to `now`
-- set `applicant_participant.tu` to `applicant_participant.tu` - `tu_amount`
-- set `applicant_participant.fiat_cost` to `applicant_participant.fiat_cost` - `slashed_fiat`
-- set `applicant_participant.slashed_tu` to `applicant_participant.slashed_tu` + `tu_amount`
-- set `applicant_participant.slashed_amount` to `applicant_participant.slashed_amount` + `slashed_fiat`
 
-use [[MOD-TD-MSG-7]](#mod-td-msg-7-remove-ecosystem-slashed-trust-units) Remove Ecosystem Slashed Trust Units with (`corporation_id` = `applicant_participant.corporation_id`, `tu_amount`, `fiat_amount` = `slashed_fiat`) to remove the slashed trust units and their cost basis from the corporation's trust deposit. The ecosystem scoping is enforced by the `tu_amount` ≤ `applicant_participant.tu` bound above: an ecosystem can only slash trust units accumulated through its own `Participant` entries.
+use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `applicant_participant.corporation_id`, `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `applicant_participant.schema_id`), `participant_id` = `applicant_participant.id`, `tu_amount`, `fiat_amount` = `slashed_fiat`).
 
 Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
 
-#### [MOD-PP-MSG-13] Repay Participant Slashed Trust Deposit
+#### [MOD-PP-MSG-13] Void
 
-This method can only be called by the `corporation` that wants to repay the deposit of a slashed `Participant` entry they own. This won't make the `Participant` entry re-usable: it will be needed for the `corporation` associated to this `Participant` entry to request a new `Participant` entry, as slashed `Participant` entries cannot be revived (same happens for revoked, etc.).
-
-Nevertheless, to get a new `Participant` entry for a given ecosystem, it is needed, using this method, to repay the deposit of a slashed `Participant` entry first. This is enforced by the unrepaid slash checks of [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks), [MOD-PP-MSG-2-2-4](#mod-pp-msg-2-2-4-renew-participant-op-unrepaid-slash-checks) and [MOD-PP-MSG-14-2-5](#mod-pp-msg-14-2-5-self-create-participant-unrepaid-slash-checks).
-
-##### [MOD-PP-MSG-13-1] Repay Participant Slashed Trust Deposit parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the `Participant` entry
-
-##### [MOD-PP-MSG-13-2] Repay Participant Slashed Trust Deposit precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-PP-MSG-13-2-1] Repay Participant Slashed Trust Deposit basic checks
-
-if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
-
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` MUST be a valid uint64.
-- Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- if `applicant_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
-- `applicant_participant.slashed_amount` MUST be greater than `applicant_participant.repaid_amount`, else abort (nothing to repay).
-
-###### [MOD-PP-MSG-13-2-2] Repay Participant Slashed Trust Deposit fee checks
-
-- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- calculate `outstanding` = `applicant_participant.slashed_amount` - `applicant_participant.repaid_amount` (in [[ref: main fiat currency]]). `outstanding` MUST be strictly positive.
-- a valid (non-expired) exchange rate between [[ref: native denom]] and [[ref: main fiat currency]] MUST be available through [Get Price](#mod-xr-qry-3-get-price).
-- calculate `repay_amount` = `outstanding` / `P(now)` in [[ref: native denom]], where `P(now)` is the current [[ref: native denom]] price in [[ref: main fiat currency]]. `corporation` MUST have at least `repay_amount` in its account balance, else [[ref: transaction]] MUST abort.
-
-##### [MOD-PP-MSG-13-3] Repay Participant Slashed Trust Deposit execution
-
-If all precondition checks passed, [[ref: transaction]] is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- define `now`: current timestamp.
-
-- Load `Participant` entry `applicant_participant` from `id`.
-- calculate `outstanding` and `repay_amount` as in fee checks.
-- transfer `repay_amount` from the `corporation` account to the [[ref: distribution pool]] account.
-- restore the slashed trust units at their original cost basis:
-  - set `applicant_participant.tu` to `applicant_participant.tu` + `applicant_participant.slashed_tu`;
-  - set `applicant_participant.fiat_cost` to `applicant_participant.fiat_cost` + `outstanding`;
-  - for the `TrustDeposit` entry `td` whose `td.corporation_id` equals `applicant_participant.corporation_id` (via the trust deposit module): set `td.tu` to `td.tu` + `applicant_participant.slashed_tu`; set `td.fiat_cost` to `td.fiat_cost` + `outstanding`;
-  - set `applicant_participant.slashed_tu` to 0.
-- set `applicant_participant.repaid` to `now`
-- set `applicant_participant.modified` to `now`
-- set `applicant_participant.repaid_amount` to `applicant_participant.repaid_amount` + `outstanding`.
-
-> Note: no fresh trust units are minted by repayment. The restored units re-enter at their decayed current value; the difference between the cost basis paid and that value is the penalty premium, and the [[ref: native denom]] paid is distributed via the [[ref: distribution pool]] like any other deposit-bound flow.
+Slash obligations, network or ecosystem, are repaid with [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation).
 
 #### [MOD-PP-MSG-14] Self Create Participant
 
@@ -4866,7 +4819,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `role` (ParticipantRole) (*mandatory*): ISSUER or VERIFIER.
-- `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
+- `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: trustable participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): the account we want to authorize to create `ParticipantSession` entries linked to this `Participant` entry. **Required** for payment delegation.
 - `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
@@ -4904,7 +4857,7 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `role` (ParticipantRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
-- `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
+- `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: trustable participant]] or [[ref: future participant]].
 - `vs_operator` (account) (*optional*): no check required.
 - `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
 - if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant: at any block height, all `Participant` entries sharing a `did` are owned by the same `Corporation`).
@@ -4958,13 +4911,7 @@ for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUS
 Same as [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks):
 
 - define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `validator_participant.schema_id`).
-- if any `Participant` entry `p` exists where:
-  - `p.corporation_id` = `co.id`,
-  - `p.slashed_amount` - `p.repaid_amount` > 0,
-  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
-
-  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
-- if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_amount` - `td.repaid_amount` > 0, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
+- [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) MUST pass for (`co.id`, `ecosystem_id`), else [[ref: transaction]] MUST abort: `corporation` MUST first repay using [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation).
 
 ##### [MOD-PP-MSG-14-3] Self Create Participant execution
 
@@ -4993,9 +4940,6 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
 - `participant.tu`: 0
 - `participant.fiat_cost`: 0
-- `participant.slashed_tu`: 0
-- `participant.slashed_amount`: 0
-- `participant.repaid_amount`: 0
 
 If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -5045,7 +4989,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `perm` from `id`. If no entry found, abort.
-- `perm` MUST be an [[ref: active participant]], else abort.
+- `perm` MUST be a [[ref: trustable participant]], else abort.
 
 ###### [MOD-PP-MSG-15-2-2] Trigger Resolver authorization checks
 
@@ -5065,7 +5009,7 @@ The target `perm` itself is excluded from this walk; only its ancestors (from th
 - set `v` = `perm`.
 - while `v.validator_participant_id` is defined and != `participant.id` :
   - load `v` from `v.validator_participant_id`.
-  - if `v` is not an [[ref: active participant]], continue with the next iteration.
+  - if `v` is not a [[ref: trustable participant]], continue with the next iteration.
   - if `co.id` != `v.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), continue with the next iteration.
   - if [AUTHZ-CHECK-1](#authz-check-1-operator-authorization-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver`, then authorization is granted => match.
 
@@ -5105,7 +5049,7 @@ Generic query used for (at least):
 - `did` (string) (*optional*): the did the `Participant` entry refers to.
 - `participant_id` (number) (*optional*): limit to `Participant` entries where the `validator_participant_id` is `participant_id`.
 - `role` (ParticipantRole) (*optional*): if we want to limit to a specific `Participant` role.
-- `only_valid` (boolean) (*optional*): if set to true, only return active participants.
+- `only_valid` (boolean) (*optional*): if set to true, only return trustable participants.
 - `only_slashed` (boolean) (*optional*): if set to true, only return slashed `Participant` entries.
 - `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed `Participant` entries.
 - `modified_after` (timestamp) (*optional*): limit to `Participant` entries modified after (or equal to) `modified_after`.
@@ -5232,8 +5176,8 @@ v --> vg
 ##### [MOD-PP-QRY-4-2] Find Beneficiaries checks
 
 - if `issuer_participant_id` and `verifier_participant_id` are unset then MUST abort.
-- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`, Participant MUST exist and MUST be a [[ref: active participant]].
-- if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Participant MUST exist and MUST be a [[ref: active participant]].
+- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`, Participant MUST exist and MUST be a [[ref: trustable participant]].
+- if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Participant MUST exist and MUST be a [[ref: trustable participant]].
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
@@ -5408,6 +5352,8 @@ Only the modules that require trust deposit manipulation CAN call this method (i
 ##### [MOD-TD-MSG-1-1] Mint Trust Units method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]].
+- `participant_id` (uint64) (*mandatory*): id of the `Participant` entry the mint is attributed to.
+- `ecosystem_id` (uint64) (*mandatory*): `ecosystem_id` of the `CredentialSchema` of that `Participant` entry.
 - `source_account` (account) (*mandatory*): account funding the mint (payer account, or escrow account at validation time).
 - `amount` (number) (*mandatory*): deposit-bound amount, in [[ref: native denom]].
 
@@ -5419,7 +5365,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `amount` MUST be strictly positive.
-- load `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`. If `td` exists and `td.slashed_amount` - `td.repaid_amount` > 0, the deposit has been slashed and not repaid: [[ref: transaction]] MUST abort.
+- [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) MUST pass for (`corporation_id`, `ecosystem_id`), else [[ref: transaction]] MUST abort.
 - a valid (non-expired) exchange rate between [[ref: native denom]] and [[ref: main fiat currency]] MUST be available through [Get Price](#mod-xr-qry-3-get-price), else [[ref: transaction]] MUST abort.
 
 ###### [MOD-TD-MSG-1-2-2] Mint Trust Units fee checks
@@ -5435,13 +5381,13 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if a `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` does not exist, create entry `td`:
   - set `td.corporation_id` to `corporation_id`;
   - set `td.tu` to 0; set `td.fiat_cost` to 0;
-  - set `td.slashed_amount` to 0; set `td.slashed_tu` to 0; set `td.repaid_amount` to 0; set `td.slash_count` to 0.
-- calculate `minted_tu` = `amount` / `price_tu_in_native_denom(now)` (equivalently `amount` × `P(now)` / `tu_peg_value(now)`).
-- calculate `minted_fiat` = `minted_tu` × `tu_peg_value(now)` (= `amount` × `P(now)`) — the [[ref: main fiat currency]] cost of this mint.
-- set `td.tu` to `td.tu` + `minted_tu`.
-- set `td.fiat_cost` to `td.fiat_cost` + `minted_fiat`.
+  - set `td.slash_count` to 0.
+- calculate `minted_fiat` = `amount` × `P(now)` — the [[ref: main fiat currency]] cost of this mint.
+- calculate `minted_tu` = `minted_fiat` / `tu_peg_value(now)`, rounded down (equivalently `amount` / `price_tu_in_native_denom(now)`).
+- set `td.tu` to `td.tu` + `minted_tu`; set `td.fiat_cost` to `td.fiat_cost` + `minted_fiat`.
+- for the `Participant` ledger entry `p` of `participant_id`: set `p.tu` to `p.tu` + `minted_tu`; set `p.fiat_cost` to `p.fiat_cost` + `minted_fiat`.
 - transfer `amount` from `source_account` to the [[ref: distribution pool]] account.
-- return `minted_tu` and `minted_fiat` to the calling module (which records them on the relevant `Participant` entry: `tu` and `fiat_cost`, or `op_validator_tu`).
+- return `minted_tu` and `minted_fiat` to the calling module.
 
 :::note
 There is no negative adjustment path: trust units are never un-minted. Refunds only exist at the escrow level, **before** minting (Option: mint-at-validation). Trust units only decrease through slashing.
@@ -5491,7 +5437,7 @@ This method is used by the network governance authority to **globally slash** th
 
 This method can only be called by a governance proposal. Slashing removes [[ref: trust units]] and records an obligation denominated in [[ref: main fiat currency]], equal to their **mint-time cost basis** — what was originally paid for them, not their decayed value: reputation decays, **liabilities do not** (misbehavior against the network costs the same whether the deposit was funded yesterday or a year ago). A slashed corporation MUST repay the obligation in order to continue to use the services provided by the VPR. While the obligation is unrepaid, all the corporation's `Participant` entries MUST be considered non-trustable and no trust units can be minted to its deposit.
 
-This method is for network governance authority slash. For ecosystem slash, see [Slash Participant Trust Deposit](#mod-pp-msg-12-slash-participant-trust-deposit).
+The obligation is recorded as a `SlashObligation` entry with a pro-rata breakdown over the corporation's `Participant` entries. For ecosystem slash, see [Slash Participant Trust Deposit](#mod-pp-msg-12-slash-participant-trust-deposit).
 
 ##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
 
@@ -5518,106 +5464,105 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-
-For the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`:
-
-- calculate `slashed_fiat` = `td.fiat_cost` × `tu_amount` / `td.tu` — the obligation in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units. Since the [[ref: trust unit peg value]] only declines, `slashed_fiat` ≥ `tu_amount × tu_peg_value(now)`: the obligation never understates (and usually exceeds) the slashed units' current value.
-- set `td.tu` to `td.tu` - `tu_amount`.
-- set `td.fiat_cost` to `td.fiat_cost` - `slashed_fiat`.
-- set `td.slashed_tu` to `td.slashed_tu` + `tu_amount`.
-- set `td.slashed_amount` to `td.slashed_amount` + `slashed_fiat`.
-- set `td.last_slashed` to `now`.
-- set `td.slash_count` to `td.slash_count` + 1.
+- load the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`.
+- load all `Participant` ledger entries `participants[]` of `corporation_id` with `p.tu` > 0, in ascending `p.id` order.
+- define `remaining` = `tu_amount`; define `entries[]` empty.
+- for each `p` in `participants[]`:
+  - if `tu_amount` = `td.tu`: `share_tu` = `p.tu` and `share_fiat` = `p.fiat_cost`.
+  - else: `share_tu` = min(`p.tu`, `remaining`, `tu_amount` × `p.tu` / `td.tu`); for the last entry of `participants[]`, `share_tu` = min(`p.tu`, `remaining`); `share_fiat` = `p.fiat_cost` × `share_tu` / `p.tu`.
+  - if `share_tu` = 0, skip `p`.
+  - set `p.tu` to `p.tu` - `share_tu`; set `p.fiat_cost` to `p.fiat_cost` - `share_fiat`.
+  - append (`p.id`, `share_tu`, `share_fiat`) to `entries[]`; set `remaining` to `remaining` - `share_tu`.
+- define `slashed_tu` = Σ `entries[].tu` and `slashed_fiat` = Σ `entries[].fiat_cost`.
+- set `td.tu` to `td.tu` - `slashed_tu`; set `td.fiat_cost` to `td.fiat_cost` - `slashed_fiat`.
+- create a `SlashObligation` entry: `corporation_id`, `scope` = NETWORK, `ecosystem_id` = null, `tu` = `slashed_tu`, `fiat_obligation` = `slashed_fiat`, `entries` = `entries[]`, `created` = `now`, `repaid` = null.
+- set `td.last_slashed` to `now`; set `td.slash_count` to `td.slash_count` + 1.
 
 :::note
 Nothing is burned here: [[ref: trust units]] are not a token. The economic penalty is the loss of trust score plus the cost-basis repayment obligation — which, because the peg only declines, is always at least (and typically more than) the slashed units' current value.
 :::
 
-#### [MOD-TD-MSG-6] Repay Slashed Trust Deposit
+#### [MOD-TD-MSG-6] Repay Slash Obligation
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`. Repayment is made in [[ref: native denom]] worth the **outstanding cost-basis obligation at current rates**, routed to the [[ref: distribution pool]]; the **slashed trust units are restored** at their original basis. No fresh trust units are minted: the restored units re-enter at their decayed current value, and the difference between the cost basis paid and that value is the **penalty premium**. Restoring trust also costs **more native denom when the token price is low**.
+Any authorized `operator` CAN execute this method on behalf of a `corporation` to repay one of its open `SlashObligation` entries. Repayment is made in [[ref: native denom]] worth `fiat_obligation` at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the `Participant` entries and the `TrustDeposit`. No trust units are minted.
 
-##### [MOD-TD-MSG-6-1] Repay Slashed Trust Deposit method parameters
+##### [MOD-TD-MSG-6-1] Repay Slash Obligation method parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `id` (uint64) (*mandatory*): id of the `SlashObligation` entry.
 
-##### [MOD-TD-MSG-6-2] Repay Slashed Trust Deposit precondition checks
+##### [MOD-TD-MSG-6-2] Repay Slash Obligation precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-TD-MSG-6-2-1] Repay Slashed Trust Deposit basic checks
+###### [MOD-TD-MSG-6-2-1] Repay Slash Obligation basic checks
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) MUST exist.
-- calculate `outstanding` = `td.slashed_amount` - `td.repaid_amount`. `outstanding` MUST be strictly positive.
+- load `SlashObligation` entry `so` from `id`. It MUST exist, `so.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `so.repaid` MUST be null.
 - a valid (non-expired) exchange rate between [[ref: native denom]] and [[ref: main fiat currency]] MUST be available through [Get Price](#mod-xr-qry-3-get-price).
 
-###### [MOD-TD-MSG-6-2-2] Repay Slashed Trust Deposit fee checks
+###### [MOD-TD-MSG-6-2-2] Repay Slash Obligation fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- calculate `repay_amount` = `outstanding` / `P(now)` in [[ref: native denom]], where `P(now)` is the current [[ref: native denom]] price in [[ref: main fiat currency]]. `co.policy_address` MUST have `repay_amount` in its account, else [[ref: transaction]] MUST abort.
+- calculate `repay_amount` = `so.fiat_obligation` / `P(now)`, rounded up, in [[ref: native denom]], where `P(now)` is the current [[ref: native denom]] price in [[ref: main fiat currency]]. `co.policy_address` MUST have `repay_amount` in its account, else [[ref: transaction]] MUST abort.
 
-##### [MOD-TD-MSG-6-3] Repay Slashed Trust Deposit execution of the method
+##### [MOD-TD-MSG-6-3] Repay Slash Obligation execution of the method
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-
-For the `TrustDeposit` entry `td` whose `td.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account):
-
-- calculate `repay_amount` = `outstanding` / `P(now)` as in fee checks.
+- calculate `repay_amount` as in fee checks.
 - transfer `repay_amount` from `co.policy_address` to the [[ref: distribution pool]] account.
-- restore the slashed trust units at their original cost basis:
-  - set `td.tu` to `td.tu` + `td.slashed_tu`;
-  - set `td.fiat_cost` to `td.fiat_cost` + `outstanding`;
-  - set `td.slashed_tu` to 0.
-- set `td.repaid_amount` to `td.repaid_amount` + `outstanding`.
-- set `td.last_repaid` to `now`.
+- for each `e` in `so.entries[]`, for the `Participant` ledger entry `p` of `e.participant_id`: set `p.tu` to `p.tu` + `e.tu`; set `p.fiat_cost` to `p.fiat_cost` + `e.fiat_cost`; set `p.repaid` to `now`.
+- for the `TrustDeposit` entry `td` whose `td.corporation_id` equals `so.corporation_id`: set `td.tu` to `td.tu` + `so.tu`; set `td.fiat_cost` to `td.fiat_cost` + `so.fiat_obligation`; set `td.last_repaid` to `now`.
+- set `so.repaid` to `now`.
 
-#### [MOD-TD-MSG-7] Remove Ecosystem Slashed Trust Units
+#### [MOD-TD-MSG-7] Record Ecosystem Slash
 
-Remove [[ref: trust units]] from the trust deposit of a given [[ref: corporation]]. This method can only be called by the participant module when performing an ecosystem-level slash ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)). The ecosystem scoping — an ecosystem governance authority can only slash the portion of a deposit that was **created in the context of its own ecosystem**, never the rest of the deposit — is enforced by the caller: [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) bounds the slash by the targeted `Participant` entry's `tu` (per-ecosystem attribution is derivable from `Participant` entries; no separate breakdown is stored on `TrustDeposit`).
+Removes [[ref: trust units]] slashed by [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) from the corporation's [[ref: trust deposit]] and records the obligation. This method can only be called by the participant module.
 
 :::warning
 Make sure to **properly protect access to the execution of this method** else it may lead to very destructive actions.
 :::
 
-##### [MOD-TD-MSG-7-1] Remove Ecosystem Slashed Trust Units method parameters
+##### [MOD-TD-MSG-7-1] Record Ecosystem Slash method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation of the [[ref: trust deposit]].
-- `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] to remove.
-- `fiat_amount` (decimal) (*mandatory*): cost basis of the removed trust units, in [[ref: main fiat currency]], as computed by the caller ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
+- `ecosystem_id` (uint64) (*mandatory*): id of the slashing `Ecosystem`.
+- `participant_id` (uint64) (*mandatory*): id of the slashed `Participant` entry.
+- `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] removed.
+- `fiat_amount` (decimal) (*mandatory*): cost basis of the removed trust units, in [[ref: main fiat currency]], as computed by the caller.
 
-##### [MOD-TD-MSG-7-2] Remove Ecosystem Slashed Trust Units precondition checks
+##### [MOD-TD-MSG-7-2] Record Ecosystem Slash precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-TD-MSG-7-2-1] Remove Ecosystem Slashed Trust Units basic checks
+###### [MOD-TD-MSG-7-2-1] Record Ecosystem Slash basic checks
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `tu_amount` must be > 0.
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.tu` MUST be greater or equal to `tu_amount`.
+- `tu_amount` must be > 0 and `fiat_amount` must be ≥ 0.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, with `td.tu` ≥ `tu_amount` and `td.fiat_cost` ≥ `fiat_amount`.
+- the `Participant` ledger entry `p` of `participant_id` MUST belong to `corporation_id`, with `p.tu` ≥ `tu_amount` and `p.fiat_cost` ≥ `fiat_amount`.
 
-###### [MOD-TD-MSG-7-2-2] Remove Ecosystem Slashed Trust Units fee checks
+###### [MOD-TD-MSG-7-2-2] Record Ecosystem Slash fee checks
 
 Fee payer running the [[ref: transaction]] MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]] else [[ref: transaction]] MUST abort.
 
-##### [MOD-TD-MSG-7-3] Remove Ecosystem Slashed Trust Units execution of the method
+##### [MOD-TD-MSG-7-3] Record Ecosystem Slash execution of the method
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-For the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`:
-
-- set `td.tu` to `td.tu` - `tu_amount`.
-- set `td.fiat_cost` to `td.fiat_cost` - `fiat_amount`.
-
-The cost-basis obligation of an ecosystem-level slash is recorded on the corresponding `Participant` entry by [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit); upon repayment ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit)), the removed trust units and their basis are restored to both the `Participant` entry and the `TrustDeposit`.
+- define `now`: current timestamp.
+- set `td.tu` to `td.tu` - `tu_amount`; set `td.fiat_cost` to `td.fiat_cost` - `fiat_amount`.
+- set `p.tu` to `p.tu` - `tu_amount`; set `p.fiat_cost` to `p.fiat_cost` - `fiat_amount`.
+- create a `SlashObligation` entry: `corporation_id`, `scope` = ECOSYSTEM, `ecosystem_id`, `tu` = `tu_amount`, `fiat_obligation` = `fiat_amount`, `entries` = [(`participant_id`, `tu_amount`, `fiat_amount`)], `created` = `now`, `repaid` = null.
+- set `td.last_slashed` to `now`; set `td.slash_count` to `td.slash_count` + 1.
 
 #### [MOD-TD-QRY-1] Get Trust Deposit
 
@@ -5661,6 +5606,24 @@ Return the list of the existing parameters and their values.
   }
 }
 ```
+
+#### [MOD-TD-QRY-3] List Slash Obligations
+
+Any [[ref: account]] CAN run this [[ref: query]].
+
+##### [MOD-TD-QRY-3-1] List Slash Obligations parameters
+
+- `corporation_id` (uint64) (*optional*): limit to entries where `corporation_id` is `corporation_id`.
+- `open_only` (boolean) (*optional*): if set to true, only return entries where `repaid` is null.
+- `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
+
+##### [MOD-TD-QRY-3-2] List Slash Obligations checks
+
+- `response_max_size` MUST be in range, else [[ref: query]] MUST fail.
+
+##### [MOD-TD-QRY-3-3] List Slash Obligations execution of the query
+
+Return the matching `SlashObligation` entries, ordered by `id`.
 
 ### Distribution
 
