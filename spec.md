@@ -1311,6 +1311,8 @@ entity "GlobalVariables" as gv {
   +foundation_budget: decimal
   +vna_holder_max_yield_rate: decimal
   +unbonding_period: duration
+  +vna_total_supply: number
+  +twap_window: duration
 }
 
 entity "TrustDeposit" as td {
@@ -1735,6 +1737,14 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 - `vna_holder_max_yield_rate` (decimal) (*mandatory*): yearly cap on the fee-funded yield paid to [[ref: bonded tokens]], expressed as a fraction of the bonded amount. No oracle needed.
 - `unbonding_period` (duration) (*mandatory*): staking exit delay for [[ref: bonded tokens]]. Default value: 28 days.
 
+**Native denom:**
+
+- `vna_total_supply` (number) (*mandatory*): total [[ref: native denom]] supply at genesis, in base units. Immutable.
+
+**Exchange Rate:**
+
+- `twap_window` (duration) (*mandatory*): averaging window of the source price feed for [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate). Adjustable by governance proposal.
+
 ## Module Requirements
 
 All [[ref: VPR]] modules MUST, at least, provide:
@@ -2092,6 +2102,8 @@ As a result, `accountABC` is authorized to:
 |                   | Get Exchange Rate                 | /xr/v1/get                  | Query  | [[MOD-XR-QRY-1]](#mod-xr-qry-1-get-exchange-rate)   |N/A |
 |                   | List Exchange Rates               | /xr/v1/list                 | Query  | [[MOD-XR-QRY-2]](#mod-xr-qry-2-list-exchange-rates)   |N/A |
 |                   | Get Price               | /xr/v1/price                 | Query  | [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)   |N/A |
+|                   | Update XR Module Parameters       | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters)   | governance proposal |
+|                   | List XR Module Parameters         | /xr/v1/params               | Query  | [[MOD-XR-QRY-4]](#mod-xr-qry-4-list-module-parameters)   |N/A |
 
 :::note
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
@@ -5706,7 +5718,9 @@ At each [[ref: epoch]] boundary, the [[ref: distribution pool]] balance MUST be 
 4. **Bonded token holders** — a **capped, fee-funded, pro-rata** yield: it accrues only to [[ref: native denom]] bonded through the standard staking module (subject to `unbonding_period`), pro-rata to the bonded amount, and hard-capped at `vna_holder_max_yield_rate` per year (a fraction of the bonded amount — no oracle needed). Per epoch, the payout equals min(pool remainder after budgets, sum of per-holder caps).
 5. **Residual → burned.** Whatever remains after 1–4 MUST be burned. Burn is not a parameter: it is the automatic pool residual.
 
-If the pool balance is insufficient to cover items 1–3 (bootstrap phase), the available balance MUST be distributed in order (validators first) and the shortfall is covered off-protocol by treasuries or vesting grants — **never by token emission**: the [[ref: native denom]] supply is fixed at genesis and strictly non-increasing.
+The [[ref: native denom]] supply is `GlobalVariables.vna_total_supply` at genesis. Native denom MUST NOT be minted after network launch; the supply is strictly non-increasing.
+
+If the pool balance is insufficient to cover items 1–3 (bootstrap phase), the available balance MUST be distributed in order (validators first) and the shortfall is covered off-protocol by treasuries or vesting grants — **never by token emission**.
 
 Payouts SHOULD stream linearly over the epoch rather than in a single burst; treasuries are expected to publish sale policies (e.g. TWAP-based).
 
@@ -6285,6 +6299,7 @@ Create `ExchangeRate` entry `xr`:
 The **Update Exchange Rate** method allows an operator authorized by network governance (via an `ExchangeRateAuthorization`) to push a fresh `rate` for a given `ExchangeRate` entry.
 
 - Only the `operator` designated in an `ExchangeRateAuthorization` matching the target `ExchangeRate` CAN execute this method.
+- `rate` MUST be the time-weighted average of the operator's source price over `GlobalVariables.twap_window`.
 
 ##### [MOD-XR-MSG-2-1] Update Exchange Rate method parameters
 
@@ -6560,6 +6575,45 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 
 :::
 
+#### [MOD-XR-MSG-6] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-XR-MSG-6-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-XR-MSG-6-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-XR-MSG-6-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+- `twap_window` MUST be a strictly positive duration.
+
+###### [MOD-XR-MSG-6-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution
+
+##### [MOD-XR-MSG-6-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
+#### [MOD-XR-QRY-4] List Module Parameters
+
+Anyone CAN run this [[ref: query]].
+
+##### [MOD-XR-QRY-4-3] List Module Parameters execution of the query
+
+Return the list of the existing parameters and their values.
+
 ## Initial Data Requirements
 
 ### [GLO] Global Variables
@@ -6596,6 +6650,14 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `foundation_budget` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]].
 - `vna_holder_max_yield_rate` (decimal) (*mandatory*): to be defined in the governance framework.
 - `unbonding_period` (duration) (*mandatory*): 28 days.
+
+**Native denom:**
+
+- `vna_total_supply` (number) (*mandatory*): 1,000,000,000 VNA (10^15 uvna).
+
+**Exchange Rate:**
+
+- `twap_window` (duration) (*mandatory*): to be defined in the governance framework.
 
 ## References
 
