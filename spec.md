@@ -1598,8 +1598,8 @@ A `ParticipantAuthorizationRecord` carries the per-permission authorization conf
 - `fee_spend_limit` (DenomAmount[]) (*optional*): maximum total amount of transaction fees that can be spent by `vs_operator` (paid by `corporation` via fee grant) in the context of this `Participant` entry.
 - `remaining_fee_spend` (DenomAmount[]) (*conditional*): runtime balance for `fee_spend_limit`. Present iff `fee_spend_limit` is set. Initialized, decremented and reset following the same rules as `remaining_spend`.
 - `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this `Participant` entry, through an on-chain `FeeGrant`.
-- `expiration` (timestamp) (*mandatory*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Initially written to `now` at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (disabled until validation) and to `Participant.effective_until` at [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) / [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant).
-- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this `Participant` entry.
+- `expiration` (timestamp) (*optional*): authorization window boundary. If unset, the record has no window of its own; the window of the `Participant` entry applies through [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1. If set and `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the record is dead. If set and `period` is set, this is the end of the current cycle: when `now() >= expiration`, the runtime balances are reset to their original limits and `expiration` is advanced to `now() + period` (the record auto-renews until removed via [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). Written to `now` at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and to `Participant.effective_until` at [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) / [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) — itself unset when the entry has no end date.
+- `period` (duration) (*optional*): reset period for `spend_limit` and `fee_spend_limit` in the context of this `Participant` entry. A record with a `period` but no `expiration` has no cycle: its runtime balances are never reset.
 
 ### ExchangeRate
 
@@ -1875,16 +1875,19 @@ A second authorization grant mode exists for vs-agents. It is used when a corpor
 
 Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission id** `participant_id` (determined by the calling method), and the current message type `msg_type`:
 
-1. A `ParticipantAuthorizationRecord` `record` MUST exist for `participant_id`. Abort if not found.
-2. `record` MUST belong to `VSOperatorAuthorization[co.id, operator]` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), that is: the containing `VSOperatorAuthorization` MUST have `co.id` as its `corporation_id` and `operator` as its `vs_operator`. Abort otherwise.
-3. `msg_type` MUST be in `record.msg_types`. Abort otherwise.
-4. Cycle / expiration check. If `record.expiration` is set:
+1. The `Participant` entry identified by `participant_id` MUST be an [[ref: active participant]]. Abort otherwise.
+2. A `ParticipantAuthorizationRecord` `record` MUST exist for `participant_id`. Abort if not found.
+3. `record` MUST belong to `VSOperatorAuthorization[co.id, operator]` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), that is: the containing `VSOperatorAuthorization` MUST have `co.id` as its `corporation_id` and `operator` as its `vs_operator`. Abort otherwise.
+4. `msg_type` MUST be in `record.msg_types`. Abort otherwise.
+5. Cycle / expiration check. If `record.expiration` is set:
    - if `record.period` is set and `now() >= record.expiration`:
      - if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
      - if `record.fee_spend_limit` is set, set `record.remaining_fee_spend := record.fee_spend_limit`.
      - set `record.expiration := now() + record.period`.
    - else, `record.expiration` MUST be strictly greater than `now()`. Abort otherwise.
-5. If `record.spend_limit` is set, `record.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `record.remaining_spend` (per matching `denom` entry).
+6. If `record.spend_limit` is set, `record.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `record.remaining_spend` (per matching `denom` entry).
+
+> Note: step 1 is what disables a record whose `Participant` entry is not, or is no longer, an [[ref: active participant]] — an entry that has never been validated has no `effective_from` yet, and a revoked, slashed or expired entry fails the definition. A renewal is unaffected: [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op) sets `op_state` back to PENDING, but the entry stays active until its `effective_until`, so `op_state` MUST NOT be used in place of the definition. `record.expiration` MUST NOT be relied on either: a record with a `period` whose `expiration` has passed is renewed by step 5, which cannot distinguish the disabled state written at [[MOD-PP-MSG-1-3]](#mod-pp-msg-1-3-start-participant-op-execution) from the end of a cycle.
 
 ##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
 
@@ -1893,7 +1896,7 @@ If the [[ref: transaction]] fees are paid by the `corporation` account (via fee 
 > Realization: the corporation's fee **payment** is handled by the same `x/feegrant` allowance as [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) — here the **aggregate** VS-operator `FeeGrant`, which carries the union of the records' `msg_types` and **no** aggregate spend limit (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). The **per-record** `fee_spend_limit` in step 3 is NOT expressible in that aggregate allowance and is therefore enforced by the VPR method as an additional, record-scoped cap on top of the payment.
 
 1. `record.with_feegrant` MUST be true, else abort.
-2. The cycle / expiration check from [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 4 has already been performed against the same `record`; `record.remaining_fee_spend` is therefore current.
+2. The cycle / expiration check from [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 5 has already been performed against the same `record`; `record.remaining_fee_spend` is therefore current.
 3. If `record.fee_spend_limit` is set, the VPR method MUST abort when `record.remaining_fee_spend` is insufficient for the [[ref: estimated transaction fees]], and MUST deduct the consumed fee from `record.remaining_fee_spend` (per matching `denom`) after successful execution. Unlike [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), this per-record balance is a **separate ledger maintained by the VPR method** (not the `x/feegrant` allowance, which carries no aggregate spend limit on the `vs_operator` path), so there is no double counting.
 
 > Ordering caveat: the corporation's fee is paid by the `x/feegrant` allowance **during fee processing, before** this per-record check runs in the VPR method. If `record.fee_spend_limit` is exceeded and the transaction reverts, the already-paid fee is **NOT** refunded (the reverted transaction still consumed gas). Applicants SHOULD size `record.fee_spend_limit` accordingly.
@@ -3488,7 +3491,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.issuance_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
   - `applicant_participant.verification_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
 
-If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **disabled** state (`expiration = now`) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **disabled** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
 - `corporation`: `corporation`
 - `vs_operator`: `vs_operator`
@@ -3501,7 +3504,7 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
   - `record.expiration`: `now`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: the record is created with `expiration = now` so authorization is **not yet active**. [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) will reject any attempt to use it until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) updates `expiration` to `applicant_participant.effective_until`. No on-chain `FeeGrant` object is created at this stage even if `with_feegrant` is true (the recompute subroutine in [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) requires `expiration > now`).
+> Note: the record is **not yet active**. `applicant_participant` is not an [[ref: active participant]] until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) sets its `effective_from`, so [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 rejects any attempt to use it; the same method then updates `expiration` to `applicant_participant.effective_until`. `expiration = now` is written for symmetry with [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant), not as the disabling mechanism. No on-chain `FeeGrant` object is created at this stage even if `with_feegrant` is true (the recompute subroutine in [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) skips a record whose `expiration` is set and not in the future).
 
 #### Connecting to the VS of the Validator
 
@@ -4056,7 +4059,7 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
   - `record.expiration`: `participant.effective_until`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: like [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant), the record is created with `expiration = participant.effective_until` and is therefore immediately active. If `with_feegrant` is true and `participant.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
+> Note: like [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant), the record is created with `expiration = participant.effective_until` and has no disabled phase of its own: it becomes usable when the entry becomes an [[ref: active participant]] ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1), that is at `participant.effective_from` — immediately, unless a future `effective_from` was provided. If `with_feegrant` is true and `participant.effective_until` is unset or in the future, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
 #### [MOD-PP-MSG-8] Set Participant Effective Until
 
@@ -5040,7 +5043,7 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
   - `record.expiration`: `participant.effective_until`
   - `record.period`: `vs_operator_authz_period`
 
-> Note: unlike [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), the record is created with `expiration = participant.effective_until` and is therefore immediately active. If `with_feegrant` is true and `participant.effective_until > now`, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
+> Note: unlike [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), the record is created with `expiration = participant.effective_until` and has no disabled phase of its own: it becomes usable when the entry becomes an [[ref: active participant]] ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1), that is at `participant.effective_from` — immediately, unless a future `effective_from` was provided. If `with_feegrant` is true and `participant.effective_until` is unset or in the future, [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants the on-chain `FeeGrant` as part of this execution.
 
 #### [MOD-PP-MSG-15] Trigger Resolver
 
@@ -6022,7 +6025,7 @@ This method can only be called directly by the following Participant module meth
 - [Create Root Participant](#mod-pp-msg-7-create-root-participant)
 - [Self Create Participant](#mod-pp-msg-14-self-create-participant)
 
-It creates a new [ParticipantAuthorizationRecord](#participantauthorizationrecord) inside `VSOperatorAuthorization[corporation_id, vs_operator]` and, if the record enables a fee grant and its `expiration` is in the future, synchronises the on-chain `FeeGrant` for the containing VSOA.
+It creates a new [ParticipantAuthorizationRecord](#participantauthorizationrecord) inside `VSOperatorAuthorization[corporation_id, vs_operator]` and, if the record enables a fee grant and its `expiration` is unset or in the future, synchronises the on-chain `FeeGrant` for the containing VSOA.
 
 This method does NOT read `Participant` state. All authorization configuration is provided by the caller.
 
@@ -6066,15 +6069,21 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-expiration) after they mutate `vsoa.records`.
 
 - define `max_expire` = null.
+- define `unbounded` = false.
+- define `active` = false.
 - define `feegrant_msg_types` = empty set.
 - for each `r` in `vsoa.records`:
-  - if `r.with_feegrant` is true AND `r.expiration` > now():
-    - if `max_expire` is null OR `r.expiration` > `max_expire`, set `max_expire` = `r.expiration`.
+  - if `r.with_feegrant` is true AND (`r.expiration` is unset OR `r.expiration` > now()):
+    - set `active` = true.
+    - if `r.expiration` is unset, set `unbounded` = true.
+    - else if `max_expire` is null OR `r.expiration` > `max_expire`, set `max_expire` = `r.expiration`.
     - add all entries of `r.msg_types` to `feegrant_msg_types`.
-- if `max_expire` is null (no active feegrant-enabled record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`).
-- else: call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`, `feegrant_msg_types`, `max_expire`, null, null).
+- if `active` is false (no active feegrant-enabled record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`).
+- else:
+  - if `unbounded` is true, set `max_expire` = null.
+  - call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`, `feegrant_msg_types`, `max_expire`, null, null).
 
-> Note: `max_expire` is bounded by the farthest `record.expiration` among feegrant-enabled records. The chain-level `FeeGrant` `msg_types` is the union of all such records' `msg_types`. Per-record spend limits are enforced at [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) time; they are not replicated on the `FeeGrant` object.
+> Note: `max_expire` is bounded by the farthest `record.expiration` among feegrant-enabled records, and is null when at least one of them has no `expiration` — the allowance then has no expiry of its own, matching the record. The chain-level `FeeGrant` `msg_types` is the union of all such records' `msg_types`. Per-record spend limits are enforced at [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) time; they are not replicated on the `FeeGrant` object.
 
 #### [MOD-DE-MSG-6] Revoke VS Operator Authorization
 
@@ -6128,12 +6137,12 @@ This method does NOT read `Participant` state; the caller supplies the new expir
 ##### [MOD-DE-MSG-9-1] Update VS Operator Authorization Expiration method parameters
 
 - `participant_id` (uint64) (*mandatory*): id of the permission whose authorization record's `expiration` must be updated.
-- `new_expiration` (timestamp) (*mandatory*): the new value of `record.expiration`.
+- `new_expiration` (timestamp) (*optional*): the new value of `record.expiration`. If unset, `record.expiration` is cleared and the record has no window of its own.
 
 ##### [MOD-DE-MSG-9-2] Update VS Operator Authorization Expiration basic checks
 
 - `participant_id` MUST be a valid uint64.
-- `new_expiration` MUST be a valid timestamp.
+- `new_expiration`, if set, MUST be a valid timestamp.
 
 > Note: absence of a record for `participant_id` is NOT an error. The method is a no-op in that case (the permission does not enable VS operator authorization).
 
