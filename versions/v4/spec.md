@@ -138,9 +138,6 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: corporation governance framework, CGF]]:
 ~ The governance framework (GF) of a [[ref: corporation]].
 
-[[def: corporation governance authority, CGA]]:
-~ The governance authority (GA) of a [[ref: corporation]].
-
 [[def: credential schema, credential schemas]]:
 ~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
 
@@ -181,6 +178,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: grantor, grantors]]:
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: ecosystem]].
+
+[[def: group, groups]]:
+~ A Cosmos SDK `x/group` on-chain membership group with an associated decision policy. Each [[ref: corporation]] is realized as a group whose group policy account is the corporation's `policy_address` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)).
 
 [[def: holder, holders]]:
 ~ A role an entity might perform by possessing one or more verifiable credentials and generating verifiable presentations from them. A holder is often, but not always, a [[ref: subject]] of the verifiable credentials they are holding. Holders store their credentials in credential repositories. Example holders include organizations, persons, things.
@@ -229,9 +229,6 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def:ecosystem, ecosystems]]
 ~ An approved list of [[ref: participants]] that are authorized to issue/verify certain credentials in an ecosystem.
-
-[[def: URI, URIs]]
-~ An Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
 
 [[def: active participant, active participants]]:
 ~ A participant of a given role, which effective_from timestamp is lower than or equal to current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and slashed is null.
@@ -644,7 +641,7 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 - The more a [[ref: corporation]] uses the [[ref: VPR]], the more its [[ref: trust deposit]] grows.
 - Trust deposits **generate yield**: block execution fees are distributed not only to network validators, but also to **trust deposit holders**.
 - **network-level penalties**: If a participant violates the [[ref: governance framework]] of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority.
-- **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), their **ecosystem-specific trust deposit can be slashed** by the corresponding ecosystem governance authority.
+- **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), their **ecosystem-specific trust deposit can be slashed** by the corresponding [[ref: ecosystem governance authority]].
 - A slashed deposit must be **refilled** to continue using the services that triggered the penalty.
 - Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size.
 
@@ -4629,7 +4626,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 This simple `Participant`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Participant` entry if issuance mode (resp. verification mode) is set to `OPEN` for a given schema. As `Participant` entries are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a `Participant` entry for being issuer or verifier of a given schema.
 
 :::note
-Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their `Participant` entry may be revoked by ecosystem governance authority and their deposit slashed.
+Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their `Participant` entry may be revoked by the [[ref: ecosystem governance authority]] and their deposit slashed.
 :::
 
 ##### [MOD-PP-MSG-14-1] Self Create Participant parameters
