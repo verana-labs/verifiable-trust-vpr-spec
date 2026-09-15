@@ -1158,7 +1158,6 @@ entity "ParticipantAuthorizationRecord" as par {
    +with_feegrant: boolean
    expiration: timestamp
    period: duration
-   window_end: timestamp
 }
 
 entity "DenomAmount" as da {
@@ -1598,9 +1597,8 @@ A `ParticipantAuthorizationRecord` carries the per-permission authorization conf
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `fee_spend_limit` (DenomAmount[]) (*conditional*): this entry's **contribution** to the corporation's aggregate fee budget for `vs_operator`: up to this amount of transaction fees per `GlobalVariables.vs_operator_fee_period`, added to the per-period limit of the aggregate allowance derived by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) while the `Participant` entry is an [[ref: active participant]] or [[ref: future participant]]. MUST be set if `with_feegrant` is true, MUST NOT be set otherwise. There is no per-record runtime fee ledger: the periodic fee cap is enforced by the aggregate `x/feegrant` allowance at fee-processing time.
 - `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this `Participant` entry, through an on-chain `FeeGrant`.
-- `expiration` (timestamp) (*conditional*): end of the current **operation-budget cycle**. Set if, and only if, `period` is set and the cycle has started: written to `now() + period` when the record becomes usable ([[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) at creation, [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window) at validation for [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) records) and advanced by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 5: when `now() >= expiration`, `remaining_spend` is reset to `spend_limit` and `expiration` is advanced to `now() + period`. It carries **no window semantics**: the entry window is enforced solely by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1.
+- `expiration` (timestamp) (*conditional*): end of the current **operation-budget cycle**. Set if, and only if, `period` is set and the cycle has started: written to `now() + period` at creation ([[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) or at first validation ([[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) for [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) records), and advanced by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 5: when `now() >= expiration`, `remaining_spend` is reset to `spend_limit` and `expiration` is advanced to `now() + period`. It carries **no window semantics**: the entry window is enforced solely by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1.
 - `period` (duration) (*optional*): length of the operation-budget cycle for `spend_limit`. Requires `spend_limit`. Does not apply to fees: the fee budget cycles on the network-wide `GlobalVariables.vs_operator_fee_period`.
-- `window_end` (timestamp) (*optional*): mirror of the `Participant` entry's `effective_until`, maintained by [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window); unset when the entry has no scheduled end (or is not yet validated). Used **only** to index the Delegation module's window-end queue that re-runs [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) when an entry expires by clock; it is not an authorization input ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 reads the `Participant` entry itself).
 
 ### ExchangeRate
 
@@ -1999,7 +1997,7 @@ As a result, `accountABC` is authorized to:
 |             | Revoke Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
 |             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |module call|
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
-|             | Update VS Operator Authorization Window | N/A (Tx) | Msg | [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window) |module call|
+|             | Sync VS Operator Authorization | N/A (Tx) | Msg | [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) |module call|
 |             | List Operator Authorizations              | /de/v1/authz/list | Query  | [[MOD-DE-QRY-1]](#mod-de-qry-1-list-operator-authorizations)   |N/A |
 |             | List VS Operator Authorizations           | /de/v1/vs-authz/list | Query  | [[MOD-DE-QRY-2]](#mod-de-qry-2-list-vs-operator-authorizations)   |N/A |
 |             | Get Operator Authorization                | /de/v1/authz/get | Query  | [[MOD-DE-QRY-3]](#mod-de-qry-3-get-operator-authorization)   |N/A |
@@ -3503,11 +3501,10 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
   - `record.spend_limit`: `vs_operator_authz_spend_limit`
   - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
   - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
-  - `record.expiration`: null (the operation-budget cycle starts at validation, see [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window))
+  - `record.expiration`: null (the operation-budget cycle starts at validation, see [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization))
   - `record.period`: `vs_operator_authz_period`
-  - `record.window_end`: null (set at validation)
 
-> Note: the record is **not yet active**. `applicant_participant` is not an [[ref: active participant]] until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) sets its `effective_from`, so [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 rejects any attempt to use it; the same method then sets `window_end` and starts the operation-budget cycle via [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window). The record contributes nothing to the aggregate fee allowance while the entry is PENDING: with `effective_from` null the entry is neither an [[ref: active participant]] nor a [[ref: future participant]], so [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) excludes it.
+> Note: the record is **not yet active**. `applicant_participant` is not an [[ref: active participant]] until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) sets its `effective_from`, so [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 rejects any attempt to use it; the same method then starts the operation-budget cycle via [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization). The record contributes nothing to the aggregate fee allowance while the entry is PENDING: with `effective_from` null the entry is neither an [[ref: active participant]] nor a [[ref: future participant]], so [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) excludes it.
 
 #### Connecting to the VS of the Validator
 
@@ -3860,12 +3857,9 @@ Update `Participant` `applicant_participant`:
   - set `applicant_participant.issuance_fee_discount` to `issuance_fee_discount`.
   - set `applicant_participant.verification_fee_discount` to `verification_fee_discount`.
 
-Activate VS Operator Authorization, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window) Update VS Operator Authorization Window with:
+Activate VS Operator Authorization, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) Sync VS Operator Authorization with `participant_id = applicant_participant.id`.
 
-- `participant_id`: `applicant_participant.id`
-- `window_end`: `applicant_participant.effective_until`
-
-This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its `window_end` is set, its operation-budget cycle is started (`expiration = now() + period` when a `period` is set), and the aggregate `FeeGrant` for the containing VSOA is granted for the first time (or updated) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) — the entry now being an [[ref: active participant]], its `fee_spend_limit` counts toward the aggregate per-period limit.
+This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its operation-budget cycle is started (`expiration = now() + period` when a `period` is set) and the aggregate `FeeGrant` for the containing VSOA is granted for the first time (or updated) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) — the entry now being an [[ref: active participant]], its `fee_spend_limit` counts toward the aggregate per-period limit and its `effective_until`, read from the participant view, is scheduled in the window-end queue.
 
 #### [MOD-PP-MSG-4] Void
 
@@ -3924,7 +3918,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_participant.corporation_id` by `applicant_participant.op_current_deposit`
   - set `applicant_participant.op_current_deposit` to 0.
 
-If `applicant_participant.op_state` was set to TERMINATED (i.e. `applicant_participant.op_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The call is a no-op if no record exists. If `applicant_participant.op_state` was set back to VALIDATED, no VSOA changes are needed (the existing record's `expiration` remains at the value set by the previous successful validation).
+If `applicant_participant.op_state` was set to TERMINATED (i.e. `applicant_participant.op_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any disabled authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The call is a no-op if no record exists. If `applicant_participant.op_state` was set back to VALIDATED, no VSOA changes are needed (the record is unchanged: its operation-budget cycle keeps running, and the aggregate fee allowance still reflects the entry, which is still an [[ref: active participant]]).
 
 #### [MOD-PP-MSG-7] Create Root Participant
 
@@ -4061,7 +4055,6 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
   - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
   - `record.expiration`: `now() + vs_operator_authz_period` if `vs_operator_authz_period` is provided, else null
   - `record.period`: `vs_operator_authz_period`
-  - `record.window_end`: `participant.effective_until`
 
 > Note: like [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant), the record has no disabled phase of its own: it becomes usable when the entry becomes an [[ref: active participant]] ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1), that is at `participant.effective_from` — immediately, unless a future `effective_from` was provided. If `with_feegrant` is true, the entry contributes `fee_spend_limit` to the aggregate fee allowance from creation (active or future participant), and [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants or updates the on-chain `FeeGrant` as part of this execution.
 
@@ -4156,12 +4149,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_participant.modified` to `now`
 
 
-Synchronise the VS Operator Authorization window, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window) Update VS Operator Authorization Window with:
+Synchronise the VS Operator Authorization, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) Sync VS Operator Authorization with `participant_id = applicant_participant.id`.
 
-- `participant_id`: `applicant_participant.id`
-- `window_end`: `applicant_participant.effective_until`
-
-This call is a no-op if no record exists for `applicant_participant.id`. If a record exists, its `window_end` is updated (re-indexing the window-end queue) and the aggregate `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). Set Participant Effective Until does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). This method also cannot create a record that does not already exist.
+This call is a no-op if no record exists for `applicant_participant.id`. If a record exists, the aggregate `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance), which re-schedules the entry's `effective_until` (read from the participant view) in the window-end queue. Set Participant Effective Until does **not** accept VSOA parameters and cannot modify any other field of the record; VSOA configuration is frozen at record creation (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). This method also cannot create a record that does not already exist.
 
 #### [MOD-PP-MSG-9] Revoke Participant
 
@@ -5046,7 +5036,6 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
   - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
   - `record.expiration`: `now() + vs_operator_authz_period` if `vs_operator_authz_period` is provided, else null
   - `record.period`: `vs_operator_authz_period`
-  - `record.window_end`: `participant.effective_until`
 
 > Note: unlike [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), the record has no disabled phase of its own: it becomes usable when the entry becomes an [[ref: active participant]] ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1), that is at `participant.effective_from` — immediately, unless a future `effective_from` was provided. If `with_feegrant` is true, the entry contributes `fee_spend_limit` to the aggregate fee allowance from creation (active or future participant), and [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants or updates the on-chain `FeeGrant` as part of this execution.
 
@@ -5850,7 +5839,7 @@ Authority and scope: the `x/feegrant` allowance is created and revoked by the VP
 This method can only be called directly by the following methods:
 
 - [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
-- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window))
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization))
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
@@ -5900,7 +5889,7 @@ This method can only be called directly by the following methods:
 
 - [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
 - [Revoke Operator Authorization](#mod-de-msg-4-revoke-operator-authorization)
-- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window))
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization))
 
 ##### [MOD-DE-MSG-2-1] Revoke Fee Allowance method parameters
 
@@ -6071,12 +6060,13 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 ##### [MOD-DE-MSG-5-5] Recompute VS Operator Fee Allowance
 
-This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window) after they mutate `vsoa.records`.
+This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) after they mutate `vsoa.records`.
 
 - define `total_fee_limit` = empty DenomAmount[].
 - define `feegrant_msg_types` = empty set.
 - for each `r` in `vsoa.records`:
   - load the `Participant` entry `p` identified by `r.participant_id` through the participant view. If `p` is neither an [[ref: active participant]] nor a [[ref: future participant]], skip `r`.
+  - if `p.effective_until` is set, insert `(p.effective_until, r.participant_id)` into the window-end queue (idempotent: inserting an existing key is a no-op).
   - if `r.with_feegrant` is true:
     - add all entries of `r.msg_types` to `feegrant_msg_types`.
     - add `r.fee_spend_limit` to `total_fee_limit` (per matching `denom`).
@@ -6085,7 +6075,7 @@ This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-o
 
 > Note: the resulting allowance is an `AllowedMsgAllowance` over the union of the live records' `msg_types`, wrapping a `PeriodicAllowance` with `period = GlobalVariables.vs_operator_fee_period` and a per-period limit equal to the **sum** of the live records' `fee_spend_limit` — never unlimited (see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks)). The `PeriodicAllowance` resets itself during fee deduction, so no VPR action is needed at fee-cycle boundaries. Re-granting mid-cycle resets the running `period_can_spend`: any VSOA mutation refreshes the current period's fee budget early — **accepted slack**, bounded by one period's budget per mutation, and mutations are controlled by the grantor.
 
-To keep the aggregate fresh when an entry expires **by clock** (no transaction touches the VSOA), the Delegation module maintains a time-indexed queue of records keyed by `window_end` (maintained by [[MOD-DE-MSG-9]](#mod-de-msg-9-update-vs-operator-authorization-window)): at each block's EndBlocker, for every due record, this subroutine is re-run for the containing VSOA, dropping the expired entry's contribution. Entries with a future `effective_from` count from creation — no start-edge queue is needed, since [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 blocks any use until the window opens.
+To keep the aggregate fresh when an entry expires **by clock** (no transaction touches the VSOA), the Delegation module maintains a time-indexed **window-end queue**, fed by the scan above from the participant view — no per-record window state is stored. At each block's EndBlocker, every due queue entry is popped and this subroutine is re-run for the containing VSOA: if the entry is no longer alive, its contribution drops (and the allowance is revoked when none remains); if its window was extended in the meantime, the re-run is harmless and the scan re-schedules the entry at its new `effective_until` (the stale key has already been popped). Entries with a future `effective_from` count from creation — no start-edge queue is needed, since [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 blocks any use until the window opens.
 
 #### [MOD-DE-MSG-6] Revoke VS Operator Authorization
 
@@ -6097,7 +6087,7 @@ This method can only be called directly by the following Participant module meth
 
 It removes the unique [ParticipantAuthorizationRecord](#participantauthorizationrecord) identified by `participant_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no such record exists.
 
-This method does NOT read `Participant` state.
+This method does NOT read `Participant` state itself; the recompute it triggers reads the participant view.
 
 ##### [MOD-DE-MSG-6-1] Revoke VS Operator Authorization method parameters
 
@@ -6125,37 +6115,34 @@ This method does NOT read `Participant` state.
 
 #### [MOD-DE-MSG-8] Void
 
-#### [MOD-DE-MSG-9] Update VS Operator Authorization Window
+#### [MOD-DE-MSG-9] Sync VS Operator Authorization
 
 This method can only be called directly by the following Participant module methods, with no signer check:
 
 - [Set Participant OP to Validated](#mod-pp-msg-3-set-participant-op-to-validated)
 - [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until)
 
-It updates the `window_end` of the unique record identified by `participant_id`, starts the record's operation-budget cycle on first activation, re-indexes the window-end queue, and recomputes the aggregate on-chain `FeeGrant` of its containing VSOA. No-op if no record exists for `participant_id`.
+It starts the operation-budget cycle of the unique record identified by `participant_id` on first activation, and recomputes the aggregate on-chain `FeeGrant` of its containing VSOA — which also (re-)schedules the entry in the window-end queue (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). No-op if no record exists for `participant_id`.
 
-This method does NOT read `Participant` state; the caller supplies the window end directly.
+This method does NOT read `Participant` state itself; the recompute it triggers reads the participant view.
 
-##### [MOD-DE-MSG-9-1] Update VS Operator Authorization Window method parameters
+##### [MOD-DE-MSG-9-1] Sync VS Operator Authorization method parameters
 
-- `participant_id` (uint64) (*mandatory*): id of the permission whose authorization record's `window_end` must be updated.
-- `window_end` (timestamp) (*optional*): the new value of `record.window_end` (the `Participant` entry's `effective_until`). If unset, `record.window_end` is cleared: the entry has no scheduled end and the record is not indexed in the window-end queue.
+- `participant_id` (uint64) (*mandatory*): id of the permission whose authorization record must be synchronised.
 
-##### [MOD-DE-MSG-9-2] Update VS Operator Authorization Window basic checks
+##### [MOD-DE-MSG-9-2] Sync VS Operator Authorization basic checks
 
 - `participant_id` MUST be a valid uint64.
-- `window_end`, if set, MUST be a valid timestamp.
 
 > Note: absence of a record for `participant_id` is NOT an error. The method is a no-op in that case (the permission does not enable VS operator authorization).
 
-##### [MOD-DE-MSG-9-3] Update VS Operator Authorization Window fee checks
+##### [MOD-DE-MSG-9-3] Sync VS Operator Authorization fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
 
-##### [MOD-DE-MSG-9-4] Update VS Operator Authorization Window execution of the method
+##### [MOD-DE-MSG-9-4] Sync VS Operator Authorization execution of the method
 
 - Locate the unique `ParticipantAuthorizationRecord` `record` with `record.participant_id = participant_id`. If none exists, EXIT (no-op).
-- Set `record.window_end = window_end` and re-index the window-end queue accordingly.
 - if `record.period` is set and `record.expiration` is null, set `record.expiration = now() + record.period` (the operation-budget cycle starts at first activation).
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for the VSOA containing `record`.
 
