@@ -4,7 +4,7 @@
 
 **Latest draft:** [spec v5-draft3](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
-**Previous stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/index-v3.html)
+**Previous stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v3/)
 
 **Editors:**
 
