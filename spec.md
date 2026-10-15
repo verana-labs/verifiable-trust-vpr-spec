@@ -1266,7 +1266,9 @@ entity "ParticipantSessionRecord" as cspsr {
 
 entity "Digest" as digest {
   *digest: string
+  +corporation_id: uint64
   +created: timestamp
+  revoked: timestamp
 }
 
 enum "ParticipantRole" as cspt {
@@ -1368,6 +1370,7 @@ csps o-- account: vs_operator
 
 valstate --o csp: op_state
 corp --o td: corporation_id
+corp --o digest: corporation_id
 
 @enduml
 
@@ -1579,10 +1582,12 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 ### Digest
 
 - `digest` (string) (*mandatory*) (key): digest to store. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential's `digestJCS`, computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] on whose behalf the digest was stored: the signing `corporation` of [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest), or the `corporation` of the `ParticipantSession` when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session).
 - `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential.
+- `revoked` (timestamp) (*optional*): block execution timestamp at which this digest was revoked by [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest); null if the digest has not been revoked. For a digest anchored at credential issuance, a non-null value means that the issuer has revoked the credential as of this timestamp, which trust resolution MUST take into account.
 
 :::note
-A `Digest` entry records only the digest and the timestamp at which it was first persisted: it does not record which [[ref: account]] anchored it, and the VPR does not verify a digest against any content.
+A `Digest` entry records the digest, the corporation that anchored it, the timestamp at which it was first persisted and, if any, the timestamp of its revocation: it does not record which operator [[ref: account]] anchored it, and the VPR does not verify a digest against any content. Only the corporation that anchored a digest can revoke it.
 :::
 
 ### OperatorAuthorization
@@ -2034,6 +2039,7 @@ As a result, `accountABC` is authorized to:
 |             | Get Operator Authorization                | /de/v1/authz/get | Query  | [[MOD-DE-QRY-3]](#mod-de-qry-3-get-operator-authorization)   |N/A |
 |             | Get VS Operator Authorization             | /de/v1/vs-authz/get | Query  | [[MOD-DE-QRY-4]](#mod-de-qry-4-get-vs-operator-authorization)   |N/A |
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + operator OR module call|
+|          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation + operator |
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
 | Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
 |                   | Update Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
@@ -4750,7 +4756,7 @@ Else update:
 
 then, add the `cspsr` to `session.session_records`
 
-if current transaction if for issuance of a credential, persist the credential's `digestJCS` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest).
+if current transaction if for issuance of a credential, persist the credential's `digestJCS` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`.
 
 :::warning
 `session.authz[]` can contain null `issuer_participant_id` OR `verifier_participant_id`
@@ -6302,10 +6308,52 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-- if a `Digest` entry `d` already exists with `d.digest` = `digest`, the method is a no-op (idempotent): execution returns success without modifying state.
+- if a `Digest` entry `d` already exists with `d.digest` = `digest`, the method is a no-op (idempotent): execution returns success without modifying state (the existing entry keeps its `corporation_id`, even if it differs from `co.id`).
 - else create `Digest` entry `d`:
   - set `d.digest` to `digest`.
+  - set `d.corporation_id` to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account; when this method is called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), the `corporation` of the session).
   - set `d.created` to `now`.
+  - set `d.revoked` to null.
+
+#### [MOD-DI-MSG-2] Revoke Digest
+
+Any authorized `operator` CAN execute this method on behalf of the `corporation` that stored the digest.
+
+Revoking a digest is the on-chain revocation mechanism for credentials whose issuance was anchored with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest): trust resolution of a credential whose `digestJCS` has a `Digest` entry with a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp. Revocation is irreversible.
+
+##### [MOD-DI-MSG-2-1] Revoke Digest method parameters
+
+- `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
+- `digest` (string(256)) (*mandatory*): digest to revoke.
+
+##### [MOD-DI-MSG-2-2] Revoke Digest precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-DI-MSG-2-2-1] Revoke Digest basic checks
+
+if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
+
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- if `digest` is not present, abort.
+- if `digest` is longer than 256 characters, abort.
+- a `Digest` entry `d` with `d.digest` = `digest` MUST exist, else abort.
+- `d.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else abort.
+
+###### [MOD-DI-MSG-2-2-2] Revoke Digest fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+
+##### [MOD-DI-MSG-2-3] Revoke Digest execution of the method
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp.
+- if `d.revoked` is not null, the method is a no-op (idempotent): execution returns success without modifying state.
+- else set `d.revoked` to `now`.
 
 #### [MOD-DI-QRY-1] Get Digest
 
@@ -6333,7 +6381,9 @@ Return found `Digest` entry (if any) matching `digest`.
 {
   "digest": {
     "digest": "GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP",
-    "created": "2025-01-14T19:40:37.967Z"
+    "corporation_id": 12,
+    "created": "2025-01-14T19:40:37.967Z",
+    "revoked": null
   }
 }
 ```
