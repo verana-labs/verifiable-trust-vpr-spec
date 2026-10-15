@@ -3488,21 +3488,19 @@ else MUST abort.
 
 - `issuance_fee_discount` : (number) (*mandatory*):
   - if `applicant_participant.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_participant.issuance_fee_discount` else MUST abort.
-  - if `cs.issuer_onboarding_mode` is set to GRANTOR_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-    - if `applicant_participant.role` == ISSUER: if `validator_participant.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_participant.issuance_fee_discount` (100% discount) inclusive.
-  - if `cs.issuer_onboarding_mode` is set to ECOSYSTEM_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-  - else MUST abort.
+  - else, the allowed range depends on `applicant_participant.role` (the onboarding mode of `cs` is implied by the existence of the onboarding process, see [[MOD-PP-MSG-1-2-2]](#mod-pp-msg-1-2-2-start-participant-op-permission-checks)):
+    - if `applicant_participant.role` == ISSUER_GRANTOR: `issuance_fee_discount` MUST be between 0 (no discount) and 1 (100% discount) inclusive, else MUST abort.
+    - if `applicant_participant.role` == ISSUER: `issuance_fee_discount` MUST be between 0 (no discount) and `max_discount` inclusive, else MUST abort, where `max_discount` is `validator_participant.issuance_fee_discount` if `cs.issuer_onboarding_mode` is GRANTOR_ONBOARDING_PROCESS (the validator is a ISSUER_GRANTOR) and 1 if it is ECOSYSTEM_ONBOARDING_PROCESS.
+    - for any other role: `issuance_fee_discount` MUST be 0, else MUST abort.
 
 - `verification_fee_discount` : (number) (*mandatory*):
   - if `applicant_participant.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_participant.verification_fee_discount` else MUST abort.
-  - if `cs.verifier_onboarding_mode` is set to GRANTOR_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == VERIFIER_GRANTOR: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-    - if `applicant_participant.role` == VERIFIER: if `validator_participant.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_participant.verification_fee_discount` (100% discount) inclusive.
-  - if `cs.verifier_onboarding_mode` is set to ECOSYSTEM_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-  - else MUST abort.
+  - else, the allowed range depends on `applicant_participant.role` (the onboarding mode of `cs` is implied by the existence of the onboarding process, see [[MOD-PP-MSG-1-2-2]](#mod-pp-msg-1-2-2-start-participant-op-permission-checks)):
+    - if `applicant_participant.role` == VERIFIER_GRANTOR: `verification_fee_discount` MUST be between 0 (no discount) and 1 (100% discount) inclusive, else MUST abort.
+    - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` MUST be between 0 (no discount) and `max_discount` inclusive, else MUST abort, where `max_discount` is `validator_participant.verification_fee_discount` if `cs.verifier_onboarding_mode` is GRANTOR_ONBOARDING_PROCESS (the validator is a VERIFIER_GRANTOR) and 1 if it is ECOSYSTEM_ONBOARDING_PROCESS.
+    - for any other role: `verification_fee_discount` MUST be 0, else MUST abort.
+
+> Note: a HOLDER applicant, and any applicant whose `cs.issuer_onboarding_mode` (resp. `cs.verifier_onboarding_mode`) is OPEN, carries no issuance (resp. verification) discount: the mandatory parameter MUST be 0 and MUST NOT make the method abort.
 
 Calculation of `op_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
 
