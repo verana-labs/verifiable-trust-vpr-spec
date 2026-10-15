@@ -2,7 +2,7 @@
 
 **Status:** stable. This version only receives minor fixes.
 
-**Latest draft:** [spec v5-draft3](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v5-draft4](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Previous stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v3/)
 
