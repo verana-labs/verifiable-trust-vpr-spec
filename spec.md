@@ -314,6 +314,7 @@ object "Ecosystem" as tra #3fbdb6 {
 [[ref: Credential schemas]] are created and managed by [[ref: ecosystems]] (i.e., by the [[ref: corporation]] controlling each [[ref: ecosystem]]). Each [[ref: Credential schema]] includes, at a minimum:
 
 - A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
+- A **SubjectKind** (`SERVICE` or `PERSON`), a **PresentationMode** (for service credentials: `PUBLIC`, `ACCREDITED_AUTOMATIC` or `ACCREDITED_APPROVAL`) and a single **CredentialFormat** (`W3C_JSONLD`, `ANONCREDS` or `SD_JWT`) that declare what credentials of this schema are for and how agents handle them; see [CredentialSchema](#credentialschema).
 - An **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` `Participant` entries are created. Modes include:
   - `OPEN`: `ISSUER` Participants can be self-created by any [[ref: corporation]].
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Participants are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
@@ -1097,6 +1098,10 @@ entity "CredentialSchema" as cs {
   +issuer_onboarding_mode: IssuerOnboardingMode
   +verifier_onboarding_mode: VerifierOnboardingMode
   +holder_onboarding_mode: HolderOnboardingMode
+  +subject_kind: SubjectKind
+  presentation_mode: PresentationMode
+  +credential_format: CredentialFormat
+  +verification_session: VerificationSessionMode
   +pricing_asset: string
   +digest_algorithm: string
 }
@@ -1135,6 +1140,24 @@ enum "VerifierOnboardingMode" as vom {
 enum "HolderOnboardingMode" as hom {
   ISSUER_ONBOARDING_PROCESS
   PERMISSIONLESS
+}
+enum "SubjectKind" as subjectkind {
+  SERVICE
+  PERSON
+}
+enum "PresentationMode" as presentationmode {
+  PUBLIC
+  ACCREDITED_AUTOMATIC
+  ACCREDITED_APPROVAL
+}
+enum "CredentialFormat" as credentialformat {
+  W3C_JSONLD
+  ANONCREDS
+  SD_JWT
+}
+enum "VerificationSessionMode" as verificationsessionmode {
+  REQUIRED
+  WHEN_FEES
 }
 
 
@@ -1295,6 +1318,10 @@ xr o-- pricingassettype: base_asset_type
 xr o-- pricingassettype: quote_asset_type
 
 cs o-- pricingassettype: pricing_asset_type 
+cs o-- subjectkind: subject_kind
+cs o-- presentationmode: presentation_mode
+cs o-- credentialformat: credential_format
+cs o-- verificationsessionmode: verification_session
 
 corp --o oauthz: corporation_id
 account --o oauthz: operator
@@ -1448,6 +1475,10 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission. HOLDER permission is used to check credential revocation status; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
+- `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a [[ref: VS]] identified by a [[ref: DID]], and the credential is held by the agent of that service. PERSON: the subject is a natural person, and the credential is held in a [[ref: VUA]] (user wallet). Immutable.
+- `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service as a Linked Verifiable Presentation in its DID Document, and anyone can read it. ACCREDITED_AUTOMATIC: the credential is not published; the holder service presents it automatically, without the approval of its controller, to any requesting verifier that holds an active VERIFIER `Participant` entry for this schema, after having verified payment when fees apply. ACCREDITED_APPROVAL: as ACCREDITED_AUTOMATIC, but each presentation requires the approval of the controller of the holder service, given before any payment is made. The VPR stores this declaration; its enforcement is the responsibility of agents, as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Immutable.
+- `credential_format` (CredentialFormat) (*mandatory*): the single format in which credentials of this schema are issued: W3C_JSONLD (W3C Verifiable Credentials in JSON-LD), ANONCREDS, or SD_JWT. An ecosystem that needs the same claims in several formats creates one schema per format. Future versions of this specification MAY add values. Immutable.
+- `verification_session` (VerificationSessionMode) (*mandatory*): declares when a verifier MUST create a `ParticipantSession` ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)) for a verification of a credential of this schema. WHEN_FEES: only when the fees computed for the verification are greater than 0. REQUIRED: for every verification, even when these fees are 0, so that an on-chain record of the verification exists. Immutable.
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
 - `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestJCS` of credentials issued under this schema, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
@@ -2683,6 +2714,10 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*).
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*).
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*).
+- `subject_kind` (SubjectKind) (*mandatory*).
+- `presentation_mode` (PresentationMode) (*conditional*): mandatory if `subject_kind` is SERVICE, MUST be absent otherwise.
+- `credential_format` (CredentialFormat) (*mandatory*).
+- `verification_session` (VerificationSessionMode) (*optional*), default to WHEN_FEES.
 - `pricing_asset_type` (PricingAssetType) (*mandatory*).
 - `pricing_asset` (string) (*mandatory*).
 - `digest_algorithm` (string) (*mandatory*): MUST be one of the lowercase tokens `sha384` or `sha512`, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
@@ -2708,6 +2743,10 @@ If any of these precondition checks fail, method MUST abort.
 - `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*). MUST be a valid IssuerOnboardingMode.
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*). MUST be a valid VerifierOnboardingMode.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*). MUST be a valid HolderOnboardingMode.
+- `subject_kind` (SubjectKind) (*mandatory*). MUST be a valid SubjectKind.
+- `presentation_mode` (PresentationMode) (*conditional*): if `subject_kind` is SERVICE, MUST be present and MUST be a valid PresentationMode; if `subject_kind` is PERSON, MUST be absent; else abort.
+- `credential_format` (CredentialFormat) (*mandatory*). MUST be a valid CredentialFormat. If `presentation_mode` is PUBLIC or ACCREDITED_AUTOMATIC, `credential_format` MUST be W3C_JSONLD (a credential presented without the intervention of the holder's controller is a complete W3C credential, not a selective disclosure), else abort.
+- `verification_session` (VerificationSessionMode) (*optional*): if present, MUST be a valid VerificationSessionMode.
 - `digest_algorithm` (string) (*mandatory*) MUST be one of the lowercase tokens `sha384` or `sha512`, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
 
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
@@ -2743,6 +2782,10 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.issuer_onboarding_mode`: `issuer_onboarding_mode`
   - `cs.verifier_onboarding_mode`: `verifier_onboarding_mode`
   - `cs.holder_onboarding_mode`: `holder_onboarding_mode`
+  - `cs.subject_kind`: `subject_kind`
+  - `cs.presentation_mode`: `presentation_mode` (null if `subject_kind` is PERSON)
+  - `cs.credential_format`: `credential_format`
+  - `cs.verification_session`: `verification_session` if present, else WHEN_FEES
   - `cs.created`: current timestamp
   - `cs.modified`: `cs.created`.
   - `cs.archived`: false
@@ -2771,7 +2814,7 @@ An [[ref: account]] that would like to update a [[ref: credential schema]] MUST 
 - `verifier_validation_validity_period` (*mandatory*), default to 0 (days).
 - `holder_validation_validity_period` (*mandatory*), default to 0 (days).
 
-other attributes are immutables and cannot be updated.
+other attributes (including `subject_kind`, `presentation_mode`, `credential_format` and `verification_session`) are immutable and cannot be updated.
 
 ##### [MOD-CS-MSG-2-2] Update Credential Schema precondition checks
 
@@ -4276,7 +4319,7 @@ Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS 
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-Any credential exchange that requires issuer or verifier to pay fees, register a digest_sri, or produce a proof implies the creation of a `ParticipantSession`.
+Any credential exchange that requires issuer or verifier to pay fees, register a digest_sri, or produce a proof implies the creation of a `ParticipantSession`. A Credential Verification of a credential whose schema sets `verification_session` to REQUIRED implies the creation of a `ParticipantSession` even when the fees computed for the verification are 0; when the schema sets WHEN_FEES, a session is required for a verification only when these fees are greater than 0 (see [CredentialSchema](#credentialschema)).
 
 If the peer wants to issue a credential, the `agent`, the Verifiable User Agent or Verifiable Service that receive the request MUST send to peer:
 
