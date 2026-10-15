@@ -4093,6 +4093,11 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if `issuer_participant_id` is null AND `verifier_participant_id` is null, MUST abort.
 
+Determine the operation type from the provided ids:
+
+- if `verifier_participant_id` is not null, the operation is a **Credential Verification**: the caller is the `vs_operator` of the verifier. `issuer_participant_id` MUST also be provided, else abort: the issuer branch is a fee beneficiary of the verification (see [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)).
+- else, the operation is a **Credential Issuance**: the caller is the `vs_operator` of the issuer.
+
 - define `issuer_participant` as null.
 - define `verifier_participant` as null.
 
@@ -4101,20 +4106,22 @@ if `issuer_participant_id` is not null:
 - Load `issuer_participant` from `issuer_participant_id`.
 - if `issuer_participant.role` is not ISSUER, abort.
 - if `issuer_participant` is not a [[ref: active participant]], abort.
-- if `issuer_participant.vs_operator` is not equal to `operator`, abort.
-- if `issuer_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
-- if `digest` is present and longer than 256 characters, abort.
 
 if `verifier_participant_id` is not null:
 
 - Load `verifier_participant` from `verifier_participant_id`.
 - if `verifier_participant.role` is not VERIFIER, abort.
 - if `verifier_participant` is not a [[ref: active participant]], abort.
-- if `verifier_participant.vs_operator` is not equal to `operator`, abort.
-- if `verifier_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
+- if `verifier_participant.schema_id` is not equal to `issuer_participant.schema_id`, abort.
+
 - if `digest` is present and longer than 256 characters, abort.
 
-Define the **primary `Participant`** `perm`: if `verifier_participant` is not null, `perm` = `verifier_participant` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_participant` (the caller is the `vs_operator` of the issuer).
+Define the **primary `Participant`** `perm`: if `verifier_participant` is not null (Credential Verification), `perm` = `verifier_participant`; else (Credential Issuance), `perm` = `issuer_participant`.
+
+- if `perm.vs_operator` is not equal to `operator`, abort.
+- if `perm.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
+
+> Note: the `vs_operator` and `corporation_id` checks apply to the primary `Participant` only. In a Credential Verification, the issuer `Participant` entry generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, activity and schema only.
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
@@ -4148,7 +4155,7 @@ Use "Find Beneficiaries" query method to get the set of beneficiary `Participant
 
 - define `total_beneficiary_fees` = 0
 
-If **Credential Issuance** (`issuer_participant` is NOT null):
+If **Credential Issuance** (`verifier_participant` is null):
 
 - for each `perm` in `found_participant_set`:
   - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.issuance_fees` × (1 - `issuer_participant.issuance_fee_discount`)
@@ -4318,7 +4325,7 @@ Initialize accumulators for agent rewards:
 
 Determine the operation type and applicable discount:
 
-- If **Credential Issuance** (`issuer_participant` is NOT null):
+- If **Credential Issuance** (`verifier_participant` is null):
   - `fee_field` = `issuance_fees`
   - `discount` = `issuer_participant.issuance_fee_discount`
   - `payer_participant` = `issuer_participant`
