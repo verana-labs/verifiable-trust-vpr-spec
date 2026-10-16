@@ -1584,8 +1584,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 - `digest` (string) (*mandatory*) (key): digest to store. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential's `digestJCS`, computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] on whose behalf the digest was stored: the signing `corporation` of [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest), or the `corporation` of the `ParticipantSession` when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session).
-- `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential.
-- `revoked` (timestamp) (*optional*): block execution timestamp at which this digest was revoked by [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest); null if the digest has not been revoked. For a digest anchored at credential issuance, a non-null value means that the issuer has revoked the credential as of this timestamp, which trust resolution MUST take into account.
+- `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential. For a presentation digest anchored by a verifier in a Credential Verification ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)), it is the **effective presentation time**: together with the session, it lets the holder prove to whom and when it presented, and the verifier prove what it received, without any content on chain.
+- `revoked` (timestamp) (*optional*): block execution timestamp at which this digest was revoked by [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest); null if the digest has not been revoked. For a digest anchored at credential issuance, a non-null value means that the issuer has revoked the credential as of this timestamp, which trust resolution MUST take into account. Revocation has no meaning for a presentation digest: trust resolution consults `revoked` for credential digests only.
 
 :::note
 A `Digest` entry records the digest, the corporation that anchored it, the timestamp at which it was first persisted and, if any, the timestamp of its revocation: it does not record which operator [[ref: account]] anchored it, and the VPR does not verify a digest against any content. Only the corporation that anchored a digest can revoke it.
@@ -4339,10 +4339,11 @@ If the peer wants to verify a credential, agent must send to peer:
 - a `uuid` for session identification;
 - *optional*: the `agent_participant_id` `Participant` id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
 - *optional*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_participant_ids, uint64: wallet_agent_participant_id>. wallet_agent_participant_id MUST NOT be set if peer is a **Verifiable Service**.
+- *optional*, only if the verifier asked for it in its request: the **presentation digest**, computed by the agent over the presentation it is about to send (the signed presentation, canonicalized with [JCS](https://www.rfc-editor.org/rfc/rfc8785), hashed with the `digest_algorithm` of the schema). The agent builds and signs the presentation first and sends only its digest at this step; the verifier anchors it as the `digest` of the session. Anchoring a presentation digest is the verifier's decision: it is never mandatory, and a verifier that did not ask for it MUST NOT expect one.
 
 In case peer is a **Verifiable Service** and illegaly set `agent_participant_id` and/or `wallet_agent_participant_id`, the other end MUST refuse the request.
 
-`payer` MUST create a Participant Session using the above information, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
+`payer` MUST create a Participant Session using the above information, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request). When the agent sent a presentation digest, it MUST additionally check, with [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest), that a `Digest` entry with its digest exists and belongs to the corporation of the verifier `Participant` before sending the presentation.
 
 ```plantuml
 scale max 800 width
@@ -4376,7 +4377,7 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 - `verifier_participant_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
 - `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
-- `digest` (string(256)) (*optional*): digest derived from an issued or verified credential.
+- `digest` (string(256)) (*optional*): in a Credential Issuance, the `digestJCS` of the credential being issued (its anchoring fixes the effective issuance time, see [Digest](#digest)); in a Credential Verification, the presentation digest sent by the agent (see above), when the verifier decides to anchor it. Never mandatory.
 
 ##### [MOD-PP-MSG-10-2] Create or Update Participant Session precondition checks
 
@@ -4757,7 +4758,7 @@ Else update:
 
 then, add the `cspsr` to `session.session_records`
 
-if current transaction if for issuance of a credential, persist the credential's `digestJCS` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`.
+if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`: in a Credential Issuance it is the credential's `digestJCS` and its `created` timestamp is the effective issuance time; in a Credential Verification it is the presentation digest and its `created` timestamp is the effective presentation time.
 
 :::warning
 `session.authz[]` can contain null `issuer_participant_id` OR `verifier_participant_id`
@@ -6320,7 +6321,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 Any authorized `operator` CAN execute this method on behalf of the `corporation` that stored the digest.
 
-Revoking a digest is the on-chain revocation mechanism for credentials whose issuance was anchored with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest): trust resolution of a credential whose `digestJCS` has a `Digest` entry with a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp. Revocation is irreversible.
+Revoking a digest is the on-chain revocation mechanism for credentials whose issuance was anchored with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest): trust resolution of a credential whose `digestJCS` has a `Digest` entry with a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp. Revocation is irreversible. Revoking a presentation digest (anchored in a Credential Verification) has no effect on trust resolution.
 
 ##### [MOD-DI-MSG-2-1] Revoke Digest method parameters
 
