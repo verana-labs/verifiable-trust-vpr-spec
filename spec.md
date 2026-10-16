@@ -1174,6 +1174,8 @@ entity "OperatorAuthorization" as oauthz {
 
 entity "VSOperatorAuthorization" as vsoauthz {
    *id: uint64
+   +fee_limit_total: DenomAmount[]
+   +feegrant_msg_type_counts: map
 }
 
 entity "ParticipantAuthorizationRecord" as par {
@@ -1623,6 +1625,8 @@ A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries 
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
 - `records` (ParticipantAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation_id`.
+- `fee_limit_total` (DenomAmount[]) (*mandatory*): derived, the sum of the `fee_spend_limit` of the live feegrant-enabled records, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
+- `feegrant_msg_type_counts` (map<msg_type, uint32>) (*mandatory*): derived, for each message type the number of live feegrant-enabled records that include it, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 
 ### ParticipantAuthorizationRecord
 
@@ -6106,22 +6110,21 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 ##### [MOD-DE-MSG-5-5] Recompute VS Operator Fee Allowance
 
-This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) after they mutate `vsoa.records`.
+This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) after they mutate `vsoa.records`, and by the window-end queue when the `Participant` entry of a record expires by clock.
 
-- define `total_fee_limit` = empty DenomAmount[].
-- define `feegrant_msg_types` = empty set.
-- for each `r` in `vsoa.records`:
-  - load the `Participant` entry `p` identified by `r.participant_id` through the participant view. If `p` is neither an [[ref: active participant]] nor a [[ref: future participant]], skip `r`.
-  - if `p.effective_until` is set, insert `(p.effective_until, r.participant_id)` into the window-end queue (idempotent: inserting an existing key is a no-op).
-  - if `r.with_feegrant` is true:
-    - add all entries of `r.msg_types` to `feegrant_msg_types`.
-    - add `r.fee_spend_limit` to `total_fee_limit` (per matching `denom`).
-- if `feegrant_msg_types` is empty (no live feegrant-enabled record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`).
-- else: call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`, `feegrant_msg_types`, `now() + GlobalVariables.vs_operator_fee_period`, `total_fee_limit`, `GlobalVariables.vs_operator_fee_period`).
+The resulting allowance MUST be an `AllowedMsgAllowance` over the union of the `msg_types` of the **live feegrant-enabled records** of `vsoa` (records whose `with_feegrant` is true and whose `Participant` entry is an [[ref: active participant]] or a [[ref: future participant]]), wrapping a `PeriodicAllowance` with `period = GlobalVariables.vs_operator_fee_period` and a per-period limit equal to the **sum** of their `fee_spend_limit` — never unlimited (see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks)).
 
-> Note: the resulting allowance is an `AllowedMsgAllowance` over the union of the live records' `msg_types`, wrapping a `PeriodicAllowance` with `period = GlobalVariables.vs_operator_fee_period` and a per-period limit equal to the **sum** of the live records' `fee_spend_limit` — never unlimited (see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks)). The `PeriodicAllowance` resets itself during fee deduction, so no VPR action is needed at fee-cycle boundaries. Re-granting mid-cycle resets the running `period_can_spend`: any VSOA mutation refreshes the current period's fee budget early — **accepted slack**, bounded by one period's budget per mutation, and mutations are controlled by the grantor.
+The aggregate MUST be maintained **incrementally**. A VSOA may group tens of thousands of records (one agent account operating many `Participant` entries), and a scan of `vsoa.records` on every mutation would make each grant cost linear time and a large roll-out quadratic. The VSOA therefore carries two derived fields, `fee_limit_total` (DenomAmount[]) and `feegrant_msg_type_counts` (map msg_type → number of live feegrant-enabled records that include it), updated as follows:
 
-To keep the aggregate fresh when an entry expires **by clock** (no transaction touches the VSOA), the Delegation module maintains a time-indexed **window-end queue**, fed by the scan above from the participant view. At each block's EndBlocker, every due queue entry is popped; a key whose `participant_id` no longer resolves to a `ParticipantAuthorizationRecord` is discarded, otherwise this subroutine is re-run for the containing VSOA: if the entry is no longer alive, its contribution drops (and the allowance is revoked when none remains); if its window was extended in the meantime, the re-run is harmless and the scan re-schedules the entry at its new `effective_until` (the stale key has already been popped). Entries with a future `effective_from` count from creation — no start-edge queue is needed, since [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 blocks any use until the window opens.
+- define the **contribution** of a record `r` as (`r.fee_spend_limit`, `r.msg_types`) if `r.with_feegrant` is true and the `Participant` entry `p` identified by `r.participant_id` (read through the participant view) is an [[ref: active participant]] or a [[ref: future participant]], else empty.
+- on a record insert or update: subtract the previous contribution of the record (if any) from `fee_limit_total` and `feegrant_msg_type_counts`, then add its new contribution; if `p.effective_until` is set, insert `(p.effective_until, r.participant_id)` into the window-end queue (idempotent: inserting an existing key is a no-op).
+- on a record removal, or when the window-end queue pops a record whose `Participant` entry is no longer an active or future participant: subtract the contribution of the record.
+- then, if no message type has a positive count in `feegrant_msg_type_counts` (no live feegrant-enabled record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`).
+- else: call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`, the message types with a positive count, `now() + GlobalVariables.vs_operator_fee_period`, `fee_limit_total`, `GlobalVariables.vs_operator_fee_period`).
+
+A full recomputation by scanning `vsoa.records` MAY be used as a consistency check or as a migration step and MUST yield the same aggregates; it MUST NOT be the per-mutation path.
+
+To keep the aggregate fresh when an entry expires **by clock** (no transaction touches the VSOA), the Delegation module maintains a time-indexed **window-end queue**, fed by the record mutations described above. At each block's EndBlocker, every due queue entry is popped; a key whose `participant_id` no longer resolves to a `ParticipantAuthorizationRecord` is discarded, otherwise this subroutine is re-run for the containing VSOA: if the entry is no longer alive, its contribution drops (and the allowance is revoked when none remains); if its window was extended in the meantime, the re-run is harmless and the scan re-schedules the entry at its new `effective_until` (the stale key has already been popped). Entries with a future `effective_from` count from creation — no start-edge queue is needed, since [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 blocks any use until the window opens.
 
 #### [MOD-DE-MSG-6] Revoke VS Operator Authorization
 
