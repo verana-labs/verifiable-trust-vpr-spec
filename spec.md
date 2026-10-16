@@ -6734,7 +6734,7 @@ Where:
 - `price_uvna` is expressed in **micro-denominated VNA units (`uvna`)**.
 - Rounding MUST always be performed **downwards**.
 
-If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail.
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail, except for an `amount` of 0, which converts to 0 in any asset without requiring an `ExchangeRate` entry.
 
 ##### [MOD-XR-QRY-3-1] Get Price parameters
 
@@ -6746,10 +6746,11 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 
 ##### [MOD-XR-QRY-3-2] Get Price query checks
 
-If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned — unless `amount` is 0 (see execution).
 
 ##### [MOD-XR-QRY-3-3] Get Price execution of the query
 
+- if `amount` is 0: `price` = 0, whatever the assets and whether or not an `ExchangeRate` entry exists (a zero fee or deposit on a FIAT-priced schema MUST NOT require an exchange rate).
 - if (base_asset_type, base_asset) == (quote_asset_type, quote_asset): `price` = `amount`.
 - else load (base_asset_type, base_asset, quote_asset_type, quote_asset).
   - if entry doesn't exist or is not active or expired, abort and generate an error.
