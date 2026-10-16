@@ -3384,7 +3384,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-op-parameters).
 
 :::note
-A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the onboarding process is REQUIRED or not.
+A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. When the schema's `holder_onboarding_mode` is `ISSUER_ONBOARDING_PROCESS`, the onboarding process MUST have reached `VALIDATED` before the credential is issued: the Verifiable Trust specification requires an effective `HOLDER` entry at issuance, and trust resolution requires it to be active. When it is `PERMISSIONLESS`, no `HOLDER` entry exists and the issuer applies its own checks.
 :::
 
 ###### [MOD-PP-MSG-1-2-2] Start Participant OP permission checks
