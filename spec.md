@@ -2046,7 +2046,7 @@ As a result, `accountABC` is authorized to:
 |             | Get Operator Authorization                | /de/v1/authz/get | Query  | [[MOD-DE-QRY-3]](#mod-de-qry-3-get-operator-authorization)   |N/A |
 |             | Get VS Operator Authorization             | /de/v1/vs-authz/get | Query  | [[MOD-DE-QRY-4]](#mod-de-qry-4-get-vs-operator-authorization)   |N/A |
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + operator OR module call|
-|          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation + operator |
+|          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation + operator OR vs_operator of an ISSUER entry |
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
 | Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
 |                   | Update Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
@@ -3364,7 +3364,7 @@ Permitted message types to be set in `vs_operator_authz_msg_types` depends on `r
 |Participant role|Permitted Messages|
 |-|-|
 | HOLDER | TriggerResolver |
-| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated |
+| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated, RevokeDigest |
 | VERIFIER | CreateOrUpdateParticipantSession |
 | ISSUER_GRANTOR | SetParticipantOPtoValidated |
 | VERIFIER_GRANTOR | SetParticipantOPtoValidated |
@@ -4969,7 +4969,7 @@ Permitted message types to be set in `vs_operator_authz_msg_types` depends on `r
 |Participant role|Permitted Messages|
 |-|-|
 | HOLDER | TriggerResolver |
-| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated |
+| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated, RevokeDigest |
 | VERIFIER | CreateOrUpdateParticipantSession |
  
 ##### [MOD-PP-MSG-14-2] Self Create Participant precondition checks
@@ -6330,7 +6330,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-DI-MSG-2] Revoke Digest
 
-Any authorized `operator` CAN execute this method on behalf of the `corporation` that stored the digest.
+Any authorized `operator` CAN execute this method on behalf of the `corporation` that stored the digest: either under an OperatorAuthorization, or, as the vs-agent of an `ISSUER` `Participant` entry of that corporation, under a VS Operator Authorization whose record lists `RevokeDigest` (see the permitted messages of [[MOD-PP-MSG-1-1]](#mod-pp-msg-1-1-start-participant-op-parameters) and [[MOD-PP-MSG-14-1]](#mod-pp-msg-14-1-self-create-participant-parameters)). The issuer's agent that anchored a digest through [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) can therefore revoke it itself.
 
 Revoking a digest is the on-chain revocation mechanism for an individual credential whose issuance was anchored with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest); revoking the holder's `HOLDER` `Participant` entry ([[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)) withdraws trust from every credential of that relationship instead. Trust resolution of a credential whose `digestJCS` has a `Digest` entry with a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp. Revocation is irreversible. Trust resolution looks up credential digests only, so revoking a presentation digest (anchored in a Credential Verification) has no effect.
 
@@ -6340,6 +6340,7 @@ Since any corporation may store any digest and the first to store it owns it, an
 
 - `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
+- `participant_id` (uint64) (*optional*): the `ISSUER` `Participant` entry in whose context a `vs_operator` executes this message (VS Operator Authorization path). Absent when the operator acts under an OperatorAuthorization.
 - `digest` (string(256)) (*mandatory*): digest to revoke.
 
 ##### [MOD-DI-MSG-2-2] Revoke Digest precondition checks
@@ -6352,7 +6353,17 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- Authorization:
+
+either (executed by any operator of corporation; `participant_id` absent):
+[[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `RevokeDigest` message.
+[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `RevokeDigest` message.
+OR (executed by the vs-agent account of an `ISSUER` `Participant` entry; `participant_id` present):
+- Load `Participant` entry `issuer_participant` from `participant_id`; `issuer_participant.role` MUST be ISSUER and `issuer_participant.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else abort.
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `issuer_participant`) tuple.
+[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `issuer_participant`) tuple.
+else MUST abort.
+
 - if `digest` is not present, abort.
 - if `digest` is longer than 256 characters, abort.
 - a `Digest` entry `d` with `d.digest` = `digest` MUST exist, else abort.
