@@ -1,6 +1,6 @@
 # Verifiable Public Registry v5 Specification
 
-**Latest draft:** [spec v5-draft3](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v5-draft4](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Latest stable:** [spec v4](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v4/)
 
@@ -314,6 +314,7 @@ object "Ecosystem" as tra #3fbdb6 {
 [[ref: Credential schemas]] are created and managed by [[ref: ecosystems]] (i.e., by the [[ref: corporation]] controlling each [[ref: ecosystem]]). Each [[ref: Credential schema]] includes, at a minimum:
 
 - A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
+- A **SubjectKind** (`SERVICE` or `PERSON`), a **PresentationMode** (for service credentials: `PUBLIC`, `ACCREDITED_AUTOMATIC` or `ACCREDITED_APPROVAL`) a single **CredentialFormat** (`W3C_JSONLD`, `ANONCREDS`, `SD_JWT` or, for persons, `MDOC`) a **VerificationSessionMode** (`WHEN_FEES` or `REQUIRED`) and a **CredentialAnchoring** (`DIGEST` or `NONE`) that declare what credentials of this schema are for and how agents handle them; see [CredentialSchema](#credentialschema).
 - An **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` `Participant` entries are created. Modes include:
   - `OPEN`: `ISSUER` Participants can be self-created by any [[ref: corporation]].
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Participants are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
@@ -323,7 +324,7 @@ object "Ecosystem" as tra #3fbdb6 {
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `VERIFIER` Participants are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
   - `GRANTOR_ONBOARDING_PROCESS`: `VERIFIER` Participants are created by one or several [[ref: verifier grantor]](s) — ecosystem operators responsible for onboarding verifiers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
 - A **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` `Participant` entries are created. Modes include:
-  - `ISSUER_ONBOARDING_PROCESS`: `HOLDER` Participants are created directly by [[ref: issuers]] for holders, through an [[ref: onboarding process]].
+  - `ISSUER_ONBOARDING_PROCESS`: `HOLDER` Participants are created for holders through an [[ref: onboarding process]] validated by the [[ref: issuers]].
   - `PERMISSIONLESS`: a holder that wants to obtain credentials from an [[ref: issuer]] does not require a `Participant` entry in the VPR.
 - A **Participant tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each `Participant` entry in the tree can define business rules; see [Business Models](#business-models) below.
 
@@ -437,7 +438,7 @@ Example of a Json Schema credential schema:
 
 To participate in an [[ref: ecosystem]] and assume a role associated with a specific [[ref: credential schema]]:
 
-- if the schema is `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and self-create its `Participant` entry.
+- if the schema is `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and self-create its `Participant` entry; under `OPEN` verification, the entry is needed only to create `ParticipantSession`s (see `presentation_mode` in [CredentialSchema](#credentialschema)).
 
 - if the schema is not `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and complete an [[ref: onboarding process]] to obtain its `Participant` entry.
 
@@ -837,7 +838,7 @@ vg --> verifier : creates schema participant
 
 [[ref: Corporations]] acting as **issuers** or **verifiers** for a given credential schema **may be required to pay trust fees** based on the schema's configuration and `Participant` tree.
 
-If trust fee payment is required, the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**, else HOLDER agent will not accept the operation.
+If trust fee payment is required, or the schema sets `verification_session` to REQUIRED, or the schema sets a presentation validity period, or a credential of a schema whose `credential_anchoring` is DIGEST is issued (its digest is anchored through the session), the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**, else HOLDER agent will not accept the operation.
 
 Key Points for "Pay-Per" Business Models
 
@@ -857,7 +858,7 @@ Trust fees are **consistently distributed** across participants:
 - The remaining portion is **transferred directly to the participant’s wallet**.
 
 :::note
-Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment.  
+Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment, or has created the required `ParticipantSession` whenever [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) requires one (`verification_session` set to REQUIRED, a `presentation_validity_period` greater than 0, or a presentation digest to anchor).  
 If not, they **must reject** the issuance or verification request.
 
 Note: The **User Agent** and **Wallet User Agent** may refer to the same implementation.
@@ -1097,27 +1098,16 @@ entity "CredentialSchema" as cs {
   +issuer_onboarding_mode: IssuerOnboardingMode
   +verifier_onboarding_mode: VerifierOnboardingMode
   +holder_onboarding_mode: HolderOnboardingMode
+  +subject_kind: SubjectKind
+  presentation_mode: PresentationMode
+  +credential_format: CredentialFormat
+  +verification_session: VerificationSessionMode
+  +credential_anchoring: CredentialAnchoring
+  presentation_validity_period: duration
   +pricing_asset: string
   +digest_algorithm: string
 }
 
-enum "SchemaAuthorizationPolicyRole" as sapr {
-  ISSUER
-  VERIFIER
-}
-
-
-entity "SchemaAuthorizationPolicy" as sap {
-  *id: uint64
-  +created: timestamp
-  +version: integer
-  +role: sapr
-  +url: string
-  +digest_sri: string
-  +revoked: boolean
-  +effective_from: timestamp
-  effective_until: timestamp
-}
 
 
 enum "IssuerOnboardingMode" as iom {
@@ -1136,6 +1126,30 @@ enum "HolderOnboardingMode" as hom {
   ISSUER_ONBOARDING_PROCESS
   PERMISSIONLESS
 }
+enum "SubjectKind" as subjectkind {
+  SERVICE
+  PERSON
+}
+enum "PresentationMode" as presentationmode {
+  PUBLIC
+  ACCREDITED_AUTOMATIC
+  ACCREDITED_APPROVAL
+}
+enum "CredentialFormat" as credentialformat {
+  W3C_JSONLD
+  ANONCREDS
+  SD_JWT
+  MDOC
+}
+enum "VerificationSessionMode" as verificationsessionmode {
+  REQUIRED
+  WHEN_FEES
+}
+
+enum "CredentialAnchoring" as credentialanchoring {
+  DIGEST
+  NONE
+}
 
 
 entity "(SDK) Account" as account {
@@ -1150,12 +1164,15 @@ entity "OperatorAuthorization" as oauthz {
 
 entity "VSOperatorAuthorization" as vsoauthz {
    *id: uint64
+   +fee_limit_total: DenomAmount[]
+   +feegrant_msg_type_counts: map
 }
 
 entity "ParticipantAuthorizationRecord" as par {
    *participant_id: uint64
    +msg_types: msg_type[]
    +with_feegrant: boolean
+   +counted: boolean
    expiration: timestamp
    period: duration
 }
@@ -1243,7 +1260,11 @@ entity "ParticipantSessionRecord" as cspsr {
 
 entity "Digest" as digest {
   *digest: string
+  +corporation_id: uint64
+  participant_id: uint64
   +created: timestamp
+  revoked: timestamp
+  presentation_valid_until: timestamp
 }
 
 enum "ParticipantRole" as cspt {
@@ -1283,6 +1304,12 @@ entity "TrustDeposit" as td {
   +slash_count: number
 }
 
+entity "UnrepaidEcosystemSlashCount" as uesc {
+  *corporation_id: uint64
+  *ecosystem_id: uint64
+  +count: number
+}
+
 corp --o fg: grantor_corporation_id
 account --o fg: grantee
 fg "1" --- "0..n" da: spend_limit
@@ -1295,6 +1322,11 @@ xr o-- pricingassettype: base_asset_type
 xr o-- pricingassettype: quote_asset_type
 
 cs o-- pricingassettype: pricing_asset_type 
+cs o-- subjectkind: subject_kind
+cs o-- presentationmode: presentation_mode
+cs o-- credentialformat: credential_format
+cs o-- verificationsessionmode: verification_session
+cs o-- credentialanchoring: credential_anchoring
 
 corp --o oauthz: corporation_id
 account --o oauthz: operator
@@ -1309,11 +1341,9 @@ csp o-- cs: schema_id
 csp o-- "0..1" csp: validator_participant_id
 cs o-- tr: ecosystem_id
 
-cs o-- "0..n" sap: policies
-
 csps --- "1..n" cspsr : session_records
 
-cspsr  o-- "0..1" csp: issuer_participant_id
+cspsr  o-- "1" csp: issuer_participant_id
 cspsr  o-- "0..1" csp: verifier_participant_id
 cspsr  o-- "0..1" csp: wallet_agent_participant_id
 cspsr  o-- "0..1" csp: agent_participant_id
@@ -1341,6 +1371,10 @@ csps o-- account: vs_operator
 
 valstate --o csp: op_state
 corp --o td: corporation_id
+corp --o uesc: corporation_id
+tr --o uesc: ecosystem_id
+corp --o digest: corporation_id
+csp --o digest: participant_id
 
 @enduml
 
@@ -1448,24 +1482,15 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission. HOLDER permission is used to check credential revocation status; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
+- `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the UserAgent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to PERMISSIONLESS, since a natural person holds no `Participant` entry. Immutable.
+- `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service as a Linked Verifiable Presentation in its DID Document, and anyone can read it; reading a published credential is not a Credential Verification: no session is created, no fees are computed and `verification_session` has no effect, so the `verification_fees` of a PUBLIC schema's `Participant` entries SHOULD be 0, since they can never be collected. ACCREDITED_AUTOMATIC: the credential is not published; the holder service presents it automatically, without the approval of its controller, to any requesting verifier authorized under the schema's `verifier_onboarding_mode` (under OPEN any peer, a VERIFIER `Participant` entry being needed only to create a `ParticipantSession`; under the other modes the holder of an active VERIFIER `Participant` entry), after having verified the `ParticipantSession` when one is required (see `verification_session`). ACCREDITED_APPROVAL: as ACCREDITED_AUTOMATIC, but each presentation requires the approval of the controller of the holder service, given before any payment is made. The VPR stores this declaration; its enforcement is the responsibility of agents, as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Immutable.
+- `credential_format` (CredentialFormat) (*mandatory*): the single format in which credentials of this schema are issued: W3C_JSONLD (W3C Verifiable Credentials in JSON-LD), ANONCREDS, SD_JWT, or MDOC (ISO/IEC 18013-5 mobile documents, `mso_mdoc`). MDOC is only allowed when `subject_kind` is PERSON. A PUBLIC credential is necessarily W3C_JSONLD, since it is published as a Linked Verifiable Presentation; a presented (non-published) service credential MAY use ANONCREDS or SD_JWT when selective disclosure or unlinkability matters, as the UserAgent credential does. An ecosystem that needs the same claims in several formats creates one schema per format. Future versions of this specification MAY add values. Immutable.
+- `credential_anchoring` (CredentialAnchoring) (*mandatory*): declares whether the digest of every credential of this schema is anchored in the VPR at issuance. DIGEST: the issuer anchors the credential digest, as defined by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/) for the container, through the issuance `ParticipantSession` before delivering the credential; the `Digest` entry gives the credential's effective issuance time, proves under which `ISSUER` entry it was issued, and carries its revocation ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)). NONE: no credential digest is anchored; the container's native mechanisms apply and trust in the credential requires a currently authorized issuer. MUST be DIGEST when `credential_format` is W3C_JSONLD and MUST be NONE when it is ANONCREDS (a verifier never sees an AnonCreds credential, only a proof derived from it); an ecosystem chooses for SD_JWT and MDOC. [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) requires the `digest` of a Credential Issuance under DIGEST and refuses one under NONE. Immutable.
+- `verification_session` (VerificationSessionMode) (*mandatory*): declares when a verifier MUST create a `ParticipantSession` ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)) for a verification of a credential of this schema. WHEN_FEES: only when the fees computed for the verification are greater than 0. REQUIRED: for every verification, even when these fees are 0, so that an on-chain record of the verification exists. Under WHEN_FEES a session MUST be created when the fees are greater than 0 and MAY be created otherwise. MUST be WHEN_FEES for a PUBLIC schema, whose credentials are read, not presented. Independently of this attribute, a session is also mandatory for every verification when the schema's `presentation_validity_period` is greater than 0, and for every Credential Issuance under a schema whose `credential_anchoring` is DIGEST, since the digest is anchored through the session. The VPR stores this attribute and does not read it in [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session); agents enforce it as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): unlike `subject_kind`, `presentation_mode` and `credential_format`, this attribute is a cost and audit setting of the ecosystem, with no effect on trust resolution, on the credentials already issued or on the sessions already created; a change applies to the verifications that follow it, and agents read the value in force at the time of the verification.
+- `presentation_validity_period` (duration) (*optional*): the duration in seconds during which a presentation of a credential of this schema is valid evidence of a verification; null or 0 means no reliance period: no digest requirement and a null `presentation_valid_until` on the presentation digests. MUST be null or 0 when `presentation_mode` is PUBLIC (published credentials are read, not presented, and produce no receipt). Maximum 315,360,000 seconds (3,650 days). A value greater than 0 makes a `ParticipantSession` and the presentation digest mandatory for every verification of the schema, whatever `verification_session` says: [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) reads the value in force at the block to require the digest and to stamp `presentation_valid_until` on it. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): a change applies to the verifications that follow it and does not change the `presentation_valid_until` values already stamped; agents read the value in force at the time of the verification. The legal effect of the period is stated by the ecosystem in its governance framework.
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
-- `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestJCS` of credentials issued under this schema, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
-
-### SchemaAuthorizationPolicy
-
-`SchemaAuthorizationPolicy`:
-
-- `id` (uint64) (*mandatory*) (key): the id of this `SchemaAuthorizationPolicy`.
-- `schema_id` (uint64) (*mandatory*): id of the `CredentialSchema` this policy applies to.
-- `created` (timestamp) (*mandatory*): timestamp when this policy entry was created.
-- `version` (integer) (*mandatory*): version number of this policy for the given `(schema_id, role)`.
-- `role` (SchemaAuthorizationPolicyRole) (*mandatory*): role this policy applies to (`ISSUER` or `VERIFIER`).
-- `url` (string) (*mandatory*): URL where the policy document is published.
-- `digest_sri` (string) (*mandatory*): SRI hash of the policy document, used to guarantee integrity and immutability.
-- `effective_from` (timestamp) (*mandatory*): timestamp from which this policy version is in force.
-- `effective_until` (timestamp) (*optional*): timestamp until which this policy version is in force, if time-limited.
-- `revoked` (boolean) (*mandatory*): indicates whether this policy version has been revoked and must no longer be used.
+- `digest_algorithm` (string) (*mandatory*): algorithm used to compute the credential digests of credentials issued under this schema (when `credential_anchoring` is DIGEST) and the presentation digests anchored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
 
 ### Participant
 
@@ -1504,6 +1529,14 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 > Note: VS operator authorization settings (spend limits, operation-budget cycle, feegrant, authorized message types) are stored in `ParticipantAuthorizationRecord` entries inside [VSOperatorAuthorization](#vsoperatorauthorization), keyed by `Participant.id`. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
+### UnrepaidEcosystemSlashCount
+
+`UnrepaidEcosystemSlashCount`:
+
+- `corporation_id` (uint64) (*mandatory*) (key): the corporation.
+- `ecosystem_id` (uint64) (*mandatory*) (key): the ecosystem.
+- `count` (uint32) (*mandatory*): the number of `Participant` entries of the corporation whose schema belongs to the ecosystem and whose slash is unrepaid (`slashed_deposit` > `repaid_deposit`). An entry exists only while `count` > 0: it is created or incremented by [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) when an entry's slash becomes unrepaid, decremented by [[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit) when it is repaid, and deleted when the count reaches 0. It is derived state: it lets the onboarding gates ([[MOD-PP-MSG-1-2-5]](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks)) and Find Beneficiaries ([[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)) answer "does this corporation carry an unrepaid ecosystem slash in this ecosystem" with one lookup instead of a scan of its `Participant` entries. The network slash needs no index: it is read from the corporation's `TrustDeposit` entry.
+
 ### ParticipantSession
 
 `ParticipantSession`:
@@ -1521,7 +1554,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 - `id` (uint64) (*mandatory*) (key): the id of this `ParticipantSessionRecord`.
 - `created` (timestamp) (*mandatory*): timestamp this record has been created.
-- `issuer_participant_id` (uint64) (*optional*): related issuer `Participant` id (if applicable).
+- `issuer_participant_id` (uint64) (*mandatory*): the `ISSUER` `Participant` entry of the issuer of the credential (the payer's own entry in a Credential Issuance, the credential issuer's entry in a Credential Verification).
 - `verifier_participant_id` (uint64) (*optional*): related verifier `Participant` id (if applicable).
 - `wallet_agent_participant_id` (uint64) (*optional*): related wallet agent `Participant` id (if applicable).
 - `agent_participant_id` (uint64) (*optional*): permission id of the agent `Participant` id (if applicable).
@@ -1547,11 +1580,25 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### Digest
 
-- `digest` (string) (*mandatory*) (key): digest to store. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential's `digestJCS`, computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
-- `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential.
+- `digest` (string) (*mandatory*) (key): digest to store. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] on whose behalf the digest was stored: the signing `corporation` of [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest), or the `corporation` of the `ParticipantSession` when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session).
+- `participant_id` (uint64) (*optional*): the `Participant` entry under which the digest was anchored: the primary participant of the session when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) (the `ISSUER` entry in a Credential Issuance, the `VERIFIER` entry in a Credential Verification); null when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). Together with the validator chain of that entry, it determines who may revoke the digest ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)).
+- `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential. For a presentation digest anchored by a verifier in a Credential Verification ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)), it is the **effective presentation time**: together with the session created by the same transaction (that transaction is the link between the two), it lets the holder prove to whom and when it presented, and the verifier prove what it received, without any content on chain.
+- `revoked` (timestamp) (*optional*): block execution timestamp at which this digest was revoked by [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest); null if the digest has not been revoked. For a digest anchored at credential issuance, a non-null value means that the owning corporation, or a governance ancestor of the anchoring entry ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)), has revoked the credential as of this timestamp; trust resolution takes it into account together with its check that the owner is the issuer's corporation (Verifiable Trust specification). Revocation has no meaning for a presentation digest: trust resolution consults `revoked` for credential digests only.
+- `presentation_valid_until` (timestamp) (*optional*): for a **presentation digest** only, the end of the period during which the presentation is valid evidence of a verification, set by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) from the `presentation_validity_period` of the schema. MUST be null for every digest anchored in a Credential Issuance and for every digest stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest): it never concerns the validity of a credential, which is bounded by the credential's own `validUntil` and by the `HOLDER` entry it was issued under. Trust resolution never reads it.
+
+The anchoring context tells the two kinds of digest apart:
+
+| | Credential digest | Presentation digest |
+| --- | --- | --- |
+| Anchored by | a Credential Issuance session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)) | a Credential Verification session |
+| `participant_id` | the `ISSUER` entry, or null | the `VERIFIER` entry |
+| `created` | effective issuance time | effective presentation time |
+| `revoked` | the credential is revoked as of this time (owner or governance ancestor) | ignored by trust resolution; never shortens `presentation_valid_until` |
+| `presentation_valid_until` | always null | end of the reliance period, when the schema's `presentation_validity_period` is greater than 0 |
 
 :::note
-A `Digest` entry records only the digest and the timestamp at which it was first persisted: it does not record which [[ref: account]] anchored it, and the VPR does not verify a digest against any content.
+A `Digest` entry records the digest, the corporation that anchored it, the `Participant` entry under which it was anchored (if any), the timestamp at which it was first persisted, its revocation timestamp (if any) and, for a presentation digest, the end of its reliance period: it does not record which operator [[ref: account]] anchored it, and the VPR does not verify a digest against any content. A digest is revoked by its owner corporation or by a governance ancestor of its anchoring entry ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)). Credential digests concern W3C credentials, whose issuance time and revocation the Verifiable Trust specification anchors here; other containers carry their own revocation mechanisms.
 :::
 
 ### OperatorAuthorization
@@ -1586,6 +1633,8 @@ A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries 
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
 - `records` (ParticipantAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation_id`.
+- `fee_limit_total` (DenomAmount[]) (*mandatory*): derived, the sum of the `fee_spend_limit` of the counted records, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
+- `feegrant_msg_type_counts` (map<msg_type, uint32>) (*mandatory*): derived, for each message type the number of counted records that include it, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 
 ### ParticipantAuthorizationRecord
 
@@ -1597,6 +1646,7 @@ A `ParticipantAuthorizationRecord` carries the per-permission authorization conf
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `fee_spend_limit` (DenomAmount[]) (*conditional*): this entry's **contribution** to the corporation's aggregate fee budget for `vs_operator`: up to this amount of transaction fees per `GlobalVariables.vs_operator_fee_period`, added to the per-period limit of the aggregate allowance derived by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) while the `Participant` entry is an [[ref: active participant]] or [[ref: future participant]]. MUST be set, with every amount strictly positive, if `with_feegrant` is true; MUST NOT be set otherwise. There is no per-record runtime fee ledger: the periodic fee cap is enforced by the aggregate `x/feegrant` allowance at fee-processing time.
 - `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this `Participant` entry, through an on-chain `FeeGrant`.
+- `counted` (boolean) (*mandatory*): derived, whether this record's contribution is currently included in the aggregates of its VSOA ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). Initialized to false at creation.
 - `expiration` (timestamp) (*conditional*): end of the current **operation-budget cycle**. Set if, and only if, `period` is set and the cycle has started: written to `now() + period` at creation ([[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) or at first validation ([[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) for [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) records), and advanced by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 5: when `now() >= expiration`, `remaining_spend` is reset to `spend_limit` and `expiration` is advanced to `now() + period`. It carries **no window semantics**: the entry window is enforced solely by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1.
 - `period` (duration) (*optional*): length of the operation-budget cycle for `spend_limit`. Requires `spend_limit`. Does not apply to fees: the fee budget cycles on the network-wide `GlobalVariables.vs_operator_fee_period`.
 
@@ -1895,11 +1945,11 @@ Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission
 
 If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `ParticipantAuthorizationRecord` `record` looked up in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
 
-> Realization: the corporation's fee **payment and its periodic cap** are both enforced by the aggregate VS-operator `x/feegrant` allowance at transaction-fee-processing time — an `AllowedMsgAllowance` over the union of the live records' `msg_types`, wrapping a `PeriodicAllowance` whose `period` is `GlobalVariables.vs_operator_fee_period` and whose per-period limit is the **sum** of the contributing records' `fee_spend_limit` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). The `PeriodicAllowance` resets itself during fee deduction, so a transaction arriving after a fee-cycle boundary needs no prior reset. There is no per-record fee ledger: no VPR-side fee check or deduction is performed.
+> Realization: the corporation's fee **payment and its periodic cap** are both enforced by the aggregate VS-operator `x/feegrant` allowance at transaction-fee-processing time — an `AllowedMsgAllowance` over the union of the counted records' `msg_types`, wrapping a `PeriodicAllowance` whose `period` is `GlobalVariables.vs_operator_fee_period` and whose per-period limit is the **sum** of the contributing records' `fee_spend_limit` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). The `PeriodicAllowance` resets itself during fee deduction, so a transaction arriving after a fee-cycle boundary needs no prior reset. There is no per-record fee ledger: no VPR-side fee check or deduction is performed.
 
 1. `record.with_feegrant` MUST be true, else abort (the corporation has not enabled fee payment for this entry).
 
-> Ordering caveat: the corporation's fee is paid by the `x/feegrant` allowance **during fee processing, before** the VPR method runs. If the method then aborts (any failed precondition, including [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1), the already-paid fee is **NOT** refunded (the reverted transaction still consumed gas). The aggregate periodic cap bounds this exposure to the sum of the live records' `fee_spend_limit` per `vs_operator_fee_period`.
+> Ordering caveat: the corporation's fee is paid by the `x/feegrant` allowance **during fee processing, before** the VPR method runs. If the method then aborts (any failed precondition, including [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1), the already-paid fee is **NOT** refunded (the reverted transaction still consumed gas). The aggregate periodic cap bounds this exposure to the sum of the counted records' `fee_spend_limit` per `vs_operator_fee_period`.
 
 ##### [AUTHZ-CHECK-5] Corporation Registration check
 
@@ -1912,7 +1962,7 @@ This check applies to every delegable message that invokes [[AUTHZ-CHECK]](#auth
 #### Example
 
 A corporation `corporationABC` wants to authorize an operator account `accountABC` to execute the  
-[`mod-pp-msg-10-create-or-update-participant-session`](#mod-pp-msg-10-create-or-update-participant-session),
+[`mod-pp-msg-1-start-participant-op`](#mod-pp-msg-1-start-participant-op),
 [`mod-pp-msg-3-set-participant-op-to-validated`](#mod-pp-msg-3-set-participant-op-to-validated), and
 [`mod-pp-msg-15-trigger-resolver`](#mod-pp-msg-15-trigger-resolver)
  messages.
@@ -1922,7 +1972,7 @@ Additionally, the corporation wants `accountABC` to pay the transaction fees for
 To achieve this, `corporationABC` MUST:
 
 - create an **authorization** from `corporationABC` to `accountABC` for the  
-  [`mod-pp-msg-10-create-or-update-participant-session`](#mod-pp-msg-10-create-or-update-participant-session),
+  [`mod-pp-msg-1-start-participant-op`](#mod-pp-msg-1-start-participant-op),
 [`mod-pp-msg-3-set-participant-op-to-validated`](#mod-pp-msg-3-set-participant-op-to-validated), and
 [`mod-pp-msg-15-trigger-resolver`](#mod-pp-msg-15-trigger-resolver) message types, optionally enabling an associated fee grant.
 
@@ -1956,15 +2006,10 @@ As a result, `accountABC` is authorized to:
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation + operator |
 |                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |corporation + operator |
 |                                | Update CS Module Parameters             |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |governance proposal |
-|                  | Create Schema Authorization Policy                  | N/A (Tx)               | Msg  | [[MOD-CS-MSG-5]](#mod-cs-msg-5-create-schema-authorization-policy) | corporation + operator |
-|                  | Increase Active Schema Authorization Policy Version | N/A (Tx)               | Msg  | [[MOD-CS-MSG-6]](#mod-cs-msg-6-increase-active-schema-authorization-policy-version) | corporation + operator |
-|                  | Revoke Schema Authorization Policy                  | N/A (Tx)               | Msg  | [[MOD-CS-MSG-7]](#mod-cs-msg-7-revoke-schema-authorization-policy) | corporation + operator |
 |                                | List Credential Schemas                 | /cs/v1/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |N/A  |
 |                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |N/A  |
 |                                | Render Json Schema                      | /cs/v1/js/{id}               | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |N/A  |
 |                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-CS-QRY-4]](#mod-cs-qry-4-list-module-parameters)   |N/A  |
-|                  | Get Schema Authorization Policy                         | /cs/v1/sap/get         | Query | [[MOD-CS-QRY-5]](#mod-cs-qry-5-get-schema-authorization-policy) | N/A |
-|                  | List Schema Authorization Policies                      | /cs/v1/sap/list        | Query | [[MOD-CS-QRY-6]](#mod-cs-qry-6-list-schema-authorization-policies) | N/A |
 | Participant                    | Start Participant OP                     |     N/A (Tx)                       | Msg    | [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op)    |corporation + operator |
 |                                | Renew a Participant OP                   |       N/A (Tx)                     | Msg    | [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)    |corporation + operator |
 |                                | Set Participant OP to Validated          |        N/A (Tx)                     | Msg    | [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)    |corporation + operator |
@@ -1972,7 +2017,7 @@ As a result, `accountABC` is authorized to:
 |                                | Create Root Participant                  |         N/A (Tx)                | Msg    | [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant)   |corporation + operator |
 |                                | Set Participant Effective Until                       |         N/A (Tx)            | Msg    | [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until)  |corporation + operator |
 |                                | Revoke Participant                       |          N/A (Tx)              | Msg    | [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)  |corporation + operator |
-|                                | Create or update Participant Session     |           N/A (Tx)              | Msg    | [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)  |corporation + operator |
+|                                | Create or update Participant Session     |           N/A (Tx)              | Msg    | [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)  |corporation + vs_operator (VS Operator Authorization) |
 |                                | Update Participant Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-PP-MSG-11]](#mod-pp-msg-11-update-participant-module-parameters) |governance proposal |
 |                                | Slash Participant Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) |corporation + operator |
 |                                | Repay Participant Slashed Trust Deposit  |     N/A (Tx)                | Msg    | [[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit) |corporation + operator |
@@ -2003,6 +2048,7 @@ As a result, `accountABC` is authorized to:
 |             | Get Operator Authorization                | /de/v1/authz/get | Query  | [[MOD-DE-QRY-3]](#mod-de-qry-3-get-operator-authorization)   |N/A |
 |             | Get VS Operator Authorization             | /de/v1/vs-authz/get | Query  | [[MOD-DE-QRY-4]](#mod-de-qry-4-get-vs-operator-authorization)   |N/A |
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + operator OR module call|
+|          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation + operator of the owner, of an active ancestor or of the schema's ecosystem (OperatorAuthorization), or vs_operator of the active anchoring entry or of an active ancestor |
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
 | Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
 |                   | Update Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
@@ -2481,9 +2527,7 @@ If all precondition checks passed, [[ref: query]] is executed and result (may be
 
 Anyone CAN run this [[ref: query]].
 
-##### [MOD-ES-QRY-3-2] List Module Parameters parameters
-
-##### [MOD-ES-QRY-3-2] List Module Parameters query checks
+##### [MOD-ES-QRY-3-2] List Module Parameters parameters and query checks
 
 ##### [MOD-ES-QRY-3-3] List Module Parameters execution of the query
 
@@ -2683,6 +2727,12 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*).
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*).
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*).
+- `subject_kind` (SubjectKind) (*mandatory*).
+- `presentation_mode` (PresentationMode) (*conditional*): mandatory if `subject_kind` is SERVICE, MUST be absent otherwise.
+- `credential_format` (CredentialFormat) (*mandatory*).
+- `credential_anchoring` (CredentialAnchoring) (*conditional*): mandatory when `credential_format` is SD_JWT or MDOC; if absent, DIGEST when `credential_format` is W3C_JSONLD and NONE when it is ANONCREDS.
+- `verification_session` (VerificationSessionMode) (*optional*), default to WHEN_FEES.
+- `presentation_validity_period` (duration) (*optional*): seconds, default to null (no reliance period).
 - `pricing_asset_type` (PricingAssetType) (*mandatory*).
 - `pricing_asset` (string) (*mandatory*).
 - `digest_algorithm` (string) (*mandatory*): MUST be one of the lowercase tokens `sha384` or `sha512`, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
@@ -2708,6 +2758,13 @@ If any of these precondition checks fail, method MUST abort.
 - `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*). MUST be a valid IssuerOnboardingMode.
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*). MUST be a valid VerifierOnboardingMode.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*). MUST be a valid HolderOnboardingMode.
+- `subject_kind` (SubjectKind) (*mandatory*). MUST be a valid SubjectKind.
+- `presentation_mode` (PresentationMode) (*conditional*): if `subject_kind` is SERVICE, MUST be present and MUST be a valid PresentationMode; if `subject_kind` is PERSON, MUST be absent; else abort.
+- if `subject_kind` is PERSON, `holder_onboarding_mode` MUST be PERMISSIONLESS (a natural person holds no `Participant` entry), else abort.
+- `credential_format` (CredentialFormat) (*mandatory*). MUST be a valid CredentialFormat. If `presentation_mode` is PUBLIC, `credential_format` MUST be W3C_JSONLD (a published credential is a Linked Verifiable Presentation), else abort. If `credential_format` is MDOC, `subject_kind` MUST be PERSON, else abort.
+- `credential_anchoring` (CredentialAnchoring) (*conditional*): if present, MUST be a valid CredentialAnchoring. MUST be DIGEST or absent when `credential_format` is W3C_JSONLD, NONE or absent when it is ANONCREDS, and MUST be present otherwise; else abort.
+- `verification_session` (VerificationSessionMode) (*optional*): if present, MUST be a valid VerificationSessionMode. If `presentation_mode` is PUBLIC, MUST be WHEN_FEES or absent, else abort.
+- `presentation_validity_period` (duration) (*optional*): if present, MUST be between 0 and 315,360,000 seconds. If `presentation_mode` is PUBLIC, MUST be 0 or absent, else abort.
 - `digest_algorithm` (string) (*mandatory*) MUST be one of the lowercase tokens `sha384` or `sha512`, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
 
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU (Trust Unit),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
@@ -2743,6 +2800,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.issuer_onboarding_mode`: `issuer_onboarding_mode`
   - `cs.verifier_onboarding_mode`: `verifier_onboarding_mode`
   - `cs.holder_onboarding_mode`: `holder_onboarding_mode`
+  - `cs.subject_kind`: `subject_kind`
+  - `cs.presentation_mode`: `presentation_mode` (null if `subject_kind` is PERSON)
+  - `cs.credential_format`: `credential_format`
+  - `cs.credential_anchoring`: `credential_anchoring` if present, else DIGEST when `credential_format` is W3C_JSONLD, NONE when it is ANONCREDS
+  - `cs.verification_session`: `verification_session` if present, else WHEN_FEES
+  - `cs.presentation_validity_period`: `presentation_validity_period` (null if absent)
   - `cs.created`: current timestamp
   - `cs.modified`: `cs.created`.
   - `cs.archived`: false
@@ -2770,8 +2833,10 @@ An [[ref: account]] that would like to update a [[ref: credential schema]] MUST 
 - `issuer_validation_validity_period` (*mandatory*), default to 0 (days).
 - `verifier_validation_validity_period` (*mandatory*), default to 0 (days).
 - `holder_validation_validity_period` (*mandatory*), default to 0 (days).
+- `verification_session` (VerificationSessionMode) (*optional*): if absent, the attribute is unchanged.
+- `presentation_validity_period` (duration) (*optional*): seconds; if absent, the attribute is unchanged.
 
-other attributes are immutables and cannot be updated.
+other attributes (including `subject_kind`, `presentation_mode`, `credential_format` and `credential_anchoring`) are immutable and cannot be updated.
 
 ##### [MOD-CS-MSG-2-2] Update Credential Schema precondition checks
 
@@ -2791,6 +2856,8 @@ If any of these precondition checks fail, method MUST abort.
 - `issuer_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
 - `verifier_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_validation_validity_period_max_days` days.
 - `holder_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
+- `verification_session`, if present, MUST be a valid VerificationSessionMode; if `cs.presentation_mode` is PUBLIC, it MUST be WHEN_FEES, else MUST abort.
+- `presentation_validity_period`, if present, MUST be between 0 and 315,360,000 seconds; if `cs.presentation_mode` is PUBLIC, it MUST be 0, else MUST abort.
 
 ###### [MOD-CS-MSG-2-2-2] Update Credential Schema fee checks
 
@@ -2809,6 +2876,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.issuer_validation_validity_period`: `issuer_validation_validity_period`
   - `cs.verifier_validation_validity_period`: `verifier_validation_validity_period`
   - `cs.holder_validation_validity_period`: `holder_validation_validity_period`
+  - `cs.verification_session`: `verification_session` if present, else unchanged
+  - `cs.presentation_validity_period`: `presentation_validity_period` if present, else unchanged
   - `cs.modified`: current timestamp.
 
 #### [MOD-CS-MSG-3] Archive Credential Schema
@@ -2888,148 +2957,13 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
 
-#### [MOD-CS-MSG-5] Create Schema Authorization Policy
+#### [MOD-CS-MSG-5] Void
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+#### [MOD-CS-MSG-6] Void
 
-This message creates a **draft** `SchemaAuthorizationPolicy` for a given `(schema_id, role)`, or overwrites the existing draft policy if one already exists.  
-A draft policy is defined as a policy with `effective_from == null` and MUST NOT be revoked.
+#### [MOD-CS-MSG-7] Void
 
-Accordingly, if a credential schema defines one or more active policies for the ISSUER or VERIFIER role, the corresponding corporation that grants the ISSUER or VERIFIER role for this schema (ISSUER_GRANTOR, VERIFIER_GRANTOR, or ECOSYSTEM, depending on how schema issuer and verifier modes have been configured) MUST issue an IAC or VAC credential to the candidate upon successful completion of the onboarding process. Refer to the [Verifiable Trust spec](https://github.com/verana-labs/verifiable-trust-spec) for more information.
-
-##### [MOD-CS-MSG-5-1] Create Schema Authorization Policy parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
-- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
-- `url` (string): URL where the policy document is published (*mandatory*).
-- `digest_sri` (string): SRI digest of the policy document (*mandatory*).
-
-##### [MOD-CS-MSG-5-2] Create Schema Authorization Policy precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-CS-MSG-5-2-1] Create Schema Authorization Policy basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `corporation`.
-- `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
-- `url` MUST be a non-empty valid [[ref: URI]].
-- `digest_sri` MUST be non-empty.
-- there MUST NOT exist more than one policy for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
-
-###### [MOD-CS-MSG-5-2-2] Create Schema Authorization Policy fee checks
-
-Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
-
-##### [MOD-CS-MSG-5-3] Create Schema Authorization Policy execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs:
-
-- if a draft policy exists for `(schema_id, role)`:
-  - update the existing policy by setting:
-    - `url = url`
-    - `digest_sri = digest_sri`
-- otherwise, create and persist a new `SchemaAuthorizationPolicy` entry `sap`:
-  - `sap.id`: auto-incremented uint64
-  - `sap.schema_id`: `schema_id`
-  - `sap.role`: `role`
-  - `sap.version`: max existing version for `(schema_id, role)` + 1, or `1` if none exist
-  - `sap.url`: `url`
-  - `sap.digest_sri`: `digest_sri`
-  - `sap.created`: current timestamp
-  - `sap.effective_from`: `null`
-  - `sap.effective_until`: `null`
-  - `sap.revoked`: `false`
-
-#### [MOD-CS-MSG-6] Increase Active Schema Authorization Policy Version
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-This message activates the current draft `SchemaAuthorizationPolicy` for the given `(schema_id, role)` and deactivates any previously active version. Deactivation does not constitute revocation; credentials issued under earlier policies MAY continue to be considered valid.
-
-##### [MOD-CS-MSG-6-1] Increase Active Schema Authorization Policy Version parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
-- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
-
-##### [MOD-CS-MSG-6-2] Increase Active Schema Authorization Policy Version precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-CS-MSG-6-2-1] Basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `schema_id` MUST reference an existing `CredentialSchema` entry controlled by `corporation`.
-- exactly one draft policy MUST exist for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
-- the draft policy MUST have non-empty `url` and `digest_sri`.
-
-###### [MOD-CS-MSG-6-2-2] Fee checks
-
-Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
-
-##### [MOD-CS-MSG-6-3] Increase Active Schema Authorization Policy Version execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks atomically in a [[ref: transaction]]:
-
-- let `draft` be the unique policy with `effective_from == null` and `revoked == false`.
-- let `prev_active` be the active policy for `(schema_id, role)`, if any.
-- set `draft.effective_from = now`.
-- if `prev_active` exists:
-  - set `prev_active.effective_until = now`.
-
-#### [MOD-CS-MSG-7] Revoke Schema Authorization Policy
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-This message revokes a previously enabled `SchemaAuthorizationPolicy` version. Revoked means previously issued credential that refer to this policy are automatically considered revoked.
-
-##### [MOD-CS-MSG-7-1] Revoke Schema Authorization Policy parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
-- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
-- `version` (integer): policy version to revoke (*mandatory*).
-
-##### [MOD-CS-MSG-7-2] Revoke Schema Authorization Policy precondition checks
-
-If any of these precondition checks fail, method MUST abort.
-
-###### [MOD-CS-MSG-7-2-1] Basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- a policy MUST exist for `(schema_id, role, version)`.
-- the targeted policy MUST have `effective_from != null` (a policy that has never been enabled MUST NOT be revoked).
-- the targeted policy MUST NOT already be revoked.
-
-###### [MOD-CS-MSG-7-2-2] Fee checks
-
-Fee payer MUST have an available balance in its [[ref: account]] to cover the required [[ref: estimated transaction fees]].
-
-##### [MOD-CS-MSG-7-3] Revoke Schema Authorization Policy execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following task in a [[ref: transaction]]:
-
-- set `revoked = true` on the targeted `SchemaAuthorizationPolicy` entry.
+> Note: the `SchemaAuthorizationPolicy` entity, its messages ([MOD-CS-MSG-5] to [MOD-CS-MSG-7]) and its queries ([MOD-CS-QRY-5], [MOD-CS-QRY-6]) are deferred to v6. In v5, accreditation criteria are published by the ecosystem governance framework, and the presentation validity period is the `presentation_validity_period` attribute of the `CredentialSchema` entry.
 
 #### [MOD-CS-QRY-1] List Credential Schemas
 
@@ -3042,6 +2976,11 @@ Method execution MUST perform the following task in a [[ref: transaction]]:
 - `issuer_onboarding_mode` (IssuerOnboardingMode): if set, filter by `issuer_onboarding_mode`.
 - `verifier_onboarding_mode` (VerifierOnboardingMode): if set, filter by `verifier_onboarding_mode`.
 - `holder_onboarding_mode` (HolderOnboardingMode): if set, filter by `holder_onboarding_mode`.
+- `subject_kind` (SubjectKind): if set, filter by `subject_kind`.
+- `presentation_mode` (PresentationMode): if set, filter by `presentation_mode`.
+- `credential_format` (CredentialFormat): if set, filter by `credential_format`.
+- `verification_session` (VerificationSessionMode): if set, filter by `verification_session`.
+- `credential_anchoring` (CredentialAnchoring): if set, filter by `credential_anchoring`.
 
 ##### [MOD-CS-QRY-1-2] List Credential Schemas checks
 
@@ -3090,9 +3029,7 @@ Schema MUST be rendered cononized, even if it was not created canonized using th
 
 Anyone CAN run this [[ref: query]].
 
-##### [MOD-CS-QRY-4-2] List Module Parameters parameters
-
-##### [MOD-CS-QRY-4-2] List Module Parameters query checks
+##### [MOD-CS-QRY-4-2] List Module Parameters parameters and query checks
 
 ##### [MOD-CS-QRY-4-3] List Module Parameters execution of the query
 
@@ -3111,75 +3048,9 @@ Return the list of the existing parameters and their values.
 }
 ```
 
-#### [MOD-CS-QRY-5] Get Schema Authorization Policy
+#### [MOD-CS-QRY-5] Void
 
-This query returns a single `SchemaAuthorizationPolicy` identified by its unique `id`.
-
-##### [MOD-CS-QRY-5-1] Get Schema Authorization Policy parameters
-
-- `id` (uint64): unique identifier of the `SchemaAuthorizationPolicy` (*mandatory*).
-
-##### [MOD-CS-QRY-5-2] Get Schema Authorization Policy precondition checks
-
-If any of these precondition checks fail, query MUST abort.
-
-- `id` MUST be provided.
-- a `SchemaAuthorizationPolicy` entry with the given `id` MUST exist.
-
-##### [MOD-CS-QRY-5-3] Get Schema Authorization Policy execution
-
-If all precondition checks pass, the query MUST return the corresponding
-`SchemaAuthorizationPolicy` entry:
-
-- `id`
-- `schema_id`
-- `role`
-- `version`
-- `url`
-- `digest_sri`
-- `created`
-- `effective_from`
-- `effective_until`
-- `revoked`
-
-
-#### [MOD-CS-QRY-6] List Schema Authorization Policies
-
-This query returns the list of `SchemaAuthorizationPolicy` entries associated
-with a given `(schema_id, role)` pair.
-
-##### [MOD-CS-QRY-6-1] List Schema Authorization Policies parameters
-
-- `schema_id` (uint64): id of the related `CredentialSchema` (*mandatory*).
-- `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
-
-##### [MOD-CS-QRY-6-2] List Schema Authorization Policies precondition checks
-
-If any of these precondition checks fail, query MUST abort.
-
-- `schema_id` MUST be provided.
-- `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
-- `schema_id` MUST reference an existing `CredentialSchema` entry.
-
-##### [MOD-CS-QRY-6-3] List Schema Authorization Policies execution
-
-If all precondition checks pass, the query MUST return the list of
-`SchemaAuthorizationPolicy` entries matching `(schema_id, role)`.
-
-Returned entries MUST include at least the following fields:
-
-- `id`
-- `schema_id`
-- `role`
-- `version`
-- `url`
-- `digest_sri`
-- `created`
-- `effective_from`
-- `effective_until`
-- `revoked`
-
-Entries MUST be ordered by ascending `version`.
+#### [MOD-CS-QRY-6] Void
 
 ### Participant Module
 
@@ -3270,7 +3141,7 @@ At any time, the [[ref: applicant]] CAN cancel the [[ref: onboarding process]] (
 Some unexpected situations may arise and MUST be mitigated. Examples:
 
 - if the selected [[ref: validator]] Participant entry is revoked while the [[ref: applicant]] is in `PENDING` state: applicant CAN cancel the [[ref: onboarding process]] (see [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request));
-- if the selected [[ref: validator]] Participant entry is revoked while the [[ref: applicant]] is in `VALIDATED` state: applicant CAN renew the [[ref: onboarding process]] by choosing a new validator (see [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)).
+- if the selected [[ref: validator]] Participant entry is revoked while the [[ref: applicant]] is in `VALIDATED` state: the applicant's entry stays effective until its own `effective_until` but cannot be renewed, since renewal requires the same validator ([[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)); to keep its role, the applicant performs a new [[ref: onboarding process]] with another validator.
 
 #### [MOD-PP-MSG-1] Start Participant OP
 
@@ -3302,12 +3173,10 @@ Permitted message types to be set in `vs_operator_authz_msg_types` depends on `r
 
 |Participant role|Permitted Messages|
 |-|-|
-| HOLDER | TriggerResolver |
-| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated |
+| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated, RevokeDigest |
 | VERIFIER | CreateOrUpdateParticipantSession |
-| ISSUER_GRANTOR | SetParticipantOPtoValidated |
+| ISSUER_GRANTOR | SetParticipantOPtoValidated, RevokeDigest |
 | VERIFIER_GRANTOR | SetParticipantOPtoValidated |
-| ECOSYSTEM | SetParticipantOPtoValidated |
  
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
@@ -3334,7 +3203,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-op-parameters).
 
 :::note
-A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. It's up to the issuer to decide if running the onboarding process is REQUIRED or not.
+A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. When the schema's `holder_onboarding_mode` is `ISSUER_ONBOARDING_PROCESS`, the onboarding process MUST have reached `VALIDATED` before the credential is issued: the Verifiable Trust specification requires an active `HOLDER` entry at issuance, and trust resolution requires it to stay active. When it is `PERMISSIONLESS`, no `HOLDER` entry exists and the issuer applies its own checks.
 :::
 
 ###### [MOD-PP-MSG-1-2-2] Start Participant OP permission checks
@@ -3441,15 +3310,10 @@ Additionally, if any `Participant` entry matches the same conditions except with
 A `corporation` with an unrepaid slash MUST NOT start an onboarding process: in the ecosystem where it was slashed (ecosystem slash, see [MOD-PP-MSG-12](#mod-pp-msg-12-slash-participant-trust-deposit)), or anywhere on the VPR (network slash, see [MOD-TD-MSG-5](#mod-td-msg-5-slash-trust-deposit)).
 
 - define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `validator_participant.schema_id`).
-- if any `Participant` entry `p` exists where:
-  - `p.corporation_id` = `co.id`,
-  - `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit`,
-  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
-
-  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
+- if an `UnrepaidEcosystemSlashCount` entry exists for (`co.id`, `ecosystem_id`) (one of the corporation's `Participant` entries under this ecosystem carries an unrepaid slash, see [UnrepaidEcosystemSlashCount](#unrepaidecosystemslashcount)), [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
 - if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_deposit` > `td.repaid_deposit`, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
 
-> Note: the condition `p.repaid_deposit` < `p.slashed_deposit` (rather than `p.repaid` is null) keeps this check correct when an entry is slashed again after a previous repayment.
+> Note: the count follows `repaid_deposit` < `slashed_deposit` rather than `repaid` being null, which keeps this check correct when an entry is slashed again after a previous repayment.
 
 ##### [MOD-PP-MSG-1-3] Start Participant OP execution
 
@@ -3650,15 +3514,10 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 Same as [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks), with `ecosystem_id` resolved from the entry being renewed:
 
 - define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `applicant_participant.schema_id`).
-- if any `Participant` entry `p` exists where:
-  - `p.corporation_id` = `co.id`,
-  - `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit`,
-  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
-
-  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
+- if an `UnrepaidEcosystemSlashCount` entry exists for (`co.id`, `ecosystem_id`) (one of the corporation's `Participant` entries under this ecosystem carries an unrepaid slash, see [UnrepaidEcosystemSlashCount](#unrepaidecosystemslashcount)), [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
 - if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_deposit` > `td.repaid_deposit`, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
 
-###### [MOD-PP-MSG-2-3] Renew Participant OP execution
+##### [MOD-PP-MSG-2-3] Renew Participant OP execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -3735,21 +3594,19 @@ else MUST abort.
 
 - `issuance_fee_discount` : (number) (*mandatory*):
   - if `applicant_participant.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_participant.issuance_fee_discount` else MUST abort.
-  - if `cs.issuer_onboarding_mode` is set to GRANTOR_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-    - if `applicant_participant.role` == ISSUER: if `validator_participant.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_participant.issuance_fee_discount` (100% discount) inclusive.
-  - if `cs.issuer_onboarding_mode` is set to ECOSYSTEM_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-  - else MUST abort.
+  - otherwise (first validation), the allowed range depends on `applicant_participant.role` (the onboarding mode of `cs` is implied by the existence of the onboarding process, see [[MOD-PP-MSG-1-2-2]](#mod-pp-msg-1-2-2-start-participant-op-permission-checks)):
+    - if `applicant_participant.role` == ISSUER_GRANTOR: `issuance_fee_discount` MUST be between 0 (no discount) and 1 (100% discount) inclusive, else MUST abort.
+    - if `applicant_participant.role` == ISSUER: `issuance_fee_discount` MUST be between 0 (no discount) and `max_discount` inclusive, else MUST abort, where `max_discount` is `validator_participant.issuance_fee_discount` if `cs.issuer_onboarding_mode` is GRANTOR_ONBOARDING_PROCESS (the validator is a ISSUER_GRANTOR) and 1 if it is ECOSYSTEM_ONBOARDING_PROCESS.
+    - for any other role: `issuance_fee_discount` MUST be 0, else MUST abort.
 
 - `verification_fee_discount` : (number) (*mandatory*):
   - if `applicant_participant.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_participant.verification_fee_discount` else MUST abort.
-  - if `cs.verifier_onboarding_mode` is set to GRANTOR_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == VERIFIER_GRANTOR: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-    - if `applicant_participant.role` == VERIFIER: if `validator_participant.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_participant.verification_fee_discount` (100% discount) inclusive.
-  - if `cs.verifier_onboarding_mode` is set to ECOSYSTEM_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-  - else MUST abort.
+  - otherwise (first validation), the allowed range depends on `applicant_participant.role` (the onboarding mode of `cs` is implied by the existence of the onboarding process, see [[MOD-PP-MSG-1-2-2]](#mod-pp-msg-1-2-2-start-participant-op-permission-checks)):
+    - if `applicant_participant.role` == VERIFIER_GRANTOR: `verification_fee_discount` MUST be between 0 (no discount) and 1 (100% discount) inclusive, else MUST abort.
+    - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` MUST be between 0 (no discount) and `max_discount` inclusive, else MUST abort, where `max_discount` is `validator_participant.verification_fee_discount` if `cs.verifier_onboarding_mode` is GRANTOR_ONBOARDING_PROCESS (the validator is a VERIFIER_GRANTOR) and 1 if it is ECOSYSTEM_ONBOARDING_PROCESS.
+    - for any other role: `verification_fee_discount` MUST be 0, else MUST abort.
+
+A HOLDER applicant, and any applicant whose `cs.issuer_onboarding_mode` (resp. `cs.verifier_onboarding_mode`) is OPEN, carries no issuance (resp. verification) discount: the mandatory parameter MUST be 0; a value of 0 MUST be accepted, and the method MUST NOT abort because of the schema's onboarding mode.
 
 Calculation of `op_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
 
@@ -3949,7 +3806,7 @@ Permitted message types to be set in `vs_operator_authz_msg_types` depends on `r
 
 |Participant role|Permitted Messages|
 |-|-|
-| ECOSYSTEM | SetParticipantOPtoValidated |
+| ECOSYSTEM | SetParticipantOPtoValidated, RevokeDigest |
 
 ##### [MOD-PP-MSG-7-2] Create Root Participant precondition checks
 
@@ -4276,9 +4133,9 @@ Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS 
 
 #### [MOD-PP-MSG-10] Create or Update Participant Session
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+Only the `vs_operator` of the primary `Participant` entry CAN execute this method on behalf of a `corporation` (a VS Operator Authorization; [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization) excludes this message from OperatorAuthorizations). The digest of a credential of a schema whose `credential_anchoring` is DIGEST is anchored through the issuance session only: such an issuer MUST hold a VS Operator Authorization for its agent.
 
-Any credential exchange that requires issuer or verifier to pay fees, register a digest_sri, or produce a proof implies the creation of a `ParticipantSession`.
+Any credential exchange that requires issuer or verifier to pay fees, anchor a digest, or produce a proof implies the creation of a `ParticipantSession`. A Credential Verification of a credential whose schema sets `verification_session` to REQUIRED implies the creation of a `ParticipantSession` even when the fees computed for the verification are 0; when the schema sets WHEN_FEES, a session is required for a verification only when these fees are greater than 0 (see [CredentialSchema](#credentialschema)).
 
 If the peer wants to issue a credential, the `agent`, the Verifiable User Agent or Verifiable Service that receive the request MUST send to peer:
 
@@ -4290,11 +4147,13 @@ If the peer wants to verify a credential, agent must send to peer:
 
 - a `uuid` for session identification;
 - *optional*: the `agent_participant_id` `Participant` id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
-- *optional*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_participant_ids, uint64: wallet_agent_participant_id>. wallet_agent_participant_id MUST NOT be set if peer is a **Verifiable Service**.
+- *mandatory*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_participant_ids, uint64: wallet_agent_participant_id>, with at least one entry (an empty map means that the agent holds no matching credential and the exchange ends without a session). The payer selects from it the `issuer_participant_id` of the session. wallet_agent_participant_id MUST NOT be set if peer is a **Verifiable Service**.
+- *mandatory*: whether the agent requires a `ParticipantSession` for this verification, from the `verification_session` of the schema read at that time (see [CredentialSchema](#credentialschema)); when the agent requires one, the payer MUST create it whatever its own reading.
+- *mandatory* when the schema's `presentation_validity_period` is greater than 0 (the agent reads the `CredentialSchema` entry at the time of the verification, the VPR evaluates the value at the block), otherwise *optional* and only if the verifier asked for it in its request: the **presentation digest**, computed by the agent over the presentation it is about to send (the signed presentation as it will be transmitted: canonicalized with [JCS](https://www.rfc-editor.org/rfc/rfc8785) when it is a JSON document, its exact bytes otherwise; hashed with the `digest_algorithm` of the schema). The agent builds and signs the presentation first and sends only its digest at this step; the verifier anchors it through the `digest` parameter of the session transaction. When it sends a presentation digest, the agent has selected the credential it will present, and the map of compatible credentials above contains that single credential. Unless the active VERIFIER policy sets a period greater than 0, anchoring a presentation digest is decided by the verifier: a verifier that did not ask for it MUST NOT expect one, and a verifier that asked for it MUST anchor it, since the agent sends the presentation only after checking the `Digest` entry. The presentation MUST be a Verifiable Presentation signed by the holder and bound to the session identifier (or to the verifier's nonce), so that its digest differs from the credential's `digestJCS` and from any earlier presentation.
 
 In case peer is a **Verifiable Service** and illegaly set `agent_participant_id` and/or `wallet_agent_participant_id`, the other end MUST refuse the request.
 
-`payer` MUST create a Participant Session using the above information, then, `agent` MUST check session has been created and is valid before accepting the action (receive and store issued credential, or accept a presentation request).
+When a session is required (fees greater than 0; `verification_session` set to REQUIRED, see [CredentialSchema](#credentialschema); a `presentation_validity_period` of the schema greater than 0; a presentation digest requested by the verifier; or a Credential Issuance under a schema whose `credential_anchoring` is DIGEST, since the digest is anchored through the session), `payer` MUST create it using the above information, then `agent` MUST check that the session has been created and is valid, and in a Credential Verification that its `issuer_participant_id` is the issuer of the credential it is about to present (fees are routed by that id), before performing the action (storing the issued credential, or sending the presentation). When the agent sent a presentation digest, it MUST additionally check, with [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest), that a `Digest` entry with its digest exists and belongs to the corporation of the verifier `Participant` before sending the presentation.
 
 ```plantuml
 scale max 800 width
@@ -4324,11 +4183,11 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uuid) (*mandatory*): id of the `ParticipantSession`.
-- `issuer_participant_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the issuance of a credential.
+- `issuer_participant_id` (uint64) (*mandatory*): the id of the `ISSUER` `Participant` entry of the issuer of the credential: the payer's own entry in a Credential Issuance, the entry of the credential's issuer in a Credential Verification.
 - `verifier_participant_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
 - `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
-- `digest` (string(256)) (*optional*): digest derived from an issued or verified credential.
+- `digest` (string(256)) (*conditional*): in a Credential Issuance, the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), mandatory when the schema's `credential_anchoring` is DIGEST and absent when it is NONE (its anchoring fixes the effective issuance time, see [Digest](#digest)); in a Credential Verification, the presentation digest sent by the agent (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
 
 ##### [MOD-PP-MSG-10-2] Create or Update Participant Session precondition checks
 
@@ -4338,64 +4197,71 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uuid. If an entry `existing_entry` with `id` already exist, then `existing_entry.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) AND `existing_entry.vs_operator` MUST be equal to `operator`, else abort.
 
-if `issuer_participant_id` is null AND `verifier_participant_id` is null, MUST abort.
+if `issuer_participant_id` is null, MUST abort.
 
-- define `issuer_participant` as null.
+Determine the operation type from the provided ids:
+
+- if `verifier_participant_id` is not null, the operation is a **Credential Verification**: the caller is the `vs_operator` of the verifier, and `issuer_participant_id` identifies the issuer branch that is a fee beneficiary of the verification (see [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)).
+- else, the operation is a **Credential Issuance**: the caller is the `vs_operator` of the issuer.
+
 - define `verifier_participant` as null.
 
-if `issuer_participant_id` is not null:
+For `issuer_participant_id` (always present):
 
 - Load `issuer_participant` from `issuer_participant_id`.
 - if `issuer_participant.role` is not ISSUER, abort.
-- if `issuer_participant` is not a [[ref: active participant]], abort.
-- if `issuer_participant.vs_operator` is not equal to `operator`, abort.
-- if `issuer_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
-- if `digest` is present and longer than 256 characters, abort.
+- if `issuer_participant.effective_from` is null or later than now (the entry has never been validated, or is not yet effective), abort.
+- if the operation is a Credential Issuance, `issuer_participant` MUST be an [[ref: active participant]], else abort. In a Credential Verification no state is required of `issuer_participant`: the validity of the credential is established by trust resolution at its issuance time, and the unrepaid-slash filter of [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
 
 if `verifier_participant_id` is not null:
 
 - Load `verifier_participant` from `verifier_participant_id`.
 - if `verifier_participant.role` is not VERIFIER, abort.
 - if `verifier_participant` is not a [[ref: active participant]], abort.
-- if `verifier_participant.vs_operator` is not equal to `operator`, abort.
-- if `verifier_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
-- if `digest` is present and longer than 256 characters, abort.
+- if `verifier_participant.schema_id` is not equal to `issuer_participant.schema_id`, abort.
+- load `CredentialSchema` `cs` from `issuer_participant.schema_id`. If `cs.presentation_validity_period` > 0 and `digest` is absent, abort: the ecosystem requires a dated receipt of every verification of this schema.
 
-Define the **primary `Participant`** `perm`: if `verifier_participant` is not null, `perm` = `verifier_participant` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_participant` (the caller is the `vs_operator` of the issuer).
+- in a Credential Issuance, load `CredentialSchema` `cs` from `issuer_participant.schema_id`; if `cs.credential_anchoring` is DIGEST and `digest` is absent, abort (the credential digest is anchored through this session); if `cs.credential_anchoring` is NONE and `digest` is present, abort (no credential digest is anchored for this schema).
+- in a Credential Issuance, if `digest` is present and a `Digest` entry with that value already exists whose `corporation_id` differs from `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort: another corporation anchored this credential first and would control its revocation; the issuer re-issues the credential with changed content, as the Verifiable Trust specification requires. An existing entry owned by `co.id` is accepted and left unchanged.
+- if `digest` is present and longer than 256 characters, abort.
+- in a Credential Verification, if `digest` is present and a `Digest` entry with that value already exists, abort: a presentation is unique to its session, and an existing entry indicates a replayed presentation.
+
+Define the **primary `Participant`** `perm`: if `verifier_participant` is not null (Credential Verification), `perm` = `verifier_participant`; else (Credential Issuance), `perm` = `issuer_participant`.
+
+- if `perm.vs_operator` is not equal to `operator`, abort.
+- if `perm.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
+
+> Note: the `vs_operator` and `corporation_id` checks apply to the primary `Participant` only. In a Credential Verification, the issuer `Participant` entry generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only: an expired, revoked or slashed issuer entry does not prevent the verification of a credential it issued while authorized.
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 
 agent:
 
-- Load `agent_participant` from `agent_participant_id`.
-- if `agent_participant.role` is not ISSUER, abort.
-- if `agent_participant` is not a [[ref: active participant]], abort.
+- if `agent_participant_id` is set: load `agent_participant` from `agent_participant_id`; if `agent_participant.role` is not ISSUER, abort; if `agent_participant` is not a [[ref: active participant]], abort.
 
 wallet_agent:
 
-- Load `wallet_agent_participant` from `wallet_agent_participant_id`.
-- if `wallet_agent_participant.role` is not ISSUER, abort.
-- if `wallet_agent_participant` is not a [[ref: active participant]], abort.
+- if `wallet_agent_participant_id` is set: load `wallet_agent_participant` from `wallet_agent_participant_id`; if `wallet_agent_participant.role` is not ISSUER, abort; if `wallet_agent_participant` is not a [[ref: active participant]], abort.
 
 :::warning
 we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a `Participant` entry that is not controlled by its owner.
 :::
 
-###### [MOD-PP-MSG-10-3] Create or Update Participant Session fee checks
+##### [MOD-PP-MSG-10-3] Create or Update Participant Session fee checks
 
-- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` if `issuer_participant` is not null, else from `verifier_participant.schema_id`.
+- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` (always present).
 - Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]].
 
 For trust fees, `corporation` account MUST have sufficient available balance as explained below.
 
 **Step 1: Calculate total beneficiary fees in credential schema pricing asset**
 
-Use "Find Beneficiaries" query method to get the set of beneficiary `Participant` entries `found_participant_set` (all ancestors in the `Participant` tree).
+Use "Find Beneficiaries" query method to get the set of beneficiary `Participant` entries `found_participant_set` (in a Credential Verification the issuer entry and the ancestors of both branches, in a Credential Issuance the ancestors of the issuer entry only, filtered as defined there).
 
 - define `total_beneficiary_fees` = 0
 
-If **Credential Issuance** (`issuer_participant` is NOT null):
+If **Credential Issuance** (`verifier_participant` is null):
 
 - for each `perm` in `found_participant_set`:
   - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.issuance_fees` × (1 - `issuer_participant.issuance_fee_discount`)
@@ -4548,7 +4414,7 @@ Required balance check:
 If all precondition checks passed, method is executed.
 
 - Load all `Participant` entries as in basic checks.
-- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` if `issuer_participant` is not null, else from `verifier_participant.schema_id`.
+- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` (always present).
 - define `now`: current timestamp.
 - use "Find Beneficiaries" to build `found_participant_set`.
 
@@ -4565,7 +4431,7 @@ Initialize accumulators for agent rewards:
 
 Determine the operation type and applicable discount:
 
-- If **Credential Issuance** (`issuer_participant` is NOT null):
+- If **Credential Issuance** (`verifier_participant` is null):
   - `fee_field` = `issuance_fees`
   - `discount` = `issuer_participant.issuance_fee_discount`
   - `payer_participant` = `issuer_participant`
@@ -4657,7 +4523,7 @@ After processing all beneficiaries, distribute accumulated rewards to agents.
 
 **User Agent Reward:**
 
-If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0:
+If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0 AND `agent_participant` has no unrepaid slash in the sense of [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries) (otherwise the reward is not paid and no deposit is funded):
 
 - `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
@@ -4666,7 +4532,7 @@ If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0:
 
 **Wallet Agent Reward:**
 
-If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 0:
+If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 0 AND `wallet_agent_participant` has no unrepaid slash in the sense of [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries):
 
 - `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
@@ -4702,10 +4568,10 @@ Else update:
 
 then, add the `cspsr` to `session.session_records`
 
-if current transaction if for issuance of a credential, persist the credential's `digestJCS` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest).
+if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`: in a Credential Issuance it is the credential's `digestJCS` and, when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry, necessarily owned by `co.id` after the precondition checks, keeps its `created`, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op); in a Credential Verification it is the presentation digest and its `created` timestamp is the effective presentation time. In a Credential Verification, when `cs.presentation_validity_period` > 0, the call passes `presentation_valid_until` = `now` plus that duration; in every other case the `Digest` entry created by this transaction has a null `presentation_valid_until`.
 
 :::warning
-`session.authz[]` can contain null `issuer_participant_id` OR `verifier_participant_id`
+a `ParticipantSessionRecord` always carries `issuer_participant_id`; `verifier_participant_id` is set in a Credential Verification only
 :::
 
 #### [MOD-PP-MSG-11] Update Participant Module Parameters
@@ -4812,6 +4678,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_participant.slashed` to `now`
 - set `applicant_participant.modified` to `now`
 - set `applicant_participant.slashed_deposit` to `applicant_participant.slashed_deposit` + `amount`
+- if, before this slash, `applicant_participant.repaid_deposit` was equal to `applicant_participant.slashed_deposit` (the entry carried no unrepaid slash), increment `UnrepaidEcosystemSlashCount[(applicant_participant.corporation_id, CredentialSchema[applicant_participant.schema_id].ecosystem_id)].count` by 1, creating the entry at 1 if absent.
 
 use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_participant.corporation_id`.
 
@@ -4819,7 +4686,7 @@ Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS 
 
 #### [MOD-PP-MSG-13] Repay Participant Slashed Trust Deposit
 
-This method can only be called by the `corporation` that wants to repay the deposit of a slashed `Participant` entry they own. This won't make the `Participant` entry re-usable: it will be needed for the `corporation` associated to this `Participant` entry to request a new `Participant` entry, as slashed `Participant` entries cannot be revived (same happens for revoked, etc.).
+This method can only be called by the `corporation` that wants to repay the deposit of a slashed `Participant` entry they own. This won't make the `Participant` entry re-usable: it will be needed for the `corporation` associated to this `Participant` entry to request a new `Participant` entry, as slashed `Participant` entries cannot be revived (same happens for revoked, etc.). Repaying does restore the fee receipt of the entry as a beneficiary ([[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)).
 
 Nevertheless, to get a new `Participant` entry for a given ecosystem, it is needed, using this method, to repay the deposit of a slashed `Participant` entry first. This is enforced by the unrepaid slash checks of [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks), [MOD-PP-MSG-2-2-4](#mod-pp-msg-2-2-4-renew-participant-op-unrepaid-slash-checks) and [MOD-PP-MSG-14-2-5](#mod-pp-msg-14-2-5-self-create-participant-unrepaid-slash-checks).
 
@@ -4865,6 +4732,7 @@ use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `owed
 - set `applicant_participant.repaid` to `now`
 - set `applicant_participant.modified` to `now`
 - set `applicant_participant.repaid_deposit` to `applicant_participant.slashed_deposit`.
+- if `owed` > 0, decrement `UnrepaidEcosystemSlashCount[(applicant_participant.corporation_id, CredentialSchema[applicant_participant.schema_id].ecosystem_id)].count` by 1, and delete the entry when it reaches 0.
 
 #### [MOD-PP-MSG-14] Self Create Participant
 
@@ -4902,7 +4770,7 @@ Permitted message types to be set in `vs_operator_authz_msg_types` depends on `r
 |Participant role|Permitted Messages|
 |-|-|
 | HOLDER | TriggerResolver |
-| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated |
+| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated, RevokeDigest |
 | VERIFIER | CreateOrUpdateParticipantSession |
  
 ##### [MOD-PP-MSG-14-2] Self Create Participant precondition checks
@@ -4930,8 +4798,8 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
 - `effective_until`:
   - if null, `validator_participant.effective_until` MUST be NULL
   - else if not null, must be greater than `effective_from_r` AND if `validator_participant.effective_until` is not null, MUST be lower or equal to `validator_participant.effective_until`
-- `verification_fees` (number) (*optional*): If specified, MUST be >= 0 and the `Participant` entry MUST be an ISSUER.
-- `validation_fees` (number) (*optional*): If specified, MUST be >= 0 and the `Participant` entry MUST be an ISSUER.
+- `verification_fees` (number) (*optional*): If specified, MUST be >= 0, and MUST be 0 when `role` is VERIFIER.
+- `validation_fees` (number) (*optional*): If specified, MUST be >= 0, and MUST be 0 when `role` is VERIFIER.
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-14-1](#mod-pp-msg-14-1-self-create-participant-parameters).
 
 ###### [MOD-PP-MSG-14-2-2] Self Create Participant permission checks
@@ -4971,12 +4839,7 @@ for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUS
 Same as [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks):
 
 - define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `validator_participant.schema_id`).
-- if any `Participant` entry `p` exists where:
-  - `p.corporation_id` = `co.id`,
-  - `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit`,
-  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
-
-  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
+- if an `UnrepaidEcosystemSlashCount` entry exists for (`co.id`, `ecosystem_id`) (one of the corporation's `Participant` entries under this ecosystem carries an unrepaid slash, see [UnrepaidEcosystemSlashCount](#unrepaidecosystemslashcount)), [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
 - if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_deposit` > `td.repaid_deposit`, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
 
 ##### [MOD-PP-MSG-14-3] Self Create Participant execution
@@ -5166,7 +5029,7 @@ Obsoleted by [MOD-PP-QRY-1].
 
 Anyone can execute this method.
 
-To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the `Participant` tree (which is the ecosystem perm), starting from the 2 branches `issuer_participant` and `verifier_participant`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_participant` is null, `issuer_participant` is never added to the set. If `verifier_participant` is NOT null, `issuer_participant` is added to the set if it exists but `verifier_participant` is not added to the set.
+To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the `Participant` tree (which is the ecosystem perm), starting from the 2 branches `issuer_participant` and `verifier_participant`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_participant` is null, `issuer_participant` is never added to the set. If `verifier_participant` is NOT null, `issuer_participant` is added to the set unless it has an unrepaid slash; `verifier_participant` itself is never added to the set.
 
 Example 1: `verifier_participant`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
 
@@ -5249,12 +5112,15 @@ v --> vg
 ##### [MOD-PP-QRY-4-2] Find Beneficiaries checks
 
 - if `issuer_participant_id` and `verifier_participant_id` are unset then MUST abort.
-- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`, Participant MUST exist and MUST be a [[ref: active participant]].
+- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`; the `Participant` entry MUST exist. Its state does not matter: an expired, revoked or slashed issuer entry still identifies the branch to pay (see the unrepaid-slash rule below).
 - if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Participant MUST exist and MUST be a [[ref: active participant]].
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
-Example: Let's build the set. Revoked and slashed `Participant` entries will not be added to the set. Expired `Participant` entries, if not revoked/slashed, will be considered.
+A `Participant` entry `p` has an **unrepaid slash** when its corporation carries one in the ecosystem of `p`'s schema or on the network, with the same scope as the onboarding gates ([[MOD-PP-MSG-1-2-5]](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks)): when an [UnrepaidEcosystemSlashCount](#unrepaidecosystemslashcount) entry exists for (`p.corporation_id`, `CredentialSchema[p.schema_id].ecosystem_id`), that is, when one of the corporation's entries under that ecosystem has `slashed_deposit` > `repaid_deposit` (ecosystem slash, see [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), or when the `TrustDeposit` entry `td` of `Corporation[p.corporation_id]` has `td.slashed_deposit` > `td.repaid_deposit` (network slash); both are single lookups, one read per beneficiary. A slash is a judgement on the corporation's conduct in that ecosystem, so one unrepaid slash stops the fees of all the corporation's entries under that ecosystem's schemas, exactly as it stops its onboarding processes there. An entry with an unrepaid slash receives no fees and funds no deposit as a beneficiary; it is paid again as soon as the slash is repaid ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)). No other state excludes a beneficiary: a revoked entry (revocation is not a sanction: a validator may revoke an entry to change its fee model, and each entry of the revoked entry's subtree keeps running until it expires) and an expired entry keep receiving the fees of the operations performed under their branch. An ecosystem that wants to stop paying a participant slashes it ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
+
+
+Algorithm. `Participant` entries with an unrepaid slash are not added to the set; revoked and expired `Participant` entries are.
 
 - create Set `found_participant_set`.
 
@@ -5267,17 +5133,17 @@ if `issuer_participant` is not null:
 - set `current_participant` = `issuer_participant`
 - while `current_participant.validator_participant_id` is not null:
   - current_participant = load(`current_participant.validator_participant_id`)
-  - if `current_participant.revoked` is NULL AND `current_participant.slashed` is NULL, Add `current_participant` to `found_participant_set`.
+  - unless `current_participant` has an unrepaid slash (see above), Add `current_participant` to `found_participant_set`.
 
 Additionally, if `verifier_participant` is not null:
 
-- if `issuer_participant` is not null, add `issuer_participant` to `found_participant_set`
+- if `issuer_participant` is not null and has no unrepaid slash (see above), add `issuer_participant` to `found_participant_set`
 - set `current_participant` = `verifier_participant`
 - while `current_participant.validator_participant_id` != null:
   - current_participant = load(`current_participant.validator_participant_id`)
-  - if `current_participant.revoked` is NULL AND `current_participant.slashed` is NULL, Add `current_participant` to `found_participant_set`.
+  - unless `current_participant` has an unrepaid slash (see above), Add `current_participant` to `found_participant_set`.
 
-return `found_perms`.
+return `found_participant_set`.
 
 :::note
 This works even is schema is open to any issuer or open to any verifier.
@@ -5295,11 +5161,9 @@ This works even is schema is open to any issuer or open to any verifier.
 
 return `ParticipantSession` entry if found, else return not found.
 
-##### [MOD-PP-QRY-6] List Participant Module Parameters
+#### [MOD-PP-QRY-6] List Participant Module Parameters
 
-##### [MOD-PP-QRY-6-2] List Participant Module Parameters parameters
-
-##### [MOD-PP-QRY-6-2] List Participant Module Parameters query checks
+##### [MOD-PP-QRY-6-2] List Participant Module Parameters parameters and query checks
 
 ##### [MOD-PP-QRY-6-3] List Participant Module Parameters execution of the query
 
@@ -5347,10 +5211,11 @@ note over Applicant, CE #EEEEEE: (*optional*) repeat the following until tasks c
 Applicant <-- CE: Form fill-ins, request proof documents
 Applicant --> CE: fill-in forms, provides requested documents...
 note over Applicant, CE #EEEEEE: tasks completed
+autonumber "<font color='#7677ed'><b>(run validated method)"
+CE --> VPR #3fbdb6: Update Validation Entry. Applicant VALIDATED, fees transferred to Validator.
 autonumber stop
+CE --> VPR #3fbdb6: Create or Update Participant Session (digest = credential digestJCS, anchored before delivery).
 CE --> Applicant #3fbdb6: Issue Credential.
-autonumber "<font color='#7677ed'><b>(run issued method)"
-CE --> VPR #3fbdb6: Update Validation Entry. Applicant VALIDATED, Credential Issued, fees transferred to Validator.
 autonumber stop
 ```
 
@@ -5646,7 +5511,7 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 This method is used by the network governance authority to **globally slash** a corporation `account` trust deposit.
 
-This method can only be called by a governance proposal. A globally slashed account MUST repay the slashed deposit in order to continue to use the services provided by the VPR. When and account is slashed, and while slashed deposit has not been repaid, all account linked permissions MUST be considered non trustable.
+This method can only be called by a governance proposal. A globally slashed account MUST repay the slashed deposit in order to continue to use the services provided by the VPR. When an account is slashed, and while the slashed deposit has not been repaid, the corporation's `Participant` entries can neither start nor renew an onboarding process ([[MOD-PP-MSG-1-2-5]](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks)) and receive no fees ([[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)); the effect on credentials already issued is defined by the Verifiable Trust specification, not by this method.
 
 This method is for network governance authority slash. For ecosystem slash, see [Slash Participant Trust Deposit](#mod-pp-msg-12-slash-participant-trust-deposit).
 
@@ -5795,9 +5660,7 @@ Return the `TrustDeposit` entry whose `corporation_id` equals the supplied `corp
 
 Anyone CAN run this [[ref: query]].
 
-##### [MOD-TD-QRY-2-2] List Module Parameters parameters
-
-##### [MOD-TD-QRY-2-2] List Module Parameters query checks
+##### [MOD-TD-QRY-2-2] List Module Parameters parameters and query checks
 
 ##### [MOD-TD-QRY-2-3] List Module Parameters execution of the query
 
@@ -5818,7 +5681,7 @@ Return the list of the existing parameters and their values.
 
 ### Delegation Module
 
-**Transaction-fee payment on behalf of a corporation (fee grants):** When a `corporation` pays the transaction fees for a grantee (an `operator` per [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), or a `vs_operator` per [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)), fee payment is handled directly via the Cosmos SDK `x/feegrant` module; VPR does not wrap the fee-deduction mechanism. Implementations MUST realize each on-chain `FeeGrant` as an `x/feegrant` allowance granted by the corporation's `policy_address` (the granter) to the `grantee`: an `AllowedMsgAllowance` (whose `allowed_messages` is the `FeeGrant.msg_types`) wrapping a `PeriodicAllowance` when both a `spend_limit` and a `period` are set — the operator path of [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization), and always the `vs_operator` path, whose aggregate allowance is capped at the sum of the live records' `fee_spend_limit` per `GlobalVariables.vs_operator_fee_period` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)) — otherwise a `BasicAllowance`. The allowance is created (or updated) when the `FeeGrant` is granted ([[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)) and removed when it is revoked ([[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)). A grantee elects corporation-paid fees by setting the transaction fee's `granter` field (the `--fee-granter`) to the corporation's `policy_address`; `x/feegrant` then validates the draw and enforces the `spend_limit`, the periodic reset, and the message-type filter, while the auth fee ante handler performs the actual debit from the corporation's account.
+**Transaction-fee payment on behalf of a corporation (fee grants):** When a `corporation` pays the transaction fees for a grantee (an `operator` per [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), or a `vs_operator` per [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)), fee payment is handled directly via the Cosmos SDK `x/feegrant` module; VPR does not wrap the fee-deduction mechanism. Implementations MUST realize each on-chain `FeeGrant` as an `x/feegrant` allowance granted by the corporation's `policy_address` (the granter) to the `grantee`: an `AllowedMsgAllowance` (whose `allowed_messages` is the `FeeGrant.msg_types`) wrapping a `PeriodicAllowance` when both a `spend_limit` and a `period` are set — the operator path of [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization), and always the `vs_operator` path, whose aggregate allowance is capped at the sum of the counted records' `fee_spend_limit` per `GlobalVariables.vs_operator_fee_period` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)) — otherwise a `BasicAllowance`. The allowance is created (or updated) when the `FeeGrant` is granted ([[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)) and removed when it is revoked ([[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)). A grantee elects corporation-paid fees by setting the transaction fee's `granter` field (the `--fee-granter`) to the corporation's `policy_address`; `x/feegrant` then validates the draw and enforces the `spend_limit`, the periodic reset, and the message-type filter, while the auth fee ante handler performs the actual debit from the corporation's account.
 
 Mapping of the auto-renewing `FeeGrant.expiration`: when `period` is set, the cycle boundary maps to the allowance's `period_reset` (the allowance carries NO absolute `x/feegrant` expiration, so it auto-renews until revoked, matching `FeeGrant.expiration`); when `period` is unset, `FeeGrant.expiration` maps to the allowance's absolute expiration. If multiple periods elapse with no activity, the `period_reset` skips ahead per the `x/feegrant` `PeriodicAllowance` rule rather than accumulating each skipped period. Accordingly, `FeeGrant.remaining_spend` MAY be sourced from the underlying allowance's running balance (it tracks the fees the allowance has paid) rather than persisted and decremented as a separate field; the normative requirement is the balance's behaviour (initialize at the limit, decrement per fee payment, reset at the end of each cycle), not its physical storage. It is queryable via the standard `x/feegrant` allowance query. On the `vs_operator` path, per-record `fee_spend_limit` values are **summands** of the aggregate allowance's per-period limit; there is no separate VPR-side fee ledger ([[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)). Design rule: **cycling that gates fee payment lives in `x/feegrant` (fee-processing side); the VPR side hard-gates operations only.**
 
@@ -5829,7 +5692,7 @@ Authority and scope: the `x/feegrant` allowance is created and revoked by the VP
 This method can only be called directly by the following methods:
 
 - [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
-- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization))
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) and the window-end queue of [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance))
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
@@ -5879,7 +5742,7 @@ This method can only be called directly by the following methods:
 
 - [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
 - [Revoke Operator Authorization](#mod-de-msg-4-revoke-operator-authorization)
-- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization))
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) and the window-end queue of [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance))
 
 ##### [MOD-DE-MSG-2-1] Revoke Fee Allowance method parameters
 
@@ -6043,29 +5906,29 @@ A **VS Operator Authorization** record CAN be granted ONLY IF no **OperatorAutho
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Initialize the runtime balance on `record`: if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
-- Load the `VSOperatorAuthorization` `vsoa` whose `vsoa.corporation_id = corporation_id` AND `vsoa.vs_operator = vs_operator`. If it does not exist, create a new `vsoa` with `vsoa.id = auto-incremented uint64`, `vsoa.corporation_id = corporation_id`, `vsoa.vs_operator = vs_operator`, `vsoa.records = []`. If `vsoa` already exists, reuse it and preserve `vsoa.id`.
+- Initialize the runtime balance on `record`: if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`; set `record.counted := false`.
+- Load the `VSOperatorAuthorization` `vsoa` whose `vsoa.corporation_id = corporation_id` AND `vsoa.vs_operator = vs_operator`. If it does not exist, create a new `vsoa` with `vsoa.id = auto-incremented uint64`, `vsoa.corporation_id = corporation_id`, `vsoa.vs_operator = vs_operator`, `vsoa.records = []`, `vsoa.fee_limit_total = []`, `vsoa.feegrant_msg_type_counts = {}`. If `vsoa` already exists, reuse it and preserve `vsoa.id`.
 - Append `record` to `vsoa.records`.
-- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
+- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa` and `record`.
 
 ##### [MOD-DE-MSG-5-5] Recompute VS Operator Fee Allowance
 
-This is a shared subroutine invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) and [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) after they mutate `vsoa.records`.
+This is a shared subroutine taking the VSOA `vsoa` and the record `r` concerned by an event. It is invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) (insertion), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) (removal; invoked before the record is deleted, so that the contribution stored in the record is still available), [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) (synchronisation) and by the window-end queue when the `Participant` entry of a record expires by clock (pop).
 
-- define `total_fee_limit` = empty DenomAmount[].
-- define `feegrant_msg_types` = empty set.
-- for each `r` in `vsoa.records`:
-  - load the `Participant` entry `p` identified by `r.participant_id` through the participant view. If `p` is neither an [[ref: active participant]] nor a [[ref: future participant]], skip `r`.
-  - if `p.effective_until` is set, insert `(p.effective_until, r.participant_id)` into the window-end queue (idempotent: inserting an existing key is a no-op).
-  - if `r.with_feegrant` is true:
-    - add all entries of `r.msg_types` to `feegrant_msg_types`.
-    - add `r.fee_spend_limit` to `total_fee_limit` (per matching `denom`).
-- if `feegrant_msg_types` is empty (no live feegrant-enabled record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`).
-- else: call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`, `feegrant_msg_types`, `now() + GlobalVariables.vs_operator_fee_period`, `total_fee_limit`, `GlobalVariables.vs_operator_fee_period`).
+The resulting allowance MUST be an `AllowedMsgAllowance` over the union of the `msg_types` of the **counted records** of `vsoa` (the records that qualify, as defined below), wrapping a `PeriodicAllowance` with `period = GlobalVariables.vs_operator_fee_period` and a per-period limit equal to the **sum** of their `fee_spend_limit` — never unlimited (see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks)).
 
-> Note: the resulting allowance is an `AllowedMsgAllowance` over the union of the live records' `msg_types`, wrapping a `PeriodicAllowance` with `period = GlobalVariables.vs_operator_fee_period` and a per-period limit equal to the **sum** of the live records' `fee_spend_limit` — never unlimited (see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks)). The `PeriodicAllowance` resets itself during fee deduction, so no VPR action is needed at fee-cycle boundaries. Re-granting mid-cycle resets the running `period_can_spend`: any VSOA mutation refreshes the current period's fee budget early — **accepted slack**, bounded by one period's budget per mutation, and mutations are controlled by the grantor.
+The aggregate MUST be maintained **incrementally**. A VSOA may group tens of thousands of records (one agent account operating many `Participant` entries), and a scan of `vsoa.records` on every mutation would make each grant cost linear time and a large roll-out quadratic. The VSOA therefore carries two derived fields, `fee_limit_total` (DenomAmount[]) and `feegrant_msg_type_counts` (map msg_type → number of counted records that include it), and each record carries a derived boolean `counted`, updated as follows:
 
-To keep the aggregate fresh when an entry expires **by clock** (no transaction touches the VSOA), the Delegation module maintains a time-indexed **window-end queue**, fed by the scan above from the participant view. At each block's EndBlocker, every due queue entry is popped; a key whose `participant_id` no longer resolves to a `ParticipantAuthorizationRecord` is discarded, otherwise this subroutine is re-run for the containing VSOA: if the entry is no longer alive, its contribution drops (and the allowance is revoked when none remains); if its window was extended in the meantime, the re-run is harmless and the scan re-schedules the entry at its new `effective_until` (the stale key has already been popped). Entries with a future `effective_from` count from creation — no start-edge queue is needed, since [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 blocks any use until the window opens.
+- a record `r` **qualifies** when `r.with_feegrant` is true and the `Participant` entry `p` identified by `r.participant_id` (read through the participant view) is an [[ref: active participant]] or a [[ref: future participant]]; its **contribution** is (`r.fee_spend_limit`, `r.msg_types`).
+- on every event concerning a record `r` — insertion ([[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)), removal ([[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)), synchronisation ([[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization), even when it changes no field of `r`) and the pop of a window-end queue key naming `r` — : (1) if `r.counted` is true, subtract the contribution as stored in `r` before the event from `fee_limit_total` and `feegrant_msg_type_counts`, and set `r.counted` to false; (2) if `r` still exists and qualifies after the event, add its contribution, set `r.counted` to true, and, if `p.effective_until` is set, insert `(p.effective_until, r.participant_id)` into the window-end queue (idempotent: inserting an existing key is a no-op). Subtracting from the stored contribution and the `counted` flag make the update independent of the order in which `Participant` state and the record are mutated, and make a stale queue key harmless.
+- then, if no message type has a positive count in `feegrant_msg_type_counts` (no counted record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`).
+- else: call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`, the message types with a positive count, `now() + GlobalVariables.vs_operator_fee_period`, `fee_limit_total`, `GlobalVariables.vs_operator_fee_period`).
+
+The `PeriodicAllowance` resets itself during fee deduction, so no VPR action is needed at fee-cycle boundaries. Re-granting mid-cycle resets the running `period_can_spend`: any VSOA mutation refreshes the current period's fee budget early — **accepted slack**, bounded by one period's budget per mutation, and mutations are controlled by the grantor.
+
+A full recomputation by scanning `vsoa.records` MAY be used as a consistency check or as a migration step and MUST yield the same aggregates once the window-end queue has been processed; it SHOULD NOT be the per-mutation path.
+
+To keep the aggregate fresh when an entry expires **by clock** (no transaction touches the VSOA), the Delegation module maintains a time-indexed **window-end queue**, fed by the record mutations described above. At each block's EndBlocker, every due queue entry is popped; a key whose `participant_id` no longer resolves to a `ParticipantAuthorizationRecord` is discarded, otherwise this subroutine is re-run for the containing VSOA: if the entry is no longer alive, its contribution drops (and the allowance is revoked when none remains); if its window was extended in the meantime, the re-run is harmless and re-schedules the entry at its new `effective_until` (the stale key has already been popped). Entries with a future `effective_from` count from creation — no start-edge queue is needed, since [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 blocks any use until the window opens.
 
 #### [MOD-DE-MSG-6] Revoke VS Operator Authorization
 
@@ -6098,7 +5961,7 @@ This method does NOT read `Participant` state itself; the recompute it triggers 
 - Locate the unique `ParticipantAuthorizationRecord` `record` with `record.participant_id = participant_id`. If none exists, EXIT (no-op).
 - Let `vsoa` = the `VSOperatorAuthorization` that contains `record`.
 - Remove `record` from `vsoa.records`.
-- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa`.
+- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa` and `record`.
 - If `vsoa.records` is now empty, delete `vsoa`.
 
 #### [MOD-DE-MSG-7] Void
@@ -6134,7 +5997,7 @@ This method does NOT read `Participant` state itself; the recompute it triggers 
 
 - Locate the unique `ParticipantAuthorizationRecord` `record` with `record.participant_id = participant_id`. If none exists, EXIT (no-op).
 - if `record.period` is set and `record.expiration` is null, set `record.expiration = now() + record.period` (the operation-budget cycle starts at first activation).
-- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for the VSOA containing `record`.
+- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for the VSOA containing `record` and for `record`.
 
 #### [MOD-DE-QRY-1] List Operator Authorizations
 
@@ -6223,13 +6086,17 @@ Return the `VSOperatorAuthorization` entry whose `id` matches the supplied `id`,
 #### [MOD-DI-MSG-1] Store Digest
 
 - Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-- This method can be called directly by [Create or Update Participant Session](#mod-pp-msg-10-create-or-update-participant-session) module with no checks.
+- This method can be called directly by [Create or Update Participant Session](#mod-pp-msg-10-create-or-update-participant-session) module with no checks, which also passes the `presentation_valid_until` it computed for a presentation digest.
+
+The agent of an issuer does not call this method itself: it anchors the digest of a credential it issues through the issuance session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), `digest` parameter), which it creates even when no fees are due, so that the anchoring entry of the digest is recorded.
 
 ##### [MOD-DI-MSG-1-1] Store Digest method parameters
 
 - `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `digest` (string(256)) (*mandatory*): digest to store.
+
+Module-call inputs, set only when the method is called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) and MUST be absent on a direct Msg: `participant_id` (the primary participant of the session) and `presentation_valid_until` (for a presentation digest, see that message).
 
 ##### [MOD-DI-MSG-1-2] Store Digest precondition checks
 
@@ -6254,10 +6121,72 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-- if a `Digest` entry `d` already exists with `d.digest` = `digest`, the method is a no-op (idempotent): execution returns success without modifying state.
+- if a `Digest` entry `d` already exists with `d.digest` = `digest`, the method is a no-op (idempotent): execution returns success without modifying state (the existing entry keeps its `corporation_id`, even if it differs from `co.id`).
 - else create `Digest` entry `d`:
   - set `d.digest` to `digest`.
+  - set `d.corporation_id` to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account; when this method is called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), the `corporation` of the session).
+  - set `d.participant_id` to the primary participant of the session when called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), else null.
   - set `d.created` to `now`.
+  - set `d.revoked` to null.
+  - set `d.presentation_valid_until` to the value passed by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) for a presentation digest anchored while the active VERIFIER policy sets a `presentation_validity_period` greater than 0, else null.
+
+#### [MOD-DI-MSG-2] Revoke Digest
+
+This method revokes a digest. It can be executed on behalf of:
+
+- the `corporation` that owns the `Digest` entry (`d.corporation_id`): by any of its operators under an OperatorAuthorization, or, while the anchoring entry `d.participant_id` is an [[ref: active participant]], by the vs-agent of that entry under a VS Operator Authorization whose record lists `RevokeDigest` (an `ISSUER` entry: `VERIFIER` entries carry no `RevokeDigest`);
+- the `corporation` of an **ancestor** of the anchoring entry (a validator in the branch of `d.participant_id`, up to the root ECOSYSTEM entry), while that ancestor is an [[ref: active participant]]: by any of its operators under an OperatorAuthorization, or by the vs-agent of that ancestor entry under a VS Operator Authorization whose record lists `RevokeDigest`;
+- the `corporation` controlling the `Ecosystem` of the schema of the anchoring entry, by any of its operators under an OperatorAuthorization, whatever the state of the tree (as for [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)).
+
+Revoking a digest is the on-chain revocation mechanism for an individual credential whose issuance was anchored through its issuance session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)); revoking the holder's `HOLDER` `Participant` entry ([[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)) withdraws trust from every credential of that relationship instead. The authority structure mirrors [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant): the issuer, its grantors and the ecosystem can revoke, and the ecosystem governance framework bounds the use of the ancestor path. Trust resolution of a credential whose `digestJCS` has a `Digest` entry with a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp, whoever set it. Revocation is irreversible. Trust resolution looks up credential digests only, so revoking a presentation digest (anchored in a Credential Verification) has no effect.
+
+Since any corporation may store any digest and the first to store it owns it, the Verifiable Trust specification requires the issuer of a credential of a schema whose `credential_anchoring` is DIGEST to anchor its digest through the issuance session before delivering the credential, so that no other corporation can anchor it first and hold the right to revoke it.
+
+##### [MOD-DI-MSG-2-1] Revoke Digest method parameters
+
+- `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
+- `participant_id` (uint64) (*optional*): the `Participant` entry in whose context a `vs_operator` executes this message: the anchoring entry `d.participant_id`, or one of its ancestors (VS Operator Authorization path). Absent when the operator acts under an OperatorAuthorization.
+- `digest` (string(256)) (*mandatory*): digest to revoke.
+
+##### [MOD-DI-MSG-2-2] Revoke Digest precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-DI-MSG-2-2-1] Revoke Digest basic checks
+
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- if `digest` is not present, abort.
+- if `digest` is longer than 256 characters, abort.
+- a `Digest` entry `d` with `d.digest` = `digest` MUST exist, else abort.
+- [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass: `co` is the `Corporation` entry whose `policy_address` is the signing `corporation` account.
+- define `authority_set`: the empty set if `d.participant_id` is null; else the anchoring entry `Participant[d.participant_id]` and every ancestor reached from it by following `validator_participant_id` until null, keeping only the entries that are [[ref: active participants]] (an expired, revoked or slashed entry confers no authority).
+- Authorization:
+
+either (executed by an operator under an OperatorAuthorization; `participant_id` absent):
+- `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) MUST equal `d.corporation_id`, or equal the `corporation_id` of an entry of `authority_set`, or, when `d.participant_id` is not null, equal `Ecosystem[cs.ecosystem_id].corporation_id` where `cs` is the `CredentialSchema` of `Participant[d.participant_id]`, else abort.
+[[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `RevokeDigest` message.
+[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `RevokeDigest` message.
+OR (executed by a vs-agent under a VS Operator Authorization; `participant_id` present):
+- `Participant[participant_id]` MUST be an entry of `authority_set`, else abort; define it as `context_participant`. `context_participant.corporation_id` MUST equal `co.id`, else abort.
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `context_participant`) tuple.
+[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `context_participant`) tuple.
+else MUST abort.
+
+> Note: a digest stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) has no anchoring entry (`d.participant_id` is null): only the operators of the owner corporation can revoke it. Such a digest is not a valid anchor of a Verifiable Trust credential, whose digest is anchored through the issuance session; it serves other uses. The vs-agent of an `ISSUER` entry revokes the digests anchored under that entry, and its grantor and ecosystem can revoke them too; it cannot revoke the digests of the corporation's other entries.
+
+###### [MOD-DI-MSG-2-2-2] Revoke Digest fee checks
+
+- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
+
+##### [MOD-DI-MSG-2-3] Revoke Digest execution of the method
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp.
+- if `d.revoked` is not null, the method is a no-op (idempotent): execution returns success without modifying state.
+- else set `d.revoked` to `now`.
 
 #### [MOD-DI-QRY-1] Get Digest
 
@@ -6285,7 +6214,11 @@ Return found `Digest` entry (if any) matching `digest`.
 {
   "digest": {
     "digest": "GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP",
-    "created": "2025-01-14T19:40:37.967Z"
+    "corporation_id": 12,
+    "participant_id": 601,
+    "created": "2025-01-14T19:40:37.967Z",
+    "revoked": null,
+    "presentation_valid_until": null
   }
 }
 ```
@@ -6631,7 +6564,7 @@ Where:
 - `price_uvna` is expressed in **micro-denominated VNA units (`uvna`)**.
 - Rounding MUST always be performed **downwards**.
 
-If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail.
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail, except for an `amount` of 0, which converts to 0 in any asset, and for identical base and quote assets, which need no `ExchangeRate` entry.
 
 ##### [MOD-XR-QRY-3-1] Get Price parameters
 
@@ -6643,10 +6576,11 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 
 ##### [MOD-XR-QRY-3-2] Get Price query checks
 
-If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned — unless `amount` is 0 or the base and quote assets are identical (see execution).
 
 ##### [MOD-XR-QRY-3-3] Get Price execution of the query
 
+- if `amount` is 0: `price` = 0, whatever the assets and whether or not an `ExchangeRate` entry exists (a zero fee or deposit on a FIAT-priced schema MUST NOT require an exchange rate).
 - if (base_asset_type, base_asset) == (quote_asset_type, quote_asset): `price` = `amount`.
 - else load (base_asset_type, base_asset, quote_asset_type, quote_asset).
   - if entry doesn't exist or is not active or expired, abort and generate an error.
