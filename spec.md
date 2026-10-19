@@ -314,7 +314,7 @@ object "Ecosystem" as tra #3fbdb6 {
 [[ref: Credential schemas]] are created and managed by [[ref: ecosystems]] (i.e., by the [[ref: corporation]] controlling each [[ref: ecosystem]]). Each [[ref: Credential schema]] includes, at a minimum:
 
 - A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
-- A **SubjectKind** (`SERVICE` or `PERSON`), a **PresentationMode** (for service credentials: `PUBLIC`, `ACCREDITED_AUTOMATIC` or `ACCREDITED_APPROVAL`) a single **CredentialFormat** (`W3C_JSONLD`, `ANONCREDS`, `SD_JWT` or, for persons, `MDOC`) and a **VerificationSessionMode** (`WHEN_FEES` or `REQUIRED`) that declare what credentials of this schema are for and how agents handle them; see [CredentialSchema](#credentialschema).
+- A **SubjectKind** (`SERVICE` or `PERSON`), a **PresentationMode** (for service credentials: `PUBLIC`, `ACCREDITED_AUTOMATIC` or `ACCREDITED_APPROVAL`) a single **CredentialFormat** (`W3C_JSONLD`, `ANONCREDS`, `SD_JWT` or, for persons, `MDOC`) a **VerificationSessionMode** (`WHEN_FEES` or `REQUIRED`) and a **CredentialAnchoring** (`DIGEST` or `NONE`) that declare what credentials of this schema are for and how agents handle them; see [CredentialSchema](#credentialschema).
 - An **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` `Participant` entries are created. Modes include:
   - `OPEN`: `ISSUER` Participants can be self-created by any [[ref: corporation]].
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Participants are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
@@ -838,7 +838,7 @@ vg --> verifier : creates schema participant
 
 [[ref: Corporations]] acting as **issuers** or **verifiers** for a given credential schema **may be required to pay trust fees** based on the schema's configuration and `Participant` tree.
 
-If trust fee payment is required, or the schema sets `verification_session` to REQUIRED, or the schema sets a presentation validity period, or a W3C credential is issued (its digest is anchored through the session), the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**, else HOLDER agent will not accept the operation.
+If trust fee payment is required, or the schema sets `verification_session` to REQUIRED, or the schema sets a presentation validity period, or a credential of a schema whose `credential_anchoring` is DIGEST is issued (its digest is anchored through the session), the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**, else HOLDER agent will not accept the operation.
 
 Key Points for "Pay-Per" Business Models
 
@@ -1102,6 +1102,7 @@ entity "CredentialSchema" as cs {
   presentation_mode: PresentationMode
   +credential_format: CredentialFormat
   +verification_session: VerificationSessionMode
+  +credential_anchoring: CredentialAnchoring
   presentation_validity_period: duration
   +pricing_asset: string
   +digest_algorithm: string
@@ -1143,6 +1144,11 @@ enum "CredentialFormat" as credentialformat {
 enum "VerificationSessionMode" as verificationsessionmode {
   REQUIRED
   WHEN_FEES
+}
+
+enum "CredentialAnchoring" as credentialanchoring {
+  DIGEST
+  NONE
 }
 
 
@@ -1314,6 +1320,7 @@ cs o-- subjectkind: subject_kind
 cs o-- presentationmode: presentation_mode
 cs o-- credentialformat: credential_format
 cs o-- verificationsessionmode: verification_session
+cs o-- credentialanchoring: credential_anchoring
 
 corp --o oauthz: corporation_id
 account --o oauthz: operator
@@ -1470,11 +1477,12 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the UserAgent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to PERMISSIONLESS, since a natural person holds no `Participant` entry. Immutable.
 - `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service as a Linked Verifiable Presentation in its DID Document, and anyone can read it; reading a published credential is not a Credential Verification: no session is created, no fees are computed and `verification_session` has no effect, so the `verification_fees` of a PUBLIC schema's `Participant` entries SHOULD be 0, since they can never be collected. ACCREDITED_AUTOMATIC: the credential is not published; the holder service presents it automatically, without the approval of its controller, to any requesting verifier authorized under the schema's `verifier_onboarding_mode` (under OPEN any peer, a VERIFIER `Participant` entry being needed only to create a `ParticipantSession`; under the other modes the holder of an active VERIFIER `Participant` entry), after having verified the `ParticipantSession` when one is required (see `verification_session`). ACCREDITED_APPROVAL: as ACCREDITED_AUTOMATIC, but each presentation requires the approval of the controller of the holder service, given before any payment is made. The VPR stores this declaration; its enforcement is the responsibility of agents, as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Immutable.
 - `credential_format` (CredentialFormat) (*mandatory*): the single format in which credentials of this schema are issued: W3C_JSONLD (W3C Verifiable Credentials in JSON-LD), ANONCREDS, SD_JWT, or MDOC (ISO/IEC 18013-5 mobile documents, `mso_mdoc`). MDOC is only allowed when `subject_kind` is PERSON. A PUBLIC credential is necessarily W3C_JSONLD, since it is published as a Linked Verifiable Presentation; a presented (non-published) service credential MAY use ANONCREDS or SD_JWT when selective disclosure or unlinkability matters, as the UserAgent credential does. An ecosystem that needs the same claims in several formats creates one schema per format. Future versions of this specification MAY add values. Immutable.
-- `verification_session` (VerificationSessionMode) (*mandatory*): declares when a verifier MUST create a `ParticipantSession` ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)) for a verification of a credential of this schema. WHEN_FEES: only when the fees computed for the verification are greater than 0. REQUIRED: for every verification, even when these fees are 0, so that an on-chain record of the verification exists. Under WHEN_FEES a session MUST be created when the fees are greater than 0 and MAY be created otherwise. MUST be WHEN_FEES for a PUBLIC schema, whose credentials are read, not presented. Independently of this attribute, a session is also mandatory for every verification when the schema's `presentation_validity_period` is greater than 0, and for every issuance of a W3C credential, whose digest is anchored through the session. The VPR stores this attribute and does not read it in [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session); agents enforce it as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): unlike `subject_kind`, `presentation_mode` and `credential_format`, this attribute is a cost and audit setting of the ecosystem, with no effect on trust resolution, on the credentials already issued or on the sessions already created; a change applies to the verifications that follow it, and agents read the value in force at the time of the verification.
+- `credential_anchoring` (CredentialAnchoring) (*mandatory*): declares whether the digest of every credential of this schema is anchored in the VPR at issuance. DIGEST: the issuer anchors the credential digest, as defined by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/) for the container, through the issuance `ParticipantSession` before delivering the credential; the `Digest` entry gives the credential's effective issuance time, proves under which `ISSUER` entry it was issued, and carries its revocation ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)). NONE: no credential digest is anchored; the container's native mechanisms apply and trust in the credential requires a currently authorized issuer. MUST be DIGEST when `credential_format` is W3C_JSONLD and MUST be NONE when it is ANONCREDS (a verifier never sees an AnonCreds credential, only a proof derived from it); an ecosystem chooses for SD_JWT and MDOC. [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) requires the `digest` of a Credential Issuance under DIGEST and refuses one under NONE. Immutable.
+- `verification_session` (VerificationSessionMode) (*mandatory*): declares when a verifier MUST create a `ParticipantSession` ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)) for a verification of a credential of this schema. WHEN_FEES: only when the fees computed for the verification are greater than 0. REQUIRED: for every verification, even when these fees are 0, so that an on-chain record of the verification exists. Under WHEN_FEES a session MUST be created when the fees are greater than 0 and MAY be created otherwise. MUST be WHEN_FEES for a PUBLIC schema, whose credentials are read, not presented. Independently of this attribute, a session is also mandatory for every verification when the schema's `presentation_validity_period` is greater than 0, and for every Credential Issuance under a schema whose `credential_anchoring` is DIGEST, since the digest is anchored through the session. The VPR stores this attribute and does not read it in [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session); agents enforce it as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): unlike `subject_kind`, `presentation_mode` and `credential_format`, this attribute is a cost and audit setting of the ecosystem, with no effect on trust resolution, on the credentials already issued or on the sessions already created; a change applies to the verifications that follow it, and agents read the value in force at the time of the verification.
 - `presentation_validity_period` (duration) (*optional*): the duration in seconds during which a presentation of a credential of this schema is valid evidence of a verification; null or 0 means no reliance period: no digest requirement and a null `presentation_valid_until` on the presentation digests. MUST be null or 0 when `presentation_mode` is PUBLIC (published credentials are read, not presented, and produce no receipt). Maximum 315,360,000 seconds (3,650 days). A value greater than 0 makes a `ParticipantSession` and the presentation digest mandatory for every verification of the schema, whatever `verification_session` says: [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) reads the value in force at the block to require the digest and to stamp `presentation_valid_until` on it. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): a change applies to the verifications that follow it and does not change the `presentation_valid_until` values already stamped; agents read the value in force at the time of the verification. The legal effect of the period is stated by the ecosystem in its governance framework.
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
-- `digest_algorithm` (string) (*mandatory*): algorithm used to compute the `digestJCS` of credentials issued under this schema and the presentation digests anchored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
+- `digest_algorithm` (string) (*mandatory*): algorithm used to compute the credential digests of credentials issued under this schema (when `credential_anchoring` is DIGEST) and the presentation digests anchored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
 
 ### Participant
 
@@ -1556,7 +1564,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### Digest
 
-- `digest` (string) (*mandatory*) (key): digest to store. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential's `digestJCS`, computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
+- `digest` (string) (*mandatory*) (key): digest to store. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] on whose behalf the digest was stored: the signing `corporation` of [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest), or the `corporation` of the `ParticipantSession` when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session).
 - `participant_id` (uint64) (*optional*): the `Participant` entry under which the digest was anchored: the primary participant of the session when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) (the `ISSUER` entry in a Credential Issuance, the `VERIFIER` entry in a Credential Verification); null when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). Together with the validator chain of that entry, it determines who may revoke the digest ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)).
 - `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential. For a presentation digest anchored by a verifier in a Credential Verification ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)), it is the **effective presentation time**: together with the session created by the same transaction (that transaction is the link between the two), it lets the holder prove to whom and when it presented, and the verifier prove what it received, without any content on chain.
@@ -2706,6 +2714,7 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `subject_kind` (SubjectKind) (*mandatory*).
 - `presentation_mode` (PresentationMode) (*conditional*): mandatory if `subject_kind` is SERVICE, MUST be absent otherwise.
 - `credential_format` (CredentialFormat) (*mandatory*).
+- `credential_anchoring` (CredentialAnchoring) (*conditional*): mandatory when `credential_format` is SD_JWT or MDOC; if absent, DIGEST when `credential_format` is W3C_JSONLD and NONE when it is ANONCREDS.
 - `verification_session` (VerificationSessionMode) (*optional*), default to WHEN_FEES.
 - `presentation_validity_period` (duration) (*optional*): seconds, default to null (no reliance period).
 - `pricing_asset_type` (PricingAssetType) (*mandatory*).
@@ -2737,6 +2746,7 @@ If any of these precondition checks fail, method MUST abort.
 - `presentation_mode` (PresentationMode) (*conditional*): if `subject_kind` is SERVICE, MUST be present and MUST be a valid PresentationMode; if `subject_kind` is PERSON, MUST be absent; else abort.
 - if `subject_kind` is PERSON, `holder_onboarding_mode` MUST be PERMISSIONLESS (a natural person holds no `Participant` entry), else abort.
 - `credential_format` (CredentialFormat) (*mandatory*). MUST be a valid CredentialFormat. If `presentation_mode` is PUBLIC, `credential_format` MUST be W3C_JSONLD (a published credential is a Linked Verifiable Presentation), else abort. If `credential_format` is MDOC, `subject_kind` MUST be PERSON, else abort.
+- `credential_anchoring` (CredentialAnchoring) (*conditional*): if present, MUST be a valid CredentialAnchoring. MUST be DIGEST or absent when `credential_format` is W3C_JSONLD, NONE or absent when it is ANONCREDS, and MUST be present otherwise; else abort.
 - `verification_session` (VerificationSessionMode) (*optional*): if present, MUST be a valid VerificationSessionMode. If `presentation_mode` is PUBLIC, MUST be WHEN_FEES or absent, else abort.
 - `presentation_validity_period` (duration) (*optional*): if present, MUST be between 0 and 315,360,000 seconds. If `presentation_mode` is PUBLIC, MUST be 0 or absent, else abort.
 - `digest_algorithm` (string) (*mandatory*) MUST be one of the lowercase tokens `sha384` or `sha512`, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
@@ -2777,6 +2787,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.subject_kind`: `subject_kind`
   - `cs.presentation_mode`: `presentation_mode` (null if `subject_kind` is PERSON)
   - `cs.credential_format`: `credential_format`
+  - `cs.credential_anchoring`: `credential_anchoring` if present, else DIGEST when `credential_format` is W3C_JSONLD, NONE when it is ANONCREDS
   - `cs.verification_session`: `verification_session` if present, else WHEN_FEES
   - `cs.presentation_validity_period`: `presentation_validity_period` (null if absent)
   - `cs.created`: current timestamp
@@ -2809,7 +2820,7 @@ An [[ref: account]] that would like to update a [[ref: credential schema]] MUST 
 - `verification_session` (VerificationSessionMode) (*optional*): if absent, the attribute is unchanged.
 - `presentation_validity_period` (duration) (*optional*): seconds; if absent, the attribute is unchanged.
 
-other attributes (including `subject_kind`, `presentation_mode` and `credential_format`) are immutable and cannot be updated.
+other attributes (including `subject_kind`, `presentation_mode`, `credential_format` and `credential_anchoring`) are immutable and cannot be updated.
 
 ##### [MOD-CS-MSG-2-2] Update Credential Schema precondition checks
 
@@ -2953,6 +2964,7 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 - `presentation_mode` (PresentationMode): if set, filter by `presentation_mode`.
 - `credential_format` (CredentialFormat): if set, filter by `credential_format`.
 - `verification_session` (VerificationSessionMode): if set, filter by `verification_session`.
+- `credential_anchoring` (CredentialAnchoring): if set, filter by `credential_anchoring`.
 
 ##### [MOD-CS-QRY-1-2] List Credential Schemas checks
 
@@ -4115,7 +4127,7 @@ Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS 
 
 #### [MOD-PP-MSG-10] Create or Update Participant Session
 
-Only the `vs_operator` of the primary `Participant` entry CAN execute this method on behalf of a `corporation` (a VS Operator Authorization; [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization) excludes this message from OperatorAuthorizations). The digest of a W3C credential is anchored through the issuance session only: an issuer MUST hold a VS Operator Authorization for its agent to issue W3C credentials.
+Only the `vs_operator` of the primary `Participant` entry CAN execute this method on behalf of a `corporation` (a VS Operator Authorization; [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization) excludes this message from OperatorAuthorizations). The digest of a credential of a schema whose `credential_anchoring` is DIGEST is anchored through the issuance session only: such an issuer MUST hold a VS Operator Authorization for its agent.
 
 Any credential exchange that requires issuer or verifier to pay fees, anchor a digest, or produce a proof implies the creation of a `ParticipantSession`. A Credential Verification of a credential whose schema sets `verification_session` to REQUIRED implies the creation of a `ParticipantSession` even when the fees computed for the verification are 0; when the schema sets WHEN_FEES, a session is required for a verification only when these fees are greater than 0 (see [CredentialSchema](#credentialschema)).
 
@@ -4135,7 +4147,7 @@ If the peer wants to verify a credential, agent must send to peer:
 
 In case peer is a **Verifiable Service** and illegaly set `agent_participant_id` and/or `wallet_agent_participant_id`, the other end MUST refuse the request.
 
-When a session is required (fees greater than 0; `verification_session` set to REQUIRED, see [CredentialSchema](#credentialschema); a `presentation_validity_period` of the schema greater than 0; a presentation digest requested by the verifier; or the issuance of a W3C credential, whose digest is anchored through the session), `payer` MUST create it using the above information, then `agent` MUST check that the session has been created and is valid, and in a Credential Verification that its `issuer_participant_id` is the issuer of the credential it is about to present (fees are routed by that id), before performing the action (storing the issued credential, or sending the presentation). When the agent sent a presentation digest, it MUST additionally check, with [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest), that a `Digest` entry with its digest exists and belongs to the corporation of the verifier `Participant` before sending the presentation.
+When a session is required (fees greater than 0; `verification_session` set to REQUIRED, see [CredentialSchema](#credentialschema); a `presentation_validity_period` of the schema greater than 0; a presentation digest requested by the verifier; or a Credential Issuance under a schema whose `credential_anchoring` is DIGEST, since the digest is anchored through the session), `payer` MUST create it using the above information, then `agent` MUST check that the session has been created and is valid, and in a Credential Verification that its `issuer_participant_id` is the issuer of the credential it is about to present (fees are routed by that id), before performing the action (storing the issued credential, or sending the presentation). When the agent sent a presentation digest, it MUST additionally check, with [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest), that a `Digest` entry with its digest exists and belongs to the corporation of the verifier `Participant` before sending the presentation.
 
 ```plantuml
 scale max 800 width
@@ -4169,7 +4181,7 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 - `verifier_participant_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
 - `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
-- `digest` (string(256)) (*optional*): in a Credential Issuance, the `digestJCS` of the credential being issued (its anchoring fixes the effective issuance time, see [Digest](#digest)); in a Credential Verification, the presentation digest sent by the agent (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
+- `digest` (string(256)) (*conditional*): in a Credential Issuance, the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), mandatory when the schema's `credential_anchoring` is DIGEST and absent when it is NONE (its anchoring fixes the effective issuance time, see [Digest](#digest)); in a Credential Verification, the presentation digest sent by the agent (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
 
 ##### [MOD-PP-MSG-10-2] Create or Update Participant Session precondition checks
 
@@ -4203,6 +4215,7 @@ if `verifier_participant_id` is not null:
 - if `verifier_participant.schema_id` is not equal to `issuer_participant.schema_id`, abort.
 - load `CredentialSchema` `cs` from `issuer_participant.schema_id`. If `cs.presentation_validity_period` > 0 and `digest` is absent, abort: the ecosystem requires a dated receipt of every verification of this schema.
 
+- in a Credential Issuance, load `CredentialSchema` `cs` from `issuer_participant.schema_id`; if `cs.credential_anchoring` is DIGEST and `digest` is absent, abort (the credential digest is anchored through this session); if `cs.credential_anchoring` is NONE and `digest` is present, abort (no credential digest is anchored for this schema).
 - if `digest` is present and longer than 256 characters, abort.
 - in a Credential Verification, if `digest` is present and a `Digest` entry with that value already exists, abort: a presentation is unique to its session, and an existing entry indicates a replayed presentation.
 
@@ -6123,7 +6136,7 @@ This method revokes a digest. It can be executed on behalf of:
 
 Revoking a digest is the on-chain revocation mechanism for an individual credential whose issuance was anchored through its issuance session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)); revoking the holder's `HOLDER` `Participant` entry ([[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)) withdraws trust from every credential of that relationship instead. The authority structure mirrors [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant): the issuer, its grantors and the ecosystem can revoke, and the ecosystem governance framework bounds the use of the ancestor path. Trust resolution of a credential whose `digestJCS` has a `Digest` entry with a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp, whoever set it. Revocation is irreversible. Trust resolution looks up credential digests only, so revoking a presentation digest (anchored in a Credential Verification) has no effect.
 
-Since any corporation may store any digest and the first to store it owns it, the Verifiable Trust specification requires the issuer of a W3C credential to anchor its digest through the issuance session before delivering the credential, so that no other corporation can anchor it first and hold the right to revoke it.
+Since any corporation may store any digest and the first to store it owns it, the Verifiable Trust specification requires the issuer of a credential of a schema whose `credential_anchoring` is DIGEST to anchor its digest through the issuance session before delivering the credential, so that no other corporation can anchor it first and hold the right to revoke it.
 
 ##### [MOD-DI-MSG-2-1] Revoke Digest method parameters
 
