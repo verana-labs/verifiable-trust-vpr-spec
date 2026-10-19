@@ -4412,7 +4412,7 @@ if `issuer_participant_id` is not null:
 
 - Load `issuer_participant` from `issuer_participant_id`.
 - if `issuer_participant.role` is not ISSUER, abort.
-- if `issuer_participant` is not a [[ref: active participant]], abort.
+- if the operation is a Credential Issuance, `issuer_participant` MUST be an [[ref: active participant]], else abort. In a Credential Verification no state is required of `issuer_participant`: the validity of the credential is established by trust resolution at its issuance time, and the unrepaid-slash filter of [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
 
 if `verifier_participant_id` is not null:
 
@@ -4428,7 +4428,7 @@ Define the **primary `Participant`** `perm`: if `verifier_participant` is not nu
 - if `perm.vs_operator` is not equal to `operator`, abort.
 - if `perm.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
 
-> Note: the `vs_operator` and `corporation_id` checks apply to the primary `Participant` only. In a Credential Verification, the issuer `Participant` entry generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, activity and schema only.
+> Note: the `vs_operator` and `corporation_id` checks apply to the primary `Participant` only. In a Credential Verification, the issuer `Participant` entry generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role and schema only: an expired, revoked or slashed issuer entry does not prevent the verification of a credential it issued while authorized.
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
@@ -5321,6 +5321,9 @@ v --> vg
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
+A `Participant` entry `p` has an **unrepaid slash** when `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit` (ecosystem slash, see [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), or when the `TrustDeposit` entry `td` of `Corporation[p.corporation_id]` has `td.slashed_deposit` > `td.repaid_deposit` (network slash). An entry with an unrepaid slash receives no fees and funds no deposit as a beneficiary; it is paid again as soon as the slash is repaid ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)). No other state excludes a beneficiary: a revoked entry (revocation is not a sanction: a validator may revoke an entry to change its fee model, and the entry's subtree keeps running until it expires) and an expired entry keep receiving the fees of the operations performed under their branch.
+
+
 Example: Let's build the set. Revoked and slashed `Participant` entries will not be added to the set. Expired `Participant` entries, if not revoked/slashed, will be considered.
 
 - create Set `found_participant_set`.
@@ -5334,15 +5337,15 @@ if `issuer_participant` is not null:
 - set `current_participant` = `issuer_participant`
 - while `current_participant.validator_participant_id` is not null:
   - current_participant = load(`current_participant.validator_participant_id`)
-  - if `current_participant.revoked` is NULL AND `current_participant.slashed` is NULL, Add `current_participant` to `found_participant_set`.
+  - unless `current_participant` has an unrepaid slash (see below), Add `current_participant` to `found_participant_set`.
 
 Additionally, if `verifier_participant` is not null:
 
-- if `issuer_participant` is not null, add `issuer_participant` to `found_participant_set`
+- if `issuer_participant` is not null and has no unrepaid slash (see below), add `issuer_participant` to `found_participant_set`
 - set `current_participant` = `verifier_participant`
 - while `current_participant.validator_participant_id` != null:
   - current_participant = load(`current_participant.validator_participant_id`)
-  - if `current_participant.revoked` is NULL AND `current_participant.slashed` is NULL, Add `current_participant` to `found_participant_set`.
+  - unless `current_participant` has an unrepaid slash (see below), Add `current_participant` to `found_participant_set`.
 
 return `found_perms`.
 
