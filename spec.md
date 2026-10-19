@@ -1119,7 +1119,7 @@ entity "SchemaAuthorizationPolicy" as sap {
   +role: sapr
   +url: string
   +digest_sri: string
-  presentation_validity_period: number
+  presentation_validity_period: duration
   +revoked: boolean
   +effective_from: timestamp
   effective_until: timestamp
@@ -1507,7 +1507,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `effective_from` (timestamp) (*mandatory*): timestamp from which this policy version is in force.
 - `effective_until` (timestamp) (*optional*): timestamp until which this policy version is in force, if time-limited.
 - `revoked` (boolean) (*mandatory*): indicates whether this policy version has been revoked and must no longer be used.
-- `presentation_validity_period` (number) (*optional*): for a VERIFIER policy, the number of days during which a presentation of a credential of this schema, received while this policy version is active, is valid evidence of a verification; null or 0 means no limit. [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) reads it to stamp `presentation_valid_until` on the presentation digest and to require that digest. MUST be null for an ISSUER policy. The legal effect of the period is stated in the policy document.
+- `presentation_validity_period` (duration) (*optional*): for a VERIFIER policy, the duration in seconds during which a presentation of a credential of this schema, received while this policy version is active, is valid evidence of a verification; null or 0 means no limit. [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) reads it to stamp `presentation_valid_until` on the presentation digest and to require that digest. MUST be null for an ISSUER policy. The legal effect of the period is stated in the policy document.
 
 ### Participant
 
@@ -2978,7 +2978,7 @@ Accordingly, if a credential schema defines one or more active policies for the 
 - `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
 - `url` (string): URL where the policy document is published (*mandatory*).
 - `digest_sri` (string): SRI digest of the policy document (*mandatory*).
-- `presentation_validity_period` (number): days (*optional*), VERIFIER role only; see [SchemaAuthorizationPolicy](#schemaauthorizationpolicy).
+- `presentation_validity_period` (duration): seconds (*optional*), VERIFIER role only; see [SchemaAuthorizationPolicy](#schemaauthorizationpolicy).
 
 ##### [MOD-CS-MSG-5-2] Create Schema Authorization Policy precondition checks
 
@@ -2994,7 +2994,7 @@ If any of these precondition checks fail, method MUST abort.
 - `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
 - `url` MUST be a non-empty valid [[ref: URI]].
 - `digest_sri` MUST be non-empty.
-- `presentation_validity_period`: if present, `role` MUST be VERIFIER and the value MUST be between 0 and 3650 days, else abort.
+- `presentation_validity_period`: if present, `role` MUST be VERIFIER and the value MUST be between 0 and 315,360,000 seconds (3650 days), else abort.
 - there MUST NOT exist more than one policy for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
 
 ###### [MOD-CS-MSG-5-2-2] Create Schema Authorization Policy fee checks
@@ -4790,7 +4790,7 @@ Else update:
 
 then, add the `cspsr` to `session.session_records`
 
-if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`: in a Credential Issuance it is the credential's `digestJCS` and, when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time; in a Credential Verification it is the presentation digest and its `created` timestamp is the effective presentation time (a pre-existing entry keeps its `created` and its owner, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op). In a Credential Verification, when `verifier_policy.presentation_validity_period` > 0, the call passes `presentation_valid_until` = `now` plus that number of days; in every other case the `Digest` entry's `presentation_valid_until` is null.
+if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`: in a Credential Issuance it is the credential's `digestJCS` and, when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time; in a Credential Verification it is the presentation digest and its `created` timestamp is the effective presentation time (a pre-existing entry keeps its `created` and its owner, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op). In a Credential Verification, when `verifier_policy.presentation_validity_period` > 0, the call passes `presentation_valid_until` = `now` plus that duration; in every other case the `Digest` entry's `presentation_valid_until` is null.
 
 :::warning
 a `ParticipantSessionRecord` always carries `issuer_participant_id`; `verifier_participant_id` is set in a Credential Verification only
