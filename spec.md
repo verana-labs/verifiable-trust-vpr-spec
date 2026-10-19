@@ -5545,7 +5545,7 @@ Nothing is burned here: [[ref: trust units]] are not a token. The economic penal
 
 #### [MOD-TD-MSG-6] Repay Slash Obligation
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation` to repay one of its open `SlashObligation` entries. Repayment is made in [[ref: native denom]] worth `fiat_obligation` at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the `Participant` entries and the `TrustDeposit`. No trust units are minted.
+Any authorized `operator` CAN execute this method on behalf of a `corporation` to repay one of its open `SlashObligation` entries. Repayment is made in [[ref: native denom]] worth `fiat_obligation` at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the `Participant` entries and the `TrustDeposit`. No trust units are minted. An obligation is repaid in full in one message; partial repayment (installments) is a candidate for a later version.
 
 ##### [MOD-TD-MSG-6-1] Repay Slash Obligation method parameters
 
