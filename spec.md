@@ -6202,7 +6202,7 @@ Return found `Digest` entry (if any) matching `digest`.
 
 ### Exchange Rate Module
 
-Exchange rates MAY be defined for multiple fiat currencies and coins (multi-fiat pricing is supported). A valid, non-expired rate between the [[ref: native denom]] and the [[ref: main fiat currency]] is REQUIRED for protocol-level operations (trust unit minting, distribution payouts, slash repayment): while it is expired, those operations MUST halt until a fresh rate is pushed.
+Exchange rates MAY be defined for multiple fiat currencies and coins (multi-fiat pricing is supported). A valid, non-expired rate between the [[ref: native denom]] and the [[ref: main fiat currency]] is REQUIRED for protocol-level operations (trust unit minting, distribution payouts, slash repayment): while it is expired, those operations MUST halt until a fresh rate is pushed. The genesis state provides the first such rate ([[XRG]](#xrg-genesis-exchange-rate)).
 
 #### [MOD-XR-MSG-1] Create Exchange Rate
 
@@ -6654,6 +6654,10 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 **Delegation:**
 
 - `vs_operator_fee_period` (duration) (*mandatory*): 1 day.
+
+### [XRG] Genesis Exchange Rate
+
+The genesis state MUST contain one `ExchangeRate` entry between the [[ref: native denom]] (COIN) and the [[ref: main fiat currency]] (FIAT), with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch oracle operator for that entry. Without this state no [[ref: trust unit]] can be minted and no slash obligation repaid until governance creates the rate and an operator pushes it. Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the operator pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
 
 ## References
 
