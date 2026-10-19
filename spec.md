@@ -5324,7 +5324,7 @@ v --> vg
 A `Participant` entry `p` has an **unrepaid slash** when `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit` (ecosystem slash, see [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), or when the `TrustDeposit` entry `td` of `Corporation[p.corporation_id]` has `td.slashed_deposit` > `td.repaid_deposit` (network slash). An entry with an unrepaid slash receives no fees and funds no deposit as a beneficiary; it is paid again as soon as the slash is repaid ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)). No other state excludes a beneficiary: a revoked entry (revocation is not a sanction: a validator may revoke an entry to change its fee model, and the entry's subtree keeps running until it expires) and an expired entry keep receiving the fees of the operations performed under their branch.
 
 
-Example: Let's build the set. Revoked and slashed `Participant` entries will not be added to the set. Expired `Participant` entries, if not revoked/slashed, will be considered.
+Example: Let's build the set. `Participant` entries with an unrepaid slash will not be added to the set. Revoked and expired `Participant` entries will be considered.
 
 - create Set `found_participant_set`.
 
