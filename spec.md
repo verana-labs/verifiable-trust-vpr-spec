@@ -4749,7 +4749,7 @@ After processing all beneficiaries, distribute accumulated rewards to agents.
 
 **User Agent Reward:**
 
-If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0 AND neither `agent_participant` nor its corporation has an unrepaid slash (same rule as [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries); otherwise the reward is not paid and no deposit is funded):
+If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0 AND `agent_participant` has no unrepaid slash in the sense of [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries) (otherwise the reward is not paid and no deposit is funded):
 
 - `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
@@ -4758,7 +4758,7 @@ If `agent_participant_id` is set AND `accumulated_user_agent_reward` > 0 AND nei
 
 **Wallet Agent Reward:**
 
-If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 0 AND neither `wallet_agent_participant` nor its corporation has an unrepaid slash (same rule):
+If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 0 AND `wallet_agent_participant` has no unrepaid slash in the sense of [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries):
 
 - `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
 - `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
@@ -5346,7 +5346,7 @@ v --> vg
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
-A `Participant` entry `p` has an **unrepaid slash** when `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit` (ecosystem slash, see [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), or when the `TrustDeposit` entry `td` of `Corporation[p.corporation_id]` has `td.slashed_deposit` > `td.repaid_deposit` (network slash). An entry with an unrepaid slash receives no fees and funds no deposit as a beneficiary; it is paid again as soon as the slash is repaid ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)). No other state excludes a beneficiary: a revoked entry (revocation is not a sanction: a validator may revoke an entry to change its fee model, and each entry of the revoked entry's subtree keeps running until it expires) and an expired entry keep receiving the fees of the operations performed under their branch. An ecosystem that wants to stop paying a participant slashes it ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
+A `Participant` entry `p` has an **unrepaid slash** when its corporation carries one in the ecosystem of `p`'s schema or on the network, with the same scope as the onboarding gates ([[MOD-PP-MSG-1-2-5]](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks)): when any `Participant` entry `q` with `q.corporation_id` = `p.corporation_id` and `CredentialSchema[q.schema_id].ecosystem_id` = `CredentialSchema[p.schema_id].ecosystem_id` has `q.slashed` not null and `q.repaid_deposit` < `q.slashed_deposit` (ecosystem slash, see [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), or when the `TrustDeposit` entry `td` of `Corporation[p.corporation_id]` has `td.slashed_deposit` > `td.repaid_deposit` (network slash). A slash is a judgement on the corporation's conduct in that ecosystem, so one unrepaid slash stops the fees of all the corporation's entries under that ecosystem's schemas, exactly as it stops its onboarding processes there. An entry with an unrepaid slash receives no fees and funds no deposit as a beneficiary; it is paid again as soon as the slash is repaid ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)). No other state excludes a beneficiary: a revoked entry (revocation is not a sanction: a validator may revoke an entry to change its fee model, and each entry of the revoked entry's subtree keeps running until it expires) and an expired entry keep receiving the fees of the operations performed under their branch. An ecosystem that wants to stop paying a participant slashes it ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
 
 
 Algorithm. `Participant` entries with an unrepaid slash are not added to the set; revoked and expired `Participant` entries are.
