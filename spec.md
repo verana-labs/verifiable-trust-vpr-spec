@@ -1304,6 +1304,12 @@ entity "TrustDeposit" as td {
   +slash_count: number
 }
 
+entity "UnrepaidEcosystemSlashCount" as uesc {
+  *corporation_id: uint64
+  *ecosystem_id: uint64
+  +count: number
+}
+
 corp --o fg: grantor_corporation_id
 account --o fg: grantee
 fg "1" --- "0..n" da: spend_limit
@@ -1365,6 +1371,8 @@ csps o-- account: vs_operator
 
 valstate --o csp: op_state
 corp --o td: corporation_id
+corp --o uesc: corporation_id
+tr --o uesc: ecosystem_id
 corp --o digest: corporation_id
 csp --o digest: participant_id
 
@@ -1520,6 +1528,14 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
 > Note: VS operator authorization settings (spend limits, operation-budget cycle, feegrant, authorized message types) are stored in `ParticipantAuthorizationRecord` entries inside [VSOperatorAuthorization](#vsoperatorauthorization), keyed by `Participant.id`. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
+
+### UnrepaidEcosystemSlashCount
+
+`UnrepaidEcosystemSlashCount`:
+
+- `corporation_id` (uint64) (*mandatory*) (key): the corporation.
+- `ecosystem_id` (uint64) (*mandatory*) (key): the ecosystem.
+- `count` (uint32) (*mandatory*): the number of `Participant` entries of the corporation whose schema belongs to the ecosystem and whose slash is unrepaid (`slashed_deposit` > `repaid_deposit`). An entry exists only while `count` > 0: it is created or incremented by [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) when an entry's slash becomes unrepaid, decremented by [[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit) when it is repaid, and deleted when the count reaches 0. It is derived state: it lets the onboarding gates ([[MOD-PP-MSG-1-2-5]](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks)) and Find Beneficiaries ([[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)) answer "does this corporation carry an unrepaid ecosystem slash in this ecosystem" with one lookup instead of a scan of its `Participant` entries. The network slash needs no index: it is read from the corporation's `TrustDeposit` entry.
 
 ### ParticipantSession
 
@@ -3294,15 +3310,10 @@ Additionally, if any `Participant` entry matches the same conditions except with
 A `corporation` with an unrepaid slash MUST NOT start an onboarding process: in the ecosystem where it was slashed (ecosystem slash, see [MOD-PP-MSG-12](#mod-pp-msg-12-slash-participant-trust-deposit)), or anywhere on the VPR (network slash, see [MOD-TD-MSG-5](#mod-td-msg-5-slash-trust-deposit)).
 
 - define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `validator_participant.schema_id`).
-- if any `Participant` entry `p` exists where:
-  - `p.corporation_id` = `co.id`,
-  - `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit`,
-  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
-
-  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
+- if an `UnrepaidEcosystemSlashCount` entry exists for (`co.id`, `ecosystem_id`) (one of the corporation's `Participant` entries under this ecosystem carries an unrepaid slash, see [UnrepaidEcosystemSlashCount](#unrepaidecosystemslashcount)), [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
 - if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_deposit` > `td.repaid_deposit`, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
 
-> Note: the condition `p.repaid_deposit` < `p.slashed_deposit` (rather than `p.repaid` is null) keeps this check correct when an entry is slashed again after a previous repayment.
+> Note: the count follows `repaid_deposit` < `slashed_deposit` rather than `repaid` being null, which keeps this check correct when an entry is slashed again after a previous repayment.
 
 ##### [MOD-PP-MSG-1-3] Start Participant OP execution
 
@@ -3503,12 +3514,7 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 Same as [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks), with `ecosystem_id` resolved from the entry being renewed:
 
 - define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `applicant_participant.schema_id`).
-- if any `Participant` entry `p` exists where:
-  - `p.corporation_id` = `co.id`,
-  - `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit`,
-  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
-
-  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
+- if an `UnrepaidEcosystemSlashCount` entry exists for (`co.id`, `ecosystem_id`) (one of the corporation's `Participant` entries under this ecosystem carries an unrepaid slash, see [UnrepaidEcosystemSlashCount](#unrepaidecosystemslashcount)), [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
 - if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_deposit` > `td.repaid_deposit`, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
 
 ##### [MOD-PP-MSG-2-3] Renew Participant OP execution
@@ -4216,6 +4222,7 @@ if `verifier_participant_id` is not null:
 - load `CredentialSchema` `cs` from `issuer_participant.schema_id`. If `cs.presentation_validity_period` > 0 and `digest` is absent, abort: the ecosystem requires a dated receipt of every verification of this schema.
 
 - in a Credential Issuance, load `CredentialSchema` `cs` from `issuer_participant.schema_id`; if `cs.credential_anchoring` is DIGEST and `digest` is absent, abort (the credential digest is anchored through this session); if `cs.credential_anchoring` is NONE and `digest` is present, abort (no credential digest is anchored for this schema).
+- in a Credential Issuance, if `digest` is present and a `Digest` entry with that value already exists whose `corporation_id` differs from `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort: another corporation anchored this credential first and would control its revocation; the issuer re-issues the credential with changed content, as the Verifiable Trust specification requires. An existing entry owned by `co.id` is accepted and left unchanged.
 - if `digest` is present and longer than 256 characters, abort.
 - in a Credential Verification, if `digest` is present and a `Digest` entry with that value already exists, abort: a presentation is unique to its session, and an existing entry indicates a replayed presentation.
 
@@ -4561,7 +4568,7 @@ Else update:
 
 then, add the `cspsr` to `session.session_records`
 
-if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`: in a Credential Issuance it is the credential's `digestJCS` and, when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry keeps its `created` and its owner, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op); in a Credential Verification it is the presentation digest and its `created` timestamp is the effective presentation time. In a Credential Verification, when `cs.presentation_validity_period` > 0, the call passes `presentation_valid_until` = `now` plus that duration; in every other case the `Digest` entry created by this transaction has a null `presentation_valid_until`.
+if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`: in a Credential Issuance it is the credential's `digestJCS` and, when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry, necessarily owned by `co.id` after the precondition checks, keeps its `created`, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op); in a Credential Verification it is the presentation digest and its `created` timestamp is the effective presentation time. In a Credential Verification, when `cs.presentation_validity_period` > 0, the call passes `presentation_valid_until` = `now` plus that duration; in every other case the `Digest` entry created by this transaction has a null `presentation_valid_until`.
 
 :::warning
 a `ParticipantSessionRecord` always carries `issuer_participant_id`; `verifier_participant_id` is set in a Credential Verification only
@@ -4671,6 +4678,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_participant.slashed` to `now`
 - set `applicant_participant.modified` to `now`
 - set `applicant_participant.slashed_deposit` to `applicant_participant.slashed_deposit` + `amount`
+- if, before this slash, `applicant_participant.repaid_deposit` was equal to `applicant_participant.slashed_deposit` (the entry carried no unrepaid slash), increment `UnrepaidEcosystemSlashCount[(applicant_participant.corporation_id, CredentialSchema[applicant_participant.schema_id].ecosystem_id)].count` by 1, creating the entry at 1 if absent.
 
 use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_participant.corporation_id`.
 
@@ -4724,6 +4732,7 @@ use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `owed
 - set `applicant_participant.repaid` to `now`
 - set `applicant_participant.modified` to `now`
 - set `applicant_participant.repaid_deposit` to `applicant_participant.slashed_deposit`.
+- if `owed` > 0, decrement `UnrepaidEcosystemSlashCount[(applicant_participant.corporation_id, CredentialSchema[applicant_participant.schema_id].ecosystem_id)].count` by 1, and delete the entry when it reaches 0.
 
 #### [MOD-PP-MSG-14] Self Create Participant
 
@@ -4830,12 +4839,7 @@ for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUS
 Same as [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks):
 
 - define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `validator_participant.schema_id`).
-- if any `Participant` entry `p` exists where:
-  - `p.corporation_id` = `co.id`,
-  - `p.slashed` is not null and `p.repaid_deposit` < `p.slashed_deposit`,
-  - `CredentialSchema[p.schema_id].ecosystem_id` = `ecosystem_id`,
-
-  then [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
+- if an `UnrepaidEcosystemSlashCount` entry exists for (`co.id`, `ecosystem_id`) (one of the corporation's `Participant` entries under this ecosystem carries an unrepaid slash, see [UnrepaidEcosystemSlashCount](#unrepaidecosystemslashcount)), [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-PP-MSG-13](#mod-pp-msg-13-repay-participant-slashed-trust-deposit).
 - if a `TrustDeposit` entry `td` exists for `co.id` and `td.slashed_deposit` > `td.repaid_deposit`, [[ref: transaction]] MUST abort: `corporation` MUST first repay using [MOD-TD-MSG-6](#mod-td-msg-6-repay-slashed-trust-deposit).
 
 ##### [MOD-PP-MSG-14-3] Self Create Participant execution
@@ -5113,7 +5117,7 @@ v --> vg
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
-A `Participant` entry `p` has an **unrepaid slash** when its corporation carries one in the ecosystem of `p`'s schema or on the network, with the same scope as the onboarding gates ([[MOD-PP-MSG-1-2-5]](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks)): when any `Participant` entry `q` with `q.corporation_id` = `p.corporation_id` and `CredentialSchema[q.schema_id].ecosystem_id` = `CredentialSchema[p.schema_id].ecosystem_id` has `q.slashed` not null and `q.repaid_deposit` < `q.slashed_deposit` (ecosystem slash, see [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), or when the `TrustDeposit` entry `td` of `Corporation[p.corporation_id]` has `td.slashed_deposit` > `td.repaid_deposit` (network slash). A slash is a judgement on the corporation's conduct in that ecosystem, so one unrepaid slash stops the fees of all the corporation's entries under that ecosystem's schemas, exactly as it stops its onboarding processes there. An entry with an unrepaid slash receives no fees and funds no deposit as a beneficiary; it is paid again as soon as the slash is repaid ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)). No other state excludes a beneficiary: a revoked entry (revocation is not a sanction: a validator may revoke an entry to change its fee model, and each entry of the revoked entry's subtree keeps running until it expires) and an expired entry keep receiving the fees of the operations performed under their branch. An ecosystem that wants to stop paying a participant slashes it ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
+A `Participant` entry `p` has an **unrepaid slash** when its corporation carries one in the ecosystem of `p`'s schema or on the network, with the same scope as the onboarding gates ([[MOD-PP-MSG-1-2-5]](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks)): when an [UnrepaidEcosystemSlashCount](#unrepaidecosystemslashcount) entry exists for (`p.corporation_id`, `CredentialSchema[p.schema_id].ecosystem_id`), that is, when one of the corporation's entries under that ecosystem has `slashed_deposit` > `repaid_deposit` (ecosystem slash, see [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), or when the `TrustDeposit` entry `td` of `Corporation[p.corporation_id]` has `td.slashed_deposit` > `td.repaid_deposit` (network slash); both are single lookups, one read per beneficiary. A slash is a judgement on the corporation's conduct in that ecosystem, so one unrepaid slash stops the fees of all the corporation's entries under that ecosystem's schemas, exactly as it stops its onboarding processes there. An entry with an unrepaid slash receives no fees and funds no deposit as a beneficiary; it is paid again as soon as the slash is repaid ([[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit)). No other state excludes a beneficiary: a revoked entry (revocation is not a sanction: a validator may revoke an entry to change its fee model, and each entry of the revoked entry's subtree keeps running until it expires) and an expired entry keep receiving the fees of the operations performed under their branch. An ecosystem that wants to stop paying a participant slashes it ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)).
 
 
 Algorithm. `Participant` entries with an unrepaid slash are not added to the set; revoked and expired `Participant` entries are.
@@ -5922,7 +5926,7 @@ The aggregate MUST be maintained **incrementally**. A VSOA may group tens of tho
 
 The `PeriodicAllowance` resets itself during fee deduction, so no VPR action is needed at fee-cycle boundaries. Re-granting mid-cycle resets the running `period_can_spend`: any VSOA mutation refreshes the current period's fee budget early — **accepted slack**, bounded by one period's budget per mutation, and mutations are controlled by the grantor.
 
-A full recomputation by scanning `vsoa.records` MAY be used as a consistency check or as a migration step and MUST yield the same aggregates once the window-end queue has been processed; it MUST NOT be the per-mutation path.
+A full recomputation by scanning `vsoa.records` MAY be used as a consistency check or as a migration step and MUST yield the same aggregates once the window-end queue has been processed; it SHOULD NOT be the per-mutation path.
 
 To keep the aggregate fresh when an entry expires **by clock** (no transaction touches the VSOA), the Delegation module maintains a time-indexed **window-end queue**, fed by the record mutations described above. At each block's EndBlocker, every due queue entry is popped; a key whose `participant_id` no longer resolves to a `ParticipantAuthorizationRecord` is discarded, otherwise this subroutine is re-run for the containing VSOA: if the entry is no longer alive, its contribution drops (and the allowance is revoked when none remains); if its window was extended in the meantime, the re-run is harmless and re-schedules the entry at its new `effective_until` (the stale key has already been popped). Entries with a future `effective_from` count from creation — no start-edge queue is needed, since [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 blocks any use until the window opens.
 
@@ -6156,6 +6160,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - if `digest` is not present, abort.
 - if `digest` is longer than 256 characters, abort.
 - a `Digest` entry `d` with `d.digest` = `digest` MUST exist, else abort.
+- [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass: `co` is the `Corporation` entry whose `policy_address` is the signing `corporation` account.
 - define `authority_set`: the empty set if `d.participant_id` is null; else the anchoring entry `Participant[d.participant_id]` and every ancestor reached from it by following `validator_participant_id` until null, keeping only the entries that are [[ref: active participants]] (an expired, revoked or slashed entry confers no authority).
 - Authorization:
 
