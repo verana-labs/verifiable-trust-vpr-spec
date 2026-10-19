@@ -3073,7 +3073,7 @@ Method execution MUST perform the following tasks atomically in a [[ref: transac
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-This message revokes a previously enabled `SchemaAuthorizationPolicy` version. Revoked means previously issued credential that refer to this policy are automatically considered revoked.
+This message revokes a previously enabled `SchemaAuthorizationPolicy` version. Revocation withdraws the version from the criteria in force: no accreditation may be granted or renewed under it. It does not affect existing `Participant` entries, the credentials issued under them, or the `presentation_valid_until` values already stamped on receipts; an ecosystem that wants to withdraw the accreditations granted under a defective version does so entry by entry ([[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until), [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)). Authorization on the VPR is the `Participant` entry, not a credential: an accreditation credential issued under a policy version (see [[MOD-CS-MSG-5]](#mod-cs-msg-5-create-schema-authorization-policy)) follows the state of the entry it attests, not that of the policy version.
 
 ##### [MOD-CS-MSG-7-1] Revoke Schema Authorization Policy parameters
 
