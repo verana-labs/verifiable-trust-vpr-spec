@@ -1119,6 +1119,7 @@ entity "SchemaAuthorizationPolicy" as sap {
   +role: sapr
   +url: string
   +digest_sri: string
+  presentation_validity_period: number
   +revoked: boolean
   +effective_from: timestamp
   effective_until: timestamp
@@ -1274,6 +1275,7 @@ entity "Digest" as digest {
   participant_id: uint64
   +created: timestamp
   revoked: timestamp
+  presentation_valid_until: timestamp
 }
 
 enum "ParticipantRole" as cspt {
@@ -1505,6 +1507,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `effective_from` (timestamp) (*mandatory*): timestamp from which this policy version is in force.
 - `effective_until` (timestamp) (*optional*): timestamp until which this policy version is in force, if time-limited.
 - `revoked` (boolean) (*mandatory*): indicates whether this policy version has been revoked and must no longer be used.
+- `presentation_validity_period` (number) (*optional*): for a VERIFIER policy, the number of days during which a presentation of a credential of this schema, received while this policy version is active, is valid evidence of a verification; null or 0 means no limit. [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) reads it to stamp `presentation_valid_until` on the presentation digest and to require that digest. MUST be null for an ISSUER policy. The legal effect of the period is stated in the policy document.
 
 ### Participant
 
@@ -1530,6 +1533,17 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `slashed_deposit` (number) (*mandatory*): part of the deposit in [[ ref: native denom ]] that has been slashed.
 - `repaid_deposit` (number) (*mandatory*): part of the slashed deposit in [[ ref: native denom ]] that has been repaid.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
+- `presentation_valid_until` (timestamp) (*optional*): for a **presentation digest** only, the end of the period during which the presentation is valid evidence of a verification, set by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) from the `presentation_validity_period` of the active VERIFIER `SchemaAuthorizationPolicy` of the schema. MUST be null for every digest anchored in a Credential Issuance and for every digest stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest): it never concerns the validity of a credential, which is bounded by the credential's own `validUntil` and by the `HOLDER` entry it was issued under. Trust resolution never reads it.
+
+The anchoring context tells the two kinds of digest apart:
+
+| | Credential digest | Presentation digest |
+| --- | --- | --- |
+| Anchored by | a Credential Issuance session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)), or directly ([[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)) | a Credential Verification session |
+| `participant_id` | the `ISSUER` entry, or null | the `VERIFIER` entry |
+| `created` | effective issuance time | effective presentation time |
+| `revoked` | the credential is revoked as of this time (owner or governance ancestor) | ignored by trust resolution |
+| `presentation_valid_until` | always null | end of the reliance period, when the VERIFIER policy sets one |
 - `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the onboarding process of this permission, ie *parent node* in the `Participant` tree.
 - `op_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
 - `op_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Participant` expiration timestamp.
@@ -2964,6 +2978,7 @@ Accordingly, if a credential schema defines one or more active policies for the 
 - `role` (SchemaAuthorizationPolicyRole): `ISSUER` or `VERIFIER` (*mandatory*).
 - `url` (string): URL where the policy document is published (*mandatory*).
 - `digest_sri` (string): SRI digest of the policy document (*mandatory*).
+- `presentation_validity_period` (number): days (*optional*), VERIFIER role only; see [SchemaAuthorizationPolicy](#schemaauthorizationpolicy).
 
 ##### [MOD-CS-MSG-5-2] Create Schema Authorization Policy precondition checks
 
@@ -2979,6 +2994,7 @@ If any of these precondition checks fail, method MUST abort.
 - `role` MUST be a valid `SchemaAuthorizationPolicyRole`.
 - `url` MUST be a non-empty valid [[ref: URI]].
 - `digest_sri` MUST be non-empty.
+- `presentation_validity_period`: if present, `role` MUST be VERIFIER and the value MUST be between 0 and 3650 days, else abort.
 - there MUST NOT exist more than one policy for `(schema_id, role)` with `effective_from == null` and `revoked == false`.
 
 ###### [MOD-CS-MSG-5-2-2] Create Schema Authorization Policy fee checks
@@ -2995,6 +3011,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - update the existing policy by setting:
     - `url = url`
     - `digest_sri = digest_sri`
+    - `presentation_validity_period = presentation_validity_period` (null if absent)
 - otherwise, create and persist a new `SchemaAuthorizationPolicy` entry `sap`:
   - `sap.id`: auto-incremented uint64
   - `sap.schema_id`: `schema_id`
@@ -3002,6 +3019,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `sap.version`: max existing version for `(schema_id, role)` + 1, or `1` if none exist
   - `sap.url`: `url`
   - `sap.digest_sri`: `digest_sri`
+  - `sap.presentation_validity_period`: `presentation_validity_period` (null if absent)
   - `sap.created`: current timestamp
   - `sap.effective_from`: `null`
   - `sap.effective_until`: `null`
@@ -4352,7 +4370,7 @@ If the peer wants to verify a credential, agent must send to peer:
 - a `uuid` for session identification;
 - *optional*: the `agent_participant_id` `Participant` id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
 - *mandatory*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_participant_ids, uint64: wallet_agent_participant_id>, with at least one entry (an empty map means that the agent holds no matching credential and the exchange ends without a session). The payer selects from it the `issuer_participant_id` of the session. wallet_agent_participant_id MUST NOT be set if peer is a **Verifiable Service**.
-- *optional*, only if the verifier asked for it in its request: the **presentation digest**, computed by the agent over the presentation it is about to send (the signed presentation as it will be transmitted: canonicalized with [JCS](https://www.rfc-editor.org/rfc/rfc8785) when it is a JSON document, its exact bytes otherwise; hashed with the `digest_algorithm` of the schema). The agent builds and signs the presentation first and sends only its digest at this step; the verifier anchors it through the `digest` parameter of the session transaction. When it sends a presentation digest, the agent has selected the credential it will present, and the map of compatible credentials above contains that single credential. Anchoring a presentation digest is optional and decided by the verifier: a verifier that did not ask for it MUST NOT expect one, and a verifier that asked for it MUST anchor it, since the agent sends the presentation only after checking the `Digest` entry.
+- *mandatory* when the active VERIFIER `SchemaAuthorizationPolicy` of the schema defines a `presentation_validity_period`, otherwise *optional* and only if the verifier asked for it in its request: the **presentation digest**, computed by the agent over the presentation it is about to send (the signed presentation as it will be transmitted: canonicalized with [JCS](https://www.rfc-editor.org/rfc/rfc8785) when it is a JSON document, its exact bytes otherwise; hashed with the `digest_algorithm` of the schema). The agent builds and signs the presentation first and sends only its digest at this step; the verifier anchors it through the `digest` parameter of the session transaction. When it sends a presentation digest, the agent has selected the credential it will present, and the map of compatible credentials above contains that single credential. Anchoring a presentation digest is optional and decided by the verifier: a verifier that did not ask for it MUST NOT expect one, and a verifier that asked for it MUST anchor it, since the agent sends the presentation only after checking the `Digest` entry.
 
 In case peer is a **Verifiable Service** and illegaly set `agent_participant_id` and/or `wallet_agent_participant_id`, the other end MUST refuse the request.
 
@@ -4422,6 +4440,7 @@ if `verifier_participant_id` is not null:
 - if `verifier_participant.role` is not VERIFIER, abort.
 - if `verifier_participant` is not a [[ref: active participant]], abort.
 - if `verifier_participant.schema_id` is not equal to `issuer_participant.schema_id`, abort.
+- load `CredentialSchema` `cs` from `issuer_participant.schema_id` and define `verifier_policy` as the active VERIFIER `SchemaAuthorizationPolicy` of `cs` at the current block (`effective_from` ≤ now, `effective_until` null or > now, not revoked), if any. If `verifier_policy.presentation_validity_period` > 0 and `digest` is absent, abort: the ecosystem requires a dated receipt of every verification of this schema.
 
 - if `digest` is present and longer than 256 characters, abort.
 
@@ -4771,7 +4790,7 @@ Else update:
 
 then, add the `cspsr` to `session.session_records`
 
-if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`: in a Credential Issuance it is the credential's `digestJCS` and, when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time; in a Credential Verification it is the presentation digest and its `created` timestamp is the effective presentation time (a pre-existing entry keeps its `created` and its owner, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op).
+if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`: in a Credential Issuance it is the credential's `digestJCS` and, when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time; in a Credential Verification it is the presentation digest and its `created` timestamp is the effective presentation time (a pre-existing entry keeps its `created` and its owner, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op). In a Credential Verification, when `verifier_policy.presentation_validity_period` > 0, the call passes `presentation_valid_until` = `now` plus that number of days; in every other case the `Digest` entry's `presentation_valid_until` is null.
 
 :::warning
 a `ParticipantSessionRecord` always carries `issuer_participant_id`; `verifier_participant_id` is set in a Credential Verification only
@@ -6296,7 +6315,7 @@ Return the `VSOperatorAuthorization` entry whose `id` matches the supplied `id`,
 #### [MOD-DI-MSG-1] Store Digest
 
 - Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-- This method can be called directly by [Create or Update Participant Session](#mod-pp-msg-10-create-or-update-participant-session) module with no checks.
+- This method can be called directly by [Create or Update Participant Session](#mod-pp-msg-10-create-or-update-participant-session) module with no checks, which also passes the `presentation_valid_until` it computed for a presentation digest.
 
 The agent of an issuer does not call this method itself: it anchors the digest of a credential it issues through the issuance session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), `digest` parameter), which it creates even when no fees are due, so that the anchoring entry of the digest is recorded.
 
@@ -6336,6 +6355,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `d.participant_id` to the primary participant of the session when called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), else null.
   - set `d.created` to `now`.
   - set `d.revoked` to null.
+  - set `d.presentation_valid_until` to the value passed by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) for a presentation digest anchored under a VERIFIER policy with a `presentation_validity_period`, else null.
 
 #### [MOD-DI-MSG-2] Revoke Digest
 
@@ -6420,8 +6440,10 @@ Return found `Digest` entry (if any) matching `digest`.
   "digest": {
     "digest": "GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP",
     "corporation_id": 12,
+    "participant_id": 601,
     "created": "2025-01-14T19:40:37.967Z",
-    "revoked": null
+    "revoked": null,
+    "presentation_valid_until": null
   }
 }
 ```
