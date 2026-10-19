@@ -240,7 +240,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The module account that collects, each [[ref: epoch]], all deposit-bound [[ref: native denom]] amounts and [[ref: network fees]]. At epoch end it is paid out in a fixed order (validator budgets, council budget, foundation budget, capped yield to bonded native denom holders) and the **residual is burned**.
 
 [[def: bonded tokens, bonded native denom]]:
-~ [[ref: native denom]] bonded through the standard staking module (subject to `unbonding_period`) in order to accrue the capped, fee-funded, pro-rata yield from the [[ref: distribution pool]]. Bonding confers **no consensus power and no governance power**: it is reward accounting only.
+~ [[ref: native denom]] bonded through the bonding mechanism of [[DIST-2]](#dist-2-bonding) (subject to `unbonding_period`) in order to accrue the capped, fee-funded, pro-rata yield from the [[ref: distribution pool]]. Bonding confers **no consensus power and no governance power**: it is reward accounting only.
 
 [[def:ecosystem, ecosystems]]
 ~ An approved list of [[ref: participants]] that are authorized to issue/verify certain credentials in an ecosystem.
@@ -1307,6 +1307,7 @@ entity "GlobalVariables" as gv {
   +foundation_budget: decimal
   +vna_holder_max_yield_rate: decimal
   +unbonding_period: duration
+  +bonding_enabled: boolean
   +vna_total_supply: number
   +twap_window: duration
   +vs_operator_fee_period: duration
@@ -1731,6 +1732,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 - `foundation_budget` (decimal) (*mandatory*): foundation treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through governance proposals.
 - `vna_holder_max_yield_rate` (decimal) (*mandatory*): yearly cap on the fee-funded yield paid to [[ref: bonded tokens]], expressed as a fraction of the bonded amount. No oracle needed. Converted to a per-epoch cap by linear pro-rata, × `epoch_length` / 365 days ([[DIST-1]](#dist-1-epoch-payout-order)).
 - `unbonding_period` (duration) (*mandatory*): staking exit delay for [[ref: bonded tokens]]. Default value: 28 days.
+- `bonding_enabled` (boolean) (*mandatory*): whether item 4 of [[DIST-1]](#dist-1-epoch-payout-order), the yield to [[ref: bonded tokens]], is active. False at genesis; set to true by governance proposal only once the bonding mechanism of [[DIST-2]](#dist-2-bonding) is specified and implemented and legal counsel has reviewed the yield. While false, bonding is not available and the pool remainder after the budgets is burned in full.
 
 **Native denom:**
 
@@ -5703,7 +5705,7 @@ In the boundary block of each [[ref: epoch]], at step (2) of the boundary sequen
    Docked amounts remain in the pool (they join the burn residual). Persistent under-performance escalates to the council's governance processes (term review) — separate from payment docking.
 2. **Council treasury** — `council_budget` (oracle-converted).
 3. **Foundation treasury** — `foundation_budget` (oracle-converted).
-4. **Bonded token holders** — a **capped, fee-funded, pro-rata** yield: it accrues only to [[ref: native denom]] bonded through the standard staking module (subject to `unbonding_period`), pro-rata to each holder's time-weighted bonded amount over the closed epoch (as tracked by the distribution accumulator, so that bonding just before the boundary earns nothing), and hard-capped: a holder's cap for the epoch is its time-weighted bonded amount × `vna_holder_max_yield_rate` × `epoch_length` / 365 days (linear pro-rata of the yearly rate, no compounding, no oracle needed). Per epoch, the payout equals min(pool remainder after budgets, sum of per-holder caps), distributed pro-rata to those amounts; the excess joins the residual. This item applies only while `GlobalVariables.bonding_enabled` is true; otherwise it is skipped and the remainder is burned.
+4. **Bonded token holders** — a **capped, fee-funded, pro-rata** yield: it accrues only to [[ref: native denom]] bonded through the bonding mechanism of [[DIST-2]](#dist-2-bonding) (subject to `unbonding_period`), pro-rata to each holder's time-weighted bonded amount over the closed epoch (as tracked by the distribution accumulator, so that bonding just before the boundary earns nothing), and hard-capped: a holder's cap for the epoch is its time-weighted bonded amount × `vna_holder_max_yield_rate` × `epoch_length` / 365 days (linear pro-rata of the yearly rate, no compounding, no oracle needed). Per epoch, the payout equals min(pool remainder after budgets, sum of per-holder caps), distributed pro-rata to those amounts; the excess joins the residual. This item applies only while `GlobalVariables.bonding_enabled` is true; otherwise it is skipped and the remainder is burned.
 5. **Residual → burned.** Whatever remains after 1–4 MUST be burned. Burn is not a parameter: it is the automatic pool residual.
 
 The [[ref: native denom]] supply is `GlobalVariables.vna_total_supply` at genesis. Native denom MUST NOT be minted after network launch; the supply is strictly non-increasing.
@@ -5714,14 +5716,14 @@ Payouts SHOULD stream linearly over the epoch rather than in a single burst; tre
 
 #### [DIST-2] Bonding
 
-Bonding uses the chain's standard staking module for reward accounting (O(1) distribution accumulator, yield follows time-in-bond, exit behind `unbonding_period`). **Bonding confers no consensus power and no governance power**: the network remains council-run Proof-of-Authority, one member one vote; bonded tokens are reward accounting only. Validators are ordinary holders too: they MAY bond their own tokens and earn the capped yield on top of the node budget, under exactly the same rules and cap as everyone else.
+Bonding is available only while `GlobalVariables.bonding_enabled` is true. It uses staking-style reward accounting (O(1) distribution accumulator, yield follows time-in-bond, exit behind `unbonding_period`), but **bonding MUST NOT alter consensus power or governance power**: it is therefore not a plain delegation to the validators through the standard staking module, whose delegations carry voting power, but a dedicated bonding mechanism reusing the accumulator. The network remains council-run Proof-of-Authority, one member one vote; bonded tokens are reward accounting only. Validators are ordinary holders too: they MAY bond their own tokens and earn the capped yield on top of the node budget, under exactly the same rules and cap as everyone else.
 
 :::todo
-**Open design question**: the exact integration between the PoA validator set and the staking module used for bonding (custom staking hooks vs. a dedicated bonding module reusing the distribution accumulator) is intentionally left open at this stage and will be specified later.
+**Open design question**: the bonding mechanism (a dedicated bonding module reusing the distribution accumulator, or staking hooks that leave validator power unchanged) is intentionally left open at this stage and will be specified before `bonding_enabled` can be set to true.
 :::
 
 :::note
-**Pending legal review**: distribution of fee revenue to passive bonded holders is dividend-like and strengthens a securities analysis of the token. The cap, the fee funding (no emission), and the bonding requirement mitigate but do not settle this. This mechanism MUST NOT be activated before legal counsel has reviewed it.
+**Pending legal review**: distribution of fee revenue to passive bonded holders is dividend-like and strengthens a securities analysis of the token. The cap, the fee funding (no emission), and the bonding requirement mitigate but do not settle this. `bonding_enabled` MUST NOT be set to true before legal counsel has reviewed it.
 :::
 
 ### Delegation Module
@@ -6640,6 +6642,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `foundation_budget` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]].
 - `vna_holder_max_yield_rate` (decimal) (*mandatory*): to be defined in the governance framework.
 - `unbonding_period` (duration) (*mandatory*): 28 days.
+- `bonding_enabled` (boolean) (*mandatory*): false.
 
 **Native denom:**
 
