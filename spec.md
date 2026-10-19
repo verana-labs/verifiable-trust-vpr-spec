@@ -1296,7 +1296,6 @@ entity "GlobalVariables" as gv {
   +credential_schema_issuer_validation_validity_period_max_days: number
   +credential_schema_verifier_validation_validity_period_max_days: number
   +credential_schema_holder_validation_validity_period_max_days: number
-  +credential_schema_trust_deposit: number
   +trust_deposit_rate:number
   +main_fiat_currency: string
   +tu_peg_value_genesis: decimal
