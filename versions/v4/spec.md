@@ -1289,7 +1289,7 @@ cs o-- tr: ecosystem_id
 
 csps --- "1..n" cspsr : session_records
 
-cspsr  o-- "1" csp: issuer_participant_id
+cspsr  o-- "0..1" csp: issuer_participant_id
 cspsr  o-- "0..1" csp: verifier_participant_id
 cspsr  o-- "0..1" csp: wallet_agent_participant_id
 cspsr  o-- "0..1" csp: agent_participant_id
@@ -1482,7 +1482,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 - `id` (uint64) (*mandatory*) (key): the id of this `ParticipantSessionRecord`.
 - `created` (timestamp) (*mandatory*): timestamp this record has been created.
-- `issuer_participant_id` (uint64) (*mandatory*): the `ISSUER` `Participant` entry of the issuer of the credential (the payer's own entry in a Credential Issuance, the credential issuer's entry in a Credential Verification).
+- `issuer_participant_id` (uint64) (*optional*): the `ISSUER` `Participant` entry of the issuer of the credential: the payer's own entry in a Credential Issuance, the credential issuer's entry in a Credential Verification when provided.
 - `verifier_participant_id` (uint64) (*optional*): related verifier `Participant` id (if applicable).
 - `wallet_agent_participant_id` (uint64) (*optional*): related wallet agent `Participant` id (if applicable).
 - `agent_participant_id` (uint64) (*optional*): permission id of the agent `Participant` id (if applicable).
@@ -3500,7 +3500,7 @@ else MUST abort.
     - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` MUST be between 0 (no discount) and `max_discount` inclusive, else MUST abort, where `max_discount` is `validator_participant.verification_fee_discount` if `cs.verifier_onboarding_mode` is GRANTOR_ONBOARDING_PROCESS (the validator is a VERIFIER_GRANTOR) and 1 if it is ECOSYSTEM_ONBOARDING_PROCESS.
     - for any other role: `verification_fee_discount` MUST be 0, else MUST abort.
 
-> Note: a HOLDER applicant, and any applicant whose `cs.issuer_onboarding_mode` (resp. `cs.verifier_onboarding_mode`) is OPEN, carries no issuance (resp. verification) discount: the mandatory parameter MUST be 0; a value of 0 MUST be accepted, and the method MUST NOT abort because of the schema's onboarding mode.
+A HOLDER applicant, and any applicant whose `cs.issuer_onboarding_mode` (resp. `cs.verifier_onboarding_mode`) is OPEN, carries no issuance (resp. verification) discount: the mandatory parameter MUST be 0; a value of 0 MUST be accepted, and the method MUST NOT abort because of the schema's onboarding mode.
 
 Calculation of `op_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
 
@@ -4075,7 +4075,7 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uuid) (*mandatory*): id of the `ParticipantSession`.
-- `issuer_participant_id` (uint64) (*conditional*): the id of the `ISSUER` `Participant` entry of the issuer of the credential: the payer's own entry in a Credential Issuance, the entry of the credential's issuer in a Credential Verification. Required in both cases (see precondition checks).
+- `issuer_participant_id` (uint64) (*conditional*): the id of the `ISSUER` `Participant` entry of the issuer of the credential: the payer's own entry in a Credential Issuance (required), the entry of the credential's issuer in a Credential Verification (optional; when provided, the issuer branch receives its verification fees).
 - `verifier_participant_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
 - `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
@@ -4093,7 +4093,7 @@ if `issuer_participant_id` is null AND `verifier_participant_id` is null, MUST a
 
 Determine the operation type from the provided ids:
 
-- if `verifier_participant_id` is not null, the operation is a **Credential Verification**: the caller is the `vs_operator` of the verifier. `issuer_participant_id` MUST also be provided, else abort: the issuer branch is a fee beneficiary of the verification (see [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)).
+- if `verifier_participant_id` is not null, the operation is a **Credential Verification**: the caller is the `vs_operator` of the verifier. `issuer_participant_id` SHOULD also be provided so that the issuer branch receives its verification fees (see [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)); when absent, only the verifier branch is paid.
 - else, the operation is a **Credential Issuance**: the caller is the `vs_operator` of the issuer.
 
 - define `issuer_participant` as null.
@@ -4110,7 +4110,7 @@ if `verifier_participant_id` is not null:
 - Load `verifier_participant` from `verifier_participant_id`.
 - if `verifier_participant.role` is not VERIFIER, abort.
 - if `verifier_participant` is not a [[ref: active participant]], abort.
-- if `verifier_participant.schema_id` is not equal to `issuer_participant.schema_id`, abort.
+- if `issuer_participant` is not null and `verifier_participant.schema_id` is not equal to `issuer_participant.schema_id`, abort.
 
 - if `digest` is present and longer than 256 characters, abort.
 
@@ -4142,7 +4142,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 
 ###### [MOD-PP-MSG-10-3] Create or Update Participant Session fee checks
 
-- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` (always present).
+- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` if `issuer_participant` is not null, else from `verifier_participant.schema_id`.
 - Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]].
 
 For trust fees, `corporation` account MUST have sufficient available balance as explained below.
@@ -4306,7 +4306,7 @@ Required balance check:
 If all precondition checks passed, method is executed.
 
 - Load all `Participant` entries as in basic checks.
-- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` (always present).
+- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` if `issuer_participant` is not null, else from `verifier_participant.schema_id`.
 - define `now`: current timestamp.
 - use "Find Beneficiaries" to build `found_participant_set`.
 
@@ -4463,7 +4463,7 @@ then, add the `cspsr` to `session.session_records`
 if current transaction if for issuance of a credential, persist the credential's `digestJCS` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest).
 
 :::warning
-a `ParticipantSessionRecord` always carries `issuer_participant_id`; `verifier_participant_id` is set in a Credential Verification only
+a `ParticipantSessionRecord` carries `issuer_participant_id` in a Credential Issuance and, when provided, in a Credential Verification; `verifier_participant_id` is set in a Credential Verification only
 :::
 
 #### [MOD-PP-MSG-11] Update Participant Module Parameters
@@ -5012,7 +5012,7 @@ v --> vg
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
-Example: Let's build the set. Revoked and slashed `Participant` entries will not be added to the set. Expired `Participant` entries, if not revoked/slashed, will be considered.
+Algorithm. Revoked and slashed `Participant` entries are not added to the set. Expired `Participant` entries, if not revoked/slashed, will be considered.
 
 - create Set `found_participant_set`.
 
@@ -6389,7 +6389,7 @@ Where:
 - `price_uvna` is expressed in **micro-denominated VNA units (`uvna`)**.
 - Rounding MUST always be performed **downwards**.
 
-If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail, except for an `amount` of 0, which converts to 0 in any asset without requiring an `ExchangeRate` entry.
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail, except for an `amount` of 0, which converts to 0 in any asset, and for identical base and quote assets, which need no `ExchangeRate` entry.
 
 ##### [MOD-XR-QRY-3-1] Get Price parameters
 
@@ -6401,7 +6401,7 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 
 ##### [MOD-XR-QRY-3-2] Get Price query checks
 
-If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned — unless `amount` is 0 (see execution).
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned — unless `amount` is 0 or the base and quote assets are identical (see execution).
 
 ##### [MOD-XR-QRY-3-3] Get Price execution of the query
 
