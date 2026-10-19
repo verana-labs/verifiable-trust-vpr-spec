@@ -4783,7 +4783,7 @@ This method can only be called by either:
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry;
-- `tu_amount` (decimal) (*mandatory*): the amount of [[ref: trust units]] to slash
+- `percent` (decimal) (*mandatory*): the fraction of the [[ref: trust units]] accumulated through this `Participant` entry to slash, greater than 0 and at most 1. The ecosystem governance framework defines the fractions of its sanction schedule; a corporation holding several `Participant` entries in the ecosystem is slashed entry by entry, one message each, which lets the ecosystem target the entries that breached.
 
 ##### [MOD-PP-MSG-12-2] Slash Participant Trust Deposit precondition checks
 
@@ -4798,7 +4798,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `tu_amount` MUST be strictly positive and lower or equal to `applicant_participant.tu` else MUST abort (an ecosystem can only slash trust units accumulated in the context of its own `Participant` entries — never the rest of the corporation's deposit).
+- `percent` MUST be greater than 0 and lower or equal to 1, and `applicant_participant.tu` MUST be greater than 0, else MUST abort (an ecosystem can only slash trust units accumulated in the context of its own `Participant` entries — never the rest of the corporation's deposit).
 
 :::note
 Even if the `Participant` entry has expired or is revoked, it is still possible to slash it.
@@ -4840,6 +4840,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Participant` entry `applicant_participant` from `id`.
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
+- calculate `tu_amount` = floor(`applicant_participant.tu` × `percent`), the number of trust units removed; if it is 0, abort.
 - calculate `slashed_fiat` = `applicant_participant.fiat_cost` × `tu_amount` / `applicant_participant.tu` — the obligation in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 - set `applicant_participant.slashed` to `now`
 - set `applicant_participant.modified` to `now`
@@ -5499,7 +5500,7 @@ The obligation is recorded as a `SlashObligation` entry with a pro-rata breakdow
 ##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation we want to slash.
-- `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] to slash.
+- `percent` (decimal) (*mandatory*): the fraction of the corporation's [[ref: trust deposit]] to slash, greater than 0 and at most 1.
 
 ##### [MOD-TD-MSG-5-2] Slash Trust Deposit precondition checks
 
@@ -5509,8 +5510,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `tu_amount` must be > 0.
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.tu` MUST be greater or equal to `tu_amount`.
+- `percent` MUST be greater than 0 and lower or equal to 1.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.tu` MUST be greater than 0.
 
 ###### [MOD-TD-MSG-5-2-2] Slash Trust Deposit fee checks
 
@@ -5522,6 +5523,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 - load the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`.
+- calculate `tu_amount` = floor(`td.tu` × `percent`), the number of trust units removed; if it is 0, abort.
 - load all `Participant` ledger entries `participants[]` of `corporation_id` with `p.tu` > 0, in ascending `p.id` order.
 - define `remaining` = `tu_amount`; define `entries[]` empty.
 - for each `p` in `participants[]`:
