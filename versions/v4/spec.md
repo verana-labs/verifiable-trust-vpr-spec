@@ -5012,7 +5012,7 @@ v --> vg
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
-Algorithm. Revoked and slashed `Participant` entries are not added to the set. Expired `Participant` entries, if not revoked/slashed, will be considered.
+Example: Let's build the set. Revoked and slashed `Participant` entries will not be added to the set. Expired `Participant` entries, if not revoked/slashed, will be considered.
 
 - create Set `found_participant_set`.
 
