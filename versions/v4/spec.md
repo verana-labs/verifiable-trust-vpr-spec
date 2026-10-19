@@ -4079,7 +4079,7 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 - `verifier_participant_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
 - `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
-- `digest` (string(256)) (*optional*): digest derived from an issued or verified credential.
+- `digest` (string(256)) (*optional*): the `digestJCS` of the credential being issued; ignored in a Credential Verification (see execution).
 
 ##### [MOD-PP-MSG-10-2] Create or Update Participant Session precondition checks
 
