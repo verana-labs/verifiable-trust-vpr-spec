@@ -1691,12 +1691,14 @@ A `Sponsorship` records the agreement of a [[ref: sponsor]] corporation to fund 
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit`. Decremented per matching `denom` by each debit paid by the sponsor ([[FUND-CHECK-1]](#fund-check-1-debit)). Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `expiration` (timestamp) (*optional*): window boundary, with the same semantics as `OperatorAuthorization.expiration`: absolute end of the sponsorship when `period` is unset; end of the current cycle when `period` is set (`remaining_spend` is reset and `expiration` advanced by `period`; the sponsorship auto-renews until revoked).
 - `period` (duration) (*optional*): reset period for `spend_limit`. If set, `spend_limit` and `expiration` MUST also be set.
-- `covers_fees` (boolean) (*mandatory*): if true, the sponsor also pays the [[ref: network fees]] of the transactions whose fee `granter` is the sponsored corporation's `policy_address`, through an on-chain allowance from the sponsor's `policy_address` to the sponsored corporation's `policy_address` (see the [Delegation Module](#delegation-module) note).
+- `covers_fees` (boolean) (*mandatory*): if true, the sponsor also pays the [[ref: network fees]] of the transactions whose fee `granter` is the sponsored corporation's `policy_address`, through an on-chain allowance from the sponsor's `policy_address` to the sponsored corporation's `policy_address` (see the [Delegation Module](#delegation-module) note). The amount paid per transaction is bounded by the network: the required fee of [[NET-FEE-2]] and the per-message gas cap of [[NET-FEE-3]] (network fees, Model C) apply to every fee-granted transaction, so the sponsorship carries no cap of its own.
 - `fee_spend_limit` (DenomAmount[]) (*optional*): maximum network fees the sponsor pays per `period` (or in total when `period` is unset) under `covers_fees`; unlimited when absent. Ignored if `covers_fees` is false.
 - `created` (timestamp) (*mandatory*): creation timestamp.
 - `modified` (timestamp) (*mandatory*): last modification timestamp.
 
-> Note: a sponsorship moves money only. Trust units minted by a sponsor-funded operation are credited to the **sponsored** corporation ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) is called with its `corporation_id`); slash obligations, [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) gates, `Participant` entries, `OperatorAuthorization`, `VSOperatorAuthorization` and `FeeGrant` entries are unaffected by the existence, change or end of a sponsorship. Nothing owned by the sponsored corporation references the sponsor: the sponsor is resolved at execution time from `Corporation.sponsor_corporation_id`.
+A `Sponsorship` entry is immutable except for **raise-only** updates by the sponsor ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)): every other change of terms requires a revocation, which clears the sponsored corporation's election, and a fresh grant that the sponsored corporation elects again.
+
+> Note: a sponsorship moves money only. Trust units minted by a sponsor-funded operation are credited to the corporations that performed the trust operation, never to the sponsor (the payer's sponsor also funds the payees' and agents' deposit-bound amounts under FIAT and foreign-coin pricing, and those trust units go to the payees and agents); slash obligations, [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) gates, `Participant` entries, `OperatorAuthorization`, `VSOperatorAuthorization` and `FeeGrant` entries are unaffected by the existence, change or end of a sponsorship. Nothing owned by the sponsored corporation references the sponsor: the sponsor is resolved at execution time from `Corporation.sponsor_corporation_id`.
 
 ### VSOperatorAuthorization
 
@@ -1981,7 +1983,7 @@ When an authorization is created or updated, it MAY optionally include an associ
 
 #### Sponsored Corporations
 
-A `corporation` MAY be funded by another `corporation`, its [[ref: sponsor]]. The sponsor declares the budget it is willing to pay ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)); the sponsored corporation elects that sponsor ([[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor)); either side can end the arrangement at any time ([[MOD-DE-MSG-11]](#mod-de-msg-11-revoke-sponsorship), or [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor) with a null sponsor).
+A `corporation` MAY be funded by another `corporation`, its [[ref: sponsor]]. The sponsor declares the budget it is willing to pay ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)); the sponsored corporation elects that sponsor ([[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor)); either side can end the arrangement at any time ([[MOD-DE-MSG-11]](#mod-de-msg-11-revoke-sponsorship), or [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor) with a null sponsor). Both the grant and the election are treasury decisions and are executed through corporation proposals only; revocation is delegable.
 
 While a sponsorship is active, every fund movement a VPR method performs for the sponsored corporation (escrow funding and refund, session payments and agent rewards, slash repayment, fee receipts) is performed on its [[ref: funding account]], resolved by [[FUND-CHECK]](#fund-check-funding-account-resolution) at execution time, and the sponsored corporation's `policy_address` never needs to hold [[ref: native denom]]. The sponsorship changes **who pays**, nothing else:
 
@@ -1989,7 +1991,7 @@ While a sponsorship is active, every fund movement a VPR method performs for the
 - `Participant` entries, `OperatorAuthorization`, `VSOperatorAuthorization` and `FeeGrant` entries, and their spend limits, are untouched: the sponsor adds a payer in front of the corporation's own account and never widens what an operator may do;
 - the sponsor's own trust deposit and obligations are unaffected by what it funds; its exposure is bounded by the sponsorship's `spend_limit`, `fee_spend_limit` and `expiration`, and by its right to revoke.
 
-Network fees are covered through the standard fee-grant machinery: the grantee keeps naming the sponsored corporation's `policy_address` as fee `granter`, the corporation's own allowance is checked as usual, and the debit is then taken from the funding account (see the [Delegation Module](#delegation-module) note). Resolution is one level deep: a sponsor pays from its own `policy_address`; its own sponsor, if any, is never consulted.
+Network fees are covered through the standard fee-grant machinery: the grantee keeps naming the sponsored corporation's `policy_address` as fee `granter`, the corporation's own allowance is checked as usual, and the debit is then taken from the funding account (see the [Delegation Module](#delegation-module) note). What a transaction can draw is bounded by the network, not by the sponsorship: the required fee of [[NET-FEE-2]] is deducted exactly, and the per-message gas cap of [[NET-FEE-3]] applies to every fee-granted transaction. Resolution is one level deep: a sponsor pays from its own `policy_address`; its own sponsor, if any, is never consulted.
 
 #### [AUTHZ-CHECK] Common Authorization and Fee Grant Checks
 
@@ -2070,14 +2072,14 @@ Given a `Corporation` entry `co`, its **active sponsor** `sp` is the `Corporatio
 
 ##### [FUND-CHECK-1] Debit
 
-When a method MUST debit an `amount` (in a given [[ref: denom]]) **from** a corporation `co` for message type `msg_type`, the accounts below are tried in order; the whole `amount` is taken from the first account that qualifies, and the method MUST abort if none does:
+A method that debits funds **from** a corporation `co` resolves its funding account **once per message**. Let `totals` be the set of amounts the method must debit, summed per [[ref: denom]] (for instance the deposit-bound amounts, the agent rewards and, under COIN pricing, the fees, all added per denom), and let `msg_type` be the type of the message being executed. The accounts below are tried in order; the first account that qualifies pays **every** amount of `totals`, and the method MUST abort if none does:
 
-1. the active sponsor's `policy_address` `sp.policy_address`, if `co` has an active sponsor `s`, `msg_type` is in `s.msg_types` (or `s.msg_types` is absent), `s.remaining_spend` (when `s.spend_limit` is set) covers `amount` for that `denom`, and `sp.policy_address` has an available balance of at least `amount`. After a successful debit, if `s.spend_limit` is set, `s.remaining_spend` MUST be decremented by `amount` for that `denom`;
-2. the corporation's own `co.policy_address`, if it has an available balance of at least `amount`.
+1. the active sponsor's `policy_address` `sp.policy_address`, if `co` has an active sponsor `s`, `msg_type` is in `s.msg_types` (or `s.msg_types` is absent), and, for every denom of `totals`, `s.remaining_spend` (when `s.spend_limit` is set) covers the total for that denom and `sp.policy_address` has an available balance of at least that total. A denom absent from `s.spend_limit` is not covered. After the debits, if `s.spend_limit` is set, `s.remaining_spend` MUST be decremented by each total for its denom, exactly once, by the calling method;
+2. the corporation's own `co.policy_address`, if it has an available balance of at least the total for every denom of `totals`.
 
-A method that debits several amounts (several denoms, or deposit-bound amounts and agent rewards) MUST resolve each debit independently, and MUST abort, rolling back every debit already made, when any of them cannot be satisfied. The account selected in step 1 or 2 is the **funding account** of that debit. When the debit funds an escrow, the method records the selected account (see `Participant.op_funding_account`).
+The account selected in step 1 or 2 is the **funding account** of the message: every transfer and every [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) call of the method names it as source, and the called methods only transfer, they never resolve or decrement. When the debit funds an escrow, the method records the selected account (see `Participant.op_funding_account`), so that one escrow always has one funder.
 
-> Note: step 2 is the pre-sponsorship behaviour. A sponsorship is strictly additive: it never lets an operator spend more than its own authorization allows, and a corporation that keeps its `policy_address` empty is simply blocked, with an explicit error, whenever its sponsor cannot pay. Implementations SHOULD emit an event when step 1 fails for a corporation that has an active sponsor, so that the sponsor can be alerted.
+> Note: step 2 is the pre-sponsorship behaviour. A sponsorship is strictly additive: it never lets an operator spend more than its own authorization allows, and a corporation that keeps its `policy_address` empty is simply blocked, with an explicit error, whenever its sponsor cannot pay. Implementations SHOULD emit an event when step 1 fails for a corporation that has an active sponsor, so that the sponsor can be alerted. A precondition of the form "the funding account of `corporation` MUST cover …" means that this resolution succeeds for the message's totals.
 
 ##### [FUND-CHECK-2] Credit
 
@@ -2114,7 +2116,7 @@ As a result, `accountABC` is authorized to:
 | Corporation               | Create Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)   | any account |
 |                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + operator |
 |                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters)   | governance proposal |
-|                                | Set Sponsor                                  | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor)   | corporation (group proposal) OR corporation + operator |
+|                                | Set Sponsor                                  | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor)   | corporation (group proposal) |
 |                                | Get Corporation                              | /co/v1/get                       | Query  | [[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)   | N/A |
 |                                | List Corporations                            | /co/v1/list                      | Query  | [[MOD-CO-QRY-2]](#mod-co-qry-2-list-corporations)   | N/A |
 |                                | List Corporation Module Parameters           | /co/v1/params                    | Query  | [[MOD-CO-QRY-3]](#mod-co-qry-3-list-module-parameters)   | N/A |
@@ -2174,7 +2176,7 @@ As a result, `accountABC` is authorized to:
 |             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |module call|
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
 |             | Sync VS Operator Authorization | N/A (Tx) | Msg | [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) |module call|
-|             | Grant Sponsorship | N/A (Tx) | Msg | [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship) |corporation (group proposal) OR corporation + operator|
+|             | Grant Sponsorship | N/A (Tx) | Msg | [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship) |corporation (group proposal)|
 |             | Revoke Sponsorship | N/A (Tx) | Msg | [[MOD-DE-MSG-11]](#mod-de-msg-11-revoke-sponsorship) |corporation (group proposal) OR corporation + operator|
 |             | List Operator Authorizations              | /de/v1/authz/list | Query  | [[MOD-DE-QRY-1]](#mod-de-qry-1-list-operator-authorizations)   |N/A |
 |             | List VS Operator Authorizations           | /de/v1/vs-authz/list | Query  | [[MOD-DE-QRY-2]](#mod-de-qry-2-list-vs-operator-authorizations)   |N/A |
@@ -2366,12 +2368,11 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 #### [MOD-CO-MSG-4] Set Sponsor
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`, or the `corporation` CAN execute it alone through a group proposal, to elect a [[ref: sponsor]] among the corporations that granted it a `Sponsorship` ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)), or to stop being sponsored.
+This method is **not delegable**: the `corporation` executes it alone through a corporation proposal, to elect a [[ref: sponsor]] among the corporations that granted it a `Sponsorship` ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)), or to stop being sponsored. Electing a sponsor redirects the corporation's receipts to it ([[FUND-CHECK-2]](#fund-check-2-credit)), which is a treasury decision of the corporation itself, not of an operator.
 
 ##### [MOD-CO-MSG-4-1] Set Sponsor parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal.
 - `sponsor_corporation_id` (uint64) (*optional*): id of the `Corporation` to elect as sponsor; null to clear the current sponsor.
 
 ##### [MOD-CO-MSG-4-2] Set Sponsor precondition checks
@@ -2380,8 +2381,7 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-CO-MSG-4-2-1] Set Sponsor basic checks
 
-- `corporation` (account): (Signer) signature must be verified.
-- if `operator` is present: `operator` (account): (Signer) signature must be verified, and [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type. Else [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
+- `corporation` (account): (Signer) signature must be verified; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
 - let `co` be the `Corporation` entry resolved from the signing `corporation` account.
 - if `sponsor_corporation_id` is not null:
   - a `Corporation` entry `sp` with `sp.id` = `sponsor_corporation_id` MUST exist, and `sp.id` MUST differ from `co.id`;
@@ -3767,6 +3767,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64 and a `Participant` entry with the same id MUST exist.
+- the `op_state` of that entry MUST be VALIDATED: a renewal cannot be started while an onboarding process is PENDING (its escrow, and the account that funded it, would otherwise be overwritten).
 
 ###### [MOD-PP-MSG-2-2-2] Renew Participant OP permission checks
 
@@ -4590,7 +4591,7 @@ we might want to check that credential schema of agent and wallet_agent perms is
 - Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` if `issuer_participant` is not null, else from `verifier_participant.schema_id`.
 - Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]].
 
-For trust fees, `corporation` account MUST have sufficient available balance as explained below.
+For trust fees, the funding account of `corporation` ([[FUND-CHECK-1]](#fund-check-1-debit)) MUST cover the totals computed below.
 
 **Step 1: Calculate total beneficiary fees in credential schema pricing asset**
 
@@ -4731,7 +4732,7 @@ If all precondition checks passed, method is executed.
 - define `now`: current timestamp.
 - use "Find Beneficiaries" to build `found_participant_set`.
 
-> Note: All funds are transferred from the `corporation` account executing the method. The steps below describe what each recipient must receive. Implementation details (batching, order of transfers) are left to the implementer.
+> Note: All funds are transferred from the funding account of the `corporation` executing the method, resolved once for this message per [[FUND-CHECK-1]](#fund-check-1-debit). The steps below describe what each recipient must receive. Implementation details (batching, order of transfers) are left to the implementer.
 
 ---
 
@@ -5698,7 +5699,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 ###### [MOD-TD-MSG-6-2-2] Repay Slash Obligation fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- calculate `repay_amount` = `so.fiat_obligation` / `P(now)`, rounded up, in [[ref: native denom]], where `P(now)` is the current [[ref: native denom]] price in [[ref: main fiat currency]]. the [[ref: funding account]] of `co` MUST cover `repay_amount` ([[FUND-CHECK-1]](#fund-check-1-debit)), else [[ref: transaction]] MUST abort.
+- calculate `repay_amount` = `so.fiat_obligation` / `P(now)`, rounded up, in [[ref: native denom]], where `P(now)` is the current [[ref: native denom]] price in [[ref: main fiat currency]]. The [[ref: funding account]] of `co` MUST cover `repay_amount` ([[FUND-CHECK-1]](#fund-check-1-debit)), else [[ref: transaction]] MUST abort.
 
 ##### [MOD-TD-MSG-6-3] Repay Slash Obligation execution of the method
 
@@ -5862,7 +5863,7 @@ Mapping of the auto-renewing `FeeGrant.expiration`: when `period` is set, the cy
 
 Authority and scope: the `x/feegrant` allowance is created and revoked by the VPR Delegation module **on the corporation's behalf** — from within [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance) / [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance), which are module calls invoked only after the corporation has authorized the enclosing operation (e.g. the group proposal that authorizes [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)); no separate `MsgGrantAllowance` is submitted. Corporation-paid fees apply to **operator-signed** delegable transactions, where the signing `operator`/`vs_operator` sets `fee_granter` to the corporation's `policy_address`; operations executed through the corporation's group (`MsgSubmitProposal` → `MsgVote` → `MsgExec`) are paid by the proposer / policy account directly and do not use a fee grant. Because the allowance is an `AllowedMsgAllowance`, **every** message in a fee-granted transaction MUST be in `FeeGrant.msg_types`, or the fee draw is rejected.
 
-**Sponsored fees:** when the fee `granter` named by a transaction is the `policy_address` of a `Corporation` `co` whose active sponsor `sp` ([[FUND-CHECK]](#fund-check-funding-account-resolution)) has `covers_fees` true, the fee-deduction step MUST, after the corporation's own allowance has accepted the draw as above, attempt to consume the sponsor's allowance granted by `sp.policy_address` to `co.policy_address` ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)) and, if that allowance accepts the fee and `sp.policy_address` has a sufficient spendable balance, debit the fee from `sp.policy_address` instead of `co.policy_address`; otherwise the fee is debited from `co.policy_address` as above, and the transaction is rejected if that account cannot pay. The sponsor's spendable balance MUST be checked before its allowance is consumed, so that a sponsor that cannot pay is not charged against its `fee_spend_limit`. Both allowances are consumed on a sponsored payment: the corporation's own caps and message filters stay in force, and the stricter of the two caps wins. Realization: a VPR-specific fee-deduction decorator replacing the standard one in the ante handler, which resolves `co` from the fee `granter` (the lookup of [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)); nothing else in fee processing changes, and no allowance of the sponsored corporation is rewritten when its sponsor changes. Transactions executed through the corporation's group are covered the same way when the group has granted plain allowances from its `policy_address` to its member accounts.
+**Sponsored fees:** when the fee `granter` named by a transaction is the `policy_address` of a `Corporation` `co` whose active sponsor `sp` ([[FUND-CHECK]](#fund-check-funding-account-resolution)) has `covers_fees` true, the fee-deduction step MUST proceed in this order: (1) the corporation's own allowance to the signer MUST accept the draw as above, and the network bounds MUST hold (the fee to deduct is the required fee of [[NET-FEE-2]]; the gas cap of [[NET-FEE-3]] applies, since the payer is not the signer); (2) `sp.policy_address` MUST have a spendable balance of at least that fee, checked **before** anything is consumed, so that a sponsor that cannot pay is not charged against its `fee_spend_limit`; (3) the sponsor's allowance granted by `sp.policy_address` to `co.policy_address` ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)) is consumed; (4) the fee is debited from `sp.policy_address`. If step 2 or 3 fails, the fee is debited from `co.policy_address` as above, and the transaction is rejected if that account cannot pay. Both allowances are consumed on a sponsored payment: the corporation's own caps and message filters stay in force, and the stricter of the two caps wins. A transaction whose handler aborts after the sponsor paid is not refunded, exactly as for a corporation-paid fee: the network bounds and the sponsor's periodic budget bound that exposure. Realization: a VPR-specific fee-deduction decorator replacing the standard one in the ante handler, which resolves `co` from the fee `granter` (the lookup of [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)); a rejected transaction leaves no state change, so neither allowance is consumed on rejection. Nothing else in fee processing changes, and no allowance of the sponsored corporation is rewritten when its sponsor changes. Transactions executed through the corporation's group are covered the same way when the group has granted plain allowances from its `policy_address` to its member accounts.
 
 #### [MOD-DE-MSG-1] Grant Fee Allowance
 
@@ -6178,31 +6179,29 @@ This method does NOT read `Participant` state itself; the recompute it triggers 
 
 #### [MOD-DE-MSG-10] Grant Sponsorship
 
-- Any authorized `operator` CAN execute this method on behalf of a `corporation` (the [[ref: sponsor]]).
-- `corporation` CAN execute this method alone through a group proposal.
+This method is **not delegable**: the `corporation` (the [[ref: sponsor]]) executes it alone through a corporation proposal, since it commits the corporation's funds to be spent by another corporation's operators, outside any operator spend limit.
 
-The sponsor declares the budget it is willing to pay for another corporation. The sponsorship takes effect only once the sponsored corporation elects it with [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor). Re-granting an existing (`sponsor`, `sponsored`) pair updates the entry in place.
+The sponsor declares the budget it is willing to pay for another corporation. The sponsorship takes effect only once the sponsored corporation elects it with [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor). A `Sponsorship` entry is **create-only**: an existing (`sponsor`, `sponsored`) pair can only be re-granted with terms that are at least as generous (raise-only update, see the execution); any reduction requires [[MOD-DE-MSG-11]](#mod-de-msg-11-revoke-sponsorship), which clears the sponsored corporation's election, followed by a fresh grant and a fresh election.
 
 ##### [MOD-DE-MSG-10-1] Grant Sponsorship method parameters
 
 - `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the sponsor corporation.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal.
 - `sponsored_corporation_id` (uint64) (*mandatory*): id of the `Corporation` to sponsor.
 - `msg_types` (msg_type[]) (*optional*): covered paying message types (see [Sponsorship](#sponsorship)); all of them when absent.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum operation funds paid per cycle.
 - `period` (duration) (*optional*): cycle length for `spend_limit`.
 - `expiration` (timestamp) (*optional*): end of the sponsorship, or end of the first cycle when `period` is set.
-- `covers_fees` (boolean) (*mandatory*): whether the sponsor also pays the [[ref: network fees]] of the sponsored corporation.
+- `covers_fees` (boolean) (*mandatory*): whether the sponsor also pays the [[ref: network fees]] of the sponsored corporation, within the network bounds of [[NET-FEE-2]] and [[NET-FEE-3]].
 - `fee_spend_limit` (DenomAmount[]) (*optional*): maximum network fees paid per `period` (or in total when `period` is unset). Ignored if `covers_fees` is false.
 
 ##### [MOD-DE-MSG-10-2] Grant Sponsorship basic checks
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): (Signer) signature must be verified.
-- if `operator` is present: `operator` (account): (Signer) signature must be verified, and [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type. Else [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
+- `corporation` (account): (Signer) signature must be verified; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
 - let `co` be the `Corporation` entry resolved from the signing `corporation` account (the sponsor).
 - `sponsored_corporation_id`: a `Corporation` entry MUST exist with this `id`, and it MUST differ from `co.id`.
+- if a `Sponsorship` entry `s` already exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, the new terms MUST be at least as generous as the current ones, else abort with an error indicating that the sponsorship must be revoked first: `period` MUST be unchanged; `msg_types` MUST be absent or a superset of `s.msg_types` (absent counts as all); `spend_limit` MUST be absent or, for every denom of `s.spend_limit`, at least `s.spend_limit` (an absent `s.spend_limit` cannot be set); `expiration` MUST be null or later than `s.expiration` (a null `s.expiration` cannot be set); `covers_fees` MUST NOT change from true to false; `fee_spend_limit` MUST be absent or at least `s.fee_spend_limit` per denom (an absent `s.fee_spend_limit` cannot be set).
 - `msg_types`, if specified: MUST be a non-empty list of message types among those of [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op), [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) and [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation).
 - `spend_limit`, if specified: MUST be a list of valid DenomAmounts.
 - `period`, if specified: MUST be a valid duration, and `spend_limit` and `expiration` MUST also be specified.
@@ -6218,15 +6217,15 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-- if a `Sponsorship` entry `s` exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, update it; else create it with `s.id` auto-incremented, `s.sponsor_corporation_id` = `co.id`, `s.sponsored_corporation_id` = `sponsored_corporation_id` and `s.created` = `now`. In both cases set:
+- if a `Sponsorship` entry `s` exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, update it in place (raise-only, see basic checks; the election of the sponsored corporation, if any, is kept, since no term became less favourable to it); else create it with `s.id` auto-incremented, `s.sponsor_corporation_id` = `co.id`, `s.sponsored_corporation_id` = `sponsored_corporation_id` and `s.created` = `now`. In both cases set:
   - `s.msg_types`: `msg_types`;
-  - `s.spend_limit`: `spend_limit`; `s.remaining_spend`: `spend_limit` if set, else absent;
+  - `s.spend_limit`: `spend_limit`; `s.remaining_spend`: on creation, `spend_limit` if set, else absent; on update, `s.remaining_spend` + (`spend_limit` − `s.spend_limit`) per denom when both are set, `spend_limit` when `s.spend_limit` was absent, absent when `spend_limit` is absent;
   - `s.period`: `period`; `s.expiration`: `expiration`;
   - `s.covers_fees`: `covers_fees`; `s.fee_spend_limit`: `fee_spend_limit` if `covers_fees` is true, else absent;
   - `s.modified`: `now`.
-- realize the fee coverage. Let `sponsored` be the `Corporation` entry of `sponsored_corporation_id`. If `covers_fees` is true, create (or replace) the on-chain `x/feegrant` allowance granted by `co.policy_address` to `sponsored.policy_address`: a `PeriodicAllowance` (`period`, per-period limit `fee_spend_limit`, first `period_reset` = `expiration`, no absolute expiration) when both `fee_spend_limit` and `period` are set, else a `BasicAllowance` (`fee_spend_limit` when set, otherwise unlimited; `expiration` when set and `period` unset). The allowance carries no message filter: which messages are fee-granted is decided by the sponsored corporation's own allowances. If `covers_fees` is false, revoke that allowance if one exists.
+- realize the fee coverage. Let `sponsored` be the `Corporation` entry of `sponsored_corporation_id`. If `covers_fees` is true, create (or replace) the on-chain `x/feegrant` allowance granted by `co.policy_address` to `sponsored.policy_address`: an `AllowedMsgAllowance` whose message filter is the set of message types listed in `GlobalVariables.max_gas_per_msg_type` ([[NET-FEE-3]]), wrapping a `PeriodicAllowance` (`period`, per-period limit `fee_spend_limit`, first `period_reset` = `expiration`, no absolute expiration) when both `fee_spend_limit` and `period` are set, else a `BasicAllowance` (`fee_spend_limit` when set, otherwise unlimited; `expiration` when set and `period` unset). If `covers_fees` is false, revoke that allowance if one exists.
 
-> Note: the allowance is consumed by the sponsored-fees rule of the [Delegation Module](#delegation-module) note: the sponsored corporation's `policy_address` remains the fee `granter` named by the transaction, its own `FeeGrant` is checked first, and the sponsor's allowance is checked on top. Granting a sponsorship rewrites nothing owned by the sponsored corporation.
+> Note: the allowance is consumed by the sponsored-fees rule of the [Delegation Module](#delegation-module) note: the sponsored corporation's `policy_address` remains the fee `granter` named by the transaction, its own `FeeGrant` is checked first, the network bounds apply, and the sponsor's allowance is checked on top. Granting a sponsorship rewrites nothing owned by the sponsored corporation.
 
 #### [MOD-DE-MSG-11] Revoke Sponsorship
 
@@ -6261,7 +6260,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - let `sponsored` be the `Corporation` entry of `sponsored_corporation_id`: revoke the on-chain `x/feegrant` allowance granted by `co.policy_address` to `sponsored.policy_address`, if one exists.
 - if `sponsored.sponsor_corporation_id` = `co.id`: set `sponsored.sponsor_corporation_id` to null and `sponsored.modified` to `now`.
 
-> Note: revocation is immediate: the next fund movement of the sponsored corporation falls back to its own `policy_address` ([[FUND-CHECK-1]](#fund-check-1-debit)) and its next fee deduction to its own `FeeGrant`. Escrows already funded by the sponsor keep it as refund target (`Participant.op_funding_account`). Open slash obligations of the sponsored corporation are its own and remain open.
+> Note: revocation is immediate: the next fund movement of the sponsored corporation falls back to its own `policy_address` ([[FUND-CHECK-1]](#fund-check-1-debit)) and its next fee deduction to its own `FeeGrant`. Escrows already funded by the sponsor keep it as refund target (`Participant.op_funding_account`). Open slash obligations of the sponsored corporation are its own and remain open. Revocation is the only way to reduce the terms of a sponsorship: after it, a new grant needs a new election by the sponsored corporation.
 
 #### [MOD-DE-QRY-1] List Operator Authorizations
 
@@ -6384,7 +6383,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-DE-QRY-6-3] List Sponsorships execution
 
-Return a list of `Sponsorship` entries matching the filter criteria, or an empty list if nothing found. Whether a listed sponsorship is **active** is read from the sponsored corporation's `sponsor_corporation_id` ([[FUND-CHECK]](#fund-check-funding-account-resolution)).
+Return a list of `Sponsorship` entries matching the filter criteria, or an empty list if nothing found. Each returned entry MUST carry a derived boolean `active`, true if, and only if, the sponsored corporation's `sponsor_corporation_id` equals the entry's `sponsor_corporation_id` and the entry is not expired, that is the full test of [[FUND-CHECK]](#fund-check-funding-account-resolution).
 
 ### Digests Module
 
