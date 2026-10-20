@@ -222,7 +222,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ Fees paid by a [[ref: participant]] that are distributed to other [[ref: participants]].
 
 [[def: network fee, network fees]]:
-~ Fees paid by a [[ref: participant]] for transaction execution, routed to the [[ref: distribution pool]].
+~ Fees paid in [[ref: native denom]] for the execution of a [[ref: transaction]]: the transaction's gas limit times the [[ref: network gas price]] ([[NET-FEE-2]](#net-fee-2-required-fee)), deducted before execution and routed to the [[ref: distribution pool]].
+
+[[def: network gas price]]:
+~ The price of one unit of gas, a network parameter expressed in the [[ref: main fiat currency]] (`GlobalVariables.network_gas_price`) and converted into [[ref: native denom]] once per [[ref: epoch]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). It is the same for every validator and every block of an epoch: the VPR has no fee market and no validator-local price.
 
 [[def: trust unit, trust units, TU, TUs]]:
 ~ A non-transferable, non-convertible accounting unit that is the only balance held in a [[ref: trust deposit]]. Trust units are minted when a deposit-bound amount of [[ref: native denom]] is spent: the [[ref: native denom]] amount is routed to the [[ref: distribution pool]] (never held in reserve) and the corresponding trust units are credited to the payer's [[ref: trust deposit]] at the current [[ref: trust unit peg value]]. Trust units are **not** a token and **not** a pricing asset: they cannot be transferred, cannot be redeemed for tokens, and cannot be used to define fees. Their sole use is the computation of trust scores, which decay over time through the declining [[ref: trust unit peg value]] index.
@@ -231,10 +234,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The value of one [[ref: trust unit]] expressed in the [[ref: main fiat currency]]. Set at genesis and declining **deterministically** each [[ref: epoch]] by `tu_decay_rate` (a protocol schedule, **not** oracle-fed). Because trust units are minted at the current peg value, a static trust deposit balance loses fiat value at exactly `tu_decay_rate`: maintaining a trust score requires ongoing paid activity ("trust decay").
 
 [[def: main fiat currency]]:
-~ The ISO-4217 fiat currency, defined at network launch, used to denominate the [[ref: trust unit peg value]], distribution budgets, and slash obligations. Fee pricing MAY use other fiat currencies (multi-fiat), but protocol-level accounting uses the main fiat currency.
+~ The ISO-4217 fiat currency, defined in the genesis state and immutable thereafter, used to denominate the [[ref: trust unit peg value]], distribution budgets, slash obligations and the [[ref: network gas price]]. Fee pricing MAY use other fiat currencies (multi-fiat), but protocol-level accounting uses the main fiat currency.
 
 [[def: epoch, epochs]]:
-~ A fixed-length period (`epoch_length`, e.g. 1 day) at whose boundary the [[ref: trust unit peg value]] index is updated and the [[ref: distribution pool]] is paid out.
+~ A fixed-length period (`epoch_length`, e.g. 1 day) at whose boundary the [[ref: trust unit peg value]] index is updated, the [[ref: distribution pool]] is paid out and the [[ref: network gas price]] is converted into [[ref: native denom]] for the next epoch.
 
 [[def: distribution pool]]:
 ~ The module account that collects, each [[ref: epoch]], all deposit-bound [[ref: native denom]] amounts and [[ref: network fees]]. At epoch end it is paid out in a fixed order (validator budgets, council budget, foundation budget, capped yield to bonded native denom holders) and the **residual is burned**.
@@ -1311,6 +1314,8 @@ entity "GlobalVariables" as gv {
   +vna_total_supply: number
   +twap_window: duration
   +vs_operator_fee_period: duration
+  +network_gas_price: decimal
+  +max_gas_per_msg_type: map<msg_type, number>
 }
 
 entity "TrustDeposit" as td {
@@ -1716,7 +1721,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 **Trust Deposit and Trust Unit Index:**
 
 - `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
-- `main_fiat_currency` (string) (*mandatory*): ISO-4217 code of the [[ref: main fiat currency]], defined at network launch. Used to denominate the trust unit peg value, distribution budgets, and slash obligations.
+- `main_fiat_currency` (string) (*mandatory*): ISO-4217 code of the [[ref: main fiat currency]], defined in the genesis state and **immutable** thereafter (a change would re-denominate every fiat-fixed obligation and budget). Used to denominate the trust unit peg value, distribution budgets, slash obligations and the network gas price. The genesis state MUST also contain the exchange rate between this currency and the [[ref: native denom]] ([[XRG]](#xrg-genesis-exchange-rate)).
 - `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in [[ref: main fiat currency]] at genesis (index start): 1.00, so that at genesis one trust unit equals one unit of [[ref: main fiat currency]] and a trust score reads directly as recent fiat-equivalent spend. Immutable: the index only moves through decay.
 - `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default value: 0.001 (0.1% per epoch; with the default 1-day `epoch_length`, an index half-life of ≈ 693 days ≈ 23 months). A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash obligations are never recomputed.
 - `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day.
@@ -1745,6 +1750,11 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 **Delegation:**
 
 - `vs_operator_fee_period` (duration) (*mandatory*): network-wide cycle length of the aggregate VS-operator fee allowance (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)): each `ParticipantAuthorizationRecord.fee_spend_limit` is a budget contribution per `vs_operator_fee_period`. Default value: 1 day.
+
+**Network fees:**
+
+- `network_gas_price` (decimal) (*mandatory*): price of one unit of gas in [[ref: main fiat currency]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). Converted once per [[ref: epoch]] into the derived state `network_gas_price_native`, which every validator applies to every transaction of the epoch. Adjustable by governance proposal; a change takes effect at the next epoch boundary.
+- `max_gas_per_msg_type` (map<msg_type, number>) (*mandatory*): maximum gas per message type that a transaction may declare when its fee is paid by an account other than its signer ([[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions)). MUST list every VPR message type and the messages of the corporation group policy (proposal submission, vote, execution, withdrawal); a message type absent from the map cannot be fee-granted. Set at genesis from the measured gas profile of each message type with a margin for state-dependent messages, and adjusted by governance proposal.
 
 ## Module Requirements
 
@@ -1928,6 +1938,8 @@ Fee grants are **not created directly**.
 They are created, updated, and revoked **exclusively by Delegation module messages**.  
 When an authorization is created or updated, it MAY optionally include an associated fee grant.
 
+Every fee-granted transaction pays the required fee of [[NET-FEE-2]](#net-fee-2-required-fee), never the declared excess, and is subject to the per-message gas cap of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions).
+
 #### [AUTHZ-CHECK] Common Authorization and Fee Grant Checks
 
 For any **delegable message** executed by an `operator` on behalf of a `corporation`, the following checks MUST hold; if any fails, the [[ref: transaction]] MUST abort. The authorization checks ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) — existence, message-type membership, cycle reset, corporation registration, and the operation `spend_limit`) are **preconditions** verified by the VPR method before any method-specific checks. The fee-grant checks ([[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) and the fee-payment part of [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)) are instead realized at **transaction-fee-processing time** (see the note below), not as VPR preconditions.
@@ -1948,7 +1960,7 @@ For any **delegable message** executed by an `operator` on behalf of a `corporat
 
 If the transaction fees are paid by the `corporation` account (via fee grant) instead of the `operator` account:
 
-> Realization: this check is performed by the corporation's `x/feegrant` allowance during standard transaction-fee processing (see the [Delegation Module](#delegation-module) note), not by the VPR message handler. The allowance enforces steps 1–3 below — existence + message-type filter (step 1), cycle reset (step 2), and sufficiency (step 3) — and the standard fee-deduction path performs the debit from the corporation's account. Steps 1–3 therefore specify the behaviour the allowance MUST realize, not separate handler logic; `fg.remaining_spend` reflects the allowance's running balance (see the [FeeGrant](#feegrant) entity).
+> Realization: this check is performed by the corporation's `x/feegrant` allowance during standard transaction-fee processing (see the [Delegation Module](#delegation-module) note), not by the VPR message handler. The allowance enforces steps 1–3 below — existence + message-type filter (step 1), cycle reset (step 2), and sufficiency (step 3) — and the standard fee-deduction path performs the debit from the corporation's account. Steps 1–3 therefore specify the behaviour the allowance MUST realize, not separate handler logic; `fg.remaining_spend` reflects the allowance's running balance (see the [FeeGrant](#feegrant) entity). The same fee-processing step enforces the per-message gas cap of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) and deducts the required fee of [[NET-FEE-2]](#net-fee-2-required-fee).
 
 1. A `FeeGrant` `fg` MUST exist where `fg.grantor_corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), `fg.grantee` = `operator`, and `fg.msg_types` includes the current message type.
 2. If `fg.expiration` is set:
@@ -1983,7 +1995,7 @@ Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission
 
 If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `ParticipantAuthorizationRecord` `record` looked up in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
 
-> Realization: the corporation's fee **payment and its periodic cap** are both enforced by the aggregate VS-operator `x/feegrant` allowance at transaction-fee-processing time — an `AllowedMsgAllowance` over the union of the live records' `msg_types`, wrapping a `PeriodicAllowance` whose `period` is `GlobalVariables.vs_operator_fee_period` and whose per-period limit is the **sum** of the contributing records' `fee_spend_limit` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). The `PeriodicAllowance` resets itself during fee deduction, so a transaction arriving after a fee-cycle boundary needs no prior reset. There is no per-record fee ledger: no VPR-side fee check or deduction is performed.
+> Realization: the corporation's fee **payment and its periodic cap** are both enforced by the aggregate VS-operator `x/feegrant` allowance at transaction-fee-processing time — an `AllowedMsgAllowance` over the union of the live records' `msg_types`, wrapping a `PeriodicAllowance` whose `period` is `GlobalVariables.vs_operator_fee_period` and whose per-period limit is the **sum** of the contributing records' `fee_spend_limit` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). The `PeriodicAllowance` resets itself during fee deduction, so a transaction arriving after a fee-cycle boundary needs no prior reset. There is no per-record fee ledger: no VPR-side fee check or deduction is performed. The per-message gas cap of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) applies to every transaction paid through this allowance.
 
 1. `record.with_feegrant` MUST be true, else abort (the corporation has not enabled fee payment for this entry).
 
@@ -2082,6 +2094,7 @@ As a result, `accountABC` is authorized to:
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |N/A |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |N/A |
 |                                | List Slash Obligations                  | /td/v1/obligations/list       | Query  | [[MOD-TD-QRY-3]](#mod-td-qry-3-list-slash-obligations)   |N/A  |
+|                                | Get Network Gas Price                   | /td/v1/gas-price              | Query  | [[MOD-TD-QRY-4]](#mod-td-qry-4-get-network-gas-price)   |N/A  |
 | Distribution                   | Update Module Parameters                | N/A (Tx)                      | Msg    | [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters)   | governance proposal |
 | Delegation  | Grant Fee Allowance         |   N/A (Tx)  | Msg  | [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)   |module call|
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
@@ -5396,8 +5409,8 @@ Trust deposits generate **no yield**: the fee-funded yield of the [[ref: VPR]] a
 The module maintains a single global index, the [[ref: trust unit peg value]] `tu_peg_value(t)`, expressed in [[ref: main fiat currency]] per trust unit:
 
 - At genesis, `tu_peg_value` MUST be initialized to `GlobalVariables.tu_peg_value_genesis`.
-- Epochs are counted from genesis: epoch `n` covers the block timestamps from `genesis_time + n × epoch_length` (inclusive) to `genesis_time + (n+1) × epoch_length` (exclusive). The **boundary block** of epoch `n` is the first block whose timestamp falls in epoch `n+1` or later. In that block, after its transactions have executed, the following MUST be performed for epoch `n`, in this order: (1) compute each validator's signed-block ratio over epoch `n`; (2) pay out the [[ref: distribution pool]] per [[DIST-1]](#dist-1-epoch-payout-order), or skip the payout and carry the pool forward when no valid exchange rate is available; (3) update the index: `tu_peg_value = tu_peg_value × (1 - GlobalVariables.tu_decay_rate)`; (4) apply any change of `tu_decay_rate` enacted during epoch `n`, so that it first affects the decline performed at the boundary of epoch `n+1`. The transactions of the boundary block therefore mint at the peg value of epoch `n`.
-- The module keeps the number of the **last closed epoch** in state (no epoch is closed at genesis). In every block, after its transactions have executed, while the epoch following the last closed epoch has ended (its end timestamp is at or before the block timestamp), the module processes the boundary of that epoch with the four steps above and advances the last closed epoch. A block normally processes one boundary. A block produced after the chain missed `k` boundaries processes them **in sequence**, each with the four steps: decay follows wall-clock time, and a `tu_decay_rate` change enacted before the halt is applied at step (4) of the first missed boundary and governs the declines that follow.
+- Epochs are counted from genesis: epoch `n` covers the block timestamps from `genesis_time + n × epoch_length` (inclusive) to `genesis_time + (n+1) × epoch_length` (exclusive). The **boundary block** of epoch `n` is the first block whose timestamp falls in epoch `n+1` or later. In that block, after its transactions have executed, the following MUST be performed for epoch `n`, in this order: (1) compute each validator's signed-block ratio over epoch `n`; (2) pay out the [[ref: distribution pool]] per [[DIST-1]](#dist-1-epoch-payout-order), or skip the payout and carry the pool forward when no valid exchange rate is available; (3) update the index: `tu_peg_value = tu_peg_value × (1 - GlobalVariables.tu_decay_rate)`; (4) apply any change of `tu_decay_rate` enacted during epoch `n`, so that it first affects the decline performed at the boundary of epoch `n+1`; (5) recompute `network_gas_price_native` for epoch `n+1` per [[NET-FEE-1]](#net-fee-1-network-gas-price). The transactions of the boundary block therefore mint at the peg value of epoch `n` and pay fees at the gas price of epoch `n`.
+- The module keeps the number of the **last closed epoch** in state (no epoch is closed at genesis). In every block, after its transactions have executed, while the epoch following the last closed epoch has ended (its end timestamp is at or before the block timestamp), the module processes the boundary of that epoch with the five steps above and advances the last closed epoch. A block normally processes one boundary. A block produced after the chain missed `k` boundaries processes them **in sequence**, each with the five steps: decay follows wall-clock time, and a `tu_decay_rate` change enacted before the halt is applied at step (4) of the first missed boundary and governs the declines that follow.
 - The index never pauses: a stale exchange rate skips the payout (step 2), never the decline (step 3). An epoch during which no block was produced has no signed blocks: its payout is skipped and the pool carries over, since the budgets compensate validators for running the network.
 - `tu_decay_rate` MUST satisfy 0 ≤ `tu_decay_rate` < 1, at genesis and on every update. The index half-life in epochs is ln 2 / −ln(1 − `tu_decay_rate`); the default 0.001 with a one-day epoch gives about 693 days.
 - A governance change of `tu_decay_rate` is **prospective only**: it is applied at step (4) of the next boundary and first affects the decline that follows. The index path already elapsed MUST NOT be recomputed: past mints, scores, and fiat-fixed slash obligations are unaffected; only the future decline steepens or flattens.
@@ -5688,13 +5701,69 @@ Any [[ref: account]] CAN run this [[ref: query]].
 
 Return the matching `SlashObligation` entries, ordered by `id`.
 
+#### [MOD-TD-QRY-4] Get Network Gas Price
+
+Anyone CAN run this [[ref: query]]. Clients use it to compute the fee of a transaction ([[NET-FEE-2]](#net-fee-2-required-fee)).
+
+##### [MOD-TD-QRY-4-1] Get Network Gas Price parameters
+
+None.
+
+##### [MOD-TD-QRY-4-3] Get Network Gas Price execution of the query
+
+Return:
+
+- `network_gas_price` (decimal): `GlobalVariables.network_gas_price`, in [[ref: main fiat currency]] per unit of gas;
+- `network_gas_price_native` (decimal): the price of one unit of gas in [[ref: native denom]] base units for the current [[ref: epoch]] ([[NET-FEE-1]](#net-fee-1-network-gas-price));
+- `epoch` (number): the current epoch number, and `epoch_ends` (timestamp): the start of the next epoch, after which `network_gas_price_native` may change;
+- `max_gas_per_msg_type` (map<msg_type, number>): `GlobalVariables.max_gas_per_msg_type`.
+
+### Network Fees
+
+#### Network Fees Overview
+
+*This section is non-normative.*
+
+Every [[ref: transaction]] pays [[ref: network fees]] in [[ref: native denom]], and all of them flow into the [[ref: distribution pool]]. The VPR is a council-run proof-of-authority network whose validators are paid budgets from that pool ([[DIST-1]](#dist-1-epoch-payout-order)): validators do not compete on fees, so there is neither a fee market nor a validator-local price. The price of gas is a network parameter expressed in the [[ref: main fiat currency]] and converted into [[ref: native denom]] once per [[ref: epoch]]. Three consequences follow. The cost of a message is constant in fiat for a whole epoch and identical for every validator and every block, which lets corporations and their sponsors budget in fiat. The fee a transaction carries is a **maximum**: the network deducts the required fee and never the declared excess, so a client can sign generously and pay exactly. And because the price is fixed, the only lever left to the payer of a fee is the gas limit, which is why fee-granted transactions are capped per message type.
+
+#### [NET-FEE-1] Network Gas Price
+
+- `GlobalVariables.network_gas_price` is the price of one unit of gas in [[ref: main fiat currency]].
+- The module maintains the derived state `network_gas_price_native`, the price of one unit of gas in [[ref: native denom]] base units for the current [[ref: epoch]], computed as `network_gas_price × rate / 10^rate_scale` from the `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]) required by [[XRG]](#xrg-genesis-exchange-rate). Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic: the price of one unit of gas is a small fraction of one base unit.
+- At genesis, `network_gas_price_native` MUST be computed from the genesis values of `network_gas_price` and of that `ExchangeRate` entry. The genesis state MUST therefore define `GlobalVariables.main_fiat_currency`, `GlobalVariables.network_gas_price` and the exchange rate between the main fiat currency and the native denom: without them no transaction fee can be computed and no transaction can be executed.
+- In the boundary block of each epoch, as step (5) of the boundary sequence defined in [Trust Unit Index](#trust-unit-index), `network_gas_price_native` MUST be recomputed for the next epoch. If no valid (non-expired) exchange rate is available at that moment, the last stored rate MUST be used even if expired: unlike minting and repayment, fee computation never aborts for lack of a rate, so that the chain, and the exchange-rate update transaction itself, keep working.
+- Within an epoch `network_gas_price_native` MUST NOT change. A governance change of `network_gas_price` takes effect at the next boundary.
+- The current values are returned by [[MOD-TD-QRY-4]](#mod-td-qry-4-get-network-gas-price).
+
+#### [NET-FEE-2] Required Fee
+
+- The required fee of a transaction is `required_fee` = `gas_limit × network_gas_price_native`, rounded up to an integer number of [[ref: native denom]] base units. Network fees MUST be paid in [[ref: native denom]] only.
+- A transaction whose declared fee is lower than `required_fee` MUST be rejected, at mempool admission and at block execution, by every validator. Validators MUST NOT apply a local minimum gas price, whether higher or lower: the [[ref: network gas price]] is the only price, and a block containing a transaction paying less than its required fee is invalid.
+- The declared fee is a **maximum**. The amount deducted from the fee payer MUST be `required_fee`; the declared excess MUST NOT be deducted. The fee payer is the transaction's signer, or the fee `granter` it names when the corresponding allowance accepts the draw ([[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)).
+- The fee is deducted before execution. A transaction that fails during execution still pays `required_fee`. Gas declared but not used is not refunded; a refund of unused gas for successful transactions MAY be introduced in a later version.
+- The whole fee is routed to the [[ref: distribution pool]].
+
+> Realization: the standard fee decorator deducts the fee returned by its fee checker; a VPR fee checker returns `required_fee` after verifying that the declared fee covers it, in both admission and execution modes. Simulation is unaffected. This replaces the validator-local minimum-gas-prices configuration, which MUST be ignored. Changing the fee checker is consensus-breaking and ships with a chain upgrade.
+
+#### [NET-FEE-3] Gas Cap for Fee-Granted Transactions
+
+When the account paying the fee is not the transaction's signer (an operator fee grant per [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), the aggregate VS operator allowance per [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks), or any other allowance granted by a corporation's `policy_address`), the transaction's `gas_limit` MUST NOT exceed the sum, over the messages it carries, of `GlobalVariables.max_gas_per_msg_type[msg_type]`, a message type absent from the map counting as 0. Otherwise the fee draw MUST be refused and the transaction rejected before any deduction. Transactions paid by their own signer are not subject to this cap.
+
+> Rationale: with a fixed network gas price, the gas limit is the only part of the fee a grantee controls. The cap bounds what any grantee can draw from a corporation's account to `max_gas × network_gas_price_native` per message, whatever caps the corporation set or forgot to set on its own grants, which protects it from a misconfigured front end or a compromised operator key. The per-period budgets of the fee grants bound the volume; this rule bounds the unit.
+
+#### Client guidance
+
+*This section is non-normative.*
+
+A client estimates gas by simulation, applies its usual gas adjustment, reads `network_gas_price_native` through [[MOD-TD-QRY-4]](#mod-td-qry-4-get-network-gas-price) and signs `fee = gas_limit × network_gas_price_native`. Within an epoch the required fee does not move. A transaction signed just before a boundary and executed just after it is rejected before any deduction if the new price is higher, and is simply resubmitted; a client MAY sign with a small margin to avoid even that, since the excess is never deducted, and the exchange-rate authorization bounds how far the rate can move per update. Wallets SHOULD display the signed fee as a maximum. A fee-granted client keeps `gas_limit` under the sum of the caps of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) for the messages it batches.
+
 ### Distribution Module
 
 #### Distribution Overview
 
 *This section is non-normative.*
 
-All deposit-bound [[ref: native denom]] (see [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and all [[ref: network fees]] flow into a single [[ref: distribution pool]]. At each [[ref: epoch]] boundary the pool is paid out in a fixed order — budgets first, then a capped yield, then **the residual is burned**. Structural sell pressure is therefore **bounded by construction** (operating budgets plus a capped yield), while the burn is the elastic residual that grows automatically with adoption. Because budgets and the burn are fiat-denominated, the burn is **self-damping** (price up → fewer tokens burned) and **countercyclical** (price down → more tokens burned).
+All deposit-bound [[ref: native denom]] (see [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and all [[ref: network fees]] (see [Network Fees](#network-fees)) flow into a single [[ref: distribution pool]]. At each [[ref: epoch]] boundary the pool is paid out in a fixed order — budgets first, then a capped yield, then **the residual is burned**. Structural sell pressure is therefore **bounded by construction** (operating budgets plus a capped yield), while the burn is the elastic residual that grows automatically with adoption. Because budgets and the burn are fiat-denominated, the burn is **self-damping** (price up → fewer tokens burned) and **countercyclical** (price down → more tokens burned).
 
 #### [DIST-1] Epoch payout order
 
@@ -5769,7 +5838,7 @@ The values in force in a boundary block apply to the payout performed in that bl
 
 ### Delegation Module
 
-**Transaction-fee payment on behalf of a corporation (fee grants):** When a `corporation` pays the transaction fees for a grantee (an `operator` per [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), or a `vs_operator` per [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)), fee payment is handled directly via the Cosmos SDK `x/feegrant` module; VPR does not wrap the fee-deduction mechanism. Implementations MUST realize each on-chain `FeeGrant` as an `x/feegrant` allowance granted by the corporation's `policy_address` (the granter) to the `grantee`: an `AllowedMsgAllowance` (whose `allowed_messages` is the `FeeGrant.msg_types`) wrapping a `PeriodicAllowance` when both a `spend_limit` and a `period` are set — the operator path of [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization), and always the `vs_operator` path, whose aggregate allowance is capped at the sum of the live records' `fee_spend_limit` per `GlobalVariables.vs_operator_fee_period` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)) — otherwise a `BasicAllowance`. The allowance is created (or updated) when the `FeeGrant` is granted ([[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)) and removed when it is revoked ([[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)). A grantee elects corporation-paid fees by setting the transaction fee's `granter` field (the `--fee-granter`) to the corporation's `policy_address`; `x/feegrant` then validates the draw and enforces the `spend_limit`, the periodic reset, and the message-type filter, while the auth fee ante handler performs the actual debit from the corporation's account.
+**Transaction-fee payment on behalf of a corporation (fee grants):** When a `corporation` pays the transaction fees for a grantee (an `operator` per [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), or a `vs_operator` per [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)), fee payment is handled directly via the Cosmos SDK `x/feegrant` module; VPR does not wrap the fee-deduction mechanism. Implementations MUST realize each on-chain `FeeGrant` as an `x/feegrant` allowance granted by the corporation's `policy_address` (the granter) to the `grantee`: an `AllowedMsgAllowance` (whose `allowed_messages` is the `FeeGrant.msg_types`) wrapping a `PeriodicAllowance` when both a `spend_limit` and a `period` are set — the operator path of [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization), and always the `vs_operator` path, whose aggregate allowance is capped at the sum of the live records' `fee_spend_limit` per `GlobalVariables.vs_operator_fee_period` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)) — otherwise a `BasicAllowance`. The allowance is created (or updated) when the `FeeGrant` is granted ([[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)) and removed when it is revoked ([[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)). A grantee elects corporation-paid fees by setting the transaction fee's `granter` field (the `--fee-granter`) to the corporation's `policy_address`; `x/feegrant` then validates the draw and enforces the `spend_limit`, the periodic reset, and the message-type filter, while the auth fee ante handler performs the actual debit from the corporation's account. Every fee-granted transaction is additionally subject to the per-message gas cap of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions), and the amount debited is the required fee of [[NET-FEE-2]](#net-fee-2-required-fee) (gas limit × network gas price), never the declared excess.
 
 Mapping of the auto-renewing `FeeGrant.expiration`: when `period` is set, the cycle boundary maps to the allowance's `period_reset` (the allowance carries NO absolute `x/feegrant` expiration, so it auto-renews until revoked, matching `FeeGrant.expiration`); when `period` is unset, `FeeGrant.expiration` maps to the allowance's absolute expiration. If multiple periods elapse with no activity, the `period_reset` skips ahead per the `x/feegrant` `PeriodicAllowance` rule rather than accumulating each skipped period. Accordingly, `FeeGrant.remaining_spend` MAY be sourced from the underlying allowance's running balance (it tracks the fees the allowance has paid) rather than persisted and decremented as a separate field; the normative requirement is the balance's behaviour (initialize at the limit, decrement per fee payment, reset at the end of each cycle), not its physical storage. It is queryable via the standard `x/feegrant` allowance query. On the `vs_operator` path, per-record `fee_spend_limit` values are **summands** of the aggregate allowance's per-period limit; there is no separate VPR-side fee ledger ([[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)). Design rule: **cycling that gates fee payment lives in `x/feegrant` (fee-processing side); the VPR side hard-gates operations only.**
 
@@ -6667,7 +6736,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 **Trust Deposit and Trust Unit Index:**
 
 - `trust_deposit_rate`(number) (*mandatory*): 0.05.
-- `main_fiat_currency` (string) (*mandatory*): to be defined at network launch (ISO-4217 code).
+- `main_fiat_currency` (string) (*mandatory*): to be defined in the genesis state (ISO-4217 code); immutable.
 - `tu_peg_value_genesis` (decimal) (*mandatory*): 1.00.
 - `tu_decay_rate` (decimal) (*mandatory*): 0.001 (0.1% per epoch; ≈ 23-month index half-life with a 1-day epoch).
 - `epoch_length` (duration) (*mandatory*): 1 day.
@@ -6697,9 +6766,14 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 
 - `vs_operator_fee_period` (duration) (*mandatory*): 1 day.
 
+**Network fees:**
+
+- `network_gas_price` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]] per unit of gas.
+- `max_gas_per_msg_type` (map<msg_type, number>) (*mandatory*): to be set at genesis from the measured gas profile of each message type, with a margin for state-dependent messages (sessions with many beneficiaries, large schemas, VS operator allowance recomputes, group executions).
+
 ### [XRG] Genesis Exchange Rate
 
-The genesis state MUST contain one `ExchangeRate` entry between the [[ref: native denom]] (COIN) and the [[ref: main fiat currency]] (FIAT), with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch oracle operator for that entry. Without this state no [[ref: trust unit]] can be minted and no slash obligation repaid until governance creates the rate and an operator pushes it. Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the operator pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
+The genesis state MUST contain one `ExchangeRate` entry between the [[ref: native denom]] (COIN) and the [[ref: main fiat currency]] (FIAT), with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch oracle operator for that entry. Without this state no [[ref: trust unit]] can be minted, no slash obligation repaid, and no transaction fee computed ([[NET-FEE-1]](#net-fee-1-network-gas-price)): the genesis state MUST define the [[ref: main fiat currency]] (`GlobalVariables.main_fiat_currency`), the [[ref: network gas price]] (`GlobalVariables.network_gas_price`) and this exchange rate together. Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the operator pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
 
 ## References
 
