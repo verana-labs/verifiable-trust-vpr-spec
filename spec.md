@@ -145,10 +145,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A `Participant` entry, linked to a [[ref: credential schema]], that represents, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], or [[ref: verifier grantor]] of a [[ref: credential schema]].
 
 [[def: decentralized identifier, DID, DIDs]]:
-~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]]. A DID is a type of [[ref: VID]].
-
-[[def: verifiable identifier, VID, VIDs]]:
-~ A digital identifier bound to cryptographic key material, such that another party can verify control of the identifier and resolve it to keys (and, when in public use, endpoint addresses), as specified in the [Trust Spanning Protocol (TSP) Specification](https://trustoverip.github.io/tswg-tsp-specification/). [[ref: DIDs]] are one **type** of VID; other examples include X.509-backed identifiers. Provided for reference: this specification currently uses [[ref: DIDs]] only. Note that KERI AIDs are [[ref: DIDs]] (e.g. `did:webs`, `did:keri`) and can therefore be used with this specification.
+~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]].
 
 [[def: decentralized identifier communication, DIDComm]]:
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
@@ -243,7 +240,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The module account that collects, each [[ref: epoch]], all deposit-bound [[ref: native denom]] amounts and [[ref: network fees]]. At epoch end it is paid out in a fixed order (validator budgets, council budget, foundation budget, capped yield to bonded native denom holders) and the **residual is burned**.
 
 [[def: bonded tokens, bonded native denom]]:
-~ [[ref: native denom]] bonded through the standard staking module (subject to `unbonding_period`) in order to accrue the capped, fee-funded, pro-rata yield from the [[ref: distribution pool]]. Bonding confers **no consensus power and no governance power**: it is reward accounting only.
+~ [[ref: native denom]] bonded through the bonding mechanism of [[DIST-2]](#dist-2-bonding) (subject to `unbonding_period`) in order to accrue the capped, fee-funded, pro-rata yield from the [[ref: distribution pool]]. Bonding confers **no consensus power and no governance power**: it is reward accounting only.
 
 [[def:ecosystem, ecosystems]]
 ~ An approved list of [[ref: participants]] that are authorized to issue/verify certain credentials in an ecosystem.
@@ -1296,7 +1293,6 @@ entity "GlobalVariables" as gv {
   +credential_schema_issuer_validation_validity_period_max_days: number
   +credential_schema_verifier_validation_validity_period_max_days: number
   +credential_schema_holder_validation_validity_period_max_days: number
-  +credential_schema_trust_deposit: number
   +trust_deposit_rate:number
   +main_fiat_currency: string
   +tu_peg_value_genesis: decimal
@@ -1311,6 +1307,7 @@ entity "GlobalVariables" as gv {
   +foundation_budget: decimal
   +vna_holder_max_yield_rate: decimal
   +unbonding_period: duration
+  +bonding_enabled: boolean
   +vna_total_supply: number
   +twap_window: duration
   +vs_operator_fee_period: duration
@@ -1546,7 +1543,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `issuance_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `verification_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `tu` (decimal) (*mandatory*): accumulated [[ref: trust units]] minted to the grantee corporation's [[ref: trust deposit]] in the context of the *use* of this `Participant` entry, including its onboarding process and the validation mints it receives as a validator. Never freed on revocation or expiry; reduced only by slashing ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) and restored by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)).
-- `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of `tu`, in [[ref: main fiat currency]]: the sum of the fiat value, at mint time, of the trust units accumulated through this `Participant` entry. Maintained by the trust deposit module together with `tu`; used to denominate slash obligations at mint-time cost.
+- `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of `tu`, in [[ref: main fiat currency]]: the sum of the fiat value, at mint time, of the trust units currently held in this `Participant` entry. Maintained by the trust deposit module together with `tu`; used to denominate slash obligations at mint-time cost.
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the onboarding process of this permission, ie *parent node* in the `Participant` tree.
 - `op_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
@@ -1595,7 +1592,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 The trust deposit module owns the per-`Participant` ledger fields `tu`, `fiat_cost` and `repaid` (created with `tu` = 0 and `fiat_cost` = 0 on first mint) and the `SlashObligation` entries; the participant module calls the trust deposit module, never the reverse.
 
-Invariants: `td.tu` = Σ `p.tu` and `td.fiat_cost` = Σ `p.fiat_cost` over all `Participant` entries `p` with `p.corporation_id` = `td.corporation_id`; all four values are ≥ 0. Divisions in [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) and [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) round down. Every write goes through [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation) or [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash), which update the `TrustDeposit` and the `Participant` entries together.
+Invariants: `td.tu` = Σ `p.tu` and `td.fiat_cost` = Σ `p.fiat_cost` over all `Participant` entries `p` with `p.corporation_id` = `td.corporation_id`; all four values are ≥ 0. Divisions and multiplications in [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) and [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) round down to the ledger precision ([Trust Unit Index](#trust-unit-index)). Every write goes through [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation) or [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash), which update the `TrustDeposit` and the `Participant` entries together.
 
 ### SlashObligation
 
@@ -1728,13 +1725,14 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 **Distribution:**
 
-- `validator_node_budget` (decimal) (*mandatory*): target payment per active validator node per [[ref: epoch]], in [[ref: main fiat currency]] (sized to cover node operating costs). Docked by uptime, see the [Distribution section](#distribution).
+- `validator_node_budget` (decimal) (*mandatory*): target payment per active validator node per [[ref: epoch]], in [[ref: main fiat currency]] (sized to cover node operating costs). Docked by uptime, see the [Distribution Module](#distribution-module).
 - `validator_target_uptime` (decimal) (*mandatory*): signed-block ratio at or above which a node receives its full epoch payment. Example value: 0.99.
 - `validator_min_uptime` (decimal) (*mandatory*): signed-block ratio below which the epoch payment is zero. Example value: 0.90.
 - `council_budget` (decimal) (*mandatory*): council treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through governance proposals.
 - `foundation_budget` (decimal) (*mandatory*): foundation treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through governance proposals.
-- `vna_holder_max_yield_rate` (decimal) (*mandatory*): yearly cap on the fee-funded yield paid to [[ref: bonded tokens]], expressed as a fraction of the bonded amount. No oracle needed.
+- `vna_holder_max_yield_rate` (decimal) (*mandatory*): yearly cap on the fee-funded yield paid to [[ref: bonded tokens]], expressed as a fraction of the bonded amount. No oracle needed. Converted to a per-epoch cap by linear pro-rata, × `epoch_length` / 365 days ([[DIST-1]](#dist-1-epoch-payout-order)).
 - `unbonding_period` (duration) (*mandatory*): staking exit delay for [[ref: bonded tokens]]. Default value: 28 days.
+- `bonding_enabled` (boolean) (*mandatory*): whether item 4 of [[DIST-1]](#dist-1-epoch-payout-order), the yield to [[ref: bonded tokens]], is active. False at genesis; set to true by governance proposal only once the bonding mechanism of [[DIST-2]](#dist-2-bonding) is specified and implemented and legal counsel has reviewed the yield. While false, bonding is not available and the pool remainder after the budgets is burned in full.
 
 **Native denom:**
 
@@ -2084,6 +2082,7 @@ As a result, `accountABC` is authorized to:
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |N/A |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |N/A |
 |                                | List Slash Obligations                  | /td/v1/obligations/list       | Query  | [[MOD-TD-QRY-3]](#mod-td-qry-3-list-slash-obligations)   |N/A  |
+| Distribution                   | Update Module Parameters                | N/A (Tx)                      | Msg    | [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters)   | governance proposal |
 | Delegation  | Grant Fee Allowance         |   N/A (Tx)  | Msg  | [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)   |module call|
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
 |             | Grant Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
@@ -4787,7 +4786,7 @@ This method can only be called by either:
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the `Participant` entry;
-- `tu_amount` (decimal) (*mandatory*): the amount of [[ref: trust units]] to slash
+- `percent` (decimal) (*mandatory*): the fraction of the [[ref: trust units]] currently held in this `Participant` entry (`p.tu`) to slash, greater than 0 and at most 1. The ecosystem governance framework defines the fractions of its sanction schedule; a corporation holding several `Participant` entries in the ecosystem is slashed entry by entry, one message each, which lets the ecosystem target the entries that breached.
 
 ##### [MOD-PP-MSG-12-2] Slash Participant Trust Deposit precondition checks
 
@@ -4802,7 +4801,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `tu_amount` MUST be strictly positive and lower or equal to `applicant_participant.tu` else MUST abort (an ecosystem can only slash trust units accumulated in the context of its own `Participant` entries — never the rest of the corporation's deposit).
+- `percent` MUST be greater than 0 and lower or equal to 1, and `applicant_participant.tu` MUST be greater than 0, else MUST abort (an ecosystem can only slash trust units accumulated in the context of its own `Participant` entries — never the rest of the corporation's deposit).
 
 :::note
 Even if the `Participant` entry has expired or is revoked, it is still possible to slash it.
@@ -4844,6 +4843,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Participant` entry `applicant_participant` from `id`.
 - Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
+- calculate `tu_amount` = `applicant_participant.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `applicant_participant.tu` exactly.
 - calculate `slashed_fiat` = `applicant_participant.fiat_cost` × `tu_amount` / `applicant_participant.tu` — the obligation in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 - set `applicant_participant.slashed` to `now`
 - set `applicant_participant.modified` to `now`
@@ -5389,17 +5389,20 @@ Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[r
 
 Because the [[ref: trust unit peg value]] declines each [[ref: epoch]], a deposit that is not fed by new paid activity loses fiat value at exactly `tu_decay_rate` ("trust decay"): trust is a subscription. Decay is implemented through the single global index — there are **no per-account updates**: a deposit's fiat value at time `T` is `td.tu × tu_peg_value(T)`, and relative rankings compare raw `td.tu` directly (the common factor cancels).
 
-Trust deposits generate **no yield**: the fee-funded yield of the [[ref: VPR]] accrues to [[ref: bonded tokens]] through the [Distribution](#distribution) mechanism, not to trust deposit holders.
+Trust deposits generate **no yield**: the fee-funded yield of the [[ref: VPR]] accrues to [[ref: bonded tokens]] through the [Distribution Module](#distribution-module) mechanism, not to trust deposit holders.
 
 #### Trust Unit Index
 
 The module maintains a single global index, the [[ref: trust unit peg value]] `tu_peg_value(t)`, expressed in [[ref: main fiat currency]] per trust unit:
 
 - At genesis, `tu_peg_value` MUST be initialized to `GlobalVariables.tu_peg_value_genesis`.
-- At each [[ref: epoch]] boundary (every `GlobalVariables.epoch_length`), the index MUST be updated: `tu_peg_value = tu_peg_value × (1 - GlobalVariables.tu_decay_rate)`.
-- A governance change of `tu_decay_rate` is **prospective only**: it takes effect from the **next epoch**. The index path already elapsed MUST NOT be recomputed: past mints, scores, and fiat-fixed slash obligations are unaffected; only the future decline steepens or flattens.
+- Epochs are counted from genesis: epoch `n` covers the block timestamps from `genesis_time + n × epoch_length` (inclusive) to `genesis_time + (n+1) × epoch_length` (exclusive). The **boundary block** of epoch `n` is the first block whose timestamp falls in epoch `n+1` or later. In that block, after its transactions have executed, the following MUST be performed for epoch `n`, in this order: (1) compute each validator's signed-block ratio over epoch `n`; (2) pay out the [[ref: distribution pool]] per [[DIST-1]](#dist-1-epoch-payout-order), or skip the payout and carry the pool forward when no valid exchange rate is available; (3) update the index: `tu_peg_value = tu_peg_value × (1 - GlobalVariables.tu_decay_rate)`; (4) apply any change of `tu_decay_rate` enacted during epoch `n`, so that it first affects the decline performed at the boundary of epoch `n+1`. The transactions of the boundary block therefore mint at the peg value of epoch `n`.
+- The module keeps the number of the **last closed epoch** in state (no epoch is closed at genesis). In every block, after its transactions have executed, while the epoch following the last closed epoch has ended (its end timestamp is at or before the block timestamp), the module processes the boundary of that epoch with the four steps above and advances the last closed epoch. A block normally processes one boundary. A block produced after the chain missed `k` boundaries processes them **in sequence**, each with the four steps: decay follows wall-clock time, and a `tu_decay_rate` change enacted before the halt is applied at step (4) of the first missed boundary and governs the declines that follow.
+- The index never pauses: a stale exchange rate skips the payout (step 2), never the decline (step 3). An epoch during which no block was produced has no signed blocks: its payout is skipped and the pool carries over, since the budgets compensate validators for running the network.
+- `tu_decay_rate` MUST satisfy 0 ≤ `tu_decay_rate` < 1, at genesis and on every update. The index half-life in epochs is ln 2 / −ln(1 − `tu_decay_rate`); the default 0.001 with a one-day epoch gives about 693 days.
+- A governance change of `tu_decay_rate` is **prospective only**: it is applied at step (4) of the next boundary and first affects the decline that follows. The index path already elapsed MUST NOT be recomputed: past mints, scores, and fiat-fixed slash obligations are unaffected; only the future decline steepens or flattens.
 - The price of one trust unit in [[ref: native denom]] is derived from the oracle: `price_tu_in_native_denom(t) = tu_peg_value(t) / P(t)`, where `P(t)` is the current [[ref: native denom]] price in [[ref: main fiat currency]] obtained through [Get Price](#mod-xr-qry-3-get-price). If no valid (non-expired) exchange rate is available, minting and repayment operations MUST abort.
-- Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic for `tu_peg_value` and all `tu` balances: raw balances grow as the index declines (~×1.44/year at the default `tu_decay_rate`). A redenomination MAY be performed at a chain upgrade.
+- **Ledger precision.** `tu_peg_value`, every `tu` and `fiat_cost` balance, and every amount derived from them (minted, slashed, restored) are decimals with exactly 18 fractional digits: the **ledger precision**. Every operation that produces such an amount rounds down to the ledger precision; an amount that rounds to 0 is 0. A fraction of a trust unit is an ordinary balance (at the genesis peg, a deposit-bound amount worth 0.15 units of [[ref: main fiat currency]] mints 0.15 trust units) and is slashed like any other. Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic: raw balances grow as the index declines (~×1.44/year at the default `tu_decay_rate`). A redenomination MAY be performed at a chain upgrade.
 
 #### [MOD-TD-MSG-1] Mint Trust Units
 
@@ -5441,7 +5444,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `td.tu` to 0; set `td.fiat_cost` to 0;
   - set `td.slash_count` to 0.
 - calculate `minted_fiat` = `amount` × `P(now)` — the [[ref: main fiat currency]] cost of this mint.
-- calculate `minted_tu` = `minted_fiat` / `tu_peg_value(now)`, rounded down (equivalently `amount` / `price_tu_in_native_denom(now)`).
+- calculate `minted_tu` = `minted_fiat` / `tu_peg_value(now)`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)) (equivalently `amount` / `price_tu_in_native_denom(now)`).
 - set `td.tu` to `td.tu` + `minted_tu`; set `td.fiat_cost` to `td.fiat_cost` + `minted_fiat`.
 - for the `Participant` ledger entry `p` of `participant_id`: set `p.tu` to `p.tu` + `minted_tu`; set `p.fiat_cost` to `p.fiat_cost` + `minted_fiat`.
 - transfer `amount` from `source_account` to the [[ref: distribution pool]] account.
@@ -5473,7 +5476,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
 - `tu_peg_value_genesis` MUST NOT be updatable: the index only moves through decay.
-- an update of `tu_decay_rate` MUST be applied prospectively, from the next [[ref: epoch]] (see [Trust Unit Index](#trust-unit-index)).
+- `tu_decay_rate`, if updated, MUST satisfy 0 ≤ value < 1, else abort.
+- an update of `tu_decay_rate` MUST be applied prospectively, at step (4) of the next epoch boundary (see [Trust Unit Index](#trust-unit-index)).
 
 ###### [MOD-TD-MSG-4-2-2] Update Module Parameters fee checks
 
@@ -5500,7 +5504,7 @@ The obligation is recorded as a `SlashObligation` entry with a pro-rata breakdow
 ##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation we want to slash.
-- `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] to slash.
+- `percent` (decimal) (*mandatory*): the fraction of the corporation's [[ref: trust deposit]] to slash, greater than 0 and at most 1.
 
 ##### [MOD-TD-MSG-5-2] Slash Trust Deposit precondition checks
 
@@ -5510,8 +5514,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `tu_amount` must be > 0.
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.tu` MUST be greater or equal to `tu_amount`.
+- `percent` MUST be greater than 0 and lower or equal to 1.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.tu` MUST be greater than 0.
 
 ###### [MOD-TD-MSG-5-2-2] Slash Trust Deposit fee checks
 
@@ -5523,6 +5527,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 - load the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`.
+- calculate `tu_amount` = `td.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `td.tu` exactly.
 - load all `Participant` ledger entries `participants[]` of `corporation_id` with `p.tu` > 0, in ascending `p.id` order.
 - define `remaining` = `tu_amount`; define `entries[]` empty.
 - for each `p` in `participants[]`:
@@ -5542,7 +5547,7 @@ Nothing is burned here: [[ref: trust units]] are not a token. The economic penal
 
 #### [MOD-TD-MSG-6] Repay Slash Obligation
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation` to repay one of its open `SlashObligation` entries. Repayment is made in [[ref: native denom]] worth `fiat_obligation` at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the `Participant` entries and the `TrustDeposit`. No trust units are minted.
+Any authorized `operator` CAN execute this method on behalf of a `corporation` to repay one of its open `SlashObligation` entries. Repayment is made in [[ref: native denom]] worth `fiat_obligation` at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the `Participant` entries and the `TrustDeposit`. No trust units are minted. An obligation is repaid in full in one message; partial repayment (installments) is a candidate for a later version.
 
 ##### [MOD-TD-MSG-6-1] Repay Slash Obligation method parameters
 
@@ -5683,7 +5688,7 @@ Any [[ref: account]] CAN run this [[ref: query]].
 
 Return the matching `SlashObligation` entries, ordered by `id`.
 
-### Distribution
+### Distribution Module
 
 #### Distribution Overview
 
@@ -5693,7 +5698,7 @@ All deposit-bound [[ref: native denom]] (see [[MOD-TD-MSG-1]](#mod-td-msg-1-mint
 
 #### [DIST-1] Epoch payout order
 
-At each [[ref: epoch]] boundary, the [[ref: distribution pool]] balance MUST be paid out in the following order. Fiat-denominated amounts are converted to [[ref: native denom]] at the current oracle rate ([Get Price](#mod-xr-qry-3-get-price)); if no valid rate is available, the payout MUST be skipped and retried at the next epoch (amounts remain in the pool).
+In the boundary block of each [[ref: epoch]], at step (2) of the boundary sequence defined in [Trust Unit Index](#trust-unit-index), the [[ref: distribution pool]] balance MUST be paid out in the following order. Epochs during which no block was produced are not paid: the pool carries over. Fiat-denominated amounts are converted to [[ref: native denom]] at the current oracle rate ([Get Price](#mod-xr-qry-3-get-price)); if no valid rate is available, the payout MUST be skipped and retried at the next epoch (amounts remain in the pool).
 
 1. **Validators** — each active validator node receives `validator_node_budget` (in [[ref: main fiat currency]], oracle-converted), **docked by uptime**. The KPI is the node's signed-block ratio over the elapsed epoch, obtained from consensus signing info (objective, no oracle):
    - ratio ≥ `validator_target_uptime`: full payment;
@@ -5702,7 +5707,7 @@ At each [[ref: epoch]] boundary, the [[ref: distribution pool]] balance MUST be 
    Docked amounts remain in the pool (they join the burn residual). Persistent under-performance escalates to the council's governance processes (term review) — separate from payment docking.
 2. **Council treasury** — `council_budget` (oracle-converted).
 3. **Foundation treasury** — `foundation_budget` (oracle-converted).
-4. **Bonded token holders** — a **capped, fee-funded, pro-rata** yield: it accrues only to [[ref: native denom]] bonded through the standard staking module (subject to `unbonding_period`), pro-rata to the bonded amount, and hard-capped at `vna_holder_max_yield_rate` per year (a fraction of the bonded amount — no oracle needed). Per epoch, the payout equals min(pool remainder after budgets, sum of per-holder caps).
+4. **Bonded token holders** — a **capped, fee-funded, pro-rata** yield: it accrues only to [[ref: native denom]] bonded through the bonding mechanism of [[DIST-2]](#dist-2-bonding) (subject to `unbonding_period`), pro-rata to each holder's time-weighted bonded amount over the closed epoch (as tracked by a stake-seconds accumulator, so that bonding just before the boundary earns nothing), and hard-capped: a holder's cap for the epoch is its time-weighted bonded amount × `vna_holder_max_yield_rate` × `epoch_length` / 365 days (linear pro-rata of the yearly rate, no compounding, no oracle needed). Per epoch, the payout equals min(pool remainder after budgets, sum of per-holder caps), distributed pro-rata to those amounts; the excess joins the residual. This item applies only while `GlobalVariables.bonding_enabled` is true; otherwise it is skipped and the remainder is burned.
 5. **Residual → burned.** Whatever remains after 1–4 MUST be burned. Burn is not a parameter: it is the automatic pool residual.
 
 The [[ref: native denom]] supply is `GlobalVariables.vna_total_supply` at genesis. Native denom MUST NOT be minted after network launch; the supply is strictly non-increasing.
@@ -5713,15 +5718,54 @@ Payouts SHOULD stream linearly over the epoch rather than in a single burst; tre
 
 #### [DIST-2] Bonding
 
-Bonding uses the chain's standard staking module for reward accounting (O(1) distribution accumulator, yield follows time-in-bond, exit behind `unbonding_period`). **Bonding confers no consensus power and no governance power**: the network remains council-run Proof-of-Authority, one member one vote; bonded tokens are reward accounting only. Validators are ordinary holders too: they MAY bond their own tokens and earn the capped yield on top of the node budget, under exactly the same rules and cap as everyone else.
+Bonding is available only while `GlobalVariables.bonding_enabled` is true. It uses staking-style reward accounting (O(1) distribution accumulator, yield follows time-in-bond, exit behind `unbonding_period`), but **bonding MUST NOT alter consensus power or governance power**: it is therefore not a plain delegation to the validators through the standard staking module, whose delegations carry voting power, but a dedicated bonding mechanism reusing the accumulator. The network remains council-run Proof-of-Authority, one member one vote; bonded tokens are reward accounting only. Validators are ordinary holders too: they MAY bond their own tokens and earn the capped yield on top of the node budget, under exactly the same rules and cap as everyone else.
 
 :::todo
-**Open design question**: the exact integration between the PoA validator set and the staking module used for bonding (custom staking hooks vs. a dedicated bonding module reusing the distribution accumulator) is intentionally left open at this stage and will be specified later.
+**Open design question**: the bonding mechanism (a dedicated bonding module reusing the distribution accumulator, or staking hooks that leave validator power unchanged) is intentionally left open at this stage and will be specified before `bonding_enabled` can be set to true.
 :::
 
 :::note
-**Pending legal review**: distribution of fee revenue to passive bonded holders is dividend-like and strengthens a securities analysis of the token. The cap, the fee funding (no emission), and the bonding requirement mitigate but do not settle this. This mechanism MUST NOT be activated before legal counsel has reviewed it.
+**Pending legal review**: distribution of fee revenue to passive bonded holders is dividend-like and strengthens a securities analysis of the token. The cap, the fee funding (no emission), and the bonding requirement mitigate but do not settle this. `bonding_enabled` MUST NOT be set to true before legal counsel has reviewed it.
 :::
+
+#### [MOD-DS-MSG-1] Update Module Parameters
+
+Update the Distribution parameters of [[GLO]](#glo-global-variables): `validator_node_budget`, `validator_target_uptime`, `validator_min_uptime`, `council_budget`, `foundation_budget`, `vna_holder_max_yield_rate`, `unbonding_period` and `bonding_enabled`.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-DS-MSG-1-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-DS-MSG-1-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-DS-MSG-1-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Distribution parameters listed above, else abort.
+- `validator_node_budget`, `council_budget` and `foundation_budget`, if updated, MUST be ≥ 0, in [[ref: main fiat currency]].
+- `validator_target_uptime` and `validator_min_uptime`: the resulting values MUST satisfy 0 ≤ `validator_min_uptime` ≤ `validator_target_uptime` ≤ 1, else abort.
+- `vna_holder_max_yield_rate`, if updated, MUST be ≥ 0.
+- `unbonding_period`, if updated, MUST be a duration greater than 0.
+- `bonding_enabled`, if updated, MUST be a boolean. It MUST NOT be set to true before the bonding mechanism of [[DIST-2]](#dist-2-bonding) is specified and the legal review recorded there is completed: this is a condition on the governance proposal, which the protocol cannot verify.
+
+###### [MOD-DS-MSG-1-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution
+
+##### [MOD-DS-MSG-1-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
+The values in force in a boundary block apply to the payout performed in that block ([[DIST-1]](#dist-1-epoch-payout-order)): a change made during an epoch first affects the payout of that epoch.
 
 ### Delegation Module
 
@@ -6199,7 +6243,7 @@ Return found `Digest` entry (if any) matching `digest`.
 
 ### Exchange Rate Module
 
-Exchange rates MAY be defined for multiple fiat currencies and coins (multi-fiat pricing is supported). A valid, non-expired rate between the [[ref: native denom]] and the [[ref: main fiat currency]] is REQUIRED for protocol-level operations (trust unit minting, distribution payouts, slash repayment): while it is expired, those operations MUST halt until a fresh rate is pushed.
+Exchange rates MAY be defined for multiple fiat currencies and coins (multi-fiat pricing is supported). A valid, non-expired rate between the [[ref: native denom]] and the [[ref: main fiat currency]] is REQUIRED for protocol-level operations (trust unit minting, distribution payouts, slash repayment): while it is expired, those operations MUST halt until a fresh rate is pushed. The genesis state provides the first such rate ([[XRG]](#xrg-genesis-exchange-rate)).
 
 #### [MOD-XR-MSG-1] Create Exchange Rate
 
@@ -6639,6 +6683,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `foundation_budget` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]].
 - `vna_holder_max_yield_rate` (decimal) (*mandatory*): to be defined in the governance framework.
 - `unbonding_period` (duration) (*mandatory*): 28 days.
+- `bonding_enabled` (boolean) (*mandatory*): false.
 
 **Native denom:**
 
@@ -6651,6 +6696,10 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 **Delegation:**
 
 - `vs_operator_fee_period` (duration) (*mandatory*): 1 day.
+
+### [XRG] Genesis Exchange Rate
+
+The genesis state MUST contain one `ExchangeRate` entry between the [[ref: native denom]] (COIN) and the [[ref: main fiat currency]] (FIAT), with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch oracle operator for that entry. Without this state no [[ref: trust unit]] can be minted and no slash obligation repaid until governance creates the rate and an operator pushes it. Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the operator pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
 
 ## References
 
