@@ -1193,14 +1193,6 @@ entity "VerifiableService" as vs {
   transfer_to_corporation_id: uint64
 }
 
-entity "VerifiableServiceVid" as vsvid {
-  *id: uint64
-  +vid: string
-  +effective_from: timestamp
-  effective_until: timestamp
-  transition_until: timestamp
-}
-
 entity "DenomAmount" as da {
   denom: string
   amount: number
@@ -1396,7 +1388,6 @@ corp --o csps: corporation_id
 
 corp --o vs: corporation_id
 account --o vs: vs_operator
-vs "1" --- "1..n" vsvid: vid history
 vs --o corp: vs_id
 vs --o tr: vs_id
 vs --o csp: vs_id
@@ -1433,7 +1424,7 @@ Several entities deviate from this convention and document their own key scheme 
 
 Every [[ref: VID]] known to the VPR is registered once, as a [VerifiableService](#verifiableservice) entry owned by a single `Corporation` (`VerifiableService.corporation_id`). The entities that bind an identifier, `Corporation` (`vs_id`), `Ecosystem` (`vs_id`) and `Participant` (`vs_id`), never store the identifier string: they reference the entry, and MUST reference an entry owned by their own corporation (for a `Corporation`, by itself). The **owner `Corporation`** of an identifier is therefore a total function given by the entry, and a `vs_id` reference is checked with a single lookup at every binding message: [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-corporation-basic-checks) / [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks), [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks) and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks).
 
-Uniqueness is enforced on the identifier string by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier): at any block height, a string is the current `vid` of at most one entry, and a string whose transition window is still open ([VerifiableServiceVid](#verifiableservicevid)) cannot be registered or rotated to by any entry. An entry MAY be referenced by several `Ecosystem` and `Participant` entries of its owner and by the owner `Corporation` itself: one service, one identifier, many roles.
+Uniqueness is enforced on the identifier string by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier): at any block height, a string is the current `vid` of at most one entry. The VPR stores only the current string. The former strings of an entry, and the transition window during which each of them remains acceptable to trust resolution, are known from the events emitted at registration and rotation; indexers keep that history and apply the continuity rules of the [[ref: VT spec]]. An entry MAY be referenced by several `Ecosystem` and `Participant` entries of its owner and by the owner `Corporation` itself: one service, one identifier, many roles.
 
 > Rationale: an identifier is attached to a single agent and thus controlled by a single organization; two corporations claiming the same identifier anywhere in the registry is always an error or an attack. Registering the identifier once also gives off-chain consumers (indexers, resolvers, trust graphs) the owner function directly, lets a [[ref: VS]] exist in the registry before it holds any `Participant` entry, and makes identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)) a change of one string instead of a re-creation of every entry that named it.
 
@@ -1447,7 +1438,7 @@ A [[ref: verifiable service entry]] (`VerifiableService`) registers a [[ref: VID
 
 - `id` (uint64) (*mandatory*) (key): the id of this entry.
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns the identifier. Changed only by an accepted transfer ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
-- `vid` (string) (*mandatory*): the current identifier string. MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters. Globally unique among current `vid` values (see [VID ownership](#vid-ownership)). Changed only by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier); every value the entry ever had is kept in [VerifiableServiceVid](#verifiableservicevid).
+- `vid` (string) (*mandatory*): the current identifier string. MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters. Globally unique among current `vid` values (see [VID ownership](#vid-ownership)). Changed only by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier), which emits the former value; the VPR does not keep former values.
 - `vs_operator` (account) (*optional*): the agent account that operates the service identified by `vid`, authorized to execute the message types of the entry's [ServiceAuthorizationRecord](#serviceauthorizationrecord) in the context of this entry and of every `Participant` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)); null when none is set. One account MAY operate many entries of the same corporation; an entry has at most one operator.
 - `deposit` (number) (*mandatory*): registration deposit, in [[ref: native denom]], paid at registration ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or at an accepted transfer, equal to `GlobalVariables.vs_registration_deposit` at that time. Part of the owner's [[ref: trust deposit]]; never refunded.
 - `transfer_to_corporation_id` (uint64) (*optional*): id of the corporation to which the owner offers this entry ([[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)); null when no transfer is pending.
@@ -1455,21 +1446,6 @@ A [[ref: verifiable service entry]] (`VerifiableService`) registers a [[ref: VID
 - `modified` (timestamp) (*mandatory*): last modification timestamp.
 
 > Note: `vs_operator` is an attribute of the identifier, not of a role: the agent that controls the identifier performs every operation the identifier performs. The authorization configuration of that agent (message types, spend limits, fee grant) is the entry's [ServiceAuthorizationRecord](#serviceauthorizationrecord), grouped under the [VSOperatorAuthorization](#vsoperatorauthorization) of (`corporation_id`, `vs_operator`).
-
-### VerifiableServiceVid
-
-The identifier history of a `VerifiableService` entry. One entry per value the identifier ever had; the current value is the entry whose `effective_until` is null.
-
-`VerifiableServiceVid`:
-
-- `id` (uint64) (*mandatory*) (key): the id of this history entry.
-- `vs_id` (uint64) (*mandatory*): the `VerifiableService` entry this value belongs to.
-- `vid` (string) (*mandatory*): the identifier string.
-- `effective_from` (timestamp) (*mandatory*): block timestamp from which (inclusive) `vid` identified the service: the registration, or the rotation that introduced it.
-- `effective_until` (timestamp) (*optional*): block timestamp of the rotation that replaced `vid` (exclusive); null for the current value.
-- `transition_until` (timestamp) (*optional*): end of the transition window during which credentials that carry the former `vid` remain acceptable to trust resolution, as defined by the [[ref: VT spec]]: `effective_until` plus the transition duration chosen at rotation. Null for the current value. While `now()` < `transition_until`, no other entry can register or rotate to `vid`.
-
-> Note: the history is written at rotation and never modified afterwards. Trust resolution uses it to match the identifier string carried by a credential, as issuer or as subject, with the entry that held that string at the credential's issuance time; the [[ref: VPR]] itself only uses it for the uniqueness rule.
 
 ### Corporation
 
@@ -2181,7 +2157,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters.
-- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry, and MUST NOT appear in any [VerifiableServiceVid](#verifiableservicevid) entry whose `transition_until` is later than `now()`; else method MUST abort ([VID ownership](#vid-ownership)).
+- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else method MUST abort ([VID ownership](#vid-ownership)).
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of [ServiceAuthorizationRecord](#serviceauthorizationrecord); if `vs_operator_authz_with_feegrant` is true, `vs_operator_authz_fee_spend_limit` MUST be provided with every amount strictly positive, and MUST NOT be provided otherwise; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
 - if `vs_operator` is provided: no `OperatorAuthorization` `oauthz` where `oauthz.corporation_id` = `co.id` and `oauthz.operator` = `vs_operator` MUST exist, and no `VSOperatorAuthorization` `vsoauthz'` where `vsoauthz'.vs_operator` = `vs_operator` AND `vsoauthz'.corporation_id` != `co.id` MUST exist (a vs-agent account cannot be controlled by multiple corporations, see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks)).
 
@@ -2206,8 +2182,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `vs.transfer_to_corporation_id`: null
 - `vs.created`: current timestamp
 - `vs.modified`: `vs.created`
-
-- create and persist the first [VerifiableServiceVid](#verifiableservicevid) entry of `vs`: `vs_id` = `vs.id`, `vid` = `vid`, `effective_from` = current timestamp, `effective_until` = null, `transition_until` = null.
 
 If `vs_operator_authz_msg_types` is provided, create the [ServiceAuthorizationRecord](#serviceauthorizationrecord) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
@@ -2278,7 +2252,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`. 
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry whose identifier is rotated.
 - `vid` (string) (*mandatory*): the new identifier string.
-- `transition` (duration) (*optional*): length of the transition window during which the former string remains acceptable to trust resolution for credentials issued under it (see [VerifiableServiceVid](#verifiableservicevid)). Defaults to `GlobalVariables.vid_rotation_max_transition`; 0 ends the former string at once, for instance after a key compromise.
+- `transition` (duration) (*optional*): length of the transition window during which the former string remains acceptable to trust resolution for credentials issued under it as defined by the [[ref: VT spec]]. Defaults to `GlobalVariables.vid_rotation_max_transition`; 0 ends the former string at once, for instance after a key compromise. The window is carried by the event of this method and applied by indexers; the VPR does not store it.
 
 ##### [MOD-VS-MSG-3-2] Rotate Verifiable Identifier precondition checks
 
@@ -2293,7 +2267,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
 - `vs.transfer_to_corporation_id` MUST be null, else abort.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters, and MUST differ from `vs.vid`.
-- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry, and MUST NOT appear in any [VerifiableServiceVid](#verifiableservicevid) entry whose `transition_until` is later than `now()`; else abort ([VID ownership](#vid-ownership)).
+- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else abort ([VID ownership](#vid-ownership)).
 - `transition` (duration) (*optional*): if provided, MUST be between 0 and `GlobalVariables.vid_rotation_max_transition` (inclusive).
 
 ###### [MOD-VS-MSG-3-2-2] Rotate Verifiable Identifier fee checks
@@ -2306,12 +2280,10 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- define `now`: current timestamp; define `transition_r`: `transition` if provided, else `GlobalVariables.vid_rotation_max_transition`.
-- load the [VerifiableServiceVid](#verifiableservicevid) entry `current` of `vs` whose `effective_until` is null; set `current.effective_until` = `now` and `current.transition_until` = `now` + `transition_r`.
-- create and persist a new `VerifiableServiceVid` entry: `vs_id` = `vs.id`, `vid` = `vid`, `effective_from` = `now`, `effective_until` = null, `transition_until` = null.
+- define `now`: current timestamp; define `transition_r`: `transition` if provided, else `GlobalVariables.vid_rotation_max_transition`; define `former`: `vs.vid`.
 - set `vs.vid` = `vid` and `vs.modified` = `now`.
 
-The method MUST emit an event carrying `vs.id`, the former string, `vid` and `current.transition_until`. Indexers MUST re-evaluate trust for the entry under the new string and MUST treat the former string as rotated: valid evidence only for credentials issued before `now`, and only until `current.transition_until`.
+The method MUST emit an event carrying `vs.id`, `former`, `vid` and `transition_until` = `now` + `transition_r`. This event is the only record of the former string: indexers MUST keep it, MUST re-evaluate trust for the entry under the new string and MUST treat `former` as rotated, valid evidence only for credentials issued before `now` and only until `transition_until`, as specified by the [[ref: VT spec]]. A string rotated away MAY be registered or rotated to again at once, by the same entry or by another; while the window of the former holder is open, trust resolution keeps matching the string to the former holder.
 
 > Note: the VPR does not re-validate anything at rotation. The ecosystems that accredited the service validated an organization, not a string; an [[ref: ecosystem governance authority]] whose framework binds accreditation to a particular identifier (a method, a domain) learns the rotation from the event and keeps its usual remedy, revocation of the `Participant` entry. Credentials that carry the former string, as issuer or as subject, are re-issued by their issuers during the transition window, and the former DID Document SHOULD stay resolvable until then so that proofs made with its keys still verify.
 
@@ -2420,7 +2392,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 ##### [MOD-VS-MSG-6-3] Remove Verifiable Service execution
 
 - call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no record).
-- delete the [VerifiableServiceVid](#verifiableservicevid) entries of `vs`, then delete `vs`.
+- delete `vs`.
 
 The method MUST emit an event carrying `vs.id` and `vs.vid`.
 
@@ -2459,19 +2431,17 @@ Anyone CAN execute this method.
 ##### [MOD-VS-QRY-1-1] Get Verifiable Service query parameters
 
 - `id` (uint64) (*conditional*): the id of the `VerifiableService` entry.
-- `vid` (string) (*conditional*): an identifier string. Exactly one of `id` and `vid` MUST be provided.
-- `at` (timestamp) (*optional*): with `vid`, resolve the entry that held the string at that time, through [VerifiableServiceVid](#verifiableservicevid); without `at`, the entry whose current `vid` is the string.
+- `vid` (string) (*conditional*): an identifier string; matches the entry whose current `vid` is the string. Exactly one of `id` and `vid` MUST be provided.
 
 ##### [MOD-VS-QRY-1-2] Get Verifiable Service query checks
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
 - exactly one of `id` and `vid` MUST be provided.
-- `at` MAY only be provided with `vid`.
 
 ##### [MOD-VS-QRY-1-3] Get Verifiable Service execution
 
-Return the matching `VerifiableService` entry with its `VerifiableServiceVid` history and, if any, its [ServiceAuthorizationRecord](#serviceauthorizationrecord), or an error if none is found. With `vid` and `at`, the match is the history entry whose `vid` equals the string and whose `effective_from` ≤ `at` < `effective_until` (or `effective_until` is null).
+Return the matching `VerifiableService` entry and, if any, its [ServiceAuthorizationRecord](#serviceauthorizationrecord), or an error if none is found. Former identifier strings are not resolvable through this query: they are served by indexers from the rotation events ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)).
 
 #### [MOD-VS-QRY-2] List Verifiable Services
 
@@ -2555,7 +2525,7 @@ If any of these precondition checks fail, method MUST abort.
 - `members`: MUST contain at least one entry. Each entry's `address` MUST be a valid account address. Each entry's `weight` MUST be a non-zero decimal string representing a positive number (e.g. `"1"`, `"10"`).
 - `decision_policy`: MUST be a valid `ThresholdDecisionPolicy` or `PercentageDecisionPolicy`.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters.
-- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry, and MUST NOT appear in any [VerifiableServiceVid](#verifiableservicevid) entry whose `transition_until` is later than `now()`; else method MUST abort ([VID ownership](#vid-ownership)).
+- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else method MUST abort ([VID ownership](#vid-ownership)).
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of [ServiceAuthorizationRecord](#serviceauthorizationrecord); if `vs_operator_authz_with_feegrant` is true, `vs_operator_authz_fee_spend_limit` MUST be provided with every amount strictly positive, and MUST NOT be provided otherwise; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
@@ -2613,8 +2583,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `vs.transfer_to_corporation_id`: null
 - `vs.created`: current timestamp
 - `vs.modified`: `vs.created`
-
-- create and persist the first [VerifiableServiceVid](#verifiableservicevid) entry of `vs`: `vs_id` = `vs.id`, `vid` = `vid`, `effective_from` = current timestamp, `effective_until` = null, `transition_until` = null.
 
 If `vs_operator_authz_msg_types` is provided, create the [ServiceAuthorizationRecord](#serviceauthorizationrecord) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
 
