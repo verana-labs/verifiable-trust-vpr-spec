@@ -1163,9 +1163,45 @@ enum "CredentialAnchoring" as credentialanchoring {
 entity "(SDK) Account" as account {
 }
 
+enum "MsgType" as msgtype {
+  RegisterVerifiableService
+  UpdateVerifiableService
+  RotateVerifiableIdentifier
+  TransferVerifiableService
+  AcceptVerifiableServiceTransfer
+  RemoveVerifiableService
+  UpdateCorporation
+  CreateEcosystem
+  UpdateEcosystem
+  ArchiveEcosystem
+  AddGovernanceFrameworkDocument
+  IncreaseActiveGovernanceFrameworkVersion
+  CreateCredentialSchema
+  UpdateCredentialSchema
+  ArchiveCredentialSchema
+  StartParticipantOP
+  RenewParticipantOP
+  SetParticipantOPtoValidated
+  CancelParticipantOPLastRequest
+  CreateRootParticipant
+  SetParticipantEffectiveUntil
+  RevokeParticipant
+  CreateOrUpdateParticipantSession
+  SlashParticipantTrustDeposit
+  RepayParticipantSlashedTrustDeposit
+  SelfCreateParticipant
+  TriggerResolver
+  ReclaimTrustDepositYield
+  RepaySlashedTrustDeposit
+  GrantOperatorAuthorization
+  RevokeOperatorAuthorization
+  StoreDigest
+  RevokeDigest
+}
+
 entity "OperatorAuthorization" as oauthz {
    *id: uint64
-   +msg_types: msg_type[]
+   +msg_types: MsgType[]
    expiration: timestamp
    period: duration
 }
@@ -1173,12 +1209,12 @@ entity "OperatorAuthorization" as oauthz {
 entity "VSOperatorAuthorization" as vsoauthz {
    *id: uint64
    +fee_limit_total: DenomAmount[]
-   +feegrant_msg_type_counts: map
+   +feegrant_msg_type_counts: map<MsgType, uint32>
 }
 
 entity "ServiceAuthorizationRecord" as sar {
    *vs_id: uint64
-   +msg_types: msg_type[]
+   +msg_types: MsgType[]
    +with_feegrant: boolean
    expiration: timestamp
    period: duration
@@ -1217,7 +1253,7 @@ entity "ExchangeRate" as xr {
 }
 
 entity "FeeGrant" as fg {
-  +msg_types: msg_type[]
+  +msg_types: MsgType[]
   expiration: timestamp
   period: duration
 }
@@ -1643,12 +1679,56 @@ A digest stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) carri
 A `Digest` entry records the digest, the corporation that anchored it, the `Participant` entry under which it was anchored (if any), the timestamp at which it was first persisted, its revocation timestamp (if any) and, for a presentation digest, the end of its reliance period: it does not record which operator [[ref: account]] anchored it, and the VPR does not verify a digest against any content. A digest is revoked by its owner corporation or by a governance ancestor of its anchoring entry ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)). Credential digests concern W3C credentials, whose issuance time and revocation the Verifiable Trust specification anchors here; other containers carry their own revocation mechanisms.
 :::
 
+### MsgType
+
+`MsgType` enumerates the delegable messages of the VPR: the messages a `corporation` executes through an `operator` under an [OperatorAuthorization](#operatorauthorization) or, in the context of a [VerifiableService](#verifiableservice) entry, through its `vs_operator` under a [ServiceAuthorizationRecord](#serviceauthorizationrecord); the same values scope a [FeeGrant](#feegrant). Every `msg_types` list of the data model and of the message parameters is a list of `MsgType` values, never of message names or protobuf type URLs: a `ServiceAuthorizationRecord` exists per registered service, and a type URL costs about fifty bytes per value where an enumeration value costs one.
+
+Values and their numbers, which are stable and only ever appended to (0 is reserved for an unspecified value):
+
+| # | Value | Message |
+|---|---|---|
+| 1 | `RegisterVerifiableService` | [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) |
+| 2 | `UpdateVerifiableService` | [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) |
+| 3 | `RotateVerifiableIdentifier` | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) |
+| 4 | `TransferVerifiableService` | [[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service) |
+| 5 | `AcceptVerifiableServiceTransfer` | [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer) |
+| 6 | `RemoveVerifiableService` | [[MOD-VS-MSG-6]](#mod-vs-msg-6-remove-verifiable-service) |
+| 7 | `UpdateCorporation` | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation) |
+| 8 | `CreateEcosystem` | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem) |
+| 9 | `UpdateEcosystem` | [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem) |
+| 10 | `ArchiveEcosystem` | [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem) |
+| 11 | `AddGovernanceFrameworkDocument` | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) |
+| 12 | `IncreaseActiveGovernanceFrameworkVersion` | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version) |
+| 13 | `CreateCredentialSchema` | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema) |
+| 14 | `UpdateCredentialSchema` | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema) |
+| 15 | `ArchiveCredentialSchema` | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema) |
+| 16 | `StartParticipantOP` | [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) |
+| 17 | `RenewParticipantOP` | [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op) |
+| 18 | `SetParticipantOPtoValidated` | [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) |
+| 19 | `CancelParticipantOPLastRequest` | [[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request) |
+| 20 | `CreateRootParticipant` | [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) |
+| 21 | `SetParticipantEffectiveUntil` | [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until) |
+| 22 | `RevokeParticipant` | [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant) |
+| 23 | `CreateOrUpdateParticipantSession` | [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) |
+| 24 | `SlashParticipantTrustDeposit` | [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) |
+| 25 | `RepayParticipantSlashedTrustDeposit` | [[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit) |
+| 26 | `SelfCreateParticipant` | [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) |
+| 27 | `TriggerResolver` | [[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver) |
+| 28 | `ReclaimTrustDepositYield` | [[MOD-TD-MSG-2]](#mod-td-msg-2-reclaim-trust-deposit-yield) |
+| 29 | `RepaySlashedTrustDeposit` | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slashed-trust-deposit) |
+| 30 | `GrantOperatorAuthorization` | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization) |
+| 31 | `RevokeOperatorAuthorization` | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization) |
+| 32 | `StoreDigest` | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) |
+| 33 | `RevokeDigest` | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest) |
+
+> Note: the realization of fee allowances through `x/feegrant` ([Delegation Module](#delegation-module)) requires protobuf type URLs. The implementation maps each `MsgType` value to the type URL of its message when it creates or updates an allowance, and maps the type URL of an incoming message to its `MsgType` value when it checks an authorization ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Which values a list may contain is stated by each message: every value except `CreateOrUpdateParticipantSession` in an [OperatorAuthorization](#operatorauthorization) ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)), the values listed by [ServiceAuthorizationRecord](#serviceauthorizationrecord) in a record.
+
 ### OperatorAuthorization
 
 - `id` (uint64) (*mandatory*) (key): the id of this `OperatorAuthorization`. Re-granting the same `(corporation_id, operator)` pair on an entry that still exists preserves the `id` (in-place update via [[MOD-DE-MSG-3-4]](#mod-de-msg-3-4-grant-operator-authorization-execution-of-the-method)); after a full revoke that deletes the entry via [[MOD-DE-MSG-4-4]](#mod-de-msg-4-4-revoke-operator-authorization-execution-of-the-method), a later re-grant mints a fresh `id` per the [Identifier conventions](#identifier-conventions).
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the authorization. The `(corporation_id, operator)` tuple MUST be **unique** across all `OperatorAuthorization` entries: at any block height, at most one entry MAY exist for a given `(corporation_id, operator)`.
 - `operator` (account) (*mandatory*): the operator account receiving the authorization. See the `(corporation_id, operator)` uniqueness constraint above.
-- `msg_types` (msg_type[]) (*mandatory*): list of module message types this authorization applies to.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the delegable messages this authorization applies to; any value except `CreateOrUpdateParticipantSession`, which is reserved to VS operators ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)).
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the grantee is allowed to spend
   as a direct consequence of executing authorized messages.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
@@ -1661,7 +1741,7 @@ A `Digest` entry records the digest, the corporation that anchored it, the `Part
 
 - `grantor_corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] granting the fee allowance. Together with `grantee`, forms the composite key.
 - `grantee` (account) (*mandatory*) (key): the account that receives the fee grant from the corporation referenced by `grantor_corporation_id`. Together with `grantor_corporation_id`, forms the composite key.
-- `msg_types` (msg_type[]) (*mandatory*): list of VPR delegable message types for which the fee allowance applies.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): list of VPR delegable message types for which the fee allowance applies.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of fees that can be spent using this grant.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `expiration` (timestamp) (*optional*): grant window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the grant is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, `remaining_spend` is reset to `spend_limit` and `expiration` is advanced to `now() + period` (the grant auto-renews until the grantor revokes it).
@@ -1676,14 +1756,14 @@ A `VSOperatorAuthorization` groups all `ServiceAuthorizationRecord` entries dele
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
 - `records` (ServiceAuthorizationRecord[]) (*mandatory*): per-service authorization records granted to `vs_operator` by `corporation_id`, one per `VerifiableService` entry the account operates.
 - `fee_limit_total` (DenomAmount[]) (*mandatory*): derived, the sum of the `fee_spend_limit` of the counted records, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
-- `feegrant_msg_type_counts` (map<msg_type, uint32>) (*mandatory*): derived, for each message type the number of counted records that include it, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
+- `feegrant_msg_type_counts` (map<[MsgType](#msgtype), uint32>) (*mandatory*): derived, for each message type the number of counted records that include it, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 
 ### ServiceAuthorizationRecord
 
 A `ServiceAuthorizationRecord` carries the authorization configuration of the `vs_operator` of a [VerifiableService](#verifiableservice) entry. Each record is globally unique by `vs_id`: for any `VerifiableService.id`, at most one record exists system-wide, so (`corporation`, `vs_operator`) can be derived from `vs_id` via a direct lookup. The record applies to every `Participant` entry that references `vs_id`, and to the messages that take a `vs_id` directly ([[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver)).
 
 - `vs_id` (uint64) (*mandatory*) (key): id of the `VerifiableService` entry this record applies to. Globally unique across all `ServiceAuthorizationRecord` entries.
-- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which `vs_operator` is authorized on behalf of `corporation` when acting in the context of `vs_id`. Permitted values: `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `StoreDigest`, `RevokeDigest`, `TriggerResolver`. Set by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) or [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service); the role-specific checks of each message decide what the operator can actually do with a given `Participant` entry.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): list of delegable message types for which `vs_operator` is authorized on behalf of `corporation` when acting in the context of `vs_id`. Permitted values: `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `StoreDigest`, `RevokeDigest`, `TriggerResolver`. Set by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) or [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service); the role-specific checks of each message decide what the operator can actually do with a given `Participant` entry.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount `vs_operator` is allowed to spend, in the context of this entry, as a direct consequence of executing authorized messages.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `fee_spend_limit` (DenomAmount[]) (*conditional*): this record's **contribution** to the corporation's aggregate fee budget for `vs_operator`: up to this amount of transaction fees per `GlobalVariables.vs_operator_fee_period`, added to the per-period limit of the aggregate allowance derived by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). MUST be set, with every amount strictly positive, iff `with_feegrant` is true.
@@ -2136,7 +2216,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 The following VS Operator Authorization parameters are **optional** and collectively define the initial [ServiceAuthorizationRecord](#serviceauthorizationrecord) of the registered entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no record is created and the entry has no VS operator authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
 
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of the entry, among `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_operator` MUST be specified.
+- `vs_operator_authz_msg_types[]` ([MsgType](#msgtype)[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of the entry, among `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_operator` MUST be specified.
 - `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of the entry as a direct consequence of executing authorized messages.
 - `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of the entry.
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): the record's contribution to the aggregate fee budget of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [ServiceAuthorizationRecord](#serviceauthorizationrecord)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
@@ -2503,7 +2583,7 @@ Provided document MUST be of the same language as the primary `language` of the 
 
 The following VS Operator Authorization parameters are **optional** and collectively define the initial [ServiceAuthorizationRecord](#serviceauthorizationrecord) of the registered entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no record is created and the entry has no VS operator authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
 
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of the new Corporation in the context of the entry, among `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_operator` MUST be specified.
+- `vs_operator_authz_msg_types[]` ([MsgType](#msgtype)[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of the new Corporation in the context of the entry, among `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_operator` MUST be specified.
 - `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of the entry as a direct consequence of executing authorized messages.
 - `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, the new Corporation pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of the entry.
 - `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): the record's contribution to the aggregate fee budget of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [ServiceAuthorizationRecord](#serviceauthorizationrecord)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
@@ -6042,7 +6122,7 @@ This method can only be called directly by the following methods:
 
 - `grantor_corporation_id` (uint64) (*mandatory*): id of the corporation that grants the fees.
 - `grantee` (account) (*mandatory*): the account that receives the fee grant from `grantor_corporation_id`.
-- `msg_types` (Msg[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
 - `expiration` (timestamp) (*optional*): when the grant expires.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum spendable
 - `period` (duration) (*optional*): can be combined with `spend_limit`
@@ -6051,7 +6131,7 @@ This method can only be called directly by the following methods:
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): MUST be a list of **VPR delegable messages only**.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `period` (duration): if specified MUST be a valid period.
@@ -6120,7 +6200,7 @@ In the same [[ref: transaction]], also revoke the corresponding `x/feegrant` all
 - `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `grantee` (account) (*mandatory*): the account that receives the authorization from `corporation`.
-- `msg_types` (Msg[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
 - `expiration` (timestamp) (*optional*): when the authorization (and its optional feegrant) expires.
 - `authz_spend_limit` (DenomAmount[]) (*optional*): maximum spendable
 - `authz_spend_limit_period` (duration) (*optional*): can be combined with `spend_limit`
@@ -6135,7 +6215,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `msg_types` (Msg[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `CreateOrUpdateParticipantSession` which is not allowed.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `CreateOrUpdateParticipantSession` which is not allowed.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `authz_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `authz_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `authz_spend_limit` is not set.
