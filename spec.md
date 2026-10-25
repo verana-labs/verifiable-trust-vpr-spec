@@ -147,6 +147,12 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: decentralized identifier, DID, DIDs]]:
 ~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]].
 
+[[def: verifiable identifier, VID, VIDs]]:
+~ A digital identifier bound to cryptographic key material, such that another party can verify control of the identifier and resolve it to keys and, when in public use, to endpoint addresses, as specified in the [Trust Spanning Protocol (TSP) Specification](https://trustoverip.github.io/tswg-tsp-specification/). [[ref: DIDs]] are one **type** of VID; other examples include KERI AIDs and X.509-backed identifiers. The [[ref: VPR]] stores VIDs without resolving them; which types of VID a [[ref: VS]] or [[ref: VUA]] accepts in trust resolution is defined by the [[ref: VT spec]], which currently requires [[ref: DIDs]].
+
+[[def: verifiable service entry, verifiable service entries]]:
+~ A `VerifiableService` entry: the registration of a [[ref: VID]] in a [[ref: VPR]], owned by a single [[ref: corporation]], that every other entity binding that identifier (`Corporation`, `Ecosystem`, `Participant`) references by `vs_id`. See [VerifiableService](#verifiableservice).
+
 [[def: decentralized identifier communication, DIDComm]]:
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
 
@@ -1052,7 +1058,7 @@ scale max 800 width
 
 entity "Ecosystem" as tr {
   *id: uint64
-  +did: string
+  +vs_id: uint64
   +created: timestamp
   +modified: timestamp
   +archived: boolean
@@ -1062,7 +1068,7 @@ entity "Ecosystem" as tr {
 
 entity "Corporation" as corp {
   *id: uint64
-  +did: string
+  +vs_id: uint64
   +created: timestamp
   +modified: timestamp
   +active_version: int
@@ -1168,13 +1174,29 @@ entity "VSOperatorAuthorization" as vsoauthz {
    +feegrant_msg_type_counts: map
 }
 
-entity "ParticipantAuthorizationRecord" as par {
-   *participant_id: uint64
+entity "ServiceAuthorizationRecord" as sar {
+   *vs_id: uint64
    +msg_types: msg_type[]
    +with_feegrant: boolean
-   +counted: boolean
    expiration: timestamp
    period: duration
+}
+
+entity "VerifiableService" as vs {
+  *id: uint64
+  +vid: string
+  +deposit: number
+  +created: timestamp
+  +modified: timestamp
+  transfer_to_corporation_id: uint64
+}
+
+entity "VerifiableServiceVid" as vsvid {
+  *id: uint64
+  +vid: string
+  +effective_from: timestamp
+  effective_until: timestamp
+  transition_until: timestamp
 }
 
 entity "DenomAmount" as da {
@@ -1215,7 +1237,7 @@ entity "ExchangeRateAuthorization" as xrauthz {
 
 entity "Participant" as csp {
   *id: uint64
-  +did: string
+  +vs_id: uint64
   +created: timestamp
   +modified: timestamp
   adjusted: timestamp
@@ -1291,6 +1313,9 @@ entity "GlobalVariables" as gv {
   +user_agent_reward_rate:number
   +wallet_user_agent_reward_rate:number
   +vs_operator_fee_period: duration
+  +vs_registration_deposit: number
+  +ecosystem_creation_deposit: number
+  +vid_rotation_max_transition: duration
 }
 
 entity "TrustDeposit" as td {
@@ -1333,8 +1358,8 @@ account --o oauthz: operator
 
 corp --o vsoauthz: corporation_id
 account --o vsoauthz: vs_operator
-vsoauthz "1" --- "1..n" par: records
-par o-- csp: participant_id
+vsoauthz "1" --- "1..n" sar: records
+sar o-- vs: vs_id
 
 csp o-- cspt: role
 csp o-- cs: schema_id
@@ -1351,9 +1376,9 @@ cspsr  o-- "0..1" csp: agent_participant_id
 oauthz "1" --- "0..n" da: spend_limit
 oauthz "1" --- "0..n" da: remaining_spend
 
-par "1" --- "0..n" da: spend_limit
-par "1" --- "0..n" da: fee_spend_limit
-par "1" --- "0..n" da: remaining_spend
+sar "1" --- "0..n" da: spend_limit
+sar "1" --- "0..n" da: fee_spend_limit
+sar "1" --- "0..n" da: remaining_spend
 
 tr "1" --- "0..n" gfv: versions (ecosystem_id)
 corp "1" --- "0..n" gfv: versions (corporation_id)
@@ -1365,7 +1390,12 @@ corp --o tr: corporation_id
 corp --o csp: corporation_id
 corp --o csps: corporation_id
 
-account --o csp: vs_operator
+corp --o vs: corporation_id
+account --o vs: vs_operator
+vs "1" --- "1..n" vsvid: vid history
+vs --o corp: vs_id
+vs --o tr: vs_id
+vs --o csp: vs_id
 
 csps o-- account: vs_operator
 
@@ -1391,31 +1421,59 @@ Unless otherwise stated, every entity's `id` field is:
 
 Clients MAY rely on `id` ordering as a deterministic cursor for keyset pagination.
 
-Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (string PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `ParticipantAuthorizationRecord` (single-field PK on `participant_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
+Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (string PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `ServiceAuthorizationRecord` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
-### DID ownership invariant
+### VID ownership
 
-Three entity types bind a DID in the VPR: `Corporation` (its declared `did`), `Ecosystem` (`did`, controlled by `corporation_id`), and `Participant` (`did`, owned by `corporation_id`). At any block height, **every entity claiming a given DID MUST resolve to the same `Corporation`**:
+Every [[ref: VID]] known to the VPR is registered once, as a [VerifiableService](#verifiableservice) entry owned by a single `Corporation` (`VerifiableService.corporation_id`). The entities that bind an identifier, `Corporation` (`vs_id`), `Ecosystem` (`vs_id`) and `Participant` (`vs_id`), never store the identifier string: they reference the entry, and MUST reference an entry owned by their own corporation (for a `Corporation`, by itself). The **owner `Corporation`** of an identifier is therefore a total function given by the entry, and a `vs_id` reference is checked with a single lookup at every binding message: [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-corporation-basic-checks) / [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks), [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks) and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks).
 
-- the `Corporation` entry whose own `did` equals the DID (if any) — resolving to itself;
-- every `Ecosystem` entry whose `did` equals the DID — resolving to its `corporation_id`;
-- every `Participant` entry whose `did` equals the DID — resolving to its `corporation_id`.
+Uniqueness is enforced on the identifier string by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier): at any block height, a string is the current `vid` of at most one entry, and a string whose transition window is still open ([VerifiableServiceVid](#verifiableservicevid)) cannot be registered or rotated to by any entry. An entry MAY be referenced by several `Ecosystem` and `Participant` entries of its owner and by the owner `Corporation` itself: one service, one identifier, many roles.
 
-A DID claimed by at least one entity therefore has a single, well-defined **owner `Corporation`**. The per-Corporation `did` uniqueness invariant and the per-Ecosystem / per-Participant `(did, corporation_id)` consistency invariants are corollaries of this global invariant. It is enforced at every DID-binding message: [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-corporation-basic-checks) / [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks) (Corporation create / `did` rotation), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks) (Ecosystem create / `did` rotation), and [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks) / [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks) / [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks) (Participant creation; `Participant.did` is set at create time and never rotated).
+> Rationale: an identifier is attached to a single agent and thus controlled by a single organization; two corporations claiming the same identifier anywhere in the registry is always an error or an attack. Registering the identifier once also gives off-chain consumers (indexers, resolvers, trust graphs) the owner function directly, lets a [[ref: VS]] exist in the registry before it holds any `Participant` entry, and makes identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)) a change of one string instead of a re-creation of every entry that named it.
 
-> Rationale: a DID is attached to a single agent and thus controlled by a single organization; two Corporations claiming the same DID anywhere in the registry is always an error or an attack. The invariant also gives off-chain consumers (indexers, resolvers, trust graphs) a total *owner Corporation* function over the indexed DID universe.
+> Transitional note: an implementation upgrading a chain whose state predates the `VerifiableService` entity MUST build the entries at upgrade time (or genesis import) from the distinct identifier strings of the existing `Corporation`, `Ecosystem` and `Participant` entries, one entry per string owned by the corporation those entries resolve to, assigning ids in the order of first appearance, rewriting the `vs_id` references, and MUST reject or repair any string claimed by two corporations before enabling the checks. The `vs_operator` of each new entry is the `vs_operator` of the migrated `Participant` entries sharing the string, which MUST be unique per string; their `ParticipantAuthorizationRecord` entries are merged into one `ServiceAuthorizationRecord` per entry, with the union of the message types and the sum of the limits.
 
-> Transitional note: an implementation upgrading a chain whose state predates this invariant MUST verify global `(did, corporation)` consistency at upgrade time (or genesis import) and reject or repair violating state before enabling the checks.
+### VerifiableService
+
+A [[ref: verifiable service entry]] (`VerifiableService`) registers a [[ref: VID]] in the VPR: who owns it, which agent account operates it, and the deposit that pays for its registration. It is the single place where an identifier string is stored; `Corporation`, `Ecosystem` and `Participant` entries reference it by `vs_id`. An entry MAY exist with no `Participant` entry at all: a registered service is indexable and can request trust resolution ([[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver)) before, or without ever, taking a role in an ecosystem.
+
+`VerifiableService`:
+
+- `id` (uint64) (*mandatory*) (key): the id of this entry.
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns the identifier. Changed only by an accepted transfer ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
+- `vid` (string) (*mandatory*): the current identifier string. MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters. Globally unique among current `vid` values (see [VID ownership](#vid-ownership)). Changed only by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier); every value the entry ever had is kept in [VerifiableServiceVid](#verifiableservicevid).
+- `vs_operator` (account) (*optional*): the agent account that operates the service identified by `vid`, authorized to execute the message types of the entry's [ServiceAuthorizationRecord](#serviceauthorizationrecord) in the context of this entry and of every `Participant` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)); null when none is set. One account MAY operate many entries of the same corporation; an entry has at most one operator.
+- `deposit` (number) (*mandatory*): registration deposit, in [[ref: native denom]], paid at registration ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or at an accepted transfer, equal to `GlobalVariables.vs_registration_deposit` at that time. Part of the owner's [[ref: trust deposit]]; never refunded.
+- `transfer_to_corporation_id` (uint64) (*optional*): id of the corporation to which the owner offers this entry ([[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)); null when no transfer is pending.
+- `created` (timestamp) (*mandatory*): registration timestamp.
+- `modified` (timestamp) (*mandatory*): last modification timestamp.
+
+> Note: `vs_operator` is an attribute of the identifier, not of a role: the agent that controls the identifier performs every operation the identifier performs. The authorization configuration of that agent (message types, spend limits, fee grant) is the entry's [ServiceAuthorizationRecord](#serviceauthorizationrecord), grouped under the [VSOperatorAuthorization](#vsoperatorauthorization) of (`corporation_id`, `vs_operator`).
+
+### VerifiableServiceVid
+
+The identifier history of a `VerifiableService` entry. One entry per value the identifier ever had; the current value is the entry whose `effective_until` is null.
+
+`VerifiableServiceVid`:
+
+- `id` (uint64) (*mandatory*) (key): the id of this history entry.
+- `vs_id` (uint64) (*mandatory*): the `VerifiableService` entry this value belongs to.
+- `vid` (string) (*mandatory*): the identifier string.
+- `effective_from` (timestamp) (*mandatory*): block timestamp from which (inclusive) `vid` identified the service: the registration, or the rotation that introduced it.
+- `effective_until` (timestamp) (*optional*): block timestamp of the rotation that replaced `vid` (exclusive); null for the current value.
+- `transition_until` (timestamp) (*optional*): end of the transition window during which credentials that carry the former `vid` remain acceptable to trust resolution, as defined by the [[ref: VT spec]]: `effective_until` plus the transition duration chosen at rotation. Null for the current value. While `now()` < `transition_until`, no other entry can register or rotate to `vid`.
+
+> Note: the history is written at rotation and never modified afterwards. Trust resolution uses it to match the identifier string carried by a credential, as issuer or as subject, with the entry that held that string at the credential's issuance time; the [[ref: VPR]] itself only uses it for the uniqueness rule.
 
 ### Corporation
 
-A `Corporation` is the VPR-level entity representing an authority that acts in the registry. It carries a DID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
+A `Corporation` is the VPR-level entity representing an authority that acts in the registry. It references the [VerifiableService](#verifiableservice) entry of its identifier, carries a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
 
 `Corporation`:
 
 - `id` (uint64) (*mandatory*) (key): the id of the Corporation.
 - `policy_address` (account) (*mandatory*): the on-chain account that signs on behalf of this Corporation. MUST be **globally unique** across all `Corporation` entries (1:1): at any block height, no two `Corporation` entries MAY share the same `policy_address`. (Can be, for example, a Cosmos SDK `group_policy_address`; see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation).)
-- `did` (string) (*mandatory*): the DID of the Corporation. MUST be **globally unique** across all `Corporation` entries (per-Corporation `did` uniqueness invariant): at any block height, no two `Corporation` entries MAY share the same `did` value. Enforced at create time by [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-corporation-basic-checks) and at rotation time by [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks). Additionally subject to the [DID ownership invariant](#did-ownership-invariant): the DID MUST NOT be claimed by any `Ecosystem` or `Participant` entry owned by another `Corporation`.
+- `vs_id` (uint64) (*mandatory*): id of the [VerifiableService](#verifiableservice) entry of the Corporation's own identifier. The referenced entry MUST be owned by this Corporation (`VerifiableService.corporation_id` = `id`), and MUST be **globally unique** across all `Corporation` entries: at any block height, no two `Corporation` entries MAY reference the same entry. Set at creation by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), which registers the entry in the same transaction, and changed by [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation). The identifier string itself is `VerifiableService.vid`; it is rotated through [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) (see [VID ownership](#vid-ownership)).
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Corporation has been modified.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
@@ -1428,8 +1486,8 @@ A `Corporation` is the VPR-level entity representing an authority that acts in t
 `Ecosystem`:
 
 - `id` (uint64) (*mandatory*) (key): the id of the ecosystem.
-- `did` (string) (*mandatory*): the did of the ecosystem. MAY be shared with other `Ecosystem` entries (a single DID MAY be the `did` of several ecosystems); per-Ecosystem DID uniqueness is NOT enforced because the `Ecosystem` identity is its `id`. However, per-Ecosystem `(did, corporation_id)` consistency IS enforced: at any block height, all `Ecosystem` entries with equal `did` MUST share the same `corporation_id`. Enforced at create time by [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) and at rotation time by [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks). Corollary of the [DID ownership invariant](#did-ownership-invariant), which further requires consistency with any `Corporation.did` and `Participant.did` claims on the same DID.
-- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that controls this entry. Constrained by the per-Ecosystem `(did, corporation_id)` consistency invariant above.
+- `vs_id` (uint64) (*mandatory*): id of the [VerifiableService](#verifiableservice) entry of the ecosystem's identifier. The referenced entry MUST be owned by `corporation_id`. MAY be shared with other `Ecosystem` entries of the same corporation (a single identifier MAY be the identifier of several ecosystems); the `Ecosystem` identity is its `id`. Set by [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem) and changed by [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem); the identifier string is rotated through [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier).
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that controls this entry. MUST equal `VerifiableService[vs_id].corporation_id`.
 - `created` (timestamp) (*mandatory*): timestamp this Ecosystem has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this Ecosystem has been modified.
 - `archived` (boolean) (*mandatory*): whether this Ecosystem is archived. Initialized to `false` at creation by [[MOD-ES-MSG-1-3]](#mod-es-msg-1-3-create-ecosystem-execution) and toggled by [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem). MUST never be null.
@@ -1499,9 +1557,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `id` (uint64) (*mandatory*) (key): the id of the participant.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `role` (ParticipantRole) (*mandatory*): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER. Set at create time and never rotated thereafter.
-- `did` (string) (*mandatory*): [[ref: DID]] this permission refers to. MUST conform to [[spec-norm:RFC3986]]. MAY be shared with other `Participant` entries (a single DID MAY be the `did` of several participants); per-Participant DID uniqueness is NOT enforced because the `Participant` identity is its `id`. However, per-Participant `(did, corporation_id)` consistency IS enforced: at any block height, all `Participant` entries with equal `did` MUST share the same `corporation_id`. Enforced by the create-time basic checks of [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks), and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks). `Participant.did` is set at create time and is not rotated thereafter. Corollary of the [DID ownership invariant](#did-ownership-invariant), which further requires consistency with any `Corporation.did` and `Ecosystem.did` claims on the same DID.
-- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns this permission. Constrained by the per-Participant `(did, corporation_id)` consistency invariant above.
-- `vs_operator` (account) (*optional*): verifiable service agent account, set at creation by [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) or [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant); null when none was specified. This is the account that will have the right to create or update participant sessions for this entry, subject to [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
+- `vs_id` (uint64) (*mandatory*): id of the [VerifiableService](#verifiableservice) entry of the [[ref: VS]] this permission refers to. The referenced entry MUST be owned by `corporation_id` (see [VID ownership](#vid-ownership)). MAY be shared with other `Participant` entries (a single identifier MAY hold several roles); the `Participant` identity is its `id`. Set at create time and never changed thereafter; the identifier string is read from `VerifiableService[vs_id].vid` and rotated through [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) without touching this entry.
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns this permission. MUST equal `VerifiableService[vs_id].corporation_id`.
 - `created` (timestamp) (*mandatory*): timestamp this `Participant` has been created.
 - `adjusted` (timestamp) (*optional*): timestamp this `Participant` has last been adjusted; null until the first adjustment.
 - `slashed` (timestamp) (*optional*): timestamp this `Participant` has last been slashed; null until the first slash.
@@ -1527,7 +1584,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
-> Note: VS operator authorization settings (spend limits, operation-budget cycle, feegrant, authorized message types) are stored in `ParticipantAuthorizationRecord` entries inside [VSOperatorAuthorization](#vsoperatorauthorization), keyed by `Participant.id`. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
+> Note: the agent account that operates a `Participant` entry is `VerifiableService[vs_id].vs_operator`, and its authorization settings (message types, spend limits, operation-budget cycle, fee grant) are the entry's [ServiceAuthorizationRecord](#serviceauthorizationrecord), keyed by `vs_id`. A `Participant` entry carries no operator configuration of its own. See [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
 ### UnrepaidEcosystemSlashCount
 
@@ -1627,27 +1684,26 @@ A `Digest` entry records the digest, the corporation that anchored it, the `Part
 
 ### VSOperatorAuthorization
 
-A `VSOperatorAuthorization` groups all `ParticipantAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. The `(corporation_id, vs_operator)` tuple MUST be **unique** across all `VSOperatorAuthorization` entries: at any block height, at most one entry MAY exist for a given `(corporation_id, vs_operator)`. The entry exists if, and only if, it has at least one record.
+A `VSOperatorAuthorization` groups all `ServiceAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. The `(corporation_id, vs_operator)` tuple MUST be **unique** across all `VSOperatorAuthorization` entries: at any block height, at most one entry MAY exist for a given `(corporation_id, vs_operator)`. The entry exists if, and only if, it has at least one record.
 
 - `id` (uint64) (*mandatory*) (key): the id of this `VSOperatorAuthorization`. Appending further records to an existing `vsoa` via [[MOD-DE-MSG-5-4]](#mod-de-msg-5-4-grant-vs-operator-authorization-execution-of-the-method) (i.e., while `vsoa.records` remains non-empty) preserves the `id`; revoking the last record deletes the `vsoa` via [[MOD-DE-MSG-6-4]](#mod-de-msg-6-4-revoke-vs-operator-authorization-execution-of-the-method), and a later grant for the same `(corporation_id, vs_operator)` pair mints a fresh `id` per the [Identifier conventions](#identifier-conventions).
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
 - `vs_operator` (account) (*mandatory*): the operator account receiving the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
-- `records` (ParticipantAuthorizationRecord[]) (*mandatory*): per-permission authorization records granted to `vs_operator` by `corporation_id`.
+- `records` (ServiceAuthorizationRecord[]) (*mandatory*): per-service authorization records granted to `vs_operator` by `corporation_id`, one per `VerifiableService` entry the account operates.
 - `fee_limit_total` (DenomAmount[]) (*mandatory*): derived, the sum of the `fee_spend_limit` of the counted records, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 - `feegrant_msg_type_counts` (map<msg_type, uint32>) (*mandatory*): derived, for each message type the number of counted records that include it, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 
-### ParticipantAuthorizationRecord
+### ServiceAuthorizationRecord
 
-A `ParticipantAuthorizationRecord` carries the per-permission authorization configuration of a `Participant` entry. Each record is globally unique by `participant_id`: for any `Participant.id`, at most one record exists system-wide, so `(corporation, vs_operator)` can be derived from `participant_id` via a direct lookup.
+A `ServiceAuthorizationRecord` carries the authorization configuration of the `vs_operator` of a [VerifiableService](#verifiableservice) entry. Each record is globally unique by `vs_id`: for any `VerifiableService.id`, at most one record exists system-wide, so (`corporation`, `vs_operator`) can be derived from `vs_id` via a direct lookup. The record applies to every `Participant` entry that references `vs_id`, and to the messages that take a `vs_id` directly ([[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver)).
 
-- `participant_id` (uint64) (*mandatory*) (key): id of the `Participant` this authorization record applies to. Globally unique across all `ParticipantAuthorizationRecord` entries.
-- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which the `vs_operator` is authorized on behalf of `corporation` when acting in the context of `participant_id`. Declared by the applicant at record creation time (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). Frozen after creation.
-- `spend_limit` (DenomAmount[]) (*optional*): maximum amount the `vs_operator` is allowed to spend, in the context of this `Participant` entry, as a direct consequence of executing authorized messages.
+- `vs_id` (uint64) (*mandatory*) (key): id of the `VerifiableService` entry this record applies to. Globally unique across all `ServiceAuthorizationRecord` entries.
+- `msg_types` (msg_type[]) (*mandatory*): list of delegable message types for which `vs_operator` is authorized on behalf of `corporation` when acting in the context of `vs_id`. Permitted values: `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `RevokeDigest`, `TriggerResolver`. Set by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) or [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service); the role-specific checks of each message decide what the operator can actually do with a given `Participant` entry.
+- `spend_limit` (DenomAmount[]) (*optional*): maximum amount `vs_operator` is allowed to spend, in the context of this entry, as a direct consequence of executing authorized messages.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
-- `fee_spend_limit` (DenomAmount[]) (*conditional*): this entry's **contribution** to the corporation's aggregate fee budget for `vs_operator`: up to this amount of transaction fees per `GlobalVariables.vs_operator_fee_period`, added to the per-period limit of the aggregate allowance derived by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) while the `Participant` entry is an [[ref: active participant]] or [[ref: future participant]]. MUST be set, with every amount strictly positive, if `with_feegrant` is true; MUST NOT be set otherwise. There is no per-record runtime fee ledger: the periodic fee cap is enforced by the aggregate `x/feegrant` allowance at fee-processing time.
-- `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this `Participant` entry, through an on-chain `FeeGrant`.
-- `counted` (boolean) (*mandatory*): derived, whether this record's contribution is currently included in the aggregates of its VSOA ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). Initialized to false at creation.
-- `expiration` (timestamp) (*conditional*): end of the current **operation-budget cycle**. Set if, and only if, `period` is set and the cycle has started: written to `now() + period` at creation ([[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) / [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) or at first validation ([[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) for [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) records), and advanced by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 5: when `now() >= expiration`, `remaining_spend` is reset to `spend_limit` and `expiration` is advanced to `now() + period`. It carries **no window semantics**: the entry window is enforced solely by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1.
+- `fee_spend_limit` (DenomAmount[]) (*conditional*): this record's **contribution** to the corporation's aggregate fee budget for `vs_operator`: up to this amount of transaction fees per `GlobalVariables.vs_operator_fee_period`, added to the per-period limit of the aggregate allowance derived by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance). MUST be set, with every amount strictly positive, iff `with_feegrant` is true.
+- `with_feegrant` (bool) (*mandatory*): if true, `corporation` pays the transaction fees for `vs_operator` when executing authorized messages in the context of this entry, through an on-chain `FeeGrant`.
+- `expiration` (timestamp) (*conditional*): end of the current **operation-budget cycle**. Set if, and only if, `period` is set: written to `now() + period` at creation and advanced by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 5. Carries no window semantics: a record is usable as long as it exists.
 - `period` (duration) (*optional*): length of the operation-budget cycle for `spend_limit`. Requires `spend_limit`. Does not apply to fees: the fee budget cycles on the network-wide `GlobalVariables.vs_operator_fee_period`.
 
 ### ExchangeRate
@@ -1706,7 +1762,13 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 **Delegation:**
 
-- `vs_operator_fee_period` (duration) (*mandatory*): network-wide cycle length of the aggregate VS-operator fee allowance (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)): each `ParticipantAuthorizationRecord.fee_spend_limit` is a budget contribution per `vs_operator_fee_period`. Default value: 1 day.
+- `vs_operator_fee_period` (duration) (*mandatory*): network-wide cycle length of the aggregate VS-operator fee allowance (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)): each `ServiceAuthorizationRecord.fee_spend_limit` is a budget contribution per `vs_operator_fee_period`. Default value: 1 day.
+
+**Verifiable Service:**
+
+- `vs_registration_deposit` (number) (*mandatory*): deposit, in [[ref: native denom]], paid once per `VerifiableService` entry at registration ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) and at an accepted transfer ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)). A state fee against registration spam, not a proof of control; never refunded.
+- `ecosystem_creation_deposit` (number) (*mandatory*): deposit, in [[ref: native denom]], paid once per `Ecosystem` entry at creation ([[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem)). Same nature as `vs_registration_deposit`.
+- `vid_rotation_max_transition` (duration) (*mandatory*): maximum, and default, transition window of an identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)).
 
 ## Module Requirements
 
@@ -1922,28 +1984,28 @@ If the transaction fees are paid by the `corporation` account (via fee grant) in
 
 ##### [AUTHZ-CHECK-3] VS Operator Authorization checks
 
-A second authorization grant mode exists for vs-agents. It is used when a corporation delegates a specific permission (and a specific set of message types, scoped to that permission) to a `vs_operator` account. The authorization model differs from other delegable messages: it relies on [VSOperatorAuthorization](#vsoperatorauthorization) / [ParticipantAuthorizationRecord](#participantauthorizationrecord) instead of `OperatorAuthorization`.
+A second authorization grant mode exists for vs-agents. It is used when a corporation delegates to the `vs_operator` of one of its [VerifiableService](#verifiableservice) entries a set of message types, scoped to that entry and to the `Participant` entries that reference it. The authorization model differs from other delegable messages: it relies on [VSOperatorAuthorization](#vsoperatorauthorization) / [ServiceAuthorizationRecord](#serviceauthorizationrecord) entries instead of [OperatorAuthorization](#operatorauthorization) entries, and the operator account is the one recorded on the `VerifiableService` entry.
 
-> Note: the set of messages a `vs_operator` is authorized to execute in the context of a permission is declared by the applicant at permission creation time (see [[MOD-PP-MSG-1-1]](#mod-pp-msg-1-1-start-participant-op-parameters) and [[MOD-PP-MSG-14-1]](#mod-pp-msg-14-1-self-create-participant-parameters)) and stored in `record.msg_types`. It is frozen for the lifetime of the record and can only be changed by revoking the permission and starting a new one.
+> Note: the set of messages a `vs_operator` is authorized to execute in the context of an entry is declared when the record is created ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or replaced ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)) and stored in `record.msg_types`. One record covers every role the identifier holds: the role-specific checks of each message decide what the operator can do with a given `Participant` entry.
 
-Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission id** `participant_id` (determined by the calling method), and the current message type `msg_type`:
+Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission** `perm` (a `Participant` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver) does), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
 
-1. The `Participant` entry identified by `participant_id` MUST be an [[ref: active participant]]. Abort otherwise.
-2. A `ParticipantAuthorizationRecord` `record` MUST exist for `participant_id`. Abort if not found.
-3. `record` MUST belong to `VSOperatorAuthorization[co.id, operator]` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), that is: the containing `VSOperatorAuthorization` MUST have `co.id` as its `corporation_id` and `operator` as its `vs_operator`. Abort otherwise.
+1. If `perm` is not null, it MUST be an [[ref: active participant]]. Abort otherwise.
+2. `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), and `vs.vs_operator` MUST equal `operator`. Abort otherwise.
+3. A `ServiceAuthorizationRecord` `record` MUST exist for `vs.id`, and MUST belong to `VSOperatorAuthorization[co.id, operator]`, that is: the containing `VSOperatorAuthorization` MUST have `co.id` as its `corporation_id` and `operator` as its `vs_operator`. Abort if not found.
 4. `msg_type` MUST be in `record.msg_types`. Abort otherwise.
-5. Operation-budget cycle. If `record.expiration` is set (which implies `record.period` is set, see [ParticipantAuthorizationRecord](#participantauthorizationrecord)) and `now() >= record.expiration`:
+5. Operation-budget cycle. If `record.expiration` is set (which implies `record.period` is set, see [ServiceAuthorizationRecord](#serviceauthorizationrecord)) and `now() >= record.expiration`:
    - if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
    - set `record.expiration := now() + record.period`.
 
    This step never aborts: `record.expiration` carries no window semantics (step 1 enforces the entry window). The advance is `now() + record.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
 6. If `record.spend_limit` is set, `record.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `record.remaining_spend` (per matching `denom` entry).
 
-> Note: step 1 is what disables a record whose `Participant` entry is not, or is no longer, an [[ref: active participant]] — an entry that has never been validated has no `effective_from` yet, and a revoked, slashed or expired entry fails the definition. A renewal is unaffected: [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op) sets `op_state` back to PENDING, but the entry stays active until its `effective_until`, so `op_state` MUST NOT be used in place of the definition. `record.expiration` MUST NOT be relied on either: it is the operation-budget cycle clock, not a window.
+> Note: step 1 is what prevents the use of a `Participant` entry that is not, or is no longer, an [[ref: active participant]]: an entry that has never been validated has no `effective_from` yet, and a revoked, slashed or expired entry fails the definition. The record itself is unaffected by the state of any single entry: the same agent keeps operating the identifier's other entries. A renewal is unaffected too: [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op) sets `op_state` back to PENDING, but the entry stays active until its `effective_until`.
 
 ##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
 
-If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `ParticipantAuthorizationRecord` `record` looked up in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
+If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `ServiceAuthorizationRecord` `record` looked up in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
 
 > Realization: the corporation's fee **payment and its periodic cap** are both enforced by the aggregate VS-operator `x/feegrant` allowance at transaction-fee-processing time — an `AllowedMsgAllowance` over the union of the counted records' `msg_types`, wrapping a `PeriodicAllowance` whose `period` is `GlobalVariables.vs_operator_fee_period` and whose per-period limit is the **sum** of the contributing records' `fee_spend_limit` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). The `PeriodicAllowance` resets itself during fee deduction, so a transaction arriving after a fee-cycle boundary needs no prior reset. There is no per-record fee ledger: no VPR-side fee check or deduction is performed.
 
@@ -1985,6 +2047,16 @@ As a result, `accountABC` is authorized to:
 
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      | Signers |
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
+| Verifiable Service        | Register Verifiable Service              | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service)   | corporation + operator |
+|                                | Update Verifiable Service               | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)   | corporation + operator |
+|                                | Rotate Verifiable Identifier            | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)   | corporation + operator |
+|                                | Transfer Verifiable Service             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)   | corporation + operator |
+|                                | Accept Verifiable Service Transfer      | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)   | corporation + operator |
+|                                | Remove Verifiable Service               | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-6]](#mod-vs-msg-6-remove-verifiable-service)   | corporation + operator |
+|                                | Update VS Module Parameters             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters)   | governance proposal |
+|                                | Get Verifiable Service                  | /vs/v1/get                       | Query  | [[MOD-VS-QRY-1]](#mod-vs-qry-1-get-verifiable-service)   | N/A |
+|                                | List Verifiable Services                | /vs/v1/list                      | Query  | [[MOD-VS-QRY-2]](#mod-vs-qry-2-list-verifiable-services)   | N/A |
+|                                | List VS Module Parameters               | /vs/v1/params                    | Query  | [[MOD-VS-QRY-3]](#mod-vs-qry-3-list-module-parameters)   | N/A |
 | Corporation               | Create Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)   | any account |
 |                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + operator |
 |                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters)   | governance proposal |
@@ -2022,7 +2094,7 @@ As a result, `accountABC` is authorized to:
 |                                | Slash Participant Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) |corporation + operator |
 |                                | Repay Participant Slashed Trust Deposit  |     N/A (Tx)                | Msg    | [[MOD-PP-MSG-13]](#mod-pp-msg-13-repay-participant-slashed-trust-deposit) |corporation + operator |
 |                                | Self Create Participant (OPEN mode)      |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) |corporation + operator  |
-|                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver) |corporation + operator |
+|                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver) |corporation + operator OR corporation + vs_operator |
 |                                | List Participants                        | /pp/v1/list                | Query  | [[MOD-PP-QRY-1]](#mod-pp-qry-1-list-participants)    |N/A |
 |                                | Get a Participant                        | /pp/v1/get                 | Query  | [[MOD-PP-QRY-2]](#mod-pp-qry-2-get-participant)    |N/A |
 |                                | Find Beneficiaries                      | /pp/v1/beneficiaries       | Query  | [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)  |N/A |
@@ -2042,7 +2114,6 @@ As a result, `accountABC` is authorized to:
 |             | Revoke Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
 |             | Grant VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)   |module call|
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
-|             | Sync VS Operator Authorization | N/A (Tx) | Msg | [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) |module call|
 |             | List Operator Authorizations              | /de/v1/authz/list | Query  | [[MOD-DE-QRY-1]](#mod-de-qry-1-list-operator-authorizations)   |N/A |
 |             | List VS Operator Authorizations           | /de/v1/vs-authz/list | Query  | [[MOD-DE-QRY-2]](#mod-de-qry-2-list-vs-operator-authorizations)   |N/A |
 |             | Get Operator Authorization                | /de/v1/authz/get | Query  | [[MOD-DE-QRY-3]](#mod-de-qry-3-get-operator-authorization)   |N/A |
@@ -2063,6 +2134,363 @@ As a result, `accountABC` is authorized to:
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
 :::
 
+### Verifiable Service Module
+
+The Verifiable Service module keeps the [VerifiableService](#verifiableservice) entries: the registration of every [[ref: VID]] known to the VPR, its owner [[ref: corporation]], its agent account and its registration deposit. All other entities that bind an identifier reference these entries by `vs_id` (see [VID ownership](#vid-ownership)). The identifier of a corporation is registered by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) in the same transaction as the corporation; every other identifier is registered here.
+
+#### [MOD-VS-MSG-1] Register Verifiable Service
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-VS-MSG-1-1] Register Verifiable Service parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vid` (string) (*mandatory*): the [[ref: VID]] to register.
+- `vs_operator` (account) (*optional*): the agent account that operates the service identified by `vid`.
+
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [ServiceAuthorizationRecord](#serviceauthorizationrecord) of the registered entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no record is created and the entry has no VS operator authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
+
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of the entry, among `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_operator` MUST be specified.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of the entry as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of the entry.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): the record's contribution to the aggregate fee budget of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [ServiceAuthorizationRecord](#serviceauthorizationrecord)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
+- `vs_operator_authz_period` (duration) (*optional*): operation-budget cycle length for `vs_operator_authz_spend_limit` (requires it to be provided). Does not apply to fees.
+
+##### [MOD-VS-MSG-1-2] Register Verifiable Service precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-1-2-1] Register Verifiable Service basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters.
+- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry, and MUST NOT appear in any [VerifiableServiceVid](#verifiableservicevid) entry whose `transition_until` is later than `now()`; else method MUST abort ([VID ownership](#vid-ownership)).
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of [ServiceAuthorizationRecord](#serviceauthorizationrecord); if `vs_operator_authz_with_feegrant` is true, `vs_operator_authz_fee_spend_limit` MUST be provided with every amount strictly positive, and MUST NOT be provided otherwise; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
+- if `vs_operator` is provided: no `OperatorAuthorization` `oauthz` where `oauthz.corporation_id` = `co.id` and `oauthz.operator` = `vs_operator` MUST exist, and no `VSOperatorAuthorization` `vsoauthz'` where `vsoauthz'.vs_operator` = `vs_operator` AND `vsoauthz'.corporation_id` != `co.id` MUST exist (a vs-agent account cannot be controlled by multiple corporations, see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks)).
+
+###### [MOD-VS-MSG-1-2-2] Register Verifiable Service fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and `corporation` MUST have an available balance of at least `GlobalVariables.vs_registration_deposit` in [[ref: native denom]].
+
+##### [MOD-VS-MSG-1-3] Register Verifiable Service execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- transfer `GlobalVariables.vs_registration_deposit` in [[ref: native denom]] from the `corporation` account to the [[ref: trust deposit]] of `co.id` (use [MOD-TD-MSG-1] to increase it by that amount); the deposit is never refunded.
+- create and persist a new `VerifiableService` entry `vs`:
+
+- `vs.id`: auto-incremented uint64
+- `vs.corporation_id`: `co.id`
+- `vs.vid`: `vid`
+- `vs.vs_operator`: `vs_operator`
+- `vs.deposit`: `GlobalVariables.vs_registration_deposit`
+- `vs.transfer_to_corporation_id`: null
+- `vs.created`: current timestamp
+- `vs.modified`: `vs.created`
+
+- create and persist the first [VerifiableServiceVid](#verifiableservicevid) entry of `vs`: `vs_id` = `vs.id`, `vid` = `vid`, `effective_from` = current timestamp, `effective_until` = null, `transition_until` = null.
+
+If `vs_operator_authz_msg_types` is provided, create the [ServiceAuthorizationRecord](#serviceauthorizationrecord) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+
+- `corporation_id`: `co.id`
+- `vs_operator`: `vs_operator`
+- `record`:
+  - `record.vs_id`: `vs.id`
+  - `record.msg_types`: `vs_operator_authz_msg_types`
+  - `record.spend_limit`: `vs_operator_authz_spend_limit`
+  - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+  - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
+  - `record.expiration`: `now() + vs_operator_authz_period` if `vs_operator_authz_period` is provided, else null
+  - `record.period`: `vs_operator_authz_period`
+
+The method MUST emit an event carrying `vs.id`, `vs.vid` and `co.id`, so that indexers learn the identifier without a query.
+
+> Note: registration is a declaration. The VPR never resolves `vid` and never verifies that `corporation` controls the identifier; trust in a registered service comes from the credentials its DID Document presents, verified by the [[ref: VT spec]] trust resolution. The deposit is a state fee: it prices the entry and gives network governance a base to slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) if the registration violates the governance framework.
+
+#### [MOD-VS-MSG-2] Update Verifiable Service
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. It sets, replaces or clears the agent account of an entry together with its [ServiceAuthorizationRecord](#serviceauthorizationrecord).
+
+##### [MOD-VS-MSG-2-1] Update Verifiable Service parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to update.
+- `vs_operator` (account) (*optional*): the new agent account; null clears the operator and its record.
+- the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: if `vs_operator_authz_msg_types` is provided, the record is replaced; otherwise the entry keeps no record.
+
+##### [MOD-VS-MSG-2-2] Update Verifiable Service precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-2-2-1] Update Verifiable Service basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
+- `vs.transfer_to_corporation_id` MUST be null (no transfer pending), else abort.
+- the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks), including the mutual-exclusion checks on `vs_operator` when it is provided.
+
+###### [MOD-VS-MSG-2-2-2] Update Verifiable Service fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-VS-MSG-2-3] Update Verifiable Service execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no record).
+- set `vs.vs_operator` to `vs_operator` and `vs.modified` to the current timestamp.
+- if `vs_operator_authz_msg_types` is provided, create the new record by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
+
+> Note: `ParticipantSession` entries created by the previous operator keep their `vs_operator`: only that account can update them ([[MOD-PP-MSG-10-2]](#mod-pp-msg-10-2-create-or-update-participant-session-precondition-checks)), and it can no longer create new ones for this entry.
+
+#### [MOD-VS-MSG-3] Rotate Verifiable Identifier
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. It replaces the identifier string of an entry. Every `Corporation`, `Ecosystem` and `Participant` entry that references the entry, every accreditation, fee term, deposit and authorization record, is unaffected: they reference `vs_id`, never the string.
+
+##### [MOD-VS-MSG-3-1] Rotate Verifiable Identifier parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry whose identifier is rotated.
+- `vid` (string) (*mandatory*): the new identifier string.
+- `transition` (duration) (*optional*): length of the transition window during which the former string remains acceptable to trust resolution for credentials issued under it (see [VerifiableServiceVid](#verifiableservicevid)). Defaults to `GlobalVariables.vid_rotation_max_transition`; 0 ends the former string at once, for instance after a key compromise.
+
+##### [MOD-VS-MSG-3-2] Rotate Verifiable Identifier precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-3-2-1] Rotate Verifiable Identifier basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
+- `vs.transfer_to_corporation_id` MUST be null, else abort.
+- `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters, and MUST differ from `vs.vid`.
+- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry, and MUST NOT appear in any [VerifiableServiceVid](#verifiableservicevid) entry whose `transition_until` is later than `now()`; else abort ([VID ownership](#vid-ownership)).
+- `transition` (duration) (*optional*): if provided, MUST be between 0 and `GlobalVariables.vid_rotation_max_transition` (inclusive).
+
+###### [MOD-VS-MSG-3-2-2] Rotate Verifiable Identifier fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-VS-MSG-3-3] Rotate Verifiable Identifier execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp; define `transition_r`: `transition` if provided, else `GlobalVariables.vid_rotation_max_transition`.
+- load the [VerifiableServiceVid](#verifiableservicevid) entry `current` of `vs` whose `effective_until` is null; set `current.effective_until` = `now` and `current.transition_until` = `now` + `transition_r`.
+- create and persist a new `VerifiableServiceVid` entry: `vs_id` = `vs.id`, `vid` = `vid`, `effective_from` = `now`, `effective_until` = null, `transition_until` = null.
+- set `vs.vid` = `vid` and `vs.modified` = `now`.
+
+The method MUST emit an event carrying `vs.id`, the former string, `vid` and `current.transition_until`. Indexers MUST re-evaluate trust for the entry under the new string and MUST treat the former string as rotated: valid evidence only for credentials issued before `now`, and only until `current.transition_until`.
+
+> Note: the VPR does not re-validate anything at rotation. The ecosystems that accredited the service validated an organization, not a string; an [[ref: ecosystem governance authority]] whose framework binds accreditation to a particular identifier (a method, a domain) learns the rotation from the event and keeps its usual remedy, revocation of the `Participant` entry. Credentials that carry the former string, as issuer or as subject, are re-issued by their issuers during the transition window, and the former DID Document SHOULD stay resolvable until then so that proofs made with its keys still verify.
+
+#### [MOD-VS-MSG-4] Transfer Verifiable Service
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. It offers an entry to another corporation, or withdraws a pending offer. Ownership changes only when the receiving corporation accepts ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
+
+##### [MOD-VS-MSG-4-1] Transfer Verifiable Service parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to transfer.
+- `to_corporation_id` (uint64) (*optional*): id of the receiving corporation; null withdraws a pending offer.
+
+##### [MOD-VS-MSG-4-2] Transfer Verifiable Service precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-4-2-1] Transfer Verifiable Service basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
+- `vs` MUST NOT be referenced by any `Corporation.vs_id`, `Ecosystem.vs_id` or `Participant.vs_id`; else abort (entries belong to their corporation and do not move: the owner first removes or expires them, or keeps the service).
+- `to_corporation_id` (uint64) (*optional*): if provided, a `Corporation` entry with this id MUST exist and MUST differ from `co.id`.
+
+###### [MOD-VS-MSG-4-2-2] Transfer Verifiable Service fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-VS-MSG-4-3] Transfer Verifiable Service execution
+
+- set `vs.transfer_to_corporation_id` = `to_corporation_id` and `vs.modified` = current timestamp.
+
+#### [MOD-VS-MSG-5] Accept Verifiable Service Transfer
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`, the receiving corporation of a pending offer.
+
+##### [MOD-VS-MSG-5-1] Accept Verifiable Service Transfer parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vs_id` (uint64) (*mandatory*): id of the offered `VerifiableService` entry.
+- `vs_operator` (account) (*optional*) and the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters): the agent and record of the entry under its new owner.
+
+##### [MOD-VS-MSG-5-2] Accept Verifiable Service Transfer precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-5-2-1] Accept Verifiable Service Transfer basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.transfer_to_corporation_id` MUST equal `co.id`; else abort.
+- `vs` MUST NOT be referenced by any `Corporation.vs_id`, `Ecosystem.vs_id` or `Participant.vs_id`; else abort.
+- the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks).
+
+###### [MOD-VS-MSG-5-2-2] Accept Verifiable Service Transfer fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and `corporation` MUST have an available balance of at least `GlobalVariables.vs_registration_deposit` in [[ref: native denom]]: the receiving corporation pays its own registration deposit; the previous owner's deposit stays in the previous owner's [[ref: trust deposit]].
+
+##### [MOD-VS-MSG-5-3] Accept Verifiable Service Transfer execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no record).
+- transfer `GlobalVariables.vs_registration_deposit` in [[ref: native denom]] from the `corporation` account to the [[ref: trust deposit]] of `co.id` (use [MOD-TD-MSG-1] to increase it by that amount).
+- set `vs.corporation_id` = `co.id`, `vs.deposit` = `GlobalVariables.vs_registration_deposit`, `vs.vs_operator` = `vs_operator`, `vs.transfer_to_corporation_id` = null, `vs.modified` = current timestamp.
+- if `vs_operator_authz_msg_types` is provided, create the record by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
+
+The method MUST emit an event carrying `vs.id`, `vs.vid`, the previous and the new `corporation_id`.
+
+#### [MOD-VS-MSG-6] Remove Verifiable Service
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. It deletes an entry that nothing references. The deposit is not refunded and the identifier string becomes registrable again by anyone; the entry's `id` is never reused ([Identifier conventions](#identifier-conventions)).
+
+##### [MOD-VS-MSG-6-1] Remove Verifiable Service parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to remove.
+
+##### [MOD-VS-MSG-6-2] Remove Verifiable Service precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-6-2-1] Remove Verifiable Service basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
+- `vs` MUST NOT be referenced by any `Corporation.vs_id`, `Ecosystem.vs_id` or `Participant.vs_id`, whatever the state of those entries; else abort.
+
+###### [MOD-VS-MSG-6-2-2] Remove Verifiable Service fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-VS-MSG-6-3] Remove Verifiable Service execution
+
+- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no record).
+- delete the [VerifiableServiceVid](#verifiableservicevid) entries of `vs`, then delete `vs`.
+
+The method MUST emit an event carrying `vs.id` and `vs.vid`.
+
+#### [MOD-VS-MSG-7] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-VS-MSG-7-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-VS-MSG-7-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-7-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
+
+###### [MOD-VS-MSG-7-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution.
+
+##### [MOD-VS-MSG-7-3] Update Module Parameters execution
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
+#### [MOD-VS-QRY-1] Get Verifiable Service
+
+Anyone CAN execute this method.
+
+##### [MOD-VS-QRY-1-1] Get Verifiable Service query parameters
+
+- `id` (uint64) (*conditional*): the id of the `VerifiableService` entry.
+- `vid` (string) (*conditional*): an identifier string. Exactly one of `id` and `vid` MUST be provided.
+- `at` (timestamp) (*optional*): with `vid`, resolve the entry that held the string at that time, through [VerifiableServiceVid](#verifiableservicevid); without `at`, the entry whose current `vid` is the string.
+
+##### [MOD-VS-QRY-1-2] Get Verifiable Service query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- exactly one of `id` and `vid` MUST be provided.
+- `at` MAY only be provided with `vid`.
+
+##### [MOD-VS-QRY-1-3] Get Verifiable Service execution
+
+Return the matching `VerifiableService` entry with its `VerifiableServiceVid` history and, if any, its [ServiceAuthorizationRecord](#serviceauthorizationrecord), or an error if none is found. With `vid` and `at`, the match is the history entry whose `vid` equals the string and whose `effective_from` ≤ `at` < `effective_until` (or `effective_until` is null).
+
+#### [MOD-VS-QRY-2] List Verifiable Services
+
+Anyone CAN execute this method.
+
+##### [MOD-VS-QRY-2-1] List Verifiable Services query parameters
+
+The following parameters are optional:
+
+- `corporation_id` (uint64) (*optional*): if specified, filter by owner corporation.
+- `vs_operator` (account) (*optional*): if specified, filter by agent account.
+- `modified_after` (timestamp) (*optional*): if specified, returns only entries with `modified` greater than `modified_after`.
+- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
+
+##### [MOD-VS-QRY-2-2] List Verifiable Services query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
+
+##### [MOD-VS-QRY-2-3] List Verifiable Services execution
+
+Return a list of `VerifiableService` entries matching the filter criteria, ordered by `id`, or an empty list if nothing found.
+
+#### [MOD-VS-QRY-3] List Module Parameters
+
+Anyone CAN execute this method.
+
+##### [MOD-VS-QRY-3-3] List Module Parameters execution
+
+Return the module parameters: `vs_registration_deposit`, `ecosystem_creation_deposit` and `vid_rotation_max_transition`.
+
 ### Corporation Module
 
 This module manages [[ref: corporation]] entries — the VPR-level entity that carries a DID, a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A `Corporation` entry MUST exist before its `policy_address` can sign as the `corporation` in any other VPR Create-* method, and before its `id` can be referenced as `corporation_id` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)).
@@ -2071,7 +2499,7 @@ This module manages [[ref: corporation]] entries — the VPR-level entity that c
 
 #### [MOD-CO-MSG-1] Create Corporation
 
-Any [[ref: account]] CAN execute this method to atomically create a new on-chain `policy_address` account (in this implementation, a Cosmos SDK [[ref: group]] policy account) and register a `Corporation` VPR entry bound to it, in a single [[ref: transaction]]. This eliminates any window between policy-address creation and VPR registration, ensuring [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) can never observe an unregistered `policy_address`.
+Any [[ref: account]] CAN execute this method to atomically create a new on-chain `policy_address` account (in this implementation, a Cosmos SDK [[ref: group]] policy account) register a `Corporation` VPR entry bound to it, and register the Corporation's own identifier as a [VerifiableService](#verifiableservice) entry owned by the new Corporation, in a single [[ref: transaction]]. This eliminates any window between policy-address creation and VPR registration, ensuring [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) can never observe an unregistered `policy_address`.
 
 There is no special "admin" role required to create a corporation: the signer is just the [[ref: account]] that submits the transaction, and that account holds no ongoing privileges over the resulting Corporation, group, or group policy.
 
@@ -2086,12 +2514,21 @@ An [[ref: account]] that would like to create a new [[ref: corporation]] MUST ca
 - `decision_policy` (DecisionPolicy): (*mandatory*) the decision policy for the group policy. MUST be either a `ThresholdDecisionPolicy` (minimum weighted sum of YES votes) or a `PercentageDecisionPolicy` (minimum percentage of total weight).
 
 > `group_policy_as_admin` is not a caller parameter — it is always set to `true` by the implementation. The group policy address becomes the admin of both the group and the group policy immediately upon creation; the `signer` account retains no admin rights thereafter.
-- `did` (string) (*mandatory*): the DID of the Corporation.
+- `vid` (string) (*mandatory*): the [[ref: VID]] of the Corporation, registered as a `VerifiableService` entry owned by the new Corporation.
+- `vs_operator` (account) (*optional*): the agent account that operates the service identified by `vid`, stored on the registered entry (see [VerifiableService](#verifiableservice)).
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the v1 [[ref: CGF]] document.
 
 Provided document MUST be of the same language as the primary `language` of the Corporation.
+
+The following VS Operator Authorization parameters are **optional** and collectively define the initial [ServiceAuthorizationRecord](#serviceauthorizationrecord) of the registered entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no record is created and the entry has no VS operator authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
+
+- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of the new Corporation in the context of the entry, among `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_operator` MUST be specified.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of the entry as a direct consequence of executing authorized messages.
+- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, the new Corporation pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of the entry.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): the record's contribution to the aggregate fee budget of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [ServiceAuthorizationRecord](#serviceauthorizationrecord)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
+- `vs_operator_authz_period` (duration) (*optional*): operation-budget cycle length for `vs_operator_authz_spend_limit` (requires it to be provided). Does not apply to fees.
 
 ##### [MOD-CO-MSG-1-2] Create Corporation precondition checks
 
@@ -2104,16 +2541,16 @@ If any of these precondition checks fail, method MUST abort.
 - `signer` (account): (Signer) signature must be verified. No further restriction — any [[ref: account]] MAY be the signer.
 - `members`: MUST contain at least one entry. Each entry's `address` MUST be a valid account address. Each entry's `weight` MUST be a non-zero decimal string representing a positive number (e.g. `"1"`, `"10"`).
 - `decision_policy`: MUST be a valid `ThresholdDecisionPolicy` or `PercentageDecisionPolicy`.
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `did` MUST NOT already be the `did` of any existing `Corporation` entry; if some `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant: a DID is the `did` of at most one `Corporation`).
-- if any existing `Ecosystem` or `Participant` entry has `did` equal to the provided `did`, method MUST abort ([DID ownership invariant](#did-ownership-invariant): those entries are owned by an already-existing `Corporation`, which cannot be the `Corporation` being created).
+- `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters.
+- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry, and MUST NOT appear in any [VerifiableServiceVid](#verifiableservicevid) entry whose `transition_until` is later than `now()`; else method MUST abort ([VID ownership](#vid-ownership)).
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of [ServiceAuthorizationRecord](#serviceauthorizationrecord); if `vs_operator_authz_with_feegrant` is true, `vs_operator_authz_fee_spend_limit` MUST be provided with every amount strictly positive, and MUST NOT be provided otherwise; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`.
 
 ###### [MOD-CO-MSG-1-2-2] Create Corporation fee checks
 
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and `signer` MUST have an available balance of at least `GlobalVariables.vs_registration_deposit` in [[ref: native denom]]: the registration deposit of the Corporation's identifier is paid by `signer`, the only account that exists before the Corporation does.
 
 ##### [MOD-CO-MSG-1-3] Create Corporation execution
 
@@ -2127,7 +2564,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `co.id`: auto-incremented uint64
 - `co.policy_address`: `group_policy_address`
-- `co.did`: `did`
+- `co.vs_id`: `vs.id` (the `VerifiableService` entry registered below; the two entries reference each other and are persisted in the same transaction)
 - `co.created`: current timestamp
 - `co.modified`: `co.created`
 - `co.language`: `language`
@@ -2153,6 +2590,32 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 > Subsequent governance framework documents and version activations for this `Corporation` MUST be managed through [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version).
 
+- register the Corporation's identifier: transfer `GlobalVariables.vs_registration_deposit` in [[ref: native denom]] from `signer` to the [[ref: trust deposit]] of `co.id` (use [MOD-TD-MSG-1] to increase it by that amount), then create and persist a new `VerifiableService` entry `vs`:
+
+- `vs.id`: auto-incremented uint64
+- `vs.corporation_id`: `co.id`
+- `vs.vid`: `vid`
+- `vs.vs_operator`: `vs_operator`
+- `vs.deposit`: `GlobalVariables.vs_registration_deposit`
+- `vs.transfer_to_corporation_id`: null
+- `vs.created`: current timestamp
+- `vs.modified`: `vs.created`
+
+- create and persist the first [VerifiableServiceVid](#verifiableservicevid) entry of `vs`: `vs_id` = `vs.id`, `vid` = `vid`, `effective_from` = current timestamp, `effective_until` = null, `transition_until` = null.
+
+If `vs_operator_authz_msg_types` is provided, create the [ServiceAuthorizationRecord](#serviceauthorizationrecord) by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
+
+- `corporation_id`: `co.id`
+- `vs_operator`: `vs_operator`
+- `record`:
+  - `record.vs_id`: `vs.id`
+  - `record.msg_types`: `vs_operator_authz_msg_types`
+  - `record.spend_limit`: `vs_operator_authz_spend_limit`
+  - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+  - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
+  - `record.expiration`: `now() + vs_operator_authz_period` if `vs_operator_authz_period` is provided, else null
+  - `record.period`: `vs_operator_authz_period`
+
 #### [MOD-CO-MSG-2] Update Corporation
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
@@ -2161,7 +2624,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `did` (string) (*mandatory*): the new DID of the Corporation.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry that becomes the Corporation's own identifier. To rotate the identifier string itself, use [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) instead: it changes the string on the entry without touching this `Corporation` entry or any `Participant` entry.
 
 > Note: `language` is set at creation time by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and is **immutable** thereafter; it cannot be updated through this method.
 
@@ -2177,9 +2640,8 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - A `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account MUST exist; if none exists, method MUST abort.
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- `did` MUST NOT already be the `did` of any **other** `Corporation` entry (i.e., any `Corporation` entry whose `id` differs from `co.id`); if some other `Corporation` entry already holds this `did`, method MUST abort (per-Corporation `did` uniqueness invariant). Rotating to the same value `co.did` already holds is a no-op and MUST be allowed.
-- if any existing `Ecosystem` or `Participant` entry has `did` equal to the provided `did` and its `corporation_id` differs from `co.id`, method MUST abort ([DID ownership invariant](#did-ownership-invariant)). Entries owned by `co` itself that already claim this DID do not block the rotation.
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else method MUST abort ([VID ownership](#vid-ownership)).
+- `vs_id` MUST NOT be the `vs_id` of any **other** `Corporation` entry (i.e., any `Corporation` entry whose `id` differs from `co.id`); else method MUST abort. Setting the value `co.vs_id` already holds is a no-op that succeeds.
 
 ###### [MOD-CO-MSG-2-2-2] Update Corporation fee checks
 
@@ -2193,7 +2655,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - load `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account and set:
 
-- `co.did`: `did`
+- `co.vs_id`: `vs_id`
 - `co.modified`: current timestamp
 
 #### [MOD-CO-MSG-3] Update Module Parameters
@@ -2300,7 +2762,7 @@ An authorized `operator` that would like to create a [[ref: ecosystem]] MUST cal
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `did` (string) (*mandatory*): the did of the ecosystem that is creating the ecosystem.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the ecosystem's identifier, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) (or at the creation of the corporation) and owned by `corporation`.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
@@ -2318,20 +2780,18 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)); else method MUST abort (per-Ecosystem `(did, corporation_id)` consistency invariant: at any block height, all `Ecosystem` entries sharing a `did` are controlled by the same `Corporation`).
-- likewise, if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id`, and if a `Corporation` entry exists whose own `did` equals the provided `did`, its `id` MUST equal `co.id`; else method MUST abort ([DID ownership invariant](#did-ownership-invariant)).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)); else method MUST abort ([VID ownership](#vid-ownership)).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL .
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`.
 
 :::note
-Several `Ecosystem` entries MAY share the same ecosystem DID. The identifier of an `Ecosystem` is its `id`, and the Verifiable Trust Spec includes the `id` of the `Ecosystem` in the DID Document. Per-Ecosystem DID uniqueness is therefore NOT required: proof of control of the DID is verified by resolving the DID outside of the context of the VPR. However, **all `Ecosystem` entries sharing the same `did` MUST be controlled by the same `Corporation`** — see the basic-check bullet above. Proof of control of the shared DID is, by construction, held by that single controlling `Corporation`, and the corresponding `Corporation` entry (if any whose own `did` equals this value) is unique by the per-Corporation `did` uniqueness invariant (and, by the [DID ownership invariant](#did-ownership-invariant), when a `Corporation` entry whose own `did` equals this value exists, it is necessarily the same `Corporation` that controls the Ecosystems claiming it).
+Several `Ecosystem` entries MAY share the same identifier. The identifier of an `Ecosystem` is its `id`, and the Verifiable Trust Spec includes the `id` of the `Ecosystem` in the DID Document; proof of control of the identifier is verified by resolving it, outside the VPR.
 :::
 
 ###### [MOD-ES-MSG-1-2-2] Create Ecosystem fee checks
 
-Fee payer MUST have an available balance to cover the [[ref: estimated transaction fees]].
+Fee payer MUST have an available balance to cover the [[ref: estimated transaction fees]], and `corporation` MUST have an available balance of at least `GlobalVariables.ecosystem_creation_deposit` in [[ref: native denom]].
 
 ##### [MOD-ES-MSG-1-3] Create Ecosystem execution
 
@@ -2339,10 +2799,12 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
+- transfer `GlobalVariables.ecosystem_creation_deposit` in [[ref: native denom]] from the `corporation` account to the [[ref: trust deposit]] of `co.id` (use [MOD-TD-MSG-1] to increase it by that amount); the deposit is never refunded.
+
 - create and persist a new `Ecosystem` entry `ecosystem`:
 
 - `ecosystem.id` : auto-incremented uint64
-- `ecosystem.did`: `did`
+- `ecosystem.vs_id`: `vs_id`
 - `ecosystem.corporation_id`: `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account)
 - `ecosystem.created`: current timestamp
 - `ecosystem.modified`: `ecosystem.created`
@@ -2379,7 +2841,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
-- `did` (string) (*mandatory*): the did of the ecosystem.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry that becomes the ecosystem's identifier. To rotate the identifier string itself, use [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier).
 
 ##### [MOD-ES-MSG-2-2] Update Ecosystem precondition checks
 
@@ -2393,9 +2855,7 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `Ecosystem` entry `ecosystem` with id `id` MUST exist and `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any **other** `Ecosystem` entry (i.e., any `Ecosystem` entry whose `id` differs from the supplied `id`) has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id`; else method MUST abort (per-Ecosystem `(did, corporation_id)` consistency invariant). Rotating `ecosystem.did` to a value already held by another `Ecosystem` controlled by a different `Corporation` is forbidden.
-- likewise, if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id`, and if a `Corporation` entry exists whose own `did` equals the provided `did`, its `id` MUST equal `co.id`; else method MUST abort ([DID ownership invariant](#did-ownership-invariant)).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else method MUST abort ([VID ownership](#vid-ownership)).
 
 ###### [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks
 
@@ -2409,7 +2869,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - load `Ecosystem` entry `ecosystem` from `id` and set:
 
-- `ecosystem.did`: `did`
+- `ecosystem.vs_id`: `vs_id`
 - `ecosystem.modified`: current timestamp
 
 #### [MOD-ES-MSG-3] Archive Ecosystem
@@ -3153,31 +3613,12 @@ An Applicant that would like to start an onboarding process MUST execute this me
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_operator` (account) (*optional*): the account of the Veriable Service we want to authorize to create participant sessions linked to this participant. If not specified, Verifiable Service will not be able to use the payment delegation feature. **Required** to use the payment delegation feature.
 - `role` (ParticipantRole) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the Participant role that the applicant would like to get;
 - `validator_participant_id` (uint64) (*mandatory*): the [[ref: validator]] participant (parent participant in the tree), chosen by the applicant.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this participant (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-
-The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) that will be created for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode (the corporation signs and pays for its own `Participant`-related transactions directly). VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
-
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this `Participant` entry. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this `Participant` entry as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this `Participant` entry.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): this entry's contribution to the aggregate fee budget of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [ParticipantAuthorizationRecord](#participantauthorizationrecord)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
-- `vs_operator_authz_period` (duration) (*optional*): operation-budget cycle length for `vs_operator_authz_spend_limit` (requires it to be provided). Does not apply to fees.
-
-Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`.
-
-|Participant role|Permitted Messages|
-|-|-|
-| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated, RevokeDigest |
-| VERIFIER | CreateOrUpdateParticipantSession |
-| ISSUER_GRANTOR | SetParticipantOPtoValidated, RevokeDigest |
-| VERIFIER_GRANTOR | SetParticipantOPtoValidated |
- 
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Participant` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
@@ -3197,10 +3638,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this `Participant` entry (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Participant` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Participant` entry (can be modified by validator).
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant: at any block height, all `Participant` entries sharing a `did` are owned by the same `Corporation`).
-- likewise, if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id`, and if a `Corporation` entry exists whose own `did` equals the provided `did`, its `id` MUST equal `co.id`; else method MUST abort ([DID ownership invariant](#did-ownership-invariant)).
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-1-1](#mod-pp-msg-1-1-start-participant-op-parameters).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort ([VID ownership](#vid-ownership)).
 
 :::note
 A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. When the schema's `holder_onboarding_mode` is `ISSUER_ONBOARDING_PROCESS`, the onboarding process MUST have reached `VALIDATED` before the credential is issued: the Verifiable Trust specification requires an active `HOLDER` entry at issuance, and trust resolution requires it to stay active. When it is `PERMISSIONLESS`, no `HOLDER` entry exists and the issuer applies its own checks.
@@ -3288,14 +3726,14 @@ Trust deposit MUST always be paid in [[ref: native denom]]
 
 ###### [MOD-PP-MSG-1-2-4] Start Participant OP overlap checks
 
-An applicant `corporation` MUST NOT have two onboarding processes running at the same time for the same `did` and `role` with the same validator. This does not prevent a `corporation` from running concurrent OPs with different validators for the same `did` and `role`, nor concurrent OPs with the same validator for different `did`s. A completed (VALIDATED) onboarding process does not prevent starting a new one: overlapping *effectiveness* of the resulting `Participant` entries is prevented at validation time by [MOD-PP-MSG-3-2-4](#mod-pp-msg-3-2-4-set-participant-op-to-validated-overlap-checks).
+An applicant `corporation` MUST NOT have two onboarding processes running at the same time for the same `vs_id` and `role` with the same validator. This does not prevent a `corporation` from running concurrent OPs with different validators for the same `vs_id` and `role`, nor concurrent OPs with the same validator for different identifiers. A completed (VALIDATED) onboarding process does not prevent starting a new one: overlapping *effectiveness* of the resulting `Participant` entries is prevented at validation time by [MOD-PP-MSG-3-2-4](#mod-pp-msg-3-2-4-set-participant-op-to-validated-overlap-checks).
 
 Find all `Participant` entries `participants[]` where:
 
 - `p.validator_participant_id` = `validator_participant_id`,
 - `p.role` = `role`,
 - `p.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account),
-- `p.did` = `did`,
+- `p.vs_id` = `vs_id`,
 - `p.revoked` is null and `p.slashed` is null,
 - `p.op_state` = PENDING.
 
@@ -3334,9 +3772,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.id`: auto-incremented uint64.
   - `applicant_participant.schema_id` = `validator_participant.schema_id`
   - `applicant_participant.corporation_id`: `co.id`.
-  - `applicant_participant.vs_operator`: `vs_operator`.
   - `applicant_participant.role`: `role`.
-  - `applicant_participant.did`: `did`.
+  - `applicant_participant.vs_id`: `vs_id`.
   - `applicant_participant.created`: `now`
   - `applicant_participant.modified`: `now`
   - `applicant_participant.deposit`: `validation_trust_deposit_in_native_denom`.
@@ -3353,20 +3790,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.issuance_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
   - `applicant_participant.verification_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
 
-If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **disabled** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
-
-- `corporation`: `corporation`
-- `vs_operator`: `vs_operator`
-- `record`:
-  - `record.participant_id`: `applicant_participant.id`
-  - `record.msg_types`: `vs_operator_authz_msg_types`
-  - `record.spend_limit`: `vs_operator_authz_spend_limit`
-  - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
-  - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
-  - `record.expiration`: null (the operation-budget cycle starts at validation, see [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization))
-  - `record.period`: `vs_operator_authz_period`
-
-> Note: the record is **not yet active**. `applicant_participant` is not an [[ref: active participant]] until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) sets its `effective_from`, so [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 rejects any attempt to use it; the same method then starts the operation-budget cycle via [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization). The record contributes nothing to the aggregate fee allowance while the entry is PENDING: with `effective_from` null the entry is neither an [[ref: active participant]] nor a [[ref: future participant]], so [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) excludes it.
+> Note: the agent that will create sessions for this entry is `VerifiableService[vs_id].vs_operator`, and its authorization is the entry's [ServiceAuthorizationRecord](#serviceauthorizationrecord): nothing is created here. The record cannot be used in the context of `applicant_participant` until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) sets its `effective_from` ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1).
 
 #### Connecting to the VS of the Validator
 
@@ -3374,13 +3798,13 @@ If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizati
 
 This action must be initiated by the [[ref: applicant]].
 
-During an onboarding process, if the associated `validator_participant` includes a specific `did`, the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
+During an onboarding process, if the associated `validator_participant` refers to a resolvable identifier (`VerifiableService[validator_participant.vs_id].vid`), the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
 
 Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by the [[ref: validator]] to complete one or more of the following tasks:
 
-1. **Prove control** over the `vs_operator` [[ref: account]] specified in the `Participant` entry (e.g., via blind signature or cryptographic challenge).
+1. **Prove control** over the `vs_operator` [[ref: account]] of the applicant's `VerifiableService` entry (e.g., via blind signature or cryptographic challenge).
 2. **Provide requested information**, such as filling out forms, submitting documents, or other forms of disclosure as required by the validation [[ref: VS]].
-3. If the requested `Participant` entry includes a [[ref: VS]] DID, the [[ref: applicant]] should prove control over the corresponding [[ref: DID]] to the validator's [[ref: VS]].
+3. The [[ref: applicant]] should prove control over the identifier of its `VerifiableService` entry to the validator's [[ref: VS]].
 
 Once the [[ref: validator]] determines that the process is complete, they may terminate the onboarding process and create the `Participant` entry accordingly. This `Participant`-entry configuration usually includes:
 
@@ -3636,7 +4060,7 @@ If `validator_participant` is not a [[ref: active participant]] (expired, revoke
 
 ###### [MOD-PP-MSG-3-2-4] Set Participant OP to Validated overlap checks
 
-Two `Participant` entries of the same applicant (`corporation_id`, `did`) MUST NOT be effective at the same time under the same `validator_participant_id` for the same `role`. That should not occur if [MOD-PP-MSG-1-2-4](#mod-pp-msg-1-2-4-start-participant-op-overlap-checks) is enforced, but better do the check anyway.
+Two `Participant` entries of the same applicant (`corporation_id`, `vs_id`) MUST NOT be effective at the same time under the same `validator_participant_id` for the same `role`. That should not occur if [MOD-PP-MSG-1-2-4](#mod-pp-msg-1-2-4-start-participant-op-overlap-checks) is enforced, but better do the check anyway.
 
 Find all [[ref: active participants]] and [[ref: future participants]] `participants[]` where:
 
@@ -3644,7 +4068,7 @@ Find all [[ref: active participants]] and [[ref: future participants]] `particip
 - `p.validator_participant_id` = `applicant_participant.validator_participant_id`,
 - `p.role` = `applicant_participant.role`,
 - `p.corporation_id` = `applicant_participant.corporation_id`,
-- `p.did` = `applicant_participant.did`.
+- `p.vs_id` = `applicant_participant.vs_id`.
 
 for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
 
@@ -3710,9 +4134,7 @@ Update `Participant` `applicant_participant`:
   - set `applicant_participant.issuance_fee_discount` to `issuance_fee_discount`.
   - set `applicant_participant.verification_fee_discount` to `verification_fee_discount`.
 
-Activate VS Operator Authorization, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) Sync VS Operator Authorization with `participant_id = applicant_participant.id`.
-
-This call is a no-op if no record was created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) (i.e., the applicant did not declare `vs_operator_authz_msg_types`). If a record exists, its operation-budget cycle is started (`expiration = now() + period` when a `period` is set) and the aggregate `FeeGrant` for the containing VSOA is granted for the first time (or updated) via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) — the entry now being an [[ref: active participant]], its `fee_spend_limit` counts toward the aggregate per-period limit and its `effective_until`, read from the participant view, is scheduled in the window-end queue.
+> Note: no VS Operator Authorization step is needed: the applicant's agent is `VerifiableService[applicant_participant.vs_id].vs_operator`, whose [ServiceAuthorizationRecord](#serviceauthorizationrecord) becomes usable in the context of this entry as soon as `effective_from` is set ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1).
 
 #### [MOD-PP-MSG-4] Void
 
@@ -3771,8 +4193,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - call [MOD-TD-MSG-1] to reduce trust deposit of `applicant_participant.corporation_id` by `applicant_participant.op_current_deposit`
   - set `applicant_participant.op_current_deposit` to 0.
 
-If `applicant_participant.op_state` was set to TERMINATED (i.e. `applicant_participant.op_exp` was null so validation never completed), call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record created at [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op). The call is a no-op if no record exists. If `applicant_participant.op_state` was set back to VALIDATED, no VSOA changes are needed (the record is unchanged: its operation-budget cycle keeps running, and the aggregate fee allowance still reflects the entry, which is still an [[ref: active participant]]).
-
 #### [MOD-PP-MSG-7] Create Root Participant
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
@@ -3786,27 +4206,12 @@ An [[ref: account]] that would like to create a `Participant` entry MUST call th
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `schema_id` (uint64) (*mandatory*)
-- `vs_operator` (account) (*optional*): the account we want to authorize to act on behalf of `corporation` in the context of this `Participant` entry. **Required** for payment delegation.
-- `did` (string) (*mandatory*): [[ref: DID]] of the VS.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Participant` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-PP-MSG-7-2-1](#mod-pp-msg-7-2-1-create-root-participant-basic-checks)).
 - `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running an onboarding process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean an onboarding process must take place. For enabling onboarding processes, at least one of the two issuer, verifier mode must be different than OPEN.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
-
-The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
-
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this `Participant` entry. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified. The permitted list of message types is provided below.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this `Participant` entry as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this `Participant` entry.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): this entry's contribution to the aggregate fee budget of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [ParticipantAuthorizationRecord](#participantauthorizationrecord)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
-- `vs_operator_authz_period` (duration) (*optional*): operation-budget cycle length for `vs_operator_authz_spend_limit` (requires it to be provided). Does not apply to fees.
-
-Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`. Since [Create Root Participant](#mod-pp-msg-7-create-root-participant) always creates an ECOSYSTEM `Participant` entry, only the following is allowed:
-
-|Participant role|Permitted Messages|
-|-|-|
-| ECOSYSTEM | SetParticipantOPtoValidated, RevokeDigest |
 
 ##### [MOD-PP-MSG-7-2] Create Root Participant precondition checks
 
@@ -3820,16 +4225,13 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant).
-- likewise, if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id`, and if a `Corporation` entry exists whose own `did` equals the provided `did`, its `id` MUST equal `co.id`; else method MUST abort ([DID ownership invariant](#did-ownership-invariant)).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort ([VID ownership](#vid-ownership)).
 - define `effective_from_r`: `effective_from` if present, else the current block timestamp.
 - if `effective_from` is present, it MUST NOT be lower than the current block timestamp.
 - `effective_until`, if not null, MUST be greater than `effective_from_r`.
 - `validation_fees` (number) (*mandatory*): MUST be >= 0.
 - `issuance_fees` (number) (*mandatory*): MUST be >= 0.
 - `verification_fees` (number) (*mandatory*): MUST be >= 0.
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-7-1](#mod-pp-msg-7-1-create-root-participant-parameters).
 
 ###### [MOD-PP-MSG-7-2-2] Create Root Participant permission checks
 
@@ -3854,7 +4256,7 @@ Find all [[ref: active participants]] and [[ref: future participants]] `particip
 - `p.role` = ECOSYSTEM,
 - `p.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 
-> Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM-role `Participant` entries it is NULL. There is no `did` condition either: a root entry represents the ecosystem itself for the schema.
+> Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM-role `Participant` entries it is NULL. There is no `vs_id` condition either: a root entry represents the ecosystem itself for the schema.
 
 for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
 
@@ -3875,9 +4277,8 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.schema_id`: `schema_id`.
 - `participant.modified` to `now`.
 - `participant.role`: ECOSYSTEM.
-- `participant.did`: `did`.
+- `participant.vs_id`: `vs_id`.
 - `participant.corporation_id`: `co.id`.
-- `participant.vs_operator`: `vs_operator`.
 - `participant.created`: `now`
 - `participant.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
 - `participant.effective_until`: `effective_until`
@@ -3893,21 +4294,6 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.verification_fee_discount`: 0
 
 > Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
-
-If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
-
-- `corporation`: `corporation`
-- `vs_operator`: `vs_operator`
-- `record`:
-  - `record.participant_id`: `participant.id`
-  - `record.msg_types`: `vs_operator_authz_msg_types`
-  - `record.spend_limit`: `vs_operator_authz_spend_limit`
-  - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
-  - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
-  - `record.expiration`: `now() + vs_operator_authz_period` if `vs_operator_authz_period` is provided, else null
-  - `record.period`: `vs_operator_authz_period`
-
-> Note: like [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant), the record has no disabled phase of its own: it becomes usable when the entry becomes an [[ref: active participant]] ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1), that is at `participant.effective_from` — immediately, unless a future `effective_from` was provided. If `with_feegrant` is true, the entry contributes `fee_spend_limit` to the aggregate fee allowance from creation (active or future participant), and [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants or updates the on-chain `FeeGrant` as part of this execution.
 
 #### [MOD-PP-MSG-8] Set Participant Effective Until
 
@@ -3966,7 +4352,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 
 ###### [MOD-PP-MSG-8-2-4] Set Participant Effective Until overlap checks
 
-Adjusting `effective_until` MUST NOT make this entry's effectiveness period overlap the period of a sibling entry of the same applicant (`corporation_id`, `did`) with the same `schema_id`, `role` and `validator_participant_id`.
+Adjusting `effective_until` MUST NOT make this entry's effectiveness period overlap the period of a sibling entry of the same applicant (`corporation_id`, `vs_id`) with the same `schema_id`, `role` and `validator_participant_id`.
 
 Find all [[ref: active participants]] and [[ref: future participants]] `participants[]` where:
 
@@ -3975,7 +4361,7 @@ Find all [[ref: active participants]] and [[ref: future participants]] `particip
 - `p.role` = `applicant_participant.role`,
 - `p.validator_participant_id` = `applicant_participant.validator_participant_id` (both NULL for root ECOSYSTEM entries),
 - `p.corporation_id` = `applicant_participant.corporation_id`,
-- `p.did` = `applicant_participant.did`.
+- `p.vs_id` = `applicant_participant.vs_id`.
 
 for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
 
@@ -3996,11 +4382,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_participant.effective_until` to `effective_until`
 - set `applicant_participant.adjusted` to `now`
 - set `applicant_participant.modified` to `now`
-
-
-Synchronise the VS Operator Authorization, if any. Call [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) Sync VS Operator Authorization with `participant_id = applicant_participant.id`.
-
-This call is a no-op if no record exists for `applicant_participant.id`. If a record exists, the aggregate `FeeGrant` for the containing VSOA is refreshed via [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance), which re-schedules the entry's `effective_until` (read from the participant view) in the window-end queue. Set Participant Effective Until does **not** accept VSOA parameters and cannot modify the record's configuration; VSOA configuration is frozen at record creation (see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). This method also cannot create a record that does not already exist.
 
 #### [MOD-PP-MSG-9] Revoke Participant
 
@@ -4129,11 +4510,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `applicant_participant.revoked` to `now`
 - set `applicant_participant.modified` to `now`
 
-Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
-
 #### [MOD-PP-MSG-10] Create or Update Participant Session
 
-Only the `vs_operator` of the primary `Participant` entry CAN execute this method on behalf of a `corporation` (a VS Operator Authorization; [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization) excludes this message from OperatorAuthorizations). The digest of a credential of a schema whose `credential_anchoring` is DIGEST is anchored through the issuance session only: such an issuer MUST hold a VS Operator Authorization for its agent.
+Only the `vs_operator` of the `VerifiableService` entry referenced by the primary `Participant` entry CAN execute this method on behalf of a `corporation` (a VS Operator Authorization; [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization) excludes this message from OperatorAuthorizations). The digest of a credential of a schema whose `credential_anchoring` is DIGEST is anchored through the issuance session only: such an issuer MUST hold a VS Operator Authorization for its agent.
 
 Any credential exchange that requires issuer or verifier to pay fees, anchor a digest, or produce a proof implies the creation of a `ParticipantSession`. A Credential Verification of a credential whose schema sets `verification_session` to REQUIRED implies the creation of a `ParticipantSession` even when the fees computed for the verification are 0; when the schema sets WHEN_FEES, a session is required for a verification only when these fees are greater than 0 (see [CredentialSchema](#credentialschema)).
 
@@ -4228,10 +4607,10 @@ if `verifier_participant_id` is not null:
 
 Define the **primary `Participant`** `perm`: if `verifier_participant` is not null (Credential Verification), `perm` = `verifier_participant`; else (Credential Issuance), `perm` = `issuer_participant`.
 
-- if `perm.vs_operator` is not equal to `operator`, abort.
+- if `VerifiableService[perm.vs_id].vs_operator` is not equal to `operator`, abort.
 - if `perm.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
 
-> Note: the `vs_operator` and `corporation_id` checks apply to the primary `Participant` only. In a Credential Verification, the issuer `Participant` entry generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only: an expired, revoked or slashed issuer entry does not prevent the verification of a credential it issued while authorized.
+> Note: the `vs_operator` and `corporation_id` checks apply to the primary `Participant` (through its `VerifiableService` entry) only. In a Credential Verification, the issuer `Participant` entry generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only: an expired, revoked or slashed issuer entry does not prevent the verification of a credential it issued while authorized.
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
@@ -4682,8 +5061,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 use [MOD-TD-MSG-7](#mod-td-msg-7-burn-ecosystem-slashed-trust-deposit) to burn the slashed `amount` from the trust deposit of `applicant_participant.corporation_id`.
 
-Call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `participant_id = applicant_participant.id` to remove any authorization record for this `Participant` entry. The call is a no-op if no record exists.
-
 #### [MOD-PP-MSG-13] Repay Participant Slashed Trust Deposit
 
 This method can only be called by the `corporation` that wants to repay the deposit of a slashed `Participant` entry they own. This won't make the `Participant` entry re-usable: it will be needed for the `corporation` associated to this `Participant` entry to request a new `Participant` entry, as slashed `Participant` entries cannot be revived (same happens for revoked, etc.). Repaying does restore the fee receipt of the entry as a beneficiary ([[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)).
@@ -4750,29 +5127,12 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `role` (ParticipantRole) (*mandatory*): ISSUER or VERIFIER.
 - `validator_participant_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
-- `vs_operator` (account) (*optional*): the account we want to authorize to create `ParticipantSession` entries linked to this `Participant` entry. **Required** for payment delegation.
-- `did` (string) (*mandatory*): [[ref: DID]] of the VS grantee service.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Participant` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-PP-MSG-14-2-1](#mod-pp-msg-14-2-1-self-create-participant-basic-checks)).
 - `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
 - `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing an onboarding process to obtain a credential, in the denom specified in the credential schema. Default to 0.
 
-The following VS Operator Authorization parameters are **optional** and collectively define the initial [ParticipantAuthorizationRecord](#participantauthorizationrecord) for this `Participant` entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, no authorization record is created and the `Participant` entry operates in manual mode. VSOA configuration is **frozen at creation time** and cannot be modified later; to change it, the `Participant` entry MUST be revoked and re-created.
-
-- `vs_operator_authz_msg_types[]` (msg_type[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of this `Participant` entry. If provided, a `ParticipantAuthorizationRecord` is created (see execution below) and `vs_operator` MUST be specified.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of this `Participant` entry as a direct consequence of executing authorized messages.
-- `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of this `Participant` entry.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): this entry's contribution to the aggregate fee budget of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [ParticipantAuthorizationRecord](#participantauthorizationrecord)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
-- `vs_operator_authz_period` (duration) (*optional*): operation-budget cycle length for `vs_operator_authz_spend_limit` (requires it to be provided). Does not apply to fees.
-
-Permitted message types to be set in `vs_operator_authz_msg_types` depends on `role`.
-
-|Participant role|Permitted Messages|
-|-|-|
-| HOLDER | TriggerResolver |
-| ISSUER | CreateOrUpdateParticipantSession, SetParticipantOPtoValidated, RevokeDigest |
-| VERIFIER | CreateOrUpdateParticipantSession |
- 
 ##### [MOD-PP-MSG-14-2] Self Create Participant precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
@@ -4788,10 +5148,7 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `role` (ParticipantRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
 - `validator_participant_id` (uint64) (*mandatory*): `validator_participant` MUST be an ECOSYSTEM [[ref: active participant]] or [[ref: future participant]].
-- `vs_operator` (account) (*optional*): no check required.
-- `did` (string) (*mandatory*): MUST conform to the DID Syntax, as specified [[spec-norm:DID-CORE]].
-- if any existing `Participant` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort (per-Participant `(did, corporation_id)` consistency invariant: at any block height, all `Participant` entries sharing a `did` are owned by the same `Corporation`).
-- likewise, if any existing `Ecosystem` entry has `did` equal to the provided `did`, its `corporation_id` MUST equal `co.id`, and if a `Corporation` entry exists whose own `did` equals the provided `did`, its `id` MUST equal `co.id`; else method MUST abort ([DID ownership invariant](#did-ownership-invariant)).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort ([VID ownership](#vid-ownership)).
 - define `effective_from_r`: `effective_from` if present, else the current block timestamp.
 - if `effective_from` is present, it MUST NOT be lower than the current block timestamp.
 - `effective_from_r` MUST be greater or equal to `validator_participant.effective_from` AND, if `validator_participant.effective_until` is not null, MUST be lower than `validator_participant.effective_until`. Note that when `effective_from` is absent and `validator_participant` is a [[ref: future participant]], this check aborts: the caller MUST pass an explicit `effective_from` greater or equal to `validator_participant.effective_from`.
@@ -4800,7 +5157,6 @@ Load `Participant` `validator_participant` from `validator_participant_id`.
   - else if not null, must be greater than `effective_from_r` AND if `validator_participant.effective_until` is not null, MUST be lower or equal to `validator_participant.effective_until`
 - `verification_fees` (number) (*optional*): If specified, MUST be >= 0, and MUST be 0 when `role` is VERIFIER.
 - `validation_fees` (number) (*optional*): If specified, MUST be >= 0, and MUST be 0 when `role` is VERIFIER.
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of VPR delegable message types, and match the permitted messages defined in [MOD-PP-MSG-14-1](#mod-pp-msg-14-1-self-create-participant-parameters).
 
 ###### [MOD-PP-MSG-14-2-2] Self Create Participant permission checks
 
@@ -4818,14 +5174,14 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PP-MSG-14-2-4] Self Create Participant overlap checks
 
-Two `Participant` entries of the same applicant (`corporation_id`, `did`) MUST NOT be effective at the same time under the same `validator_participant_id` for the same `role`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
+Two `Participant` entries of the same applicant (`corporation_id`, `vs_id`) MUST NOT be effective at the same time under the same `validator_participant_id` for the same `role`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
 Find all [[ref: active participants]] and [[ref: future participants]] `participants[]` where:
 
 - `p.validator_participant_id` = `validator_participant_id`,
 - `p.role` = `role`,
 - `p.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account),
-- `p.did` = `did`.
+- `p.vs_id` = `vs_id`.
 
 for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
 
@@ -4858,9 +5214,8 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.schema_id`: `validator_participant.schema_id`
 - `participant.modified` to `now`.
 - `participant.role`: `role`.
-- `participant.did`: `did`.
+- `participant.vs_id`: `vs_id`.
 - `participant.corporation_id`: `co.id`.
-- `participant.vs_operator`: `vs_operator`.
 - `participant.created`: `now`
 - `participant.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
 - `participant.effective_until`: `effective_until`
@@ -4877,30 +5232,21 @@ A new entry `Participant` `perm` MUST be created:
 
 > Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
-If `vs_operator_authz_msg_types` is provided, create the [ParticipantAuthorizationRecord](#participantauthorizationrecord) in **active** state by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization with:
-
-- `corporation`: `corporation`
-- `vs_operator`: `vs_operator`
-- `record`:
-  - `record.participant_id`: `participant.id`
-  - `record.msg_types`: `vs_operator_authz_msg_types`
-  - `record.spend_limit`: `vs_operator_authz_spend_limit`
-  - `record.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
-  - `record.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
-  - `record.expiration`: `now() + vs_operator_authz_period` if `vs_operator_authz_period` is provided, else null
-  - `record.period`: `vs_operator_authz_period`
-
-> Note: unlike [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), the record has no disabled phase of its own: it becomes usable when the entry becomes an [[ref: active participant]] ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1), that is at `participant.effective_from` — immediately, unless a future `effective_from` was provided. If `with_feegrant` is true, the entry contributes `fee_spend_limit` to the aggregate fee allowance from creation (active or future participant), and [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) grants or updates the on-chain `FeeGrant` as part of this execution.
-
 #### [MOD-PP-MSG-15] Trigger Resolver
 
-This method CAN be executed by:
+This method CAN be executed, for a `VerifiableService` entry `vs` identified directly by `vs_id`:
 
-- the `vs_operator` of the `Participant` entry, acting on behalf of `Corporation[participant.corporation_id]`; or
-- any ancestor validator of the `Participant` entry in the `Participant` tree (from the direct parent up to the root `Participant` entry). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` defined in `v`, or by any `operator` authorized by `Corporation[v.corporation_id]` for this message type.
+- by the `vs_operator` of `vs`, acting on behalf of `Corporation[vs.corporation_id]` under the entry's [ServiceAuthorizationRecord](#serviceauthorizationrecord); or
+- by any `operator` authorized by `Corporation[vs.corporation_id]` for this message type.
 
-This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the `did` registered in the `Participant` entry. Typical use cases include:
+and, for a `Participant` entry `perm` identified by `id`:
 
+- by the `vs_operator` of `VerifiableService[perm.vs_id]`, acting on behalf of `Corporation[perm.corporation_id]`; or
+- by any ancestor validator of `perm` in the `Participant` tree (from the direct parent up to the root `Participant` entry). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` of `VerifiableService[v.vs_id]`, or by any `operator` authorized by `Corporation[v.corporation_id]` for this message type.
+
+This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the identifier of `vs`, or of the `VerifiableService` entry referenced by `perm`. Typical use cases include:
+
+- a service has been registered, or has published new credentials in its DID Document, and holds no `Participant` entry yet: its agent asks for trust to be (re-)evaluated by `vs_id`;
 - a new [[ref: verifiable service]] has been onboarded and its credentials are now present in the DID Document, so trust can be (re-)evaluated;
 - an issuer has revoked a credential issued to a holder: the issuer (acting as the validator of the corresponding HOLDER `Participant` entry) notifies the trust resolver to re-evaluate trust for the revoked HOLDER `Participant` entry;
 - an issuer is no longer operating: a parent issuer grantor or root ecosystem `Participant` entry triggers a re-evaluation.
@@ -4911,7 +5257,8 @@ The method does not modify the [[ref: VPR]] state; it only emits an event that o
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*): id of the `Participant` entry for which a trust resolution must be triggered.
+- `vs_id` (uint64) (*conditional*): id of the `VerifiableService` entry for which a trust resolution must be triggered. Exactly one of `vs_id` and `id` MUST be provided.
+- `id` (uint64) (*conditional*): id of the `Participant` entry for which a trust resolution must be triggered.
 
 ##### [MOD-PP-MSG-15-2] Trigger Resolver precondition checks
 
@@ -4923,33 +5270,39 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- `id` MUST be a valid uint64.
-- Load `Participant` entry `perm` from `id`. If no entry found, abort.
-- `perm` MUST be an [[ref: active participant]], else abort.
+- exactly one of `vs_id` and `id` MUST be provided, else abort.
+- if `vs_id` is provided: it MUST be a valid uint64, and a `VerifiableService` entry `vs` with this id MUST exist, else abort.
+- if `id` is provided: it MUST be a valid uint64; load `Participant` entry `perm` from `id` (abort if no entry found); `perm` MUST be an [[ref: active participant]], else abort.
 
 ###### [MOD-PP-MSG-15-2-2] Trigger Resolver authorization checks
 
-At least one of the two authorization paths below MUST pass, else [[ref: transaction]] MUST abort.
+At least one of the authorization paths below MUST pass, else [[ref: transaction]] MUST abort.
 
-*Path 1 — vs_operator of the target `Participant` entry*
+*Path 1 — vs_operator of the target entry*
 
-- `co.id` MUST equal `participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
-- `operator` MUST be equal to `participant.vs_operator`.
-- [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
-- [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
+- Let `vs` be the given entry (`vs_id` form) or `VerifiableService[perm.vs_id]` (`id` form).
+- `co.id` MUST equal `vs.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
+- [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm` or null, `vs`) tuple.
+- [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for the same tuple.
 
-*Path 2 — ancestor validator in the `Participant` tree*
+*Path 2 — operator of the owner (`vs_id` form only)*
+
+- `co.id` MUST equal `vs.corporation_id`.
+- [[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and message `TriggerResolver`, and [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for the same tuple and message.
+
+*Path 3 — ancestor validator in the `Participant` tree (`id` form only)*
 
 The target `perm` itself is excluded from this walk; only its ancestors (from the direct parent up to the root) are considered. Walk the tree:
 
 - set `v` = `perm`.
-- while `v.validator_participant_id` is defined and != `participant.id` :
+- while `v.validator_participant_id` is defined and != `perm.id` :
   - load `v` from `v.validator_participant_id`.
   - if `v` is not an [[ref: active participant]], continue with the next iteration.
   - if `co.id` != `v.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), continue with the next iteration.
   - if [AUTHZ-CHECK-1](#authz-check-1-operator-authorization-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `operator`) tuple and message `TriggerResolver`, then authorization is granted => match.
+  - else if `operator` equals `VerifiableService[v.vs_id].vs_operator` and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) and [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) pass for (`corporation`, `operator`, `v`, `VerifiableService[v.vs_id]`), authorization is granted => match.
 
-If the walk terminates without a match, Path 2 fails.
+If the walk terminates without a match, Path 3 fails.
 
 ###### [MOD-PP-MSG-15-2-3] Trigger Resolver fee checks
 
@@ -4959,11 +5312,13 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
-This method does not modify the state of the [[ref: VPR]]. It MUST emit an event signaling that a trust resolution has been triggered for `perm`. The event MUST include at least:
+This method does not modify the state of the [[ref: VPR]]. It MUST emit an event signaling that a trust resolution has been triggered. The event MUST include at least:
 
-- `participant_id`: equal to `id`.
+- `vs_id`: the id of the `VerifiableService` entry concerned (`vs_id`, or `perm.vs_id`);
+- `vid`: its current identifier string, `VerifiableService[vs_id].vid`;
+- `participant_id`: equal to `id` when the `id` form was used, absent otherwise.
 
-> Note: the identity of the signers (`corporation`, `operator`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `Participant` entry queried by `participant_id` to resolve `did`, `corporation`, `vs_operator`, and ancestor chain without duplicating them in the event payload.
+> Note: the identity of the signers (`corporation`, `operator`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `VerifiableService` entry and, when present, the `Participant` entry to resolve the owner `corporation`, the `vs_operator` and the ancestor chain without duplicating them in the event payload.
 
 #### [MOD-PP-QRY-1] List Participants
 
@@ -4982,7 +5337,7 @@ Generic query used for (at least):
 
 - `schema_id` (number) (*optional*): the schema id.
 - `grantee` (account) (*optional*): the grantee account.
-- `did` (string) (*optional*): the did the `Participant` entry refers to.
+- `vs_id` (uint64) (*optional*): the `VerifiableService` entry the `Participant` entry refers to (to search by identifier string, resolve it first with [[MOD-VS-QRY-1]](#mod-vs-qry-1-get-verifiable-service)).
 - `participant_id` (number) (*optional*): limit to `Participant` entries where the `validator_participant_id` is `participant_id`.
 - `role` (ParticipantRole) (*optional*): if we want to limit to a specific `Participant` role.
 - `only_valid` (boolean) (*optional*): if set to true, only return active participants.
@@ -5236,7 +5591,7 @@ participant "Verifiable Public Registry" as VPR #3fbdb6
 ApplicantAccount --> VPR: Start Participant OP
 VPR <-- VPR: create `Participant` entry.
 ApplicantAccount <-- VPR: `Participant` entry created,\nassigned participant.validator_participant_id from ISSUER_GRANTOR `Participant` entries.
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in validator_participant.did\nby creating a DIDComm connection
+ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in VerifiableService[validator_participant.vs_id].vid\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
 ApplicantBrowser --> ValidatorVS: I want to proceed with participant.id=...
 ValidatorVS --> ValidatorVS: load perm with id=...\nand verify the associated participant.validator_participant_id is referring to me
@@ -5692,7 +6047,7 @@ Authority and scope: the `x/feegrant` allowance is created and revoked by the VP
 This method can only be called directly by the following methods:
 
 - [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
-- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) and the window-end queue of [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance))
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization))
 
 ##### [MOD-DE-MSG-1-1] Grant Fee Allowance method parameters
 
@@ -5742,7 +6097,7 @@ This method can only be called directly by the following methods:
 
 - [Grant Operator Authorization](#mod-de-msg-3-grant-operator-authorization)
 - [Revoke Operator Authorization](#mod-de-msg-4-revoke-operator-authorization)
-- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) and the window-end queue of [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance))
+- the VS Operator Authorization feegrant subroutine [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) (invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization))
 
 ##### [MOD-DE-MSG-2-1] Revoke Fee Allowance method parameters
 
@@ -5802,7 +6157,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - Check if a **VS Operator Authorization** exists for `corporation` and `grantee`. If this is the case, MUST abort.
 
 ::: warning
-An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for `participant.corporation_id` and `participant.vs_operator`. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
+An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for the same (`corporation_id`, `operator`) pair, that is, if `operator` is not the `vs_operator` of a `VerifiableService` entry of the corporation that holds a [ServiceAuthorizationRecord](#serviceauthorizationrecord). **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
 :::
 
 ##### [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks
@@ -5866,28 +6221,28 @@ MUST abort if one of these conditions fails:
 
 #### [MOD-DE-MSG-5] Grant VS Operator Authorization
 
-This method can only be called directly by the following Participant module methods, with no signer check:
+This method can only be called directly by the following methods, with no signer check:
 
-- [Start Participant OP](#mod-pp-msg-1-start-participant-op)
-- [Create Root Participant](#mod-pp-msg-7-create-root-participant)
-- [Self Create Participant](#mod-pp-msg-14-self-create-participant)
+- [Register Verifiable Service](#mod-vs-msg-1-register-verifiable-service)
+- [Create Corporation](#mod-co-msg-1-create-corporation)
+- [Update Verifiable Service](#mod-vs-msg-2-update-verifiable-service)
 
-It creates a new [ParticipantAuthorizationRecord](#participantauthorizationrecord) inside `VSOperatorAuthorization[corporation_id, vs_operator]` and recomputes the aggregate on-chain `FeeGrant` for the containing VSOA.
+It creates the [ServiceAuthorizationRecord](#serviceauthorizationrecord) of a `VerifiableService` entry inside `VSOperatorAuthorization[corporation_id, vs_operator]` and recomputes the aggregate on-chain `FeeGrant` for the containing VSOA.
 
-All authorization configuration is provided by the caller; [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance) reads `Participant` state through the participant view (see [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1).
+All authorization configuration is provided by the caller, which has already checked that `VerifiableService[record.vs_id]` is owned by `corporation_id` and that its `vs_operator` equals `vs_operator`.
 
 ##### [MOD-DE-MSG-5-1] Grant VS Operator Authorization method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation delegating the authorization.
 - `vs_operator` (account) (*mandatory*): the account receiving the authorization.
-- `record` ([ParticipantAuthorizationRecord](#participantauthorizationrecord)) (*mandatory*): the full record to store.
+- `record` ([ServiceAuthorizationRecord](#serviceauthorizationrecord)) (*mandatory*): the full record to store.
 
 ##### [MOD-DE-MSG-5-2] Grant VS Operator Authorization basic checks
 
 If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `corporation_id` and `vs_operator` MUST NOT be null.
-- `record.participant_id` MUST NOT match an existing `ParticipantAuthorizationRecord` anywhere in the store (each record is globally unique by `participant_id`).
+- `record.vs_id` MUST NOT match an existing `ServiceAuthorizationRecord` anywhere in the store (each record is globally unique by `vs_id`).
 - `record.msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
 - if `record.with_feegrant` is true, `record.fee_spend_limit` MUST be set and every amount MUST be strictly positive (the aggregate fee allowance is never unlimited nor zero); if `record.with_feegrant` is false, `record.fee_spend_limit` MUST NOT be set.
 - if `record.period` is set, `record.spend_limit` MUST be set.
@@ -5906,51 +6261,49 @@ A **VS Operator Authorization** record CAN be granted ONLY IF no **OperatorAutho
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Initialize the runtime balance on `record`: if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`; set `record.counted := false`.
+- Initialize the runtime balance on `record`: if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
 - Load the `VSOperatorAuthorization` `vsoa` whose `vsoa.corporation_id = corporation_id` AND `vsoa.vs_operator = vs_operator`. If it does not exist, create a new `vsoa` with `vsoa.id = auto-incremented uint64`, `vsoa.corporation_id = corporation_id`, `vsoa.vs_operator = vs_operator`, `vsoa.records = []`, `vsoa.fee_limit_total = []`, `vsoa.feegrant_msg_type_counts = {}`. If `vsoa` already exists, reuse it and preserve `vsoa.id`.
 - Append `record` to `vsoa.records`.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa` and `record`.
 
 ##### [MOD-DE-MSG-5-5] Recompute VS Operator Fee Allowance
 
-This is a shared subroutine taking the VSOA `vsoa` and the record `r` concerned by an event. It is invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) (insertion), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) (removal; invoked before the record is deleted, so that the contribution stored in the record is still available), [[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization) (synchronisation) and by the window-end queue when the `Participant` entry of a record expires by clock (pop).
+This is a shared subroutine taking the VSOA `vsoa` and the record `r` concerned by an event. It is invoked by [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) (insertion) and [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) (removal; invoked before the record is deleted, so that the contribution being removed is known). It maintains the aggregate `x/feegrant` allowance that realizes [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) for (`vsoa.corporation_id`, `vsoa.vs_operator`).
 
-The resulting allowance MUST be an `AllowedMsgAllowance` over the union of the `msg_types` of the **counted records** of `vsoa` (the records that qualify, as defined below), wrapping a `PeriodicAllowance` with `period = GlobalVariables.vs_operator_fee_period` and a per-period limit equal to the **sum** of their `fee_spend_limit` — never unlimited (see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks)).
+The resulting allowance MUST be an `AllowedMsgAllowance` over the union of the `msg_types` of the **counted records** of `vsoa` (the records whose `with_feegrant` is true), wrapping a `PeriodicAllowance` with `period = GlobalVariables.vs_operator_fee_period` and a per-period limit equal to the **sum** of their `fee_spend_limit`.
 
-The aggregate MUST be maintained **incrementally**. A VSOA may group tens of thousands of records (one agent account operating many `Participant` entries), and a scan of `vsoa.records` on every mutation would make each grant cost linear time and a large roll-out quadratic. The VSOA therefore carries two derived fields, `fee_limit_total` (DenomAmount[]) and `feegrant_msg_type_counts` (map msg_type → number of counted records that include it), and each record carries a derived boolean `counted`, updated as follows:
+The aggregate MUST be maintained **incrementally**. A VSOA may group tens of thousands of records (one agent account operating many `VerifiableService` entries), and a scan of `vsoa.records` on every mutation would make each grant cost linear time and a large roll-out quadratic. The VSOA therefore carries two derived fields, `fee_limit_total` and `feegrant_msg_type_counts`, updated by the event:
 
-- a record `r` **qualifies** when `r.with_feegrant` is true and the `Participant` entry `p` identified by `r.participant_id` (read through the participant view) is an [[ref: active participant]] or a [[ref: future participant]]; its **contribution** is (`r.fee_spend_limit`, `r.msg_types`).
-- on every event concerning a record `r` — insertion ([[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization)), removal ([[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)), synchronisation ([[MOD-DE-MSG-9]](#mod-de-msg-9-sync-vs-operator-authorization), even when it changes no field of `r`) and the pop of a window-end queue key naming `r` — : (1) if `r.counted` is true, subtract the contribution as stored in `r` before the event from `fee_limit_total` and `feegrant_msg_type_counts`, and set `r.counted` to false; (2) if `r` still exists and qualifies after the event, add its contribution, set `r.counted` to true, and, if `p.effective_until` is set, insert `(p.effective_until, r.participant_id)` into the window-end queue (idempotent: inserting an existing key is a no-op). Subtracting from the stored contribution and the `counted` flag make the update independent of the order in which `Participant` state and the record are mutated, and make a stale queue key harmless.
+- a record `r` **counts** when `r.with_feegrant` is true; its **contribution** is (`r.fee_spend_limit`, `r.msg_types`). A record has no window of its own: it counts from its creation to its removal.
+- on insertion of a counting `r`: add `r.fee_spend_limit` to `vsoa.fee_limit_total` (per denom) and increment `feegrant_msg_type_counts[m]` for each `m` in `r.msg_types`; on removal of a counting `r`: subtract and decrement likewise.
 - then, if no message type has a positive count in `feegrant_msg_type_counts` (no counted record remains): call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`).
 - else: call [Grant Fee Allowance](#mod-de-msg-1-grant-fee-allowance)(`vsoa.corporation_id`, `vsoa.vs_operator`, the message types with a positive count, `now() + GlobalVariables.vs_operator_fee_period`, `fee_limit_total`, `GlobalVariables.vs_operator_fee_period`).
 
-The `PeriodicAllowance` resets itself during fee deduction, so no VPR action is needed at fee-cycle boundaries. Re-granting mid-cycle resets the running `period_can_spend`: any VSOA mutation refreshes the current period's fee budget early — **accepted slack**, bounded by one period's budget per mutation, and mutations are controlled by the grantor.
+The `PeriodicAllowance` resets itself during fee deduction, so no VPR action is needed at fee-cycle boundaries. Re-granting mid-cycle resets the running `period_can_spend`: any VSOA mutation refreshes the current period's fee budget early — **accepted slack**, bounded by one period's budget per mutation, and mutations are corporation-controlled.
 
-A full recomputation by scanning `vsoa.records` MAY be used as a consistency check or as a migration step and MUST yield the same aggregates once the window-end queue has been processed; it SHOULD NOT be the per-mutation path.
+A full recomputation by scanning `vsoa.records` MAY be used as a consistency check or as a migration step and MUST yield the same aggregates; it SHOULD NOT be the per-mutation path.
 
-To keep the aggregate fresh when an entry expires **by clock** (no transaction touches the VSOA), the Delegation module maintains a time-indexed **window-end queue**, fed by the record mutations described above. At each block's EndBlocker, every due queue entry is popped; a key whose `participant_id` no longer resolves to a `ParticipantAuthorizationRecord` is discarded, otherwise this subroutine is re-run for the containing VSOA: if the entry is no longer alive, its contribution drops (and the allowance is revoked when none remains); if its window was extended in the meantime, the re-run is harmless and re-schedules the entry at its new `effective_until` (the stale key has already been popped). Entries with a future `effective_from` count from creation — no start-edge queue is needed, since [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1 blocks any use until the window opens.
+> Note: because records are bound to `VerifiableService` entries and not to `Participant` entries, no entry expiry can silently change the aggregate: the window-end queue of earlier drafts is not needed. Whether a given `Participant` entry may be operated is decided at use time by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1.
 
 #### [MOD-DE-MSG-6] Revoke VS Operator Authorization
 
-This method can only be called directly by the following Participant module methods, with no signer check:
+This method can only be called directly by the following methods, with no signer check:
 
-- [Cancel Participant OP Last Request](#mod-pp-msg-6-cancel-participant-op-last-request) (only when the cancellation terminates the permission)
-- [Revoke Participant](#mod-pp-msg-9-revoke-participant)
-- [Slash Participant Trust Deposit](#mod-pp-msg-12-slash-participant-trust-deposit)
+- [Update Verifiable Service](#mod-vs-msg-2-update-verifiable-service) (when the operator or its authorization is changed or cleared)
+- [Accept Verifiable Service Transfer](#mod-vs-msg-5-accept-verifiable-service-transfer)
+- [Remove Verifiable Service](#mod-vs-msg-6-remove-verifiable-service)
 
-It removes the unique [ParticipantAuthorizationRecord](#participantauthorizationrecord) identified by `participant_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no such record exists.
-
-This method does NOT read `Participant` state itself; the recompute it triggers reads the participant view.
+It removes the unique [ServiceAuthorizationRecord](#serviceauthorizationrecord) identified by `vs_id` and recomputes the on-chain `FeeGrant` of its containing VSOA. No-op if no such record exists.
 
 ##### [MOD-DE-MSG-6-1] Revoke VS Operator Authorization method parameters
 
-- `participant_id` (uint64) (*mandatory*): id of the permission whose authorization record must be removed.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry whose authorization record must be removed.
 
 ##### [MOD-DE-MSG-6-2] Revoke VS Operator Authorization basic checks
 
-- `participant_id` MUST be a valid uint64.
+- `vs_id` MUST be a valid uint64.
 
-> Note: absence of a record for `participant_id` is NOT an error. The method is a no-op in that case (the permission was never VS-operator-authorized, or was already revoked).
+> Note: absence of a record for `vs_id` is NOT an error. The method is a no-op in that case (the entry was never VS-operator-authorized, or was already revoked).
 
 ##### [MOD-DE-MSG-6-3] Revoke VS Operator Authorization fee checks
 
@@ -5958,7 +6311,7 @@ This method does NOT read `Participant` state itself; the recompute it triggers 
 
 ##### [MOD-DE-MSG-6-4] Revoke VS Operator Authorization execution of the method
 
-- Locate the unique `ParticipantAuthorizationRecord` `record` with `record.participant_id = participant_id`. If none exists, EXIT (no-op).
+- Locate the unique `ServiceAuthorizationRecord` `record` with `record.vs_id = vs_id`. If none exists, EXIT (no-op).
 - Let `vsoa` = the `VSOperatorAuthorization` that contains `record`.
 - Remove `record` from `vsoa.records`.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa` and `record`.
@@ -5968,36 +6321,7 @@ This method does NOT read `Participant` state itself; the recompute it triggers 
 
 #### [MOD-DE-MSG-8] Void
 
-#### [MOD-DE-MSG-9] Sync VS Operator Authorization
-
-This method can only be called directly by the following Participant module methods, with no signer check:
-
-- [Set Participant OP to Validated](#mod-pp-msg-3-set-participant-op-to-validated)
-- [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until)
-
-It starts the operation-budget cycle of the unique record identified by `participant_id` on first activation, and recomputes the aggregate on-chain `FeeGrant` of its containing VSOA — which also (re-)schedules the entry in the window-end queue (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)). No-op if no record exists for `participant_id`.
-
-This method does NOT read `Participant` state itself; the recompute it triggers reads the participant view.
-
-##### [MOD-DE-MSG-9-1] Sync VS Operator Authorization method parameters
-
-- `participant_id` (uint64) (*mandatory*): id of the permission whose authorization record must be synchronised.
-
-##### [MOD-DE-MSG-9-2] Sync VS Operator Authorization basic checks
-
-- `participant_id` MUST be a valid uint64.
-
-> Note: absence of a record for `participant_id` is NOT an error. The method is a no-op in that case (the permission does not enable VS operator authorization).
-
-##### [MOD-DE-MSG-9-3] Sync VS Operator Authorization fee checks
-
-- Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-DE-MSG-9-4] Sync VS Operator Authorization execution of the method
-
-- Locate the unique `ParticipantAuthorizationRecord` `record` with `record.participant_id = participant_id`. If none exists, EXIT (no-op).
-- if `record.period` is set and `record.expiration` is null, set `record.expiration = now() + record.period` (the operation-budget cycle starts at first activation).
-- Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for the VSOA containing `record` and for `record`.
+#### [MOD-DE-MSG-9] Void
 
 #### [MOD-DE-QRY-1] List Operator Authorizations
 
@@ -6079,7 +6403,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-DE-QRY-4-3] Get VS Operator Authorization execution
 
-Return the `VSOperatorAuthorization` entry whose `id` matches the supplied `id`, including its `records` (per-permission `ParticipantAuthorizationRecord` entries).
+Return the `VSOperatorAuthorization` entry whose `id` matches the supplied `id`, including its `records` (per-service `ServiceAuthorizationRecord` entries).
 
 ### Digests Module
 
@@ -6625,6 +6949,12 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 **Delegation:**
 
 - `vs_operator_fee_period` (duration) (*mandatory*): 1 day.
+
+**Verifiable Service:**
+
+- `vs_registration_deposit` (number) (*mandatory*): to be defined in the governance framework, as a state fee: low enough for an integrator to register the identifiers of every service it hosts, and restated in the network's main fiat currency once fiat-denominated parameters exist.
+- `ecosystem_creation_deposit` (number) (*mandatory*): to be defined in the governance framework.
+- `vid_rotation_max_transition` (duration) (*mandatory*): 180 days.
 
 ## References
 
