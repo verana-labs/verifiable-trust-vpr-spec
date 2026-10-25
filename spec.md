@@ -2244,8 +2244,8 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`. 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to update.
-- `vs_operator` (account) (*optional*): the new agent account; null clears the operator and its configuration.
-- the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: if `vs_operator_authz_msg_types` is provided, the configuration is applied incrementally by [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization), unchanged values leaving the budget balance and the fee allowance untouched; otherwise the configuration is cleared.
+- `vs_operator` (account) (*optional*): the new agent account, or the current one when only the configuration changes. Null clears the operator together with its configuration and budget: the entry keeps its `Participant` entries and sessions but can no longer create sessions until an agent is set again.
+- the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: presence of `vs_operator_authz_msg_types` triggers the whole group, budget included, and implies that `vs_operator` is provided; the configuration is then applied incrementally by [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization), unchanged values leaving the budget balance and the fee allowance untouched. If `vs_operator_authz_msg_types` is not provided, no other parameter of the group MAY be, and the configuration and budget are cleared, whether or not `vs_operator` is provided.
 
 ##### [MOD-VS-MSG-2-2] Update Verifiable Service precondition checks
 
@@ -2363,7 +2363,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`, 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_id` (uint64) (*mandatory*): id of the offered `VerifiableService` entry.
-- `vs_operator` (account) (*optional*) and the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters): the agent and record of the entry under its new owner.
+- `vs_operator` (account) (*optional*) and the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: the agent and configuration of the entry under its new owner; presence of `vs_operator_authz_msg_types` triggers the whole group, budget included, and implies that `vs_operator` is provided.
 
 ##### [MOD-VS-MSG-5-2] Accept Verifiable Service Transfer precondition checks
 
