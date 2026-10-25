@@ -1418,15 +1418,13 @@ account "1" --- "1" corp : policy_address
 
 corp --o tr: corporation_id
 corp --o csp: corporation_id
-corp --o csps: corporation_id
+vs --o csps: vs_id
 
 corp --o vs: corporation_id
 account --o vs: vs_operator
 vs --o corp: vs_id
 vs --o tr: vs_id
 vs --o csp: vs_id
-
-csps o-- account: vs_operator
 
 valstate --o csp: op_state
 corp --o td: corporation_id
@@ -1615,8 +1613,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 `ParticipantSession`:
 
 - `id` (uuid) (*mandatory*): session uuid.
-- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that controls the entry.
-- `vs_operator` (account) (*mandatory*): verifiable service agent account that controls the entry (agent crypto account).
+- `vs_id` (uint64) (*mandatory*): the [VerifiableService](#verifiableservice) entry that controls the session: the entry of the primary party of its records (the issuer's in a Credential Issuance, the verifier's in a Credential Verification), in whose context the session was created by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session). A session is extended only in the context of the same entry, by its current `vs_operator`: an operator change ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)) carries the open sessions over to the new account. The controlling corporation is `VerifiableService[vs_id].corporation_id`; the session stores no account.
 - `created` (timestamp) (*mandatory*): timestamp this ParticipantSession has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this ParticipantSession has been modified.
 - `session_records` (ParticipantSessionRecord[]) (*mandatory*): session records, for this session.
@@ -2316,7 +2313,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `vs.vs_operator` to `vs_operator` and `vs.modified` to the current timestamp.
 - if `vs_operator_authz_msg_types` is provided, create the new record by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-grant-vs-operator-authorization) Grant VS Operator Authorization exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
 
-> Note: `ParticipantSession` entries created by the previous operator keep their `vs_operator`: only that account can update them ([[MOD-PP-MSG-10-2]](#mod-pp-msg-10-2-create-or-update-participant-session-precondition-checks)), and it can no longer create new ones for this entry.
+> Note: `ParticipantSession` entries are bound to the entry, not to the account ([ParticipantSession](#participantsession)): the sessions created under the previous operator are extended by the new one, and the previous account can no longer act for this entry.
 
 #### [MOD-VS-MSG-3] Rotate Verifiable Identifier
 
@@ -4672,6 +4669,7 @@ Verifier reference (Credential Verification only):
 Define the **primary party**: in a Credential Verification, `perm` = `verifier_participant` (null when `verifier_vs_id` was given) and `vs` = `VerifiableService[verifier_participant.vs_id]` or `verifier_vs`; in a Credential Issuance, `perm` = `issuer_participant` (null when `issuer_vs_id` was given) and `vs` = `VerifiableService[issuer_participant.vs_id]` or `issuer_vs`.
 
 - `vs.corporation_id` MUST equal `co.id`, and `vs.vs_operator` MUST equal `operator`, else abort.
+- if a `ParticipantSession` entry `session` with id `id` already exists, `session.vs_id` MUST equal `vs.id`, else abort: a session is extended only in the context of the entry that created it ([ParticipantSession](#participantsession)).
 
 > Note: the `vs_operator` and `corporation_id` checks apply to the primary party only. In a Credential Verification, the issuer reference generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only: an expired, revoked or slashed issuer entry does not prevent the verification of a credential it issued while authorized.
 
@@ -5006,8 +5004,7 @@ Create a `ParticipantSessionRecord` `cspsr`:
 If new, create entry `ParticipantSession` `session`:
 
 - `session.id`: `id`
-- `session.corporation_id`: `co.id`
-- `session.vs_operator`: `operator`
+- `session.vs_id`: `vs.id`
 - `session.modified:` : `now`
 - `session.created:` : `now`
 
