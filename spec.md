@@ -1058,7 +1058,6 @@ scale max 800 width
 
 entity "Ecosystem" as tr {
   *id: uint64
-  +vs_id: uint64
   +created: timestamp
   +modified: timestamp
   +archived: boolean
@@ -1068,7 +1067,6 @@ entity "Ecosystem" as tr {
 
 entity "Corporation" as corp {
   *id: uint64
-  +vs_id: uint64
   +created: timestamp
   +modified: timestamp
   +active_version: int
@@ -1105,11 +1103,6 @@ entity "CredentialSchema" as cs {
   +verifier_onboarding_mode: VerifierOnboardingMode
   verifier_credential_schema_ids: uint64[]
   +holder_onboarding_mode: HolderOnboardingMode
-  +subject_kind: SubjectKind
-  presentation_mode: PresentationMode
-  +credential_format: CredentialFormat
-  +verification_session: VerificationSessionMode
-  +credential_anchoring: CredentialAnchoring
   presentation_validity_period: duration
   +pricing_asset: string
   +digest_algorithm: string
@@ -1207,7 +1200,6 @@ entity "OperatorAuthorization" as oauthz {
 }
 
 entity "VsOperatorBudget" as obudget {
-   *vs_id: uint64
    expiration: timestamp
 }
 
@@ -1261,7 +1253,6 @@ entity "ExchangeRateAuthorization" as xrauthz {
 
 entity "Participant" as csp {
   *id: uint64
-  +vs_id: uint64
   +created: timestamp
   +modified: timestamp
   adjusted: timestamp
@@ -1306,9 +1297,6 @@ entity "ParticipantSessionRecord" as cspsr {
 
 entity "Digest" as digest {
   *digest: bytes
-  participant_id: uint64
-  +vs_id: uint64
-  schema_id: uint64
   +created: timestamp
   revoked: timestamp
 }
@@ -1354,8 +1342,6 @@ entity "TrustDeposit" as td {
 }
 
 entity "UnrepaidEcosystemSlashCount" as uesc {
-  *corporation_id: uint64
-  *ecosystem_id: uint64
   +count: number
 }
 
