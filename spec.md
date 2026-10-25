@@ -1311,7 +1311,7 @@ entity "ParticipantSessionRecord" as cspsr {
 }
 
 entity "Digest" as digest {
-  *digest: string
+  *digest: bytes
   participant_id: uint64
   +vs_id: uint64
   schema_id: uint64
@@ -1449,7 +1449,7 @@ Unless otherwise stated, every entity's `id` field is:
 
 Clients MAY rely on `id` ordering as a deterministic cursor for keyset pagination.
 
-Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (string PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `VSOperatorAuthorization` (single-field PK on `vs_operator`), `ServiceAuthorizationRecord` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
+Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `VSOperatorAuthorization` (single-field PK on `vs_operator`), `ServiceAuthorizationRecord` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
 ### VID ownership
 
@@ -1612,7 +1612,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `ParticipantSession`:
 
-- `id` (uuid) (*mandatory*): session uuid.
+- `id` (uuid) (*mandatory*) (key): the session identifier, a UUID chosen by the agent that creates the session, stored as its 16 raw bytes; the API accepts and returns the canonical textual form.
 - `vs_id` (uint64) (*mandatory*): the [VerifiableService](#verifiableservice) entry that controls the session: the entry of the primary party of its records (the issuer's in a Credential Issuance, the verifier's in a Credential Verification), in whose context the session was created by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session). A session is extended only in the context of the same entry, by its current `vs_operator`: an operator change ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)) carries the open sessions over to the new account. The controlling corporation is `VerifiableService[vs_id].corporation_id`; the session stores no account.
 - `created` (timestamp) (*mandatory*): timestamp this ParticipantSession has been created.
 - `modified` (timestamp) (*mandatory*): timestamp this ParticipantSession has been modified.
@@ -1653,7 +1653,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### Digest
 
-- `digest` (string) (*mandatory*) (key): digest to store. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
+- `digest` (bytes) (*mandatory*) (key): the raw digest bytes, 48 for `sha384` and 64 for `sha512`, decoded from the base64 form defined by the Verifiable Trust specification; the API accepts and returns that base64 form. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
 - `participant_id` (uint64) (*optional*): the `Participant` entry under which the digest was anchored: the primary participant of the session when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) (the `ISSUER` entry in a Credential Issuance, the `VERIFIER` entry in a Credential Verification); null when the primary party holds no entry (OPEN or CREDENTIAL mode, see `vs_id`) or when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). Together with the validator chain of that entry, it determines who may revoke the digest ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)).
 - `vs_id` (uint64) (*mandatory*): the [VerifiableService](#verifiableservice) entry under which the digest was anchored: the entry of the primary party of the session when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) (the issuer's entry in a Credential Issuance, the verifier's in a Credential Verification), whether or not that party holds a `Participant` entry; the entry named by the signer when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). The **owner** of the digest is the corporation of this entry (`VerifiableService.corporation_id`); the digest follows the entry through a transfer ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)). With `schema_id`, this is the anchoring context of a credential issued under an OPEN schema by an issuer without an `ISSUER` entry.
 - `schema_id` (uint64) (*optional*): the `CredentialSchema` entry of the session that anchored the digest; null when stored directly.
@@ -4621,7 +4621,7 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uuid) (*mandatory*): id of the `ParticipantSession`.
+- `id` (uuid) (*mandatory*): id of the `ParticipantSession`, in canonical textual form; stored as 16 bytes ([ParticipantSession](#participantsession)).
 - `schema_id` (uint64) (*mandatory*): the id of the `CredentialSchema` entry of the credential.
 - `issuer_participant_id` (uint64) (*conditional*): the id of the `ISSUER` `Participant` entry of the issuer of the credential: the payer's own entry in a Credential Issuance, the entry the credential was anchored under in a Credential Verification. Exactly one of `issuer_participant_id` and `issuer_vs_id` MUST be provided.
 - `issuer_vs_id` (uint64) (*conditional*): the `VerifiableService` entry of the issuer, when the issuer holds no `ISSUER` entry (the schema's `issuer_onboarding_mode` is OPEN): the payer's own entry in a Credential Issuance, the entry the credential was anchored under in a Credential Verification.
@@ -4629,7 +4629,7 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 - `verifier_vs_id` (uint64) (*conditional*): the payer's own `VerifiableService` entry in a Credential Verification, when the verifier holds no `VERIFIER` entry (the schema's `verifier_onboarding_mode` is OPEN or CREDENTIAL).
 - `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
-- `digest` (string(256)) (*conditional*): in a Credential Issuance, the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), mandatory when the schema's `credential_anchoring` is DIGEST and absent when it is NONE (its anchoring fixes the effective issuance time, see [Digest](#digest)); in a Credential Verification, the presentation digest sent by the agent (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
+- `digest` (bytes, base64 in the API) (*conditional*): in a Credential Issuance, the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), mandatory when the schema's `credential_anchoring` is DIGEST and absent when it is NONE (its anchoring fixes the effective issuance time, see [Digest](#digest)); in a Credential Verification, the presentation digest sent by the agent (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
 
 ##### [MOD-PP-MSG-10-2] Create or Update Participant Session precondition checks
 
@@ -4637,7 +4637,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- `id` MUST be a valid uuid. If an entry `existing_entry` with `id` already exist, then `existing_entry.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) AND `existing_entry.vs_operator` MUST be equal to `operator`, else abort.
+- `id` MUST be a valid UUID (16 bytes once decoded). The control of an existing session is checked below, once the primary party is known.
 
 - `schema_id` MUST refer to an existing `CredentialSchema` entry `cs`, else abort.
 - exactly one of `issuer_participant_id` and `issuer_vs_id` MUST be provided, and at most one of `verifier_participant_id` and `verifier_vs_id`; else abort.
@@ -4662,7 +4662,7 @@ Verifier reference (Credential Verification only):
 
 - in a Credential Issuance: if `cs.credential_anchoring` is DIGEST and `digest` is absent, abort (the credential digest is anchored through this session); if `cs.credential_anchoring` is NONE and `digest` is present, abort (no credential digest is anchored for this schema).
 - in a Credential Issuance, if `digest` is present and a `Digest` entry with that value already exists whose owner, the corporation of its `vs_id` entry, differs from `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort: another corporation anchored this credential first and would control its revocation; the issuer re-issues the credential with changed content, as the Verifiable Trust specification requires.
-- if `digest` is present and longer than 256 characters, abort.
+- if `digest` is present, its decoded length MUST be the output size of `cs.digest_algorithm` (48 bytes for `sha384`, 64 for `sha512`), else abort.
 - in a Credential Verification, if `digest` is present and a `Digest` entry with that value already exists, abort: a presentation is unique to its session, and an existing entry indicates a replayed presentation.
 
 Define the **primary party**: in a Credential Verification, `perm` = `verifier_participant` (null when `verifier_vs_id` was given) and `vs` = `VerifiableService[verifier_participant.vs_id]` or `verifier_vs`; in a Credential Issuance, `perm` = `issuer_participant` (null when `issuer_vs_id` was given) and `vs` = `VerifiableService[issuer_participant.vs_id]` or `issuer_vs`.
@@ -5573,7 +5573,7 @@ A party without an entry sits directly under the root: it pays the ecosystem's f
 
 ##### [MOD-PP-QRY-5-1] Get ParticipantSession parameters
 
-- `id` (uuid) (*mandatory*): the id of the `ParticipantSession`.
+- `id` (uuid) (*mandatory*): the id of the `ParticipantSession`, in canonical textual form.
 
 ##### [MOD-PP-QRY-5-2] Get ParticipantSession checks
 
@@ -6484,7 +6484,7 @@ The agent of an issuer does not call this method itself: it anchors the digest o
 - `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_id` (uint64) (*mandatory*): the `VerifiableService` entry under which the digest is anchored; MUST be owned by `corporation`.
-- `digest` (string(256)) (*mandatory*): digest to store.
+- `digest` (bytes, base64 in the API) (*mandatory*): digest to store.
 
 Module-call inputs, set only when the method is called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) and MUST be absent on a direct Msg: `participant_id` (the primary participant of the session, if any) and `schema_id` (the schema of the session); `vs_id` is then the primary party's `VerifiableService` entry and the authorization checks below are those of the session message.
 
@@ -6501,7 +6501,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `vs_id` (uint64): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), else abort.
 - Authorization: either [[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) and [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and `StoreDigest`; or [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) and [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for the (`corporation`, `operator`, null, `vs`) tuple; else abort.
 - if `digest` is not present, abort.
-- if `digest` is longer than 256 characters, abort.
+- if `digest` decodes to neither 48 nor 64 bytes, abort.
 
 ###### [MOD-DI-MSG-1-2-2] Store Digest fee checks
 
@@ -6538,7 +6538,7 @@ Since any corporation may store any digest and the first to store it owns it, th
 - `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `participant_id` (uint64) (*optional*): the `Participant` entry in whose context a `vs_operator` executes this message: the anchoring entry `d.participant_id`, or one of its ancestors (VS Operator Authorization path). Absent when the operator acts under an OperatorAuthorization, or when the vs-agent acts in the context of `d.vs_id` alone (anchoring without a `Participant` entry).
-- `digest` (string(256)) (*mandatory*): digest to revoke.
+- `digest` (bytes, base64 in the API) (*mandatory*): digest to revoke.
 
 ##### [MOD-DI-MSG-2-2] Revoke Digest precondition checks
 
@@ -6549,7 +6549,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - if `digest` is not present, abort.
-- if `digest` is longer than 256 characters, abort.
+- if `digest` decodes to neither 48 nor 64 bytes, abort.
 - a `Digest` entry `d` with `d.digest` = `digest` MUST exist, else abort.
 - [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass: `co` is the `Corporation` entry whose `policy_address` is the signing `corporation` account.
 - define `authority_set`: the empty set if `d.participant_id` is null; else the anchoring entry `Participant[d.participant_id]` and every ancestor reached from it by following `validator_participant_id` until null, keeping only the entries that are [[ref: active participants]] (an expired, revoked or slashed entry confers no authority).
@@ -6585,7 +6585,7 @@ Anyone CAN execute this method.
 
 ##### [MOD-DI-QRY-1-1] Get Digest parameters
 
-- `digest` (string) (*mandatory*): the digest to look up.
+- `digest` (bytes, base64 in the API) (*mandatory*): the digest to look up.
 
 ##### [MOD-DI-QRY-1-2] Get Digest checks
 
