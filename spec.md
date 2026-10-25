@@ -1206,12 +1206,6 @@ entity "OperatorAuthorization" as oauthz {
    period: duration
 }
 
-entity "OperatorAuthz" as oacfg {
-   +msg_types: MsgType[]
-   +with_feegrant: boolean
-   period: duration
-}
-
 entity "OperatorBudget" as obudget {
    *vs_id: uint64
    expiration: timestamp
@@ -1220,6 +1214,9 @@ entity "OperatorBudget" as obudget {
 entity "VerifiableService" as vs {
   *id: uint64
   +vid: string
+  +msg_types: MsgType[]
+  period: duration
+  +with_feegrant: boolean
   +deposit: number
   +created: timestamp
   +modified: timestamp
@@ -1383,7 +1380,6 @@ cs o-- credentialanchoring: credential_anchoring
 corp --o oauthz: corporation_id
 account --o oauthz: operator
 
-vs "1" --- "0..1" oacfg: operator_authz
 vs "1" --- "0..1" obudget: vs_id
 
 csp o-- cspt: role
@@ -1401,8 +1397,8 @@ cspsr  o-- "0..1" csp: agent_participant_id
 oauthz "1" --- "0..n" da: spend_limit
 oauthz "1" --- "0..n" da: remaining_spend
 
-oacfg "1" --- "0..n" da: spend_limit
-oacfg "1" --- "0..n" da: fee_spend_limit
+obudget "1" --- "0..n" da: spend_limit
+vs "1" --- "0..n" da: fee_spend_limit
 obudget "1" --- "0..n" da: remaining_spend
 
 tr "1" --- "0..n" gfv: versions (ecosystem_id)
@@ -1454,7 +1450,7 @@ Uniqueness is enforced on the identifier string by [[MOD-VS-MSG-1]](#mod-vs-msg-
 
 > Rationale: an identifier is attached to a single agent and thus controlled by a single organization; two corporations claiming the same identifier anywhere in the registry is always an error or an attack. Registering the identifier once also gives off-chain consumers (indexers, resolvers, trust graphs) the owner function directly, lets a [[ref: VS]] exist in the registry before it holds any `Participant` entry, and makes identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)) a change of one string instead of a re-creation of every entry that named it.
 
-> Transitional note: an implementation upgrading a chain whose state predates the `VerifiableService` entity MUST build the entries at upgrade time (or genesis import) from the distinct identifier strings of the existing `Corporation`, `Ecosystem` and `Participant` entries, one entry per string owned by the corporation those entries resolve to, assigning ids in the order of first appearance, rewriting the `vs_id` references, and MUST reject or repair any string claimed by two corporations before enabling the checks. The `vs_operator` of each new entry is the `vs_operator` of the migrated `Participant` entries sharing the string, which MUST be unique per string; their `ParticipantAuthorizationRecord` entries are merged into the `operator_authz` of the entry, with the union of the message types and the sum of the limits.
+> Transitional note: an implementation upgrading a chain whose state predates the `VerifiableService` entity MUST build the entries at upgrade time (or genesis import) from the distinct identifier strings of the existing `Corporation`, `Ecosystem` and `Participant` entries, one entry per string owned by the corporation those entries resolve to, assigning ids in the order of first appearance, rewriting the `vs_id` references, and MUST reject or repair any string claimed by two corporations before enabling the checks. The `vs_operator` of each new entry is the `vs_operator` of the migrated `Participant` entries sharing the string, which MUST be unique per string; their `ParticipantAuthorizationRecord` entries are merged into the operator configuration of the entry, with the union of the message types and the sum of the limits.
 
 ### VerifiableService
 
@@ -1465,14 +1461,17 @@ A [[ref: verifiable service entry]] (`VerifiableService`) registers a [[ref: VID
 - `id` (uint64) (*mandatory*) (key): the id of this entry.
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns the identifier. Changed only by an accepted transfer ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
 - `vid` (string) (*mandatory*): the current identifier string. MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters. Globally unique among current `vid` values (see [VID ownership](#vid-ownership)). Changed only by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier), which emits the former value; the VPR does not keep former values.
-- `vs_operator` (account) (*optional*): the agent account that operates the service identified by `vid`, authorized to execute the message types of the entry's `operator_authz` in the context of this entry and of every `Participant` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)); null when none is set. One account MAY operate many entries of the same corporation; an entry has at most one operator.
-- `operator_authz` ([OperatorAuthz](#operatorauthz)) (*optional*): the authorization configuration of `vs_operator` (message types, operation budget, fee contribution), set with the operator by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) and [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer); null when the operator is authorized for nothing. The running operation budget is kept apart, in [OperatorBudget](#operatorbudget), so that consuming it never rewrites the entry.
+- `vs_operator` (account) (*optional*): the agent account that operates the service identified by `vid`, authorized to execute the entry's `msg_types` in the context of this entry and of every `Participant` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)); null when none is set. One account MAY operate many entries of the same corporation; an entry has at most one operator.
+- `msg_types` ([MsgType](#msgtype)[]) (*optional*): the delegable message types `vs_operator` is authorized to execute on behalf of the owner corporation in the context of this entry and of every `Participant` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Permitted values: `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `StoreDigest`, `RevokeDigest`, `TriggerResolver`. Empty when the operator is authorized for nothing. With `period`, `with_feegrant` and `fee_spend_limit`, this is the operator configuration of the entry: set with the operator by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) and [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer), changed only when the corporation changes it. The role-specific checks of each message decide what the operator can actually do with a given `Participant` entry. What an operation changes, the running budget, is kept apart in [OperatorBudget](#operatorbudget), so that consuming it never rewrites the entry.
+- `period` (duration) (*optional*): length of the operation-budget cycle of the entry's [OperatorBudget](#operatorbudget). Requires a budget. Does not apply to fees: the fee budget cycles on the network-wide `GlobalVariables.vs_operator_fee_period`.
+- `with_feegrant` (bool) (*mandatory*): if true, the entry contributes `fee_spend_limit` to the fee allowance of `vs_operator`, and [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) accepts corporation-paid fees for messages executed in the context of this entry. False when no operator configuration is set.
+- `fee_spend_limit` (DenomAmount[]) (*conditional*): the entry's **contribution** to the transaction fee allowance the corporation grants to `vs_operator`: added to the per-period limit of that allowance, per `GlobalVariables.vs_operator_fee_period`, when the configuration is set and subtracted when it is cleared or replaced ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)). The allowance is per account: it pays the fees of every transaction `vs_operator` signs with the corporation as granter, whichever entry the messages concern. MUST be set, with every amount strictly positive, iff `with_feegrant` is true.
 - `deposit` (number) (*mandatory*): registration deposit, in [[ref: native denom]], paid at registration ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or at an accepted transfer, equal to `GlobalVariables.vs_registration_deposit` at that time. Part of the owner's [[ref: trust deposit]]; never refunded.
 - `transfer_to_corporation_id` (uint64) (*optional*): id of the corporation to which the owner offers this entry ([[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)); null when no transfer is pending.
 - `created` (timestamp) (*mandatory*): registration timestamp.
 - `modified` (timestamp) (*mandatory*): last modification timestamp.
 
-> Note: `vs_operator` is an attribute of the identifier, not of a role: the agent that controls the identifier performs every operation the identifier performs. The authorization configuration of that agent (message types, spend limits, fee grant) is the entry's `operator_authz`; the transaction fee allowance of the account is the sum of the contributions of the entries it operates ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)).
+> Note: `vs_operator` is an attribute of the identifier, not of a role: the agent that controls the identifier performs every operation the identifier performs. The authorization configuration of that agent (message types, spend limits, fee grant) is carried by the entry itself (`msg_types`, `period`, `with_feegrant`, `fee_spend_limit`) and its [OperatorBudget](#operatorbudget); the transaction fee allowance of the account is the sum of the contributions of the entries it operates ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)).
 
 ### Corporation
 
@@ -1594,7 +1593,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Participant` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Participant` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Participant` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
-> Note: the agent account that operates a `Participant` entry is `VerifiableService[vs_id].vs_operator`, and its authorization settings (message types, spend limits, operation-budget cycle, fee grant) are the entry's `operator_authz` ([OperatorAuthz](#operatorauthz)). A `Participant` entry carries no operator configuration of its own. See [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
+> Note: the agent account that operates a `Participant` entry is `VerifiableService[vs_id].vs_operator`, and its authorization settings (message types, spend limits, operation-budget cycle, fee grant) are the entry's own `msg_types`, `period`, `with_feegrant` and `fee_spend_limit`, with its [OperatorBudget](#operatorbudget). A `Participant` entry carries no operator configuration of its own. See [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
 ### UnrepaidEcosystemSlashCount
 
@@ -1674,7 +1673,7 @@ A `Digest` entry records the digest, the corporation that anchored it, the `Part
 
 ### MsgType
 
-`MsgType` enumerates the delegable messages of the VPR: the messages a `corporation` executes through an `operator` under an [OperatorAuthorization](#operatorauthorization) or, in the context of a [VerifiableService](#verifiableservice) entry, through its `vs_operator` under the entry's `operator_authz` ([OperatorAuthz](#operatorauthz)); the same values scope a [FeeGrant](#feegrant). Every `msg_types` list of the data model and of the message parameters is a list of `MsgType` values, never of message names or protobuf type URLs: a an `operator_authz` exists per registered service, and a type URL costs about fifty bytes per value where an enumeration value costs one.
+`MsgType` enumerates the delegable messages of the VPR: the messages a `corporation` executes through an `operator` under an [OperatorAuthorization](#operatorauthorization) or, in the context of a [VerifiableService](#verifiableservice) entry, through its `vs_operator` under the entry's `msg_types`; the same values scope a [FeeGrant](#feegrant). Every `msg_types` list of the data model and of the message parameters is a list of `MsgType` values, never of message names or protobuf type URLs: a an `operator_authz` exists per registered service, and a type URL costs about fifty bytes per value where an enumeration value costs one.
 
 Values and their numbers, which are stable and only ever appended to (0 is reserved for an unspecified value):
 
@@ -1714,7 +1713,7 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 | 32 | `StoreDigest` | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) |
 | 33 | `RevokeDigest` | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest) |
 
-> Note: the realization of fee allowances through `x/feegrant` ([Delegation Module](#delegation-module)) requires protobuf type URLs. The implementation maps each `MsgType` value to the type URL of its message when it creates or updates an allowance, and maps the type URL of an incoming message to its `MsgType` value when it checks an authorization ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Which values a list may contain is stated by each message: every value except `CreateOrUpdateParticipantSession` in an [OperatorAuthorization](#operatorauthorization) ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)), the values listed by [OperatorAuthz](#operatorauthz) in an entry's `operator_authz`.
+> Note: the realization of fee allowances through `x/feegrant` ([Delegation Module](#delegation-module)) requires protobuf type URLs. The implementation maps each `MsgType` value to the type URL of its message when it creates or updates an allowance, and maps the type URL of an incoming message to its `MsgType` value when it checks an authorization ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Which values a list may contain is stated by each message: every value except `CreateOrUpdateParticipantSession` in an [OperatorAuthorization](#operatorauthorization) ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)), the values listed by [VerifiableService](#verifiableservice) in an entry's `msg_types`.
 
 ### OperatorAuthorization
 
@@ -1740,23 +1739,14 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 - `expiration` (timestamp) (*optional*): grant window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the grant is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, `remaining_spend` is reset to `spend_limit` and `expiration` is advanced to `now() + period` (the grant auto-renews until the grantor revokes it).
 - `period` (duration) (*optional*): reset period for `spend_limit`. If set, `expiration` MUST also be set.
 
-### OperatorAuthz
-
-`OperatorAuthz` is the authorization configuration of the `vs_operator` of a [VerifiableService](#verifiableservice) entry, embedded in the entry as `operator_authz`. It is present only when the corporation authorized the operator for at least one message type ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service), [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)), and applies to every `Participant` entry that references the entry and to the messages that take a `vs_id` directly ([[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver)). It changes only when the corporation changes it: the running operation budget lives in [OperatorBudget](#operatorbudget), so that consuming budget never rewrites the entry.
-
-- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): list of delegable message types for which `vs_operator` is authorized on behalf of the owner corporation when acting in the context of the entry. Permitted values: `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `StoreDigest`, `RevokeDigest`, `TriggerResolver`. The role-specific checks of each message decide what the operator can actually do with a given `Participant` entry.
-- `spend_limit` (DenomAmount[]) (*optional*): maximum amount `vs_operator` is allowed to spend, in the context of this entry, as a direct consequence of executing authorized messages, per operation-budget cycle when `period` is set, in total otherwise.
-- `period` (duration) (*optional*): length of the operation-budget cycle for `spend_limit`. Requires `spend_limit`. Does not apply to fees: the fee budget cycles on the network-wide `GlobalVariables.vs_operator_fee_period`.
-- `with_feegrant` (bool) (*mandatory*): if true, the entry contributes `fee_spend_limit` to the fee allowance of `vs_operator`, and [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) accepts corporation-paid fees for messages executed in the context of this entry.
-- `fee_spend_limit` (DenomAmount[]) (*conditional*): the entry's **contribution** to the transaction fee allowance the corporation grants to `vs_operator`: added to the per-period limit of that allowance, per `GlobalVariables.vs_operator_fee_period`, when the configuration is set and subtracted when it is cleared or replaced ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)). The allowance is per account: it pays the fees of every transaction `vs_operator` signs with the corporation as granter, whichever entry the messages concern. MUST be set, with every amount strictly positive, iff `with_feegrant` is true.
-
 ### OperatorBudget
 
-The running operation budget of the `vs_operator` of a [VerifiableService](#verifiableservice) entry: one row per entry whose `operator_authz.spend_limit` is set, created when the configuration is set and deleted when it is cleared ([[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). It is the only state written when an authorized operation consumes budget ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) steps 5 and 6): a few bytes, apart from the entry and its identifier string.
+The running operation budget of the `vs_operator` of a [VerifiableService](#verifiableservice) entry: one row per entry whose operator was given a spend limit, created when the operator configuration is set with one and deleted when the configuration is cleared ([[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization), [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)). It is the only state written when an authorized operation consumes budget ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) steps 5 and 6): a few bytes, apart from the entry and its identifier string.
 
 - `vs_id` (uint64) (*mandatory*) (key): the `VerifiableService` entry.
-- `remaining_spend` (DenomAmount[]) (*mandatory*): runtime balance for `operator_authz.spend_limit`. Initialized to `spend_limit` when the configuration is set. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends.
-- `expiration` (timestamp) (*conditional*): end of the current **operation-budget cycle**. Set if, and only if, `operator_authz.period` is set: written to `now() + period` when the configuration is set and advanced by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 5. Carries no window semantics: the configuration is usable as long as it is set.
+- `spend_limit` (DenomAmount[]) (*mandatory*): maximum amount `vs_operator` is allowed to spend, in the context of the entry, as a direct consequence of executing authorized messages: per cycle when the entry's `period` is set, in total otherwise.
+- `remaining_spend` (DenomAmount[]) (*mandatory*): runtime balance for `spend_limit`. Initialized to `spend_limit` when the row is created. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends.
+- `expiration` (timestamp) (*conditional*): end of the current **operation-budget cycle**. Set if, and only if, the entry's `period` is set: written to `now() + period` when the row is created and advanced by [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 5. Carries no window semantics: the configuration is usable as long as it is set.
 
 ### ExchangeRate
 
@@ -2036,32 +2026,32 @@ If the transaction fees are paid by the `corporation` account (via fee grant) in
 
 ##### [AUTHZ-CHECK-3] VS Operator Authorization checks
 
-A second authorization grant mode exists for vs-agents. It is used when a corporation delegates to the `vs_operator` of one of its [VerifiableService](#verifiableservice) entries a set of message types, scoped to that entry and to the `Participant` entries that reference it. The authorization model differs from other delegable messages: it relies on the `operator_authz` of the [VerifiableService](#verifiableservice) entry ([OperatorAuthz](#operatorauthz)) instead of [OperatorAuthorization](#operatorauthorization) entries, and the operator account is the one recorded on the `VerifiableService` entry.
+A second authorization grant mode exists for vs-agents. It is used when a corporation delegates to the `vs_operator` of one of its [VerifiableService](#verifiableservice) entries a set of message types, scoped to that entry and to the `Participant` entries that reference it. The authorization model differs from other delegable messages: it relies on the operator fields of the [VerifiableService](#verifiableservice) entry and its [OperatorBudget](#operatorbudget) instead of [OperatorAuthorization](#operatorauthorization) entries, and the operator account is the one recorded on the `VerifiableService` entry.
 
-> Note: the set of messages a `vs_operator` is authorized to execute in the context of an entry is declared when the configuration is set ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or replaced ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)) and stored in `vs.operator_authz.msg_types`. One configuration covers every role the identifier holds: the role-specific checks of each message decide what the operator can do with a given `Participant` entry.
+> Note: the set of messages a `vs_operator` is authorized to execute in the context of an entry is declared when the configuration is set ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or replaced ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)) and stored in `vs.msg_types`. One configuration covers every role the identifier holds: the role-specific checks of each message decide what the operator can do with a given `Participant` entry.
 
 Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission** `perm` (a `Participant` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver) does), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
 
 1. If `perm` is not null, it MUST be an [[ref: active participant]]. Abort otherwise.
 2. `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), and `vs.vs_operator` MUST equal `operator`. Abort otherwise.
-3. `vs.operator_authz` MUST be set. Abort otherwise (step 2 already ties the entry to `co` and `operator`). Define `cfg` = `vs.operator_authz`.
-4. `msg_type` MUST be in `cfg.msg_types`. Abort otherwise.
-5. Operation-budget cycle. If `cfg.period` is set (which implies `cfg.spend_limit` is set, see [OperatorAuthz](#operatorauthz)), load the [OperatorBudget](#operatorbudget) `budget` of `vs.id`; if `now() >= budget.expiration`:
-   - set `budget.remaining_spend := cfg.spend_limit`.
-   - set `budget.expiration := now() + cfg.period`.
+3. `vs.msg_types` MUST be non-empty. Abort otherwise (step 2 already ties the entry to `co` and `operator`).
+4. `msg_type` MUST be in `vs.msg_types`. Abort otherwise.
+5. Operation-budget cycle. If `vs.period` is set (which implies an [OperatorBudget](#operatorbudget) exists for `vs.id`), load that `budget`; if `now() >= budget.expiration`:
+   - set `budget.remaining_spend := budget.spend_limit`.
+   - set `budget.expiration := now() + vs.period`.
 
-   This step never aborts: `budget.expiration` carries no window semantics (step 1 enforces the entry window). The advance is `now() + cfg.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
-6. If `cfg.spend_limit` is set, `budget.remaining_spend` (loading the [OperatorBudget](#operatorbudget) of `vs.id` if step 5 did not) MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
+   This step never aborts: `budget.expiration` carries no window semantics (step 1 enforces the entry window). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
+6. If an [OperatorBudget](#operatorbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
 
 > Note: step 1 is what prevents the use of a `Participant` entry that is not, or is no longer, an [[ref: active participant]]: an entry that has never been validated has no `effective_from` yet, and a revoked, slashed or expired entry fails the definition. The configuration itself is unaffected by the state of any single `Participant` entry: the same agent keeps operating the identifier's other entries. A renewal is unaffected too: [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op) sets `op_state` back to PENDING, but the entry stays active until its `effective_until`.
 
 ##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
 
-If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same `cfg` = `vs.operator_authz` resolved in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
+If the [[ref: transaction]] fees are paid by the `corporation` account (via fee grant) instead of the `operator` account, using the same entry `vs` resolved in [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks):
 
-> Realization: the corporation's fee **payment and its periodic cap** are both enforced by the account's `x/feegrant` allowance at transaction-fee-processing time — an `AllowedMsgAllowance` over every [MsgType](#msgtype) value, wrapping a `PeriodicAllowance` whose `period` is `GlobalVariables.vs_operator_fee_period` and whose per-period limit is the **sum** of the `operator_authz.fee_spend_limit` of the entries the account operates whose `with_feegrant` is true ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)). The `PeriodicAllowance` resets itself during fee deduction, so a transaction arriving after a fee-cycle boundary needs no prior reset. There is no per-entry fee ledger: no VPR-side fee check or deduction is performed.
+> Realization: the corporation's fee **payment and its periodic cap** are both enforced by the account's `x/feegrant` allowance at transaction-fee-processing time — an `AllowedMsgAllowance` over every [MsgType](#msgtype) value, wrapping a `PeriodicAllowance` whose `period` is `GlobalVariables.vs_operator_fee_period` and whose per-period limit is the **sum** of the `fee_spend_limit` of the entries the account operates whose `with_feegrant` is true ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)). The `PeriodicAllowance` resets itself during fee deduction, so a transaction arriving after a fee-cycle boundary needs no prior reset. There is no per-entry fee ledger: no VPR-side fee check or deduction is performed.
 
-1. `cfg.with_feegrant` MUST be true, else abort (the corporation has not enabled fee payment for this entry).
+1. `vs.with_feegrant` MUST be true, else abort (the corporation has not enabled fee payment for this entry).
 
 > Ordering caveat: the corporation's fee is paid by the `x/feegrant` allowance **during fee processing, before** the VPR method runs. If the method then aborts (any failed precondition, including [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1), the already-paid fee is **NOT** refunded (the reverted transaction still consumed gas). The periodic cap bounds this exposure to the allowance's per-period limit, whichever entry or message type the failed transaction concerned.
 
@@ -2199,12 +2189,12 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - `vid` (string) (*mandatory*): the [[ref: VID]] to register.
 - `vs_operator` (account) (*optional*): the agent account that operates the service identified by `vid`.
 
-The following VS Operator Authorization parameters are **optional** and collectively define the initial `operator_authz` ([OperatorAuthz](#operatorauthz)) of the registered entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, `operator_authz` stays null and the entry has no VS operator authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
+The following VS Operator Authorization parameters are **optional** and collectively define the initial operator configuration of the registered entry (its `msg_types`, `period`, `with_feegrant`, `fee_spend_limit` and [OperatorBudget](#operatorbudget)). Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, `msg_types` stays empty and the entry has no VS operator authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
 
 - `vs_operator_authz_msg_types[]` ([MsgType](#msgtype)[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of the entry, among `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_operator` MUST be specified.
 - `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of the entry as a direct consequence of executing authorized messages.
 - `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, `corporation` pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of the entry.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): the entry's contribution to the fee allowance of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [OperatorAuthz](#operatorauthz)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): the entry's contribution to the fee allowance of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [VerifiableService](#verifiableservice)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
 - `vs_operator_authz_period` (duration) (*optional*): operation-budget cycle length for `vs_operator_authz_spend_limit` (requires it to be provided). Does not apply to fees.
 
 ##### [MOD-VS-MSG-1-2] Register Verifiable Service precondition checks
@@ -2219,7 +2209,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters.
 - `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else method MUST abort ([VID ownership](#vid-ownership)).
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of [OperatorAuthz](#operatorauthz); if `vs_operator_authz_with_feegrant` is true, `vs_operator_authz_fee_spend_limit` MUST be provided with every amount strictly positive, and MUST NOT be provided otherwise; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of `VerifiableService.msg_types`; if `vs_operator_authz_with_feegrant` is true, `vs_operator_authz_fee_spend_limit` MUST be provided with every amount strictly positive, and MUST NOT be provided otherwise; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
 - if `vs_operator` is provided: no `OperatorAuthorization` `oauthz` where `oauthz.corporation_id` = `co.id` and `oauthz.operator` = `vs_operator` MUST exist, and no `VerifiableService` entry owned by another corporation MAY have `vs_operator` as its `vs_operator` (a vs-agent account cannot be controlled by multiple corporations, see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)).
 
 ###### [MOD-VS-MSG-1-2-2] Register Verifiable Service fee checks
@@ -2244,17 +2234,16 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `vs.created`: current timestamp
 - `vs.modified`: `vs.created`
 
-If `vs_operator_authz_msg_types` is provided, set the entry's `operator_authz` by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with:
+If `vs_operator_authz_msg_types` is provided, set the entry's operator configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with:
 
 - `corporation_id`: `co.id`
 - `vs_operator`: `vs_operator`
 - `vs_id`: `vs.id`
-- `authz`:
-  - `authz.msg_types`: `vs_operator_authz_msg_types`
-  - `authz.spend_limit`: `vs_operator_authz_spend_limit`
-  - `authz.period`: `vs_operator_authz_period`
-  - `authz.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
-  - `authz.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+- `msg_types`: `vs_operator_authz_msg_types`
+- `spend_limit`: `vs_operator_authz_spend_limit`
+- `period`: `vs_operator_authz_period`
+- `with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
+- `fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
 
 The method MUST emit an event carrying `vs.id`, `vs.vid` and `co.id`, so that indexers learn the identifier without a query.
 
@@ -2262,15 +2251,15 @@ The method MUST emit an event carrying `vs.id`, `vs.vid` and `co.id`, so that in
 
 #### [MOD-VS-MSG-2] Update Verifiable Service
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`. It sets, replaces or clears the agent account of an entry together with its `operator_authz`.
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. It sets, replaces or clears the agent account of an entry together with its operator configuration.
 
 ##### [MOD-VS-MSG-2-1] Update Verifiable Service parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to update.
-- `vs_operator` (account) (*optional*): the new agent account; null clears the operator and its `operator_authz`.
-- the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: if `vs_operator_authz_msg_types` is provided, the configuration is replaced; otherwise the entry keeps no `operator_authz`.
+- `vs_operator` (account) (*optional*): the new agent account; null clears the operator and its configuration.
+- the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: if `vs_operator_authz_msg_types` is provided, the configuration is replaced; otherwise the entry keeps no operator configuration.
 
 ##### [MOD-VS-MSG-2-2] Update Verifiable Service precondition checks
 
@@ -2296,9 +2285,9 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no `operator_authz`).
+- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration).
 - set `vs.vs_operator` to `vs_operator` and `vs.modified` to the current timestamp.
-- if `vs_operator_authz_msg_types` is provided, set the new `operator_authz` by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
+- if `vs_operator_authz_msg_types` is provided, set the new configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
 
 > Note: `ParticipantSession` entries are bound to the entry, not to the account ([ParticipantSession](#participantsession)): the sessions created under the previous operator are extended by the new one, and the previous account can no longer act for this entry.
 
@@ -2415,10 +2404,10 @@ If all precondition checks passed, method is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no `operator_authz`).
+- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration).
 - transfer `GlobalVariables.vs_registration_deposit` in [[ref: native denom]] from the `corporation` account to the [[ref: trust deposit]] of `co.id` (use [MOD-TD-MSG-1] to increase it by that amount).
 - set `vs.corporation_id` = `co.id`, `vs.deposit` = `GlobalVariables.vs_registration_deposit`, `vs.vs_operator` = `vs_operator`, `vs.transfer_to_corporation_id` = null, `vs.modified` = current timestamp.
-- if `vs_operator_authz_msg_types` is provided, set `operator_authz` by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
+- if `vs_operator_authz_msg_types` is provided, set the configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
 
 The method MUST emit an event carrying `vs.id`, `vs.vid`, the previous and the new `corporation_id`.
 
@@ -2451,7 +2440,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 
 ##### [MOD-VS-MSG-6-3] Remove Verifiable Service execution
 
-- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no `operator_authz`).
+- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration).
 - delete `vs`.
 
 The method MUST emit an event carrying `vs.id` and `vs.vid`.
@@ -2501,7 +2490,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-VS-QRY-1-3] Get Verifiable Service execution
 
-Return the matching `VerifiableService` entry, with its `operator_authz` and, if any, its [OperatorBudget](#operatorbudget), or an error if none is found. Former identifier strings are not resolvable through this query: they are served by indexers from the rotation events ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)).
+Return the matching `VerifiableService` entry with, if any, its [OperatorBudget](#operatorbudget), or an error if none is found. Former identifier strings are not resolvable through this query: they are served by indexers from the rotation events ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)).
 
 #### [MOD-VS-QRY-2] List Verifiable Services
 
@@ -2565,12 +2554,12 @@ An [[ref: account]] that would like to create a new [[ref: corporation]] MUST ca
 
 Provided document MUST be of the same language as the primary `language` of the Corporation.
 
-The following VS Operator Authorization parameters are **optional** and collectively define the initial `operator_authz` ([OperatorAuthz](#operatorauthz)) of the registered entry. Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, `operator_authz` stays null and the entry has no VS operator authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
+The following VS Operator Authorization parameters are **optional** and collectively define the initial operator configuration of the registered entry (its `msg_types`, `period`, `with_feegrant`, `fee_spend_limit` and [OperatorBudget](#operatorbudget)). Presence of `vs_operator_authz_msg_types` is the trigger: if it is not provided, `msg_types` stays empty and the entry has no VS operator authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
 
 - `vs_operator_authz_msg_types[]` ([MsgType](#msgtype)[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of the new Corporation in the context of the entry, among `CreateOrUpdateParticipantSession`, `SetParticipantOPtoValidated`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_operator` MUST be specified.
 - `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of the entry as a direct consequence of executing authorized messages.
 - `vs_operator_authz_with_feegrant` (bool) (*optional*, default: false): if true, the new Corporation pays transaction fees for `vs_operator` via an on-chain `FeeGrant` when executing authorized messages in the context of the entry.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): the entry's contribution to the fee allowance of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [OperatorAuthz](#operatorauthz)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*conditional*): the entry's contribution to the fee allowance of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [VerifiableService](#verifiableservice)). MUST be provided, with every amount strictly positive, if `vs_operator_authz_with_feegrant` is true; MUST NOT be provided otherwise.
 - `vs_operator_authz_period` (duration) (*optional*): operation-budget cycle length for `vs_operator_authz_spend_limit` (requires it to be provided). Does not apply to fees.
 
 ##### [MOD-CO-MSG-1-2] Create Corporation precondition checks
@@ -2586,7 +2575,7 @@ If any of these precondition checks fail, method MUST abort.
 - `decision_policy`: MUST be a valid `ThresholdDecisionPolicy` or `PercentageDecisionPolicy`.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 2,048 characters.
 - `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else method MUST abort ([VID ownership](#vid-ownership)).
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of [OperatorAuthz](#operatorauthz); if `vs_operator_authz_with_feegrant` is true, `vs_operator_authz_fee_spend_limit` MUST be provided with every amount strictly positive, and MUST NOT be provided otherwise; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of `VerifiableService.msg_types`; if `vs_operator_authz_with_feegrant` is true, `vs_operator_authz_fee_spend_limit` MUST be provided with every amount strictly positive, and MUST NOT be provided otherwise; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`.
@@ -2644,17 +2633,16 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `vs.created`: current timestamp
 - `vs.modified`: `vs.created`
 
-If `vs_operator_authz_msg_types` is provided, set the entry's `operator_authz` by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with:
+If `vs_operator_authz_msg_types` is provided, set the entry's operator configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with:
 
 - `corporation_id`: `co.id`
 - `vs_operator`: `vs_operator`
 - `vs_id`: `vs.id`
-- `authz`:
-  - `authz.msg_types`: `vs_operator_authz_msg_types`
-  - `authz.spend_limit`: `vs_operator_authz_spend_limit`
-  - `authz.period`: `vs_operator_authz_period`
-  - `authz.with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
-  - `authz.fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+- `msg_types`: `vs_operator_authz_msg_types`
+- `spend_limit`: `vs_operator_authz_spend_limit`
+- `period`: `vs_operator_authz_period`
+- `with_feegrant`: `vs_operator_authz_with_feegrant` (default: false)
+- `fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
 
 #### [MOD-CO-MSG-2] Update Corporation
 
@@ -3837,7 +3825,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.issuance_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
   - `applicant_participant.verification_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
 
-> Note: the agent that will create sessions for this entry is `VerifiableService[vs_id].vs_operator`, and its authorization is the entry's `operator_authz`: nothing is created here. It cannot be used in the context of `applicant_participant` until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) sets its `effective_from` ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1).
+> Note: the agent that will create sessions for this entry is `VerifiableService[vs_id].vs_operator`, and its authorization is the entry's `msg_types`: nothing is created here. It cannot be used in the context of `applicant_participant` until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) sets its `effective_from` ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1).
 
 #### Connecting to the VS of the Validator
 
@@ -4181,7 +4169,7 @@ Update `Participant` `applicant_participant`:
   - set `applicant_participant.issuance_fee_discount` to `issuance_fee_discount`.
   - set `applicant_participant.verification_fee_discount` to `verification_fee_discount`.
 
-> Note: no VS Operator Authorization step is needed: the applicant's agent is `VerifiableService[applicant_participant.vs_id].vs_operator`, whose `operator_authz` becomes usable in the context of this entry as soon as `effective_from` is set ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1).
+> Note: no VS Operator Authorization step is needed: the applicant's agent is `VerifiableService[applicant_participant.vs_id].vs_operator`, whose `msg_types` become usable in the context of this entry as soon as `effective_from` is set ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1).
 
 #### [MOD-PP-MSG-4] Void
 
@@ -5289,7 +5277,7 @@ A new entry `Participant` `perm` MUST be created:
 
 This method CAN be executed, for a `VerifiableService` entry `vs` identified directly by `vs_id`:
 
-- by the `vs_operator` of `vs`, acting on behalf of `Corporation[vs.corporation_id]` under the entry's `operator_authz`; or
+- by the `vs_operator` of `vs`, acting on behalf of `Corporation[vs.corporation_id]` under the entry's `msg_types`; or
 - by any `operator` authorized by `Corporation[vs.corporation_id]` for this message type.
 
 and, for a `Participant` entry `perm` identified by `id`:
@@ -6209,7 +6197,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - Check if a **VS Operator Authorization** exists for `corporation` and `grantee`. If this is the case, MUST abort.
 
 ::: warning
-An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for the same (`corporation_id`, `operator`) pair, that is, if `operator` is not the `vs_operator` of a `VerifiableService` entry of the corporation whose `operator_authz` is set. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
+An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for the same (`corporation_id`, `operator`) pair, that is, if `operator` is not the `vs_operator` of a `VerifiableService` entry of the corporation whose `msg_types` is non-empty. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
 :::
 
 ##### [MOD-DE-MSG-3-3] Grant Operator Authorization fee checks
@@ -6279,7 +6267,7 @@ This method can only be called directly by the following methods, with no signer
 - [Create Corporation](#mod-co-msg-1-create-corporation)
 - [Update Verifiable Service](#mod-vs-msg-2-update-verifiable-service)
 
-It sets the `operator_authz` of a `VerifiableService` entry ([OperatorAuthz](#operatorauthz)), creates its [OperatorBudget](#operatorbudget) when a `spend_limit` is set and, when the configuration contributes to it, adjusts the on-chain `FeeGrant` of `vs_operator` by the contribution.
+It sets the operator configuration of a `VerifiableService` entry (`msg_types`, `period`, `with_feegrant`, `fee_spend_limit`), creates its [OperatorBudget](#operatorbudget) when a `spend_limit` is given and, when the configuration contributes to it, adjusts the on-chain `FeeGrant` of `vs_operator` by the contribution.
 
 All authorization configuration is provided by the caller, which has already checked that `VerifiableService[vs_id]` is owned by `corporation_id` and that its `vs_operator` equals `vs_operator`.
 
@@ -6288,17 +6276,21 @@ All authorization configuration is provided by the caller, which has already che
 - `corporation_id` (uint64) (*mandatory*): id of the corporation delegating the authorization.
 - `vs_operator` (account) (*mandatory*): the account receiving the authorization.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry.
-- `authz` ([OperatorAuthz](#operatorauthz)) (*mandatory*): the configuration to store.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the message types to authorize.
+- `spend_limit` (DenomAmount[]) (*optional*): the operation budget, creating an [OperatorBudget](#operatorbudget).
+- `period` (duration) (*optional*): the operation-budget cycle; requires `spend_limit`.
+- `with_feegrant` (bool) (*mandatory*): whether the entry contributes to the fee allowance of `vs_operator`.
+- `fee_spend_limit` (DenomAmount[]) (*conditional*): the contribution; iff `with_feegrant`.
 
 ##### [MOD-DE-MSG-5-2] Set VS Operator Authorization basic checks
 
 If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `corporation_id` and `vs_operator` MUST NOT be null.
-- `VerifiableService[vs_id].operator_authz` MUST be null (the callers revoke before setting).
-- `authz.msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
-- if `authz.with_feegrant` is true, `authz.fee_spend_limit` MUST be set and every amount MUST be strictly positive (the fee allowance is never unlimited nor zero); if `authz.with_feegrant` is false, `authz.fee_spend_limit` MUST NOT be set.
-- if `authz.period` is set, `authz.spend_limit` MUST be set.
+- `VerifiableService[vs_id].msg_types` MUST be empty (the callers revoke before setting).
+- `msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
+- if `with_feegrant` is true, `fee_spend_limit` MUST be set and every amount MUST be strictly positive (the fee allowance is never unlimited nor zero); if `with_feegrant` is false, `fee_spend_limit` MUST NOT be set.
+- if `period` is set, `spend_limit` MUST be set.
 - No `OperatorAuthorization` `oauthz` where `oauthz.corporation_id` = `corporation_id` and `oauthz.operator` = `vs_operator` MUST exist.
 - No `VerifiableService` entry owned by a corporation other than `corporation_id` MAY have `vs_operator` as its `vs_operator` (implementations keep an index of entries by operator account). In other words, a vs-agent account cannot be controlled by multiple corporations.
 
@@ -6314,13 +6306,13 @@ A **VS Operator Authorization** CAN be set ONLY IF no **OperatorAuthorization** 
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- Set `vs.operator_authz` := `authz` and `vs.modified` := `now()`, where `vs` = `VerifiableService[vs_id]`.
-- If `authz.spend_limit` is set, create the [OperatorBudget](#operatorbudget) of `vs_id`: `remaining_spend` := `authz.spend_limit`, `expiration` := `now() + authz.period` if `authz.period` is set, else null.
-- If `authz.with_feegrant` is true, call **[Adjust VS Operator Fee Allowance](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)** for (`corporation_id`, `vs_operator`, +`authz.fee_spend_limit`).
+- Set `vs.msg_types` := `msg_types`, `vs.period` := `period`, `vs.with_feegrant` := `with_feegrant`, `vs.fee_spend_limit` := `fee_spend_limit` and `vs.modified` := `now()`, where `vs` = `VerifiableService[vs_id]`.
+- If `spend_limit` is set, create the [OperatorBudget](#operatorbudget) of `vs_id`: `spend_limit` := `spend_limit`, `remaining_spend` := `spend_limit`, `expiration` := `now() + period` if `period` is set, else null.
+- If `with_feegrant` is true, call **[Adjust VS Operator Fee Allowance](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)** for (`corporation_id`, `vs_operator`, +`fee_spend_limit`).
 
 ##### [MOD-DE-MSG-5-5] Adjust VS Operator Fee Allowance
 
-This is a shared subroutine taking a `corporation_id`, a `vs_operator` and a signed contribution `delta` (DenomAmount[]): the `fee_spend_limit` of an `operator_authz` whose `with_feegrant` is true, positive when it is set ([[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization)) and negative when it is cleared ([[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization), invoked before it is cleared). It maintains the `x/feegrant` allowance that realizes [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) for (`corporation_id`, `vs_operator`). The VPR keeps no aggregate of its own: the running total is the `spend_limit` of the [FeeGrant](#feegrant) entry of (`corporation_id`, `vs_operator`).
+This is a shared subroutine taking a `corporation_id`, a `vs_operator` and a signed contribution `delta` (DenomAmount[]): the `fee_spend_limit` of an entry whose `with_feegrant` is true, positive when it is set ([[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization)) and negative when it is cleared ([[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization), invoked before it is cleared). It maintains the `x/feegrant` allowance that realizes [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) for (`corporation_id`, `vs_operator`). The VPR keeps no aggregate of its own: the running total is the `spend_limit` of the [FeeGrant](#feegrant) entry of (`corporation_id`, `vs_operator`).
 
 - load the `FeeGrant` entry `fg` of (`corporation_id`, `vs_operator`); define `total` = `fg.spend_limit` if `fg` exists, else empty; set `total` := `total` + `delta`, per denom, dropping a denom whose amount reaches zero. `total` MUST NOT contain a negative amount; abort otherwise.
 - if `total` is empty: call [Revoke Fee Allowance](#mod-de-msg-2-revoke-fee-allowance)(`corporation_id`, `vs_operator`) (no-op when none exists).
@@ -6340,17 +6332,17 @@ This method can only be called directly by the following methods, with no signer
 - [Accept Verifiable Service Transfer](#mod-vs-msg-5-accept-verifiable-service-transfer)
 - [Remove Verifiable Service](#mod-vs-msg-6-remove-verifiable-service)
 
-It clears the `operator_authz` of the `VerifiableService` entry `vs_id`, deletes its [OperatorBudget](#operatorbudget) if any and, when the configuration contributed to it, adjusts the on-chain `FeeGrant` of the entry's `vs_operator` by subtracting the contribution.
+It clears the operator configuration of the `VerifiableService` entry `vs_id` (`msg_types`, `period`, `with_feegrant`, `fee_spend_limit`), deletes its [OperatorBudget](#operatorbudget) if any and, when the configuration contributed to it, adjusts the on-chain `FeeGrant` of the entry's `vs_operator` by subtracting the contribution.
 
 ##### [MOD-DE-MSG-6-1] Revoke VS Operator Authorization method parameters
 
-- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry whose `operator_authz` is cleared.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry whose operator configuration is cleared.
 
 ##### [MOD-DE-MSG-6-2] Revoke VS Operator Authorization basic checks
 
 - `vs_id` MUST be a valid uint64.
 
-> Note: a null `operator_authz` is NOT an error. The method is a no-op in that case (the entry was never VS-operator-authorized, or was already revoked).
+> Note: an empty `msg_types` is NOT an error. The method is a no-op in that case (the entry was never VS-operator-authorized, or was already revoked).
 
 ##### [MOD-DE-MSG-6-3] Revoke VS Operator Authorization fee checks
 
@@ -6358,10 +6350,10 @@ It clears the `operator_authz` of the `VerifiableService` entry `vs_id`, deletes
 
 ##### [MOD-DE-MSG-6-4] Revoke VS Operator Authorization execution of the method
 
-- Define `vs` = `VerifiableService[vs_id]` and `cfg` = `vs.operator_authz`. If `cfg` is null, EXIT (no-op).
+- Define `vs` = `VerifiableService[vs_id]`. If `vs.msg_types` is empty, EXIT (no-op).
 - Define `vs_operator` = `vs.vs_operator`: the configuration applies to the entry's current operator, and the callers that change the operator ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)) revoke before writing the new account.
-- If `cfg.with_feegrant` is true, call **[Adjust VS Operator Fee Allowance](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)** for (`vs.corporation_id`, `vs_operator`, −`cfg.fee_spend_limit`).
-- Delete the [OperatorBudget](#operatorbudget) of `vs_id` if it exists; set `vs.operator_authz` := null and `vs.modified` := `now()`.
+- If `vs.with_feegrant` is true, call **[Adjust VS Operator Fee Allowance](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)** for (`vs.corporation_id`, `vs_operator`, −`vs.fee_spend_limit`).
+- Delete the [OperatorBudget](#operatorbudget) of `vs_id` if it exists; set `vs.msg_types` := [], `vs.period` := null, `vs.with_feegrant` := false, `vs.fee_spend_limit` := null and `vs.modified` := `now()`.
 
 #### [MOD-DE-MSG-7] Void
 
