@@ -1189,7 +1189,6 @@ enum "MsgType" as msgtype {
   RotateVerifiableIdentifier
   TransferVerifiableService
   AcceptVerifiableServiceTransfer
-  RemoveVerifiableService
 }
 
 entity "OperatorAuthorization" as oauthz {
@@ -1697,7 +1696,6 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 | 30 | `RotateVerifiableIdentifier` | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) |
 | 31 | `TransferVerifiableService` | [[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service) |
 | 32 | `AcceptVerifiableServiceTransfer` | [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer) |
-| 33 | `RemoveVerifiableService` | [[MOD-VS-MSG-6]](#mod-vs-msg-6-remove-verifiable-service) |
 
 > Note: the realization of fee allowances through `x/feegrant` ([Delegation Module](#delegation-module)) requires protobuf type URLs. The implementation maps each `MsgType` value to the type URL of its message when it creates or updates an allowance, and maps the type URL of an incoming message to its `MsgType` value when it checks an authorization ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Which values a list may contain is stated by each message: every value except `CreateOrUpdateParticipantSession` in an [OperatorAuthorization](#operatorauthorization) ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)), the values listed by [VerifiableService](#verifiableservice) in an entry's `msg_types`.
 
@@ -2150,7 +2148,6 @@ As a result, `accountABC` is authorized to:
 |                                | Rotate Verifiable Identifier            | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)   | corporation + operator |
 |                                | Transfer Verifiable Service             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)   | corporation + operator |
 |                                | Accept Verifiable Service Transfer      | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)   | corporation + operator |
-|                                | Remove Verifiable Service               | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-6]](#mod-vs-msg-6-remove-verifiable-service)   | corporation + operator |
 |                                | Update VS Module Parameters             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters)   | governance proposal |
 |                                | Get Verifiable Service                  | /vs/v1/get                       | Query  | [[MOD-VS-QRY-1]](#mod-vs-qry-1-get-verifiable-service)   | N/A |
 |                                | List Verifiable Services                | /vs/v1/list                      | Query  | [[MOD-VS-QRY-2]](#mod-vs-qry-2-list-verifiable-services)   | N/A |
@@ -2343,7 +2340,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced by any `Corporation.vs_id`, `Ecosystem.vs_id` or `Participant.vs_id`; else abort (entries belong to their corporation and do not move: the owner first removes or expires them, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
+- `vs` MUST NOT be referenced by any `Corporation.vs_id`, `Ecosystem.vs_id` or `Participant.vs_id`; else abort (entries belong to their corporation and do not move: the owner first revokes them or lets them expire, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
 - `to_corporation_id` (uint64) (*optional*): if provided, a `Corporation` entry with this id MUST exist and MUST differ from `co.id`.
 
 ###### [MOD-VS-MSG-4-2-2] Transfer Verifiable Service fee checks
@@ -2396,39 +2393,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 The method MUST emit an event carrying `vs.id`, `vs.vid`, the previous and the new `corporation_id`.
 
-#### [MOD-VS-MSG-6] Remove Verifiable Service
+#### [MOD-VS-MSG-6] Void
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`. It deletes an entry that nothing references. The deposit is not refunded and the identifier string becomes registrable again by anyone; the entry's `id` is never reused ([Identifier conventions](#identifier-conventions)).
-
-##### [MOD-VS-MSG-6-1] Remove Verifiable Service parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to remove.
-
-##### [MOD-VS-MSG-6-2] Remove Verifiable Service precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-VS-MSG-6-2-1] Remove Verifiable Service basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced by any `Corporation.vs_id`, `Ecosystem.vs_id` or `Participant.vs_id`, whatever the state of those entries; else abort.
-
-###### [MOD-VS-MSG-6-2-2] Remove Verifiable Service fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-VS-MSG-6-3] Remove Verifiable Service execution
-
-- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration).
-- delete `vs`.
-
-The method MUST emit an event carrying `vs.id` and `vs.vid`.
+> Note: there is no message to remove a `VerifiableService` entry. Once registered, an entry is permanent, like a `Participant` entry: the credential digests anchored under it, the sessions created in its context and the `Participant` entries bound to it reference its `id`, and trust resolution resolves the issuer of a credential through that link to the entry's identifier for as long as the credential may be evaluated, which the registry cannot know. A wrong identifier string is corrected by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) Rotate Verifiable Identifier, with a transition of 0 when nothing was issued under it; an identifier that is no longer operated has its operator cleared by [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service); an identifier its owner no longer needs is transferred ([[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)) or kept. The registration deposit is never refunded.
 
 #### [MOD-VS-MSG-7] Update Module Parameters
 
@@ -6316,7 +6283,6 @@ This method can only be called directly by the following methods, with no signer
 
 - [Update Verifiable Service](#mod-vs-msg-2-update-verifiable-service) (when the operator or its authorization is changed or cleared)
 - [Accept Verifiable Service Transfer](#mod-vs-msg-5-accept-verifiable-service-transfer)
-- [Remove Verifiable Service](#mod-vs-msg-6-remove-verifiable-service)
 
 It clears the operator configuration of the `VerifiableService` entry `vs_id` (`msg_types`, `period`, `with_feegrant`, `fee_spend_limit`), deletes its [VsOperatorBudget](#vsoperatorbudget) if any and, when the configuration contributed to it, adjusts the on-chain `FeeGrant` of the entry's `vs_operator` by subtracting the contribution.
 
