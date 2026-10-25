@@ -1207,7 +1207,7 @@ entity "OperatorAuthorization" as oauthz {
 }
 
 entity "VSOperatorAuthorization" as vsoauthz {
-   *id: uint64
+   *vs_operator: account
    +fee_limit_total: DenomAmount[]
    +feegrant_msg_type_counts: map<MsgType, uint32>
 }
@@ -1449,7 +1449,7 @@ Unless otherwise stated, every entity's `id` field is:
 
 Clients MAY rely on `id` ordering as a deterministic cursor for keyset pagination.
 
-Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (string PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `ServiceAuthorizationRecord` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
+Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (string PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `VSOperatorAuthorization` (single-field PK on `vs_operator`), `ServiceAuthorizationRecord` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
 ### VID ownership
 
@@ -1476,7 +1476,7 @@ A [[ref: verifiable service entry]] (`VerifiableService`) registers a [[ref: VID
 - `created` (timestamp) (*mandatory*): registration timestamp.
 - `modified` (timestamp) (*mandatory*): last modification timestamp.
 
-> Note: `vs_operator` is an attribute of the identifier, not of a role: the agent that controls the identifier performs every operation the identifier performs. The authorization configuration of that agent (message types, spend limits, fee grant) is the entry's [ServiceAuthorizationRecord](#serviceauthorizationrecord), grouped under the [VSOperatorAuthorization](#vsoperatorauthorization) of (`corporation_id`, `vs_operator`).
+> Note: `vs_operator` is an attribute of the identifier, not of a role: the agent that controls the identifier performs every operation the identifier performs. The authorization configuration of that agent (message types, spend limits, fee grant) is the entry's [ServiceAuthorizationRecord](#serviceauthorizationrecord), grouped under the [VSOperatorAuthorization](#vsoperatorauthorization) of `vs_operator`.
 
 ### Corporation
 
@@ -1746,11 +1746,10 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 
 ### VSOperatorAuthorization
 
-A `VSOperatorAuthorization` groups all `ServiceAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. The `(corporation_id, vs_operator)` tuple MUST be **unique** across all `VSOperatorAuthorization` entries: at any block height, at most one entry MAY exist for a given `(corporation_id, vs_operator)`. The entry exists if, and only if, it has at least one record.
+A `VSOperatorAuthorization` groups all `ServiceAuthorizationRecord` entries delegated by one `corporation` to one `vs_operator`. It is keyed by `vs_operator`: a vs-agent account is controlled by at most one corporation ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-grant-vs-operator-authorization-basic-checks)), so the account alone identifies the entry. The entry exists if, and only if, it has at least one record.
 
-- `id` (uint64) (*mandatory*) (key): the id of this `VSOperatorAuthorization`. Appending further records to an existing `vsoa` via [[MOD-DE-MSG-5-4]](#mod-de-msg-5-4-grant-vs-operator-authorization-execution-of-the-method) (i.e., while `vsoa.records` remains non-empty) preserves the `id`; revoking the last record deletes the `vsoa` via [[MOD-DE-MSG-6-4]](#mod-de-msg-6-4-revoke-vs-operator-authorization-execution-of-the-method), and a later grant for the same `(corporation_id, vs_operator)` pair mints a fresh `id` per the [Identifier conventions](#identifier-conventions).
-- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
-- `vs_operator` (account) (*mandatory*): the operator account receiving the authorization. See the `(corporation_id, vs_operator)` uniqueness constraint above.
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] granting the authorization, the granter of the fee allowance realized for this entry; equal to the corporation of the `VerifiableService` entry of every record.
+- `vs_operator` (account) (*mandatory*) (key): the operator account receiving the authorization.
 - `records` (ServiceAuthorizationRecord[]) (*mandatory*): per-service authorization records granted to `vs_operator` by `corporation_id`, one per `VerifiableService` entry the account operates.
 - `fee_limit_total` (DenomAmount[]) (*mandatory*): derived, the sum of the `fee_spend_limit` of the counted records, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
 - `feegrant_msg_type_counts` (map<[MsgType](#msgtype), uint32>) (*mandatory*): derived, for each message type the number of counted records that include it, maintained incrementally by [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance).
@@ -6328,7 +6327,7 @@ A **VS Operator Authorization** record CAN be granted ONLY IF no **OperatorAutho
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - Initialize the runtime balance on `record`: if `record.spend_limit` is set, set `record.remaining_spend := record.spend_limit`.
-- Load the `VSOperatorAuthorization` `vsoa` whose `vsoa.corporation_id = corporation_id` AND `vsoa.vs_operator = vs_operator`. If it does not exist, create a new `vsoa` with `vsoa.id = auto-incremented uint64`, `vsoa.corporation_id = corporation_id`, `vsoa.vs_operator = vs_operator`, `vsoa.records = []`, `vsoa.fee_limit_total = []`, `vsoa.feegrant_msg_type_counts = {}`. If `vsoa` already exists, reuse it and preserve `vsoa.id`.
+- Load the `VSOperatorAuthorization` `vsoa` keyed by `vs_operator` (its `corporation_id` equals `corporation_id`, by the check above). If it does not exist, create a new `vsoa` with `vsoa.vs_operator = vs_operator`, `vsoa.corporation_id = corporation_id`, `vsoa.records = []`, `vsoa.fee_limit_total = []`, `vsoa.feegrant_msg_type_counts = {}`. If `vsoa` already exists, reuse it.
 - Append `record` to `vsoa.records`.
 - Call **[Recompute VS Operator Fee Allowance](#mod-de-msg-5-5-recompute-vs-operator-fee-allowance)** for `vsoa` and `record`.
 
