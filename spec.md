@@ -1369,6 +1369,7 @@ vs "1" --- "0..1" obudget: vs_id
 
 csp o-- cspt: role
 csp o-- cs: schema_id
+cs o-- "0..n" csp: root_participant_ids
 csp o-- "0..1" csp: validator_participant_id
 cs o-- tr: ecosystem_id
 
@@ -1426,6 +1427,8 @@ Unless otherwise stated, every entity's `id` field is:
 Clients MAY rely on `id` ordering as a deterministic cursor for keyset pagination.
 
 Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `VsOperatorBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
+
+**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_operator` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)), and `Participant` by `vs_id` (the sibling, session and materialization checks). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_participant_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these three indexes, nothing else. A secondary index entry costs as much state as the row it points to.
 
 ### VID ownership
 
@@ -1543,6 +1546,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
 - `pricing_asset` (string) (*mandatory*): `"tu"` if `pricing_asset_type` is set to TU, else examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,...
 - `digest_algorithm` (string) (*mandatory*): algorithm used to compute the credential digests of credentials issued under this schema (when `credential_anchoring` is DIGEST) and the presentation digests anchored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
+- `root_participant_ids` (uint64[]) (*mandatory*): the root ECOSYSTEM `Participant` entries of this schema, in creation order, appended by [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant); empty until the first is created. At most one of them is an [[ref: active participant]] at any time ([[MOD-PP-MSG-7-2-4]](#mod-pp-msg-7-2-4-create-root-participant-overlap-checks)): that one is the **active root entry** of the schema, read by [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries) and [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session). A few ids per schema, in place of an index of `Participant` entries by schema.
 
 ### Participant
 
@@ -2077,19 +2081,16 @@ As a result, `accountABC` is authorized to:
 |                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + operator |
 |                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters)   | governance proposal |
 |                                | Get Corporation                              | /co/v1/get                       | Query  | [[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)   | N/A |
-|                                | List Corporations                            | /co/v1/list                      | Query  | [[MOD-CO-QRY-2]](#mod-co-qry-2-list-corporations)   | N/A |
 |                                | List Corporation Module Parameters           | /co/v1/params                    | Query  | [[MOD-CO-QRY-3]](#mod-co-qry-3-list-module-parameters)   | N/A |
 | Ecosystem                 | Create Ecosystem                 |    N/A (Tx)                    | Msg    | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem)   | corporation + operator |
 |                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)   |corporation + operator |
 |                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem)   |corporation + operator |
 |                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters)   |governance proposal |
 |                                | Get Ecosystem                      | /ec/v1/get                  | Query  | [[MOD-ES-QRY-1]](#mod-es-qry-1-get-ecosystem)   |N/A |
-|                                | List Ecosystems                   | /ec/v1/list                 | Query  | [[MOD-ES-QRY-2]](#mod-es-qry-2-list-ecosystems)   |N/A |
 |                                | List Ecosystem Module Parameters               | /ec/v1/params                 | Query  | [[MOD-ES-QRY-3]](#mod-es-qry-3-list-module-parameters)   |N/A |
 | Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation + operator |
 |                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + operator |
 |                                | Get Governance Framework Version             | /gf/v1/get                       | Query  | [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version)   | N/A |
-|                                | List Governance Framework Versions           | /gf/v1/list                      | Query  | [[MOD-GF-QRY-2]](#mod-gf-qry-2-list-governance-framework-versions)   | N/A |
 | Credential Schema              | Create Credential Schema              |       N/A (Tx)                   | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema)   |corporation + operator |
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation + operator |
 |                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |corporation + operator |
@@ -2141,7 +2142,6 @@ As a result, `accountABC` is authorized to:
 |                   | Grant Exchange Rate Authorization |     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization)   |governance proposal|
 |                   | Revoke Exchange Rate Authorization|     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-5]](#mod-xr-msg-5-revoke-exchange-rate-authorization)   |governance proposal|
 |                   | Get Exchange Rate                 | /xr/v1/get                  | Query  | [[MOD-XR-QRY-1]](#mod-xr-qry-1-get-exchange-rate)   |N/A |
-|                   | List Exchange Rates               | /xr/v1/list                 | Query  | [[MOD-XR-QRY-2]](#mod-xr-qry-2-list-exchange-rates)   |N/A |
 |                   | Get Price               | /xr/v1/price                 | Query  | [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)   |N/A |
 | Verifiable Service        | Register Verifiable Service              | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service)   | corporation + operator |
 |                                | Update Verifiable Service               | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)   | corporation + operator |
@@ -2452,9 +2452,7 @@ Anyone CAN execute this method.
 
 The following parameters are optional:
 
-- `corporation_id` (uint64) (*optional*): if specified, filter by owner corporation.
-- `vs_operator` (account) (*optional*): if specified, filter by agent account.
-- `modified_after` (timestamp) (*optional*): if specified, returns only entries with `modified` greater than `modified_after`.
+- `vs_operator` (account) (*optional*): if specified, filter by agent account, served by the index the one-corporation rule requires ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)). Listing by corporation or by time is an indexer function.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 
 ##### [MOD-VS-QRY-2-2] List Verifiable Services query checks
@@ -2690,26 +2688,9 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 Return the `Corporation` entry whose `id` equals `corporation_id` (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
 
-#### [MOD-CO-QRY-2] List Corporations
+#### [MOD-CO-QRY-2] Void
 
-##### [MOD-CO-QRY-2-1] List Corporations query parameters
-
-The following parameters are optional:
-
-- `modified_after` (timestamp) (*optional*): if specified, returns only `Corporation` entries with `Corporation.modified` greater than `modified_after`.
-- `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
-- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
-- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
-
-##### [MOD-CO-QRY-2-2] List Corporations query checks
-
-If any of these checks fail, [[ref: query]] MUST fail.
-
-- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
-
-##### [MOD-CO-QRY-2-3] List Corporations execution
-
-If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned. If `modified_after` is specified, order by `modified` desc.
+> Note: listing is an indexer function; the chain keeps no index for it ([Indexes](#identifier-conventions)).
 
 #### [MOD-CO-QRY-3] List Module Parameters
 
@@ -2941,27 +2922,9 @@ Anyone CAN execute this method.
 
 return found `Ecosystem` entry (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
 
-#### [MOD-ES-QRY-2] List Ecosystems
+#### [MOD-ES-QRY-2] Void
 
-##### [MOD-ES-QRY-2-1] List Ecosystems query parameters
-
-The following parameters are optional:
-
-- `corporation_id` (uint64) (*optional*): if specified, filter by corporation.
-- `modified_after` (timestamp) (*optional*): if specified, returns only `Ecosystem` entries with `Ecosystem.modified` greater than `modified`.
-- `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
-- `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
-- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
-
-##### [MOD-ES-QRY-2-2] List Ecosystems query checks
-
-If any of these checks fail, [[ref: query]] MUST fail.
-
-- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
-
-##### [MOD-ES-QRY-2-3] List Ecosystems execution of the query
-
-If all precondition checks passed, [[ref: query]] is executed and result (may be empty) returned. If `modified_after` is specified, order by `modified` desc.
+> Note: listing is an indexer function; the chain keeps no index for it ([Indexes](#identifier-conventions)).
 
 #### [MOD-ES-QRY-3] List Module Parameters
 
@@ -3120,32 +3083,9 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id` or `corporation_id`) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
 
-#### [MOD-GF-QRY-2] List Governance Framework Versions
+#### [MOD-GF-QRY-2] Void
 
-Anyone CAN execute this method.
-
-##### [MOD-GF-QRY-2-1] List Governance Framework Versions query parameters
-
-Exactly one of `ecosystem_id` and `corporation_id` MUST be set:
-
-- `ecosystem_id` (uint64) (*conditional*): filter by ecosystem. MUST be set if `corporation_id` is null.
-- `corporation_id` (uint64) (*conditional*): filter by corporation. MUST be set if `ecosystem_id` is null.
-- `active_only` (boolean) (*optional*): if true, return only the entry corresponding to the subject's `active_version`.
-- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
-- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
-
-##### [MOD-GF-QRY-2-2] List Governance Framework Versions query checks
-
-If any of these checks fail, [[ref: query]] MUST fail.
-
-- Exactly one of `ecosystem_id` and `corporation_id` MUST be set.
-- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
-
-##### [MOD-GF-QRY-2-3] List Governance Framework Versions execution
-
-Return the list of `GovernanceFrameworkVersion` entries matching the filter, with their nested `GovernanceFrameworkDocument` entries (filtered as above). Entries MUST be ordered by ascending `version`.
-
-### Credential Schema Module
+> Note: listing is an indexer function; the chain keeps no index for it ([Indexes](#identifier-conventions)).
 
 #### [MOD-CS-MSG-1] Create Credential Schema
 
@@ -3416,27 +3356,16 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 ##### [MOD-CS-QRY-1-1] List Credential Schemas parameters
 
 - `ecosystem_id` (uint64) (*optional*): to filter by ecosystem id.
-- `modified_after` (timestamp) (*optional*): show schemas modified after this timestamp.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 - `only_active` (boolean): if set to true, returns only not archived entries.
-- `issuer_onboarding_mode` (IssuerOnboardingMode): if set, filter by `issuer_onboarding_mode`.
-- `verifier_onboarding_mode` (VerifierOnboardingMode): if set, filter by `verifier_onboarding_mode`.
-- `verifier_credential_schema_id` (uint64): if set, return only the entries whose `verifier_credential_schema_ids` contains this id.
-- `holder_onboarding_mode` (HolderOnboardingMode): if set, filter by `holder_onboarding_mode`.
-- `subject_kind` (SubjectKind): if set, filter by `subject_kind`.
-- `presentation_mode` (PresentationMode): if set, filter by `presentation_mode`.
-- `credential_format` (CredentialFormat): if set, filter by `credential_format`.
-- `verification_session` (VerificationSessionMode): if set, filter by `verification_session`.
-- `credential_anchoring` (CredentialAnchoring): if set, filter by `credential_anchoring`.
 
 ##### [MOD-CS-QRY-1-2] List Credential Schemas checks
 
-- `modified_after` must be a timestamp.
 - `response_max_size` must be between 1 and 1,024.
 
 ##### [MOD-CS-QRY-1-3] List Credential Schemas execution
 
-return a list of found entry, or an empty list if nothing found. Results MUST be ordered by `modified` DESC.
+Return the matching entries ordered by `id`, or an empty list if nothing found. Credential schemas are few: this query scans them and keeps no index. Filtering by declaration values or by time is an indexer function ([Indexes](#identifier-conventions)).
 
 #### [MOD-CS-QRY-2] Get Credential Schema
 
@@ -4235,15 +4164,11 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 ###### [MOD-PP-MSG-7-2-4] Create Root Participant overlap checks
 
-Two root ECOSYSTEM `Participant` entries of the same `corporation` MUST NOT be effective at the same time for the same `schema_id`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
+Two root ECOSYSTEM `Participant` entries MUST NOT be effective at the same time for the same `schema_id`. If `corporation` wishes to create a new `Participant` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Participant Effective Until](#mod-pp-msg-8-set-participant-effective-until) to set or adjust the `effective_until` value.
 
-Find all [[ref: active participants]] and [[ref: future participants]] `participants[]` where:
+Let `participants[]` be the entries of `cs.root_participant_ids` that are [[ref: active participants]] or [[ref: future participants]].
 
-- `p.schema_id` = `schema_id`,
-- `p.role` = ECOSYSTEM,
-- `p.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
-
-> Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM-role `Participant` entries it is NULL. There is no `vs_id` condition either: a root entry represents the ecosystem itself for the schema.
+> Note: unlike overlap checks from other methods, here we do not need to check for `validator_participant_id`, as for ECOSYSTEM-role `Participant` entries it is NULL, nor for `vs_id` or `corporation_id`: a root entry represents the ecosystem itself for the schema, and only the corporation controlling the ecosystem creates one. The candidates are read from the schema, not from an index of entries.
 
 for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
 
@@ -4279,6 +4204,8 @@ A new entry `Participant` `perm` MUST be created:
 - `participant.op_current_deposit`: 0
 - `participant.issuance_fee_discount`: 0
 - `participant.verification_fee_discount`: 0
+
+Then append `participant.id` to `cs.root_participant_ids` and set `cs.modified` to `now`.
 
 > Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
@@ -4809,7 +4736,7 @@ Determine the operation type and applicable discount:
   - `discount` = `verifier_discount`
   - `payer_participant` = `verifier_participant` (null when the verifier holds no entry)
 
-**Materialize the payer's entry, if needed.** If `payer_participant` is null and `total_payer_trust_deposit` (fee checks) is greater than 0, the payer's deposit needs a ledger line: create a `Participant` entry exactly as [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) would, with `role` = ISSUER (Credential Issuance) or VERIFIER (Credential Verification), `validator_participant_id` = the id of the active root ECOSYSTEM entry of `schema_id` (abort if none exists), `vs_id` = `vs.id`, `corporation_id` = `co.id`, all fees and discounts 0, `effective_from` = `now`, `effective_until` = the root entry's `effective_until`; set `payer_participant` and `perm` to it. The entry is created once: the next session of the same party references it.
+**Materialize the payer's entry, if needed.** If `payer_participant` is null and `total_payer_trust_deposit` (fee checks) is greater than 0, the payer's deposit needs a ledger line: create a `Participant` entry exactly as [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) would, with `role` = ISSUER (Credential Issuance) or VERIFIER (Credential Verification), `validator_participant_id` = the id of the active root entry of `schema_id`, the entry of `cs.root_participant_ids` that is an [[ref: active participant]] (abort if none exists), `vs_id` = `vs.id`, `corporation_id` = `co.id`, all fees and discounts 0, `effective_from` = `now`, `effective_until` = the root entry's `effective_until`; set `payer_participant` and `perm` to it. The entry is created once: the next session of the same party references it.
 
 **For each beneficiary `Participant` `perm` in `found_participant_set`:**
 
@@ -5317,41 +5244,26 @@ This method does not modify the state of the [[ref: VPR]]. It MUST emit an event
 
 Anyone CAN execute this method.
 
-Generic query used for (at least):
-
-- find all `Participant` entries (all or limit to active) of a given schema;
-- for a given validator, get PENDING onboarding processes;
-- find all `Participant` entries of a given grantee;
-- find all `Participant` entries of a given did;
-- find all ISSUER_GRANTOR active participants, so that I can apply to an ISSUER `Participant` entry;
-...
+Returns the `Participant` entries of a `VerifiableService` entry, served by the index the sibling, session and materialization checks require ([[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)). Any other listing, by schema, by validator, by corporation, by state or by time, is an indexer function ([Indexes](#identifier-conventions)).
 
 ##### [MOD-PP-QRY-1-1] List Participants parameters
 
-- `schema_id` (number) (*optional*): the schema id.
-- `grantee` (account) (*optional*): the grantee account.
-- `vs_id` (uint64) (*optional*): the `VerifiableService` entry the `Participant` entry refers to (to search by identifier string, resolve it first with [[MOD-VS-QRY-1]](#mod-vs-qry-1-get-verifiable-service)).
-- `participant_id` (number) (*optional*): limit to `Participant` entries where the `validator_participant_id` is `participant_id`.
-- `role` (ParticipantRole) (*optional*): if we want to limit to a specific `Participant` role.
-- `only_valid` (boolean) (*optional*): if set to true, only return active participants.
-- `only_slashed` (boolean) (*optional*): if set to true, only return slashed `Participant` entries.
-- `only_repaid` (boolean) (*optional*): if set to true, only return repaid slashed `Participant` entries.
-- `modified_after` (timestamp) (*optional*): limit to `Participant` entries modified after (or equal to) `modified_after`.
-- `op_state` (OnboardingState) (*optional*): limit to `Participant` entries with a `op_state` not null and equal to `op_state`.
+- `vs_id` (uint64) (*mandatory*): the `VerifiableService` entry the `Participant` entries refer to (to search by identifier string, resolve it first with [[MOD-VS-QRY-1]](#mod-vs-qry-1-get-verifiable-service)).
+- `schema_id` (uint64) (*optional*): keep only the entries of this schema.
+- `role` (ParticipantRole) (*optional*): keep only the entries of this role.
+- `only_valid` (boolean) (*optional*): if true, keep only [[ref: active participants]].
 - `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
-- `when` (timestamp) (*optional*): if set, query *at* `when`, else query *at* now(). Used to query the VPR state at a previous datetime.
 
 ##### [MOD-PP-QRY-1-2] List Participants checks
 
-Basic type check arg SHOULD be applied.
-
 If any of these checks fail, [[ref: query]] MUST fail.
 
+- `vs_id` MUST be provided.
 - `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
 
 ##### [MOD-PP-QRY-1-3] List Participants execution
 
-return a list of found entries, or an empty list if nothing found. Ordered by `modified` asc.
+Return the entries of `vs_id` that pass the filters, ordered by `id`, or an empty list if nothing found.
 
 #### [MOD-PP-QRY-2] Get Participant
 
@@ -5477,7 +5389,7 @@ Algorithm. `Participant` entries with an unrepaid slash are not added to the set
 - define `current_participant` as null.
 
 - load the optional `issuer_participant` and `verifier_participant` as specified in basic checks above.
-- define `root`: the active root ECOSYSTEM `Participant` entry of `schema_id` (`role` = ECOSYSTEM, `validator_participant_id` null, an [[ref: active participant]]); null if none exists.
+- define `root`: the active root entry of `schema_id`, the entry of `CredentialSchema[schema_id].root_participant_ids` that is an [[ref: active participant]]; null if none is.
 
 Issuer branch:
 
@@ -6780,34 +6692,9 @@ an ExchangeRate entry with `base_asset_type`, `base_asset`, `quote_asset_type`, 
 
 If found, returns ExchangeRate entry, else return not found.
 
-#### [MOD-XR-QRY-2] List Exchange Rates
+#### [MOD-XR-QRY-2] Void
 
-Any [[ref: account]] CAN run this [[ref: query]]. As this method does not modify data, it does not require a [[ref: transaction]].
-
-##### [MOD-XR-QRY-2-1] List Exchange Rates query parameters
-
-- `base_asset_type` (PricingAssetType) (*optional*)  
-- `base_asset` (string) (*optional*)  
-- `quote_asset_type` (PricingAssetType) (*optional*)  
-- `quote_asset` (string) (*optional*)  
-- `state` (boolean) (*optional*): to force state, enabled or disabled.
-- `expires` (timestamp) (*optional*): only return entries whose `xr.expires` is strictly greater than `expires` (i.e., entries still valid at this timestamp).
-- `response_max_size` (uint32) (*optional*): maximum number of entries returned. Default 64, MUST be between 1 and 1024.
-
-##### [MOD-XR-QRY-2-2] List Exchange Rates query checks
-
-If any of these checks fail, [[ref: query]] MUST fail.
-
-- if `base_asset_type` is set to `TU`, `base_asset` MUST be null.
-- if `base_asset_type` is set to `COIN` or `FIAT` and `base_asset` is set, `base_asset` MUST be a non-empty string.
-- if `quote_asset_type` is set to `TU`, `quote_asset` MUST be null.
-- if `quote_asset_type` is set to `COIN` or `FIAT` and `quote_asset` is set, `quote_asset` MUST be a non-empty string.
-- if `expires` is set, it MUST be a valid timestamp.
-- `response_max_size` MUST be between 1 and 1024 if set; default to 64 if unspecified.
-
-##### [MOD-XR-QRY-2-3] List Exchange Rates execution of the query
-
-If found, returns a list of found ExchangeRates, else return an empty list.
+> Note: listing is an indexer function; the chain keeps no index for it ([Indexes](#identifier-conventions)).
 
 #### [MOD-XR-QRY-3] Get Price
 
