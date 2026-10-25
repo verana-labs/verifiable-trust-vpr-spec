@@ -1674,7 +1674,7 @@ A `Digest` entry records the digest, the corporation that anchored it, the `Part
 
 ### MsgType
 
-`MsgType` enumerates the delegable messages of the VPR: the messages a `corporation` executes through an `operator` under an [OperatorAuthorization](#operatorauthorization) or, in the context of a [VerifiableService](#verifiableservice) entry, through its `vs_operator` under a [OperatorAuthz](#operatorauthz); the same values scope a [FeeGrant](#feegrant). Every `msg_types` list of the data model and of the message parameters is a list of `MsgType` values, never of message names or protobuf type URLs: a `ServiceAuthorizationRecord` exists per registered service, and a type URL costs about fifty bytes per value where an enumeration value costs one.
+`MsgType` enumerates the delegable messages of the VPR: the messages a `corporation` executes through an `operator` under an [OperatorAuthorization](#operatorauthorization) or, in the context of a [VerifiableService](#verifiableservice) entry, through its `vs_operator` under the entry's `operator_authz` ([OperatorAuthz](#operatorauthz)); the same values scope a [FeeGrant](#feegrant). Every `msg_types` list of the data model and of the message parameters is a list of `MsgType` values, never of message names or protobuf type URLs: a an `operator_authz` exists per registered service, and a type URL costs about fifty bytes per value where an enumeration value costs one.
 
 Values and their numbers, which are stable and only ever appended to (0 is reserved for an unspecified value):
 
