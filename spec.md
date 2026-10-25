@@ -1149,6 +1149,11 @@ enum "CredentialAnchoring" as credentialanchoring {
   NONE
 }
 
+enum "CredentialRevocation" as credentialrevocation {
+  VPR
+  NONE
+}
+
 
 entity "(SDK) Account" as account {
 }
@@ -1275,6 +1280,7 @@ entity "Digest" as digest {
   *digest: bytes
   +created: timestamp
   revoked: timestamp
+  expires: timestamp
 }
 
 enum "ParticipantRole" as cspt {
@@ -1335,6 +1341,7 @@ cs o-- presentationmode: presentation_mode
 cs o-- credentialformat: credential_format
 cs o-- verificationsessionmode: verification_session
 cs o-- credentialanchoring: credential_anchoring
+cs o-- credentialrevocation: credential_revocation
 
 corp --o oauthz: corporation_id
 account --o oauthz: operator
@@ -1502,7 +1509,8 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the UserAgent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to PERMISSIONLESS, since a natural person holds no `Participant` entry. Immutable.
 - `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service as a Linked Verifiable Presentation in its DID Document, and anyone can read it; reading a published credential is not a Credential Verification: no session is created, no fees are computed and `verification_session` has no effect, so the `verification_fees` of a PUBLIC schema's `Participant` entries SHOULD be 0, since they can never be collected. ACCREDITED_AUTOMATIC: the credential is not published; the holder service presents it automatically, without the approval of its controller, to any requesting verifier authorized under the schema's `verifier_onboarding_mode` (under OPEN any peer, a VERIFIER `Participant` entry being needed only to create a `ParticipantSession`; under the other modes the holder of an active VERIFIER `Participant` entry), after having verified the `ParticipantSession` when one is required (see `verification_session`). ACCREDITED_APPROVAL: as ACCREDITED_AUTOMATIC, but each presentation requires the approval of the controller of the holder service, given before any payment is made. The VPR stores this declaration; its enforcement is the responsibility of agents, as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Immutable.
 - `credential_format` (CredentialFormat) (*mandatory*): the single format in which credentials of this schema are issued: W3C_JSONLD (W3C Verifiable Credentials in JSON-LD), ANONCREDS, SD_JWT, or MDOC (ISO/IEC 18013-5 mobile documents, `mso_mdoc`). MDOC is only allowed when `subject_kind` is PERSON. A PUBLIC credential is necessarily W3C_JSONLD, since it is published as a Linked Verifiable Presentation; a presented (non-published) service credential MAY use ANONCREDS or SD_JWT when selective disclosure or unlinkability matters, as the UserAgent credential does. An ecosystem that needs the same claims in several formats creates one schema per format. Future versions of this specification MAY add values. Immutable.
-- `credential_anchoring` (CredentialAnchoring) (*mandatory*): declares whether the digest of every credential of this schema is anchored in the VPR at issuance. DIGEST: the issuer anchors the credential digest, as defined by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/) for the container, through the issuance `ParticipantSession` before delivering the credential; the `Digest` entry gives the credential's effective issuance time, proves under which `ISSUER` entry it was issued, and carries its revocation ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)). NONE: no credential digest is anchored; the container's native mechanisms apply and trust in the credential requires a currently authorized issuer. MUST be DIGEST when `credential_format` is W3C_JSONLD and MUST be NONE when it is ANONCREDS (a verifier never sees an AnonCreds credential, only a proof derived from it); an ecosystem chooses for SD_JWT and MDOC. [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) requires the `digest` of a Credential Issuance under DIGEST and refuses one under NONE. Immutable.
+- `credential_anchoring` (CredentialAnchoring) (*mandatory*): declares whether the digest of every credential of this schema is anchored in the VPR at issuance. DIGEST: the issuer anchors the credential digest, as defined by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/) for the container, through the issuance `ParticipantSession` before delivering the credential; the event of the issuance session gives the credential's effective issuance time and the entry it was issued under and, when `credential_revocation` is VPR, a [Digest](#digest) entry carries its revocation ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)). NONE: no credential digest is anchored; the container's native mechanisms apply and trust in the credential requires a currently authorized issuer. MUST be DIGEST when `credential_format` is W3C_JSONLD and MUST be NONE when it is ANONCREDS (a verifier never sees an AnonCreds credential, only a proof derived from it); an ecosystem chooses for SD_JWT and MDOC. [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) requires the `digest` of a Credential Issuance under DIGEST and refuses one under NONE. Immutable.
+- `credential_revocation` (CredentialRevocation) (*mandatory*): for a DIGEST schema, declares whether its credentials are revocable through the VPR. VPR: the issuance session persists the credential digest as a [Digest](#digest) entry, revocable by the issuer or by the ecosystem governance ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) and kept until the credential expires; the credential MUST carry an expiry ([[ref: VT spec]]) and the issuance session MUST give it (`credential_valid_until`). NONE: the digest is anchored by the event of the issuance session only, nothing is written, and revocation, if any, uses a mechanism native to the container. MUST be NONE when `credential_anchoring` is NONE. Immutable.
 - `verification_session` (VerificationSessionMode) (*mandatory*): declares when a verifier MUST create a `ParticipantSession` ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)) for a verification of a credential of this schema. WHEN_FEES: only when the fees computed for the verification are greater than 0. REQUIRED: for every verification, even when these fees are 0, so that an on-chain record of the verification exists. Under WHEN_FEES a session MUST be created when the fees are greater than 0 and MAY be created otherwise. MUST be WHEN_FEES for a PUBLIC schema, whose credentials are read, not presented. Independently of this attribute, a session is also mandatory for every verification when the schema's `presentation_validity_period` is greater than 0, and for every Credential Issuance under a schema whose `credential_anchoring` is DIGEST, since the digest is anchored through the session. The VPR stores this attribute and does not read it in [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session); agents enforce it as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): unlike `subject_kind`, `presentation_mode` and `credential_format`, this attribute is a cost and audit setting of the ecosystem, with no effect on trust resolution, on the credentials already issued or on the sessions already created; a change applies to the verifications that follow it, and agents read the value in force at the time of the verification.
 - `presentation_validity_period` (duration) (*optional*): the duration in seconds during which a presentation of a credential of this schema is valid evidence of a verification; null or 0 means no reliance period and no digest requirement. MUST be null or 0 when `presentation_mode` is PUBLIC (published credentials are read, not presented, and produce no receipt). Maximum 315,360,000 seconds (3,650 days). A value greater than 0 makes a `ParticipantSession` transaction carrying the presentation digest mandatory for every verification of the schema, whatever `verification_session` says: [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) reads the value in force at the block to require the digest. The end of the reliance period of a presentation is not stored: it is the block time of the session transaction that carried the presentation digest plus the value of this attribute in force at that time, computed by the parties, and by indexers from the schema's update history. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): a change applies to the verifications that follow it and does not change the reliance period of the presentations already anchored; agents read the value in force at the time of the verification. The legal effect of the period is stated by the ecosystem in its governance framework.
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for paying business fees. Can be TU ([[ref: trust unit]]),  COIN (a token available on the VPR chain), FIAT (means chain is used for settlement only and payment is done off-chain). Not that in all cases, trust deposits are always handled in `denom`.
@@ -1557,7 +1565,7 @@ A `ParticipantSession` is the set of credential exchanges (issuances, verificati
 - `issuer_participant_id` (uint64) or `issuer_vs_id` (uint64): the `ISSUER` `Participant` entry of the issuer of the credential (the payer's own entry in a Credential Issuance, the credential issuer's entry in a Credential Verification), or the `VerifiableService` entry of an issuer that holds no `ISSUER` entry (OPEN issuer mode). Exactly one is set.
 - `verifier_participant_id` (uint64) or `verifier_vs_id` (uint64): in a Credential Verification, the `VERIFIER` entry of the verifier, or the `VerifiableService` entry of a verifier that holds no `VERIFIER` entry (OPEN or CREDENTIAL verifier mode).
 - `wallet_agent_participant_id` (uint64), `agent_participant_id` (uint64): the wallet agent and agent `Participant` entries, when applicable.
-- `digest` (bytes): in a Credential Issuance, the credential digest, also persisted as a [Digest](#digest) entry; in a Credential Verification, the presentation digest, carried by the event only.
+- `digest` (bytes): in a Credential Issuance, the credential digest, also persisted as a [Digest](#digest) entry when the schema's `credential_revocation` is VPR; in a Credential Verification, the presentation digest, carried by the event only.
 - the block time of the transaction: the effective issuance time of the credential, or the effective presentation time of the presentation.
 
 ### TrustDeposit
@@ -1584,11 +1592,12 @@ A `ParticipantSession` is the set of credential exchanges (issuances, verificati
 - `schema_id` (uint64) (*optional*): the `CredentialSchema` entry of the session that anchored the digest; null when stored directly.
 - `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential.
 - `revoked` (timestamp) (*optional*): block execution timestamp at which this digest was revoked by [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest); null if the digest has not been revoked. For a digest anchored at credential issuance, a non-null value means that the owning corporation, or a governance ancestor of the anchoring entry ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)), has revoked the credential as of this timestamp; trust resolution takes it into account together with its check that the anchoring entry is the issuer's (Verifiable Trust specification).
+- `expires` (timestamp) (*optional*): block time after which the entry is deleted by the expiry sweep ([Digests Module](#digests-module)): the expiry of the credential (`credential_valid_until` of the issuance session) for a credential digest, the value chosen by the owner for a direct notarization; null keeps the entry indefinitely.
 
-A digest stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) carries `vs_id` only, no `schema_id` and no `participant_id`: it has no anchoring context of a credential and is not a valid anchor of one (Verifiable Trust specification). It serves the other needs of its owner, such as a dated proof of the existence of a document.
+A digest stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) carries `vs_id` only, no `schema_id` and no `participant_id`: it has no anchoring context of a credential and is not a valid anchor of one (Verifiable Trust specification). It serves the other needs of its owner, such as a dated proof of the existence of a document, and is kept until the `expires` its owner gave, or indefinitely when none.
 
 :::note
-A `Digest` entry records the digest, the [VerifiableService](#verifiableservice) entry under which it was anchored (whose corporation owns it), the `Participant` entry under which it was anchored (if any), the schema, the timestamp at which it was first persisted and its revocation timestamp (if any): it does not record which operator [[ref: account]] anchored it, and the VPR does not verify a digest against any content. A digest is revoked by its owner corporation or by a governance ancestor of its anchoring entry ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)). Credential digests concern W3C credentials, whose issuance time and revocation the Verifiable Trust specification anchors here; other containers carry their own revocation mechanisms.
+A `Digest` entry records the digest, the [VerifiableService](#verifiableservice) entry under which it was anchored (whose corporation owns it), the `Participant` entry under which it was anchored (if any), the schema, the timestamp at which it was first persisted, its revocation timestamp (if any) and its expiry (if any): it does not record which operator [[ref: account]] anchored it, and the VPR does not verify a digest against any content. A digest is revoked by its owner corporation or by a governance ancestor of its anchoring entry ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)). Credential digests exist for schemas whose `credential_revocation` is VPR: their revocation is anchored here, their issuance time in the event of the issuance session like that of every anchored credential; other schemas carry their own revocation mechanisms or none.
 :::
 
 ### MsgType
@@ -3028,6 +3037,7 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `presentation_mode` (PresentationMode) (*conditional*): mandatory if `subject_kind` is SERVICE, MUST be absent otherwise.
 - `credential_format` (CredentialFormat) (*mandatory*).
 - `credential_anchoring` (CredentialAnchoring) (*conditional*): mandatory when `credential_format` is SD_JWT or MDOC; if absent, DIGEST when `credential_format` is W3C_JSONLD and NONE when it is ANONCREDS.
+- `credential_revocation` (CredentialRevocation) (*conditional*): mandatory when the resulting `credential_anchoring` is DIGEST; if absent, NONE.
 - `verification_session` (VerificationSessionMode) (*optional*), default to WHEN_FEES.
 - `presentation_validity_period` (duration) (*optional*): seconds, default to null (no reliance period).
 - `pricing_asset_type` (PricingAssetType) (*mandatory*).
@@ -3061,6 +3071,7 @@ If any of these precondition checks fail, method MUST abort.
 - if `subject_kind` is PERSON, `holder_onboarding_mode` MUST be PERMISSIONLESS (a natural person holds no `Participant` entry), else abort.
 - `credential_format` (CredentialFormat) (*mandatory*). MUST be a valid CredentialFormat. If `presentation_mode` is PUBLIC, `credential_format` MUST be W3C_JSONLD (a published credential is a Linked Verifiable Presentation), else abort. If `credential_format` is MDOC, `subject_kind` MUST be PERSON, else abort.
 - `credential_anchoring` (CredentialAnchoring) (*conditional*): if present, MUST be a valid CredentialAnchoring. MUST be DIGEST or absent when `credential_format` is W3C_JSONLD, NONE or absent when it is ANONCREDS, and MUST be present otherwise; else abort.
+- `credential_revocation` (CredentialRevocation) (*conditional*): if present, MUST be a valid CredentialRevocation. MUST be present when the resulting `credential_anchoring` is DIGEST, and MUST be NONE or absent when it is NONE; else abort.
 - `verification_session` (VerificationSessionMode) (*optional*): if present, MUST be a valid VerificationSessionMode. If `presentation_mode` is PUBLIC, MUST be WHEN_FEES or absent, else abort.
 - `presentation_validity_period` (duration) (*optional*): if present, MUST be between 0 and 315,360,000 seconds. If `presentation_mode` is PUBLIC, MUST be 0 or absent, else abort.
 - `digest_algorithm` (string) (*mandatory*) MUST be one of the lowercase tokens `sha384` or `sha512`, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
@@ -3103,6 +3114,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.presentation_mode`: `presentation_mode` (null if `subject_kind` is PERSON)
   - `cs.credential_format`: `credential_format`
   - `cs.credential_anchoring`: `credential_anchoring` if present, else DIGEST when `credential_format` is W3C_JSONLD, NONE when it is ANONCREDS
+  - `cs.credential_revocation`: `credential_revocation` if present, else NONE
   - `cs.verification_session`: `verification_session` if present, else WHEN_FEES
   - `cs.presentation_validity_period`: `presentation_validity_period` (null if absent)
   - `cs.created`: current timestamp
@@ -3135,7 +3147,7 @@ An [[ref: account]] that would like to update a [[ref: credential schema]] MUST 
 - `presentation_validity_period` (duration) (*optional*): seconds; if absent, the attribute is unchanged.
 - `verifier_credential_schema_ids` (uint64[]) (*optional*): the new list, replacing the current one; only when `cs.verifier_onboarding_mode` is CREDENTIAL; if absent, the attribute is unchanged.
 
-other attributes (including `subject_kind`, `presentation_mode`, `credential_format` and `credential_anchoring`) are immutable and cannot be updated.
+other attributes (including `subject_kind`, `presentation_mode`, `credential_format`, `credential_anchoring` and `credential_revocation`) are immutable and cannot be updated.
 
 ##### [MOD-CS-MSG-2-2] Update Credential Schema precondition checks
 
@@ -4389,6 +4401,7 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 - `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `digest` (bytes, base64 in the API) (*conditional*): in a Credential Issuance, the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), mandatory when the schema's `credential_anchoring` is DIGEST and absent when it is NONE (its anchoring fixes the effective issuance time, see [Digest](#digest)); in a Credential Verification, the presentation digest sent by the agent (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
+- `credential_valid_until` (timestamp) (*conditional*): in a Credential Issuance under a schema whose `credential_revocation` is VPR, the expiry of the credential (`validUntil`, `exp` or `validityInfo.validUntil`, see the [[ref: VT spec]]), mandatory; absent otherwise. The `Digest` entry is kept until then ([Digests Module](#digests-module)).
 
 ##### [MOD-PP-MSG-10-2] Create or Update Participant Session precondition checks
 
@@ -4420,7 +4433,8 @@ Verifier reference (Credential Verification only):
 - if `cs.presentation_validity_period` > 0 and `digest` is absent, abort: the ecosystem requires a dated receipt of every verification of this schema.
 
 - in a Credential Issuance: if `cs.credential_anchoring` is DIGEST and `digest` is absent, abort (the credential digest is anchored through this session); if `cs.credential_anchoring` is NONE and `digest` is present, abort (no credential digest is anchored for this schema).
-- in a Credential Issuance, if `digest` is present and a `Digest` entry with that value already exists whose owner, the corporation of its `vs_id` entry, differs from `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort: another corporation anchored this credential first and would control its revocation; the issuer re-issues the credential with changed content, as the Verifiable Trust specification requires.
+- in a Credential Issuance: if `cs.credential_revocation` is VPR, `credential_valid_until` MUST be present and later than `now()`, else abort; otherwise `credential_valid_until` MUST be absent.
+- in a Credential Issuance under a schema whose `credential_revocation` is VPR, if a `Digest` entry with the value of `digest` already exists whose owner, the corporation of its `vs_id` entry, differs from `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort: another corporation anchored this credential first and would control its revocation; the issuer re-issues the credential with changed content, as the Verifiable Trust specification requires.
 - if `digest` is present, its decoded length MUST be the output size of `cs.digest_algorithm` (48 bytes for `sha384`, 64 for `sha512`), else abort.
 
 Define the **primary party**: in a Credential Verification, `perm` = `verifier_participant` (null when `verifier_vs_id` was given) and `vs` = `VerifiableService[verifier_participant.vs_id]` or `verifier_vs`; in a Credential Issuance, `perm` = `issuer_participant` (null when `issuer_vs_id` was given) and `vs` = `VerifiableService[issuer_participant.vs_id]` or `issuer_vs`.
@@ -4747,7 +4761,7 @@ If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 
 
 The method MUST emit a `ParticipantSession` event ([ParticipantSession](#participantsession)) carrying `id`, `schema_id`, `issuer_participant_id` (null when `issuer_vs_id` was given) or `issuer_vs_id`, `verifier_participant_id` (the id of `verifier_participant`, the materialized entry if one was created in this session; null in a Credential Issuance) or `verifier_vs_id`, `agent_participant_id`, `wallet_agent_participant_id`, `digest` when present, and `now`. Nothing is written for the session.
 
-In a Credential Issuance, if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`, passing `participant_id` = the id of `perm` (null when the primary party holds no entry), `vs_id` = `vs.id` and `schema_id` = `schema_id`: in a Credential Issuance it is the credential's `digestJCS` and, when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry, necessarily owned by `co.id` after the precondition checks, keeps its `created`, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op). In a Credential Verification the presentation digest is carried by the event only: the block time of the transaction is the effective presentation time, from which the reliance period of the presentation runs when `cs.presentation_validity_period` is greater than 0.
+In a Credential Issuance under a schema whose `credential_revocation` is VPR, persist `digest` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`, passing `participant_id` = the id of `perm` (null when the primary party holds no entry), `vs_id` = `vs.id`, `schema_id` = `schema_id` and `expires` = `credential_valid_until`: when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry, necessarily owned by `co.id` after the precondition checks, keeps its `created`, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op). Under NONE revocation the credential digest is carried by the event only: the block time of the transaction is the effective issuance time, and nothing is written. In a Credential Verification the presentation digest is carried by the event only: the block time of the transaction is the effective presentation time, from which the reliance period of the presentation runs when `cs.presentation_validity_period` is greater than 0.
 
 :::warning
 a session event always carries `schema_id` and exactly one of `issuer_participant_id` and `issuer_vs_id`; `verifier_participant_id` or `verifier_vs_id` is set in a Credential Verification only
@@ -6134,12 +6148,14 @@ Return the `OperatorAuthorization` entry whose `id` matches the supplied `id`.
 
 ### Digests Module
 
+The Digests module keeps the [Digest](#digest) entries: the credential digests of schemas whose `credential_revocation` is VPR, written by the issuance session so that the credential can be revoked ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)), and the notarizations of [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). An entry lives until its `expires`: at the end of every block, the module deletes the entries whose `expires` is not null and not later than the block time (implementations keep an expiry queue, bucketed by time, written when the entry is created). A credential digest therefore exists exactly while the credential it anchors can be valid, revoked ones included, as a tombstone that stops the identical credential from being re-anchored; after expiry the credential is rejected on its own expiry and its anchoring remains in the transaction history. Credential digests of schemas whose `credential_revocation` is NONE are never written: the event of the issuance session anchors them.
+
 #### [MOD-DI-MSG-1] Store Digest
 
 - Any authorized `operator` CAN execute this method on behalf of a `corporation`, in the context of one of the corporation's [VerifiableService](#verifiableservice) entries: a corporation operator under an OperatorAuthorization, or the vs-agent of that entry under a VS Operator Authorization whose record lists `StoreDigest`.
 - This method can be called directly by [Create or Update Participant Session](#mod-pp-msg-10-create-or-update-participant-session) module with no checks.
 
-The agent of an issuer does not call this method itself: it anchors the digest of a credential it issues through the issuance session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), `digest` parameter), which it creates even when no fees are due, so that the anchoring entry of the digest is recorded. Called directly, this method anchors a digest for the owner's other needs (a dated proof of the existence of a document, a retention record): such a digest has no anchoring context of a credential.
+The agent of an issuer does not call this method itself: it anchors the digest of a credential it issues through the issuance session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), `digest` parameter), which it creates even when no fees are due, so that the anchoring entry of the digest is recorded; the entry is written only under a schema whose `credential_revocation` is VPR. Called directly, this method anchors a digest for the owner's other needs (a dated proof of the existence of a document, a retention record): such a digest has no anchoring context of a credential.
 
 ##### [MOD-DI-MSG-1-1] Store Digest method parameters
 
@@ -6147,8 +6163,9 @@ The agent of an issuer does not call this method itself: it anchors the digest o
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_id` (uint64) (*mandatory*): the `VerifiableService` entry under which the digest is anchored; MUST be owned by `corporation`.
 - `digest` (bytes, base64 in the API) (*mandatory*): digest to store.
+- `expires` (timestamp) (*optional*): block time after which the entry is deleted ([Digests Module](#digests-module)); null keeps it indefinitely.
 
-Module-call inputs, set only when the method is called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) and MUST be absent on a direct Msg: `participant_id` (the primary participant of the session, if any) and `schema_id` (the schema of the session); `vs_id` is then the primary party's `VerifiableService` entry and the authorization checks below are those of the session message.
+Module-call inputs, set only when the method is called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) and MUST be absent on a direct Msg: `participant_id` (the primary participant of the session, if any), `schema_id` (the schema of the session) and `expires` (the credential's expiry); `vs_id` is then the primary party's `VerifiableService` entry and the authorization checks below are those of the session message.
 
 ##### [MOD-DI-MSG-1-2] Store Digest precondition checks
 
@@ -6164,6 +6181,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - Authorization: either [[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) and [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and `StoreDigest`; or [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) and [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for the (`corporation`, `operator`, null, `vs`) tuple; else abort.
 - if `digest` is not present, abort.
 - if `digest` decodes to neither 48 nor 64 bytes, abort.
+- if `expires` is present, it MUST be later than `now()`, else abort.
 
 ###### [MOD-DI-MSG-1-2-2] Store Digest fee checks
 
@@ -6174,7 +6192,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-- if a `Digest` entry `d` already exists with `d.digest` = `digest`, the method is a no-op (idempotent): execution returns success without modifying state (the existing entry keeps its `vs_id`, even if its owner differs from `co.id`).
+- if a `Digest` entry `d` already exists with `d.digest` = `digest`, the method is a no-op (idempotent): execution returns success without modifying state (the existing entry keeps its `vs_id` and its `expires`, even if its owner differs from `co.id`).
 - else create `Digest` entry `d`:
   - set `d.digest` to `digest`.
   - set `d.participant_id` to the primary participant of the session when called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), else null.
@@ -6182,6 +6200,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `d.schema_id` to the value passed by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), else null.
   - set `d.created` to `now`.
   - set `d.revoked` to null.
+  - set `d.expires` to `expires` (the `credential_valid_until` of the session when called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)), null when absent, and file the entry in the expiry queue when not null.
 
 #### [MOD-DI-MSG-2] Revoke Digest
 
@@ -6213,6 +6232,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - if `digest` is not present, abort.
 - if `digest` decodes to neither 48 nor 64 bytes, abort.
 - a `Digest` entry `d` with `d.digest` = `digest` MUST exist, else abort.
+- `d.expires` MUST be null or later than `now()`, else abort (the credential it anchored has expired and the entry is about to be swept).
 - [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass: `co` is the `Corporation` entry whose `policy_address` is the signing `corporation` account.
 - define `authority_set`: the empty set if `d.participant_id` is null; else the anchoring entry `Participant[d.participant_id]` and every ancestor reached from it by following `validator_participant_id` until null, keeping only the entries that are [[ref: active participants]] (an expired, revoked or slashed entry confers no authority).
 - Authorization:
