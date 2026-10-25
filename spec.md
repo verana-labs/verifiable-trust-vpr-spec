@@ -1103,6 +1103,7 @@ entity "CredentialSchema" as cs {
   +holder_validation_validity_period: number
   +issuer_onboarding_mode: IssuerOnboardingMode
   +verifier_onboarding_mode: VerifierOnboardingMode
+  verifier_credential_schema_ids: uint64[]
   +holder_onboarding_mode: HolderOnboardingMode
   +subject_kind: SubjectKind
   presentation_mode: PresentationMode
@@ -1126,6 +1127,7 @@ enum "VerifierOnboardingMode" as vom {
   OPEN
   GRANTOR_ONBOARDING_PROCESS
   ECOSYSTEM_ONBOARDING_PROCESS
+  CREDENTIAL
 }
 
 enum "HolderOnboardingMode" as hom {
@@ -1284,6 +1286,8 @@ entity "Digest" as digest {
   *digest: string
   +corporation_id: uint64
   participant_id: uint64
+  vs_id: uint64
+  schema_id: uint64
   +created: timestamp
   revoked: timestamp
   presentation_valid_until: timestamp
@@ -1405,6 +1409,8 @@ corp --o uesc: corporation_id
 tr --o uesc: ecosystem_id
 corp --o digest: corporation_id
 csp --o digest: participant_id
+vs --o digest: vs_id
+cs --o digest: schema_id
 
 @enduml
 
@@ -1537,8 +1543,9 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `issuer_validation_validity_period` (number) (*mandatory*): number of days after which an issuer onboarding process expires and must be renewed.
 - `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier onboarding process expires and must be renewed.
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder onboarding process expires and must be renewed.
-- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credential of this schema; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
-- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means anyone can verify credentials of this schema (does not implies that a payment is not necessary); GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credentials of this schema without any `ISSUER` `Participant` entry: an issuer anchors its credentials and pays the ecosystem's issuance fees under its [VerifiableService](#verifiableservice) entry ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)), and MAY self-create an `ISSUER` entry ([[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) to declare the `verification_fees` and `validation_fees` it charges (an entry is also created for it at its first fee-bearing session); GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
+- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means any service can verify credentials of this schema without any `VERIFIER` `Participant` entry (which does not imply that a payment is not necessary: a verifier pays and anchors under its [VerifiableService](#verifiableservice) entry, and a `VERIFIER` entry is created for it at its first fee-bearing session); CREDENTIAL means any service whose identifier is the subject of a valid credential of one of the schemas listed in `verifier_credential_schema_ids`, as established by the holder's trust resolution ([[ref: VT spec]]), can verify, without any `VERIFIER` entry either; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `verifier_credential_schema_ids` (uint64[]) (*conditional*): ids of the `CredentialSchema` entries whose holders are authorized verifiers when `verifier_onboarding_mode` is CREDENTIAL; MUST be set, non-empty, iff the mode is CREDENTIAL. Each id MUST refer to a `CredentialSchema` entry whose `subject_kind` is SERVICE and whose `presentation_mode` is PUBLIC, so that a holder can establish the verifier's credential from its DID Document alone, before any session. The VPR stores the list and does not evaluate it; the holder does, per the [[ref: VT spec]]. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema); a change applies to the presentations that follow it.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission. HOLDER permission is used to check credential revocation status; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
 - `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the UserAgent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to PERMISSIONLESS, since a natural person holds no `Participant` entry. Immutable.
 - `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service as a Linked Verifiable Presentation in its DID Document, and anyone can read it; reading a published credential is not a Credential Verification: no session is created, no fees are computed and `verification_session` has no effect, so the `verification_fees` of a PUBLIC schema's `Participant` entries SHOULD be 0, since they can never be collected. ACCREDITED_AUTOMATIC: the credential is not published; the holder service presents it automatically, without the approval of its controller, to any requesting verifier authorized under the schema's `verifier_onboarding_mode` (under OPEN any peer, a VERIFIER `Participant` entry being needed only to create a `ParticipantSession`; under the other modes the holder of an active VERIFIER `Participant` entry), after having verified the `ParticipantSession` when one is required (see `verification_session`). ACCREDITED_APPROVAL: as ACCREDITED_AUTOMATIC, but each presentation requires the approval of the controller of the holder service, given before any payment is made. The VPR stores this declaration; its enforcement is the responsibility of agents, as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Immutable.
@@ -1611,8 +1618,11 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 - `id` (uint64) (*mandatory*) (key): the id of this `ParticipantSessionRecord`.
 - `created` (timestamp) (*mandatory*): timestamp this record has been created.
-- `issuer_participant_id` (uint64) (*mandatory*): the `ISSUER` `Participant` entry of the issuer of the credential (the payer's own entry in a Credential Issuance, the credential issuer's entry in a Credential Verification).
-- `verifier_participant_id` (uint64) (*optional*): related verifier `Participant` id (if applicable).
+- `schema_id` (uint64) (*mandatory*): the `CredentialSchema` entry of the credential.
+- `issuer_participant_id` (uint64) (*conditional*): the `ISSUER` `Participant` entry of the issuer of the credential (the payer's own entry in a Credential Issuance, the credential issuer's entry in a Credential Verification). Exactly one of `issuer_participant_id` and `issuer_vs_id` is set.
+- `issuer_vs_id` (uint64) (*conditional*): the `VerifiableService` entry of an issuer that holds no `ISSUER` entry (OPEN issuer mode).
+- `verifier_participant_id` (uint64) (*optional*): the `VERIFIER` entry of the verifier, in a Credential Verification.
+- `verifier_vs_id` (uint64) (*optional*): the `VerifiableService` entry of a verifier that holds no `VERIFIER` entry (OPEN or CREDENTIAL verifier mode), in a Credential Verification.
 - `wallet_agent_participant_id` (uint64) (*optional*): related wallet agent `Participant` id (if applicable).
 - `agent_participant_id` (uint64) (*optional*): permission id of the agent `Participant` id (if applicable).
 
@@ -1639,7 +1649,9 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 - `digest` (string) (*mandatory*) (key): digest to store. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] on whose behalf the digest was stored: the signing `corporation` of [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest), or the `corporation` of the `ParticipantSession` when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session).
-- `participant_id` (uint64) (*optional*): the `Participant` entry under which the digest was anchored: the primary participant of the session when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) (the `ISSUER` entry in a Credential Issuance, the `VERIFIER` entry in a Credential Verification); null when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). Together with the validator chain of that entry, it determines who may revoke the digest ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)).
+- `participant_id` (uint64) (*optional*): the `Participant` entry under which the digest was anchored: the primary participant of the session when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) (the `ISSUER` entry in a Credential Issuance, the `VERIFIER` entry in a Credential Verification); null when the primary party holds no entry (OPEN or CREDENTIAL mode, see `vs_id`) or when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). Together with the validator chain of that entry, it determines who may revoke the digest ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)).
+- `vs_id` (uint64) (*optional*): the [VerifiableService](#verifiableservice) entry of the primary party of the session that anchored the digest (the issuer's entry in a Credential Issuance, the verifier's in a Credential Verification), set by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) whether or not that party holds a `Participant` entry; null when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). With `schema_id`, this is the anchoring context of a credential issued under an OPEN schema by an issuer without an `ISSUER` entry.
+- `schema_id` (uint64) (*optional*): the `CredentialSchema` entry of the session that anchored the digest; null when stored directly.
 - `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential. For a presentation digest anchored by a verifier in a Credential Verification ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)), it is the **effective presentation time**: together with the session created by the same transaction (that transaction is the link between the two), it lets the holder prove to whom and when it presented, and the verifier prove what it received, without any content on chain.
 - `revoked` (timestamp) (*optional*): block execution timestamp at which this digest was revoked by [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest); null if the digest has not been revoked. For a digest anchored at credential issuance, a non-null value means that the owning corporation, or a governance ancestor of the anchoring entry ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)), has revoked the credential as of this timestamp; trust resolution takes it into account together with its check that the owner is the issuer's corporation (Verifiable Trust specification). Revocation has no meaning for a presentation digest: trust resolution consults `revoked` for credential digests only.
 - `presentation_valid_until` (timestamp) (*optional*): for a **presentation digest** only, the end of the period during which the presentation is valid evidence of a verification, set by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) from the `presentation_validity_period` of the schema. MUST be null for every digest anchored in a Credential Issuance and for every digest stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest): it never concerns the validity of a credential, which is bounded by the credential's own `validUntil` and by the `HOLDER` entry it was issued under. Trust resolution never reads it.
@@ -1649,7 +1661,8 @@ The anchoring context tells the two kinds of digest apart:
 | | Credential digest | Presentation digest |
 | --- | --- | --- |
 | Anchored by | a Credential Issuance session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)) | a Credential Verification session |
-| `participant_id` | the `ISSUER` entry, or null | the `VERIFIER` entry |
+| `participant_id` | the `ISSUER` entry, or null when the issuer holds none | the `VERIFIER` entry, or null when the verifier holds none |
+| `vs_id`, `schema_id` | the issuer's `VerifiableService` entry and the schema | the verifier's `VerifiableService` entry and the schema |
 | `created` | effective issuance time | effective presentation time |
 | `revoked` | the credential is revoked as of this time (owner or governance ancestor) | ignored by trust resolution; never shortens `presentation_valid_until` |
 | `presentation_valid_until` | always null | end of the reliance period, when the schema's `presentation_validity_period` is greater than 0 |
@@ -3186,6 +3199,7 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `holder_validation_validity_period` (*mandatory*), default to 0 (days).
 - `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*).
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*).
+- `verifier_credential_schema_ids` (uint64[]) (*conditional*): MUST be provided, non-empty, iff `verifier_onboarding_mode` is CREDENTIAL.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*).
 - `subject_kind` (SubjectKind) (*mandatory*).
 - `presentation_mode` (PresentationMode) (*conditional*): mandatory if `subject_kind` is SERVICE, MUST be absent otherwise.
@@ -3217,6 +3231,7 @@ If any of these precondition checks fail, method MUST abort.
 - `holder_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
 - `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*). MUST be a valid IssuerOnboardingMode.
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*). MUST be a valid VerifierOnboardingMode.
+- `verifier_credential_schema_ids` (uint64[]) (*conditional*): if `verifier_onboarding_mode` is CREDENTIAL, MUST be present and non-empty, and each id MUST refer to an existing, non-archived `CredentialSchema` entry whose `subject_kind` is SERVICE and whose `presentation_mode` is PUBLIC; if the mode is not CREDENTIAL, MUST be absent; else abort.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*). MUST be a valid HolderOnboardingMode.
 - `subject_kind` (SubjectKind) (*mandatory*). MUST be a valid SubjectKind.
 - `presentation_mode` (PresentationMode) (*conditional*): if `subject_kind` is SERVICE, MUST be present and MUST be a valid PresentationMode; if `subject_kind` is PERSON, MUST be absent; else abort.
@@ -3259,6 +3274,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.holder_validation_validity_period`: `holder_validation_validity_period`
   - `cs.issuer_onboarding_mode`: `issuer_onboarding_mode`
   - `cs.verifier_onboarding_mode`: `verifier_onboarding_mode`
+  - `cs.verifier_credential_schema_ids`: `verifier_credential_schema_ids` (null unless the mode is CREDENTIAL)
   - `cs.holder_onboarding_mode`: `holder_onboarding_mode`
   - `cs.subject_kind`: `subject_kind`
   - `cs.presentation_mode`: `presentation_mode` (null if `subject_kind` is PERSON)
@@ -3295,6 +3311,7 @@ An [[ref: account]] that would like to update a [[ref: credential schema]] MUST 
 - `holder_validation_validity_period` (*mandatory*), default to 0 (days).
 - `verification_session` (VerificationSessionMode) (*optional*): if absent, the attribute is unchanged.
 - `presentation_validity_period` (duration) (*optional*): seconds; if absent, the attribute is unchanged.
+- `verifier_credential_schema_ids` (uint64[]) (*optional*): the new list, replacing the current one; only when `cs.verifier_onboarding_mode` is CREDENTIAL; if absent, the attribute is unchanged.
 
 other attributes (including `subject_kind`, `presentation_mode`, `credential_format` and `credential_anchoring`) are immutable and cannot be updated.
 
@@ -3318,6 +3335,7 @@ If any of these precondition checks fail, method MUST abort.
 - `holder_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
 - `verification_session`, if present, MUST be a valid VerificationSessionMode; if `cs.presentation_mode` is PUBLIC, it MUST be WHEN_FEES, else MUST abort.
 - `presentation_validity_period`, if present, MUST be between 0 and 315,360,000 seconds; if `cs.presentation_mode` is PUBLIC, it MUST be 0, else MUST abort.
+- `verifier_credential_schema_ids`, if present, MUST be non-empty, `cs.verifier_onboarding_mode` MUST be CREDENTIAL, and each id MUST satisfy the checks of [[MOD-CS-MSG-1-2-1]](#mod-cs-msg-1-2-1-create-credential-schema-basic-checks); else MUST abort.
 
 ###### [MOD-CS-MSG-2-2-2] Update Credential Schema fee checks
 
@@ -3338,6 +3356,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.holder_validation_validity_period`: `holder_validation_validity_period`
   - `cs.verification_session`: `verification_session` if present, else unchanged
   - `cs.presentation_validity_period`: `presentation_validity_period` if present, else unchanged
+  - `cs.verifier_credential_schema_ids`: `verifier_credential_schema_ids` if present, else unchanged
   - `cs.modified`: current timestamp.
 
 #### [MOD-CS-MSG-3] Archive Credential Schema
@@ -3435,6 +3454,7 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 - `only_active` (boolean): if set to true, returns only not archived entries.
 - `issuer_onboarding_mode` (IssuerOnboardingMode): if set, filter by `issuer_onboarding_mode`.
 - `verifier_onboarding_mode` (VerifierOnboardingMode): if set, filter by `verifier_onboarding_mode`.
+- `verifier_credential_schema_id` (uint64): if set, return only the entries whose `verifier_credential_schema_ids` contains this id.
 - `holder_onboarding_mode` (HolderOnboardingMode): if set, filter by `holder_onboarding_mode`.
 - `subject_kind` (SubjectKind): if set, filter by `subject_kind`.
 - `presentation_mode` (PresentationMode): if set, filter by `presentation_mode`.
@@ -3566,10 +3586,10 @@ issuer --> holder
 
 ```
 
-`ECOSYSTEM` Participants are created directly by the [[ref: credential schema]] owner. All other Participants are created by running an [[ref: onboarding process]] — except when onboarding mode is set to `OPEN` for ISSUER and/or VERIFIER Participants, which any account CAN create directly:
+`ECOSYSTEM` Participants are created directly by the [[ref: credential schema]] owner. All other Participants are created by running an [[ref: onboarding process]], except under the `OPEN` and `CREDENTIAL` modes, where no entry is required at all:
 
-- `ISSUER` Participants when `issuer_onboarding_mode` is `OPEN`;
-- `VERIFIER` Participants when `verifier_onboarding_mode` is `OPEN`.
+- when `issuer_onboarding_mode` is `OPEN`, any service issues under its [VerifiableService](#verifiableservice) entry; it MAY self-create an `ISSUER` entry to declare fees ([[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)), and one is created for it at its first fee-bearing session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session));
+- when `verifier_onboarding_mode` is `OPEN` or `CREDENTIAL`, any authorized service verifies under its `VerifiableService` entry; it MAY self-create a `VERIFIER` entry, and one is created for it at its first fee-bearing session.
 
 An [[ref: onboarding process]] (OP) involves an [[ref: applicant]] (the [[ref: corporation]] of a given Participant entry) and a [[ref: validator]] Participant. It MAY require the applicant to pay `validation_fees` in addition to [[ref: transaction fees]].
 
@@ -4512,7 +4532,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-PP-MSG-10] Create or Update Participant Session
 
-Only the `vs_operator` of the `VerifiableService` entry referenced by the primary `Participant` entry CAN execute this method on behalf of a `corporation` (a VS Operator Authorization; [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization) excludes this message from OperatorAuthorizations). The digest of a credential of a schema whose `credential_anchoring` is DIGEST is anchored through the issuance session only: such an issuer MUST hold a VS Operator Authorization for its agent.
+Only the `vs_operator` of the primary party's [VerifiableService](#verifiableservice) entry (the entry referenced by the primary `Participant` entry, or the entry given directly when the schema's mode requires no entry) CAN execute this method on behalf of a `corporation` (a VS Operator Authorization; [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization) excludes this message from OperatorAuthorizations). The digest of a credential of a schema whose `credential_anchoring` is DIGEST is anchored through the issuance session only: such an issuer MUST hold a VS Operator Authorization for its agent.
 
 Any credential exchange that requires issuer or verifier to pay fees, anchor a digest, or produce a proof implies the creation of a `ParticipantSession`. A Credential Verification of a credential whose schema sets `verification_session` to REQUIRED implies the creation of a `ParticipantSession` even when the fees computed for the verification are 0; when the schema sets WHEN_FEES, a session is required for a verification only when these fees are greater than 0 (see [CredentialSchema](#credentialschema)).
 
@@ -4526,7 +4546,7 @@ If the peer wants to verify a credential, agent must send to peer:
 
 - a `uuid` for session identification;
 - *optional*: the `agent_participant_id` `Participant` id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
-- *mandatory*: a map of compatible found credentials in available wallets for the requested schema_id: Map<uint64[] issuer_participant_ids, uint64: wallet_agent_participant_id>, with at least one entry (an empty map means that the agent holds no matching credential and the exchange ends without a session). The payer selects from it the `issuer_participant_id` of the session. wallet_agent_participant_id MUST NOT be set if peer is a **Verifiable Service**.
+- *mandatory*: a map of compatible found credentials in available wallets for the requested schema_id, with at least one entry (an empty map means that the agent holds no matching credential and the exchange ends without a session): for each matching credential, the reference of its issuer (the id of the `ISSUER` `Participant` entry its digest was anchored under, or, for a credential anchored under a `VerifiableService` entry alone (OPEN issuer mode), the issuer's `vs_id`) and, for a VUA, the `wallet_agent_participant_id` of the wallet storing it. The payer selects from it the issuer reference of the session. wallet_agent_participant_id MUST NOT be set if the agent is a **Verifiable Service**.
 - *mandatory*: whether the agent requires a `ParticipantSession` for this verification, from the `verification_session` of the schema read at that time (see [CredentialSchema](#credentialschema)); when the agent requires one, the payer MUST create it whatever its own reading.
 - *mandatory* when the schema's `presentation_validity_period` is greater than 0 (the agent reads the `CredentialSchema` entry at the time of the verification, the VPR evaluates the value at the block), otherwise *optional* and only if the verifier asked for it in its request: the **presentation digest**, computed by the agent over the presentation it is about to send (the signed presentation as it will be transmitted: canonicalized with [JCS](https://www.rfc-editor.org/rfc/rfc8785) when it is a JSON document, its exact bytes otherwise; hashed with the `digest_algorithm` of the schema). The agent builds and signs the presentation first and sends only its digest at this step; the verifier anchors it through the `digest` parameter of the session transaction. When it sends a presentation digest, the agent has selected the credential it will present, and the map of compatible credentials above contains that single credential. Unless the active VERIFIER policy sets a period greater than 0, anchoring a presentation digest is decided by the verifier: a verifier that did not ask for it MUST NOT expect one, and a verifier that asked for it MUST anchor it, since the agent sends the presentation only after checking the `Digest` entry. The presentation MUST be a Verifiable Presentation signed by the holder and bound to the session identifier (or to the verifier's nonce), so that its digest differs from the credential's `digestJCS` and from any earlier presentation.
 
@@ -4562,8 +4582,11 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uuid) (*mandatory*): id of the `ParticipantSession`.
-- `issuer_participant_id` (uint64) (*mandatory*): the id of the `ISSUER` `Participant` entry of the issuer of the credential: the payer's own entry in a Credential Issuance, the entry of the credential's issuer in a Credential Verification.
-- `verifier_participant_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
+- `schema_id` (uint64) (*mandatory*): the id of the `CredentialSchema` entry of the credential.
+- `issuer_participant_id` (uint64) (*conditional*): the id of the `ISSUER` `Participant` entry of the issuer of the credential: the payer's own entry in a Credential Issuance, the entry the credential was anchored under in a Credential Verification. Exactly one of `issuer_participant_id` and `issuer_vs_id` MUST be provided.
+- `issuer_vs_id` (uint64) (*conditional*): the `VerifiableService` entry of the issuer, when the issuer holds no `ISSUER` entry (the schema's `issuer_onboarding_mode` is OPEN): the payer's own entry in a Credential Issuance, the entry the credential was anchored under in a Credential Verification.
+- `verifier_participant_id` (uint64) (*conditional*): the id of the `VERIFIER` entry of the verifier, in a Credential Verification. At most one of `verifier_participant_id` and `verifier_vs_id` MAY be provided; the presence of either makes the operation a Credential Verification.
+- `verifier_vs_id` (uint64) (*conditional*): the payer's own `VerifiableService` entry in a Credential Verification, when the verifier holds no `VERIFIER` entry (the schema's `verifier_onboarding_mode` is OPEN or CREDENTIAL).
 - `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `digest` (string(256)) (*conditional*): in a Credential Issuance, the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), mandatory when the schema's `credential_anchoring` is DIGEST and absent when it is NONE (its anchoring fixes the effective issuance time, see [Digest](#digest)); in a Credential Verification, the presentation digest sent by the agent (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
@@ -4576,44 +4599,40 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uuid. If an entry `existing_entry` with `id` already exist, then `existing_entry.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) AND `existing_entry.vs_operator` MUST be equal to `operator`, else abort.
 
-if `issuer_participant_id` is null, MUST abort.
+- `schema_id` MUST refer to an existing `CredentialSchema` entry `cs`, else abort.
+- exactly one of `issuer_participant_id` and `issuer_vs_id` MUST be provided, and at most one of `verifier_participant_id` and `verifier_vs_id`; else abort.
 
 Determine the operation type from the provided ids:
 
-- if `verifier_participant_id` is not null, the operation is a **Credential Verification**: the caller is the `vs_operator` of the verifier, and `issuer_participant_id` identifies the issuer branch that is a fee beneficiary of the verification (see [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)).
+- if `verifier_participant_id` or `verifier_vs_id` is provided, the operation is a **Credential Verification**: the caller is the `vs_operator` of the verifier, and the issuer reference identifies the issuer branch that is a fee beneficiary of the verification (see [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)).
 - else, the operation is a **Credential Issuance**: the caller is the `vs_operator` of the issuer.
 
-- define `verifier_participant` as null.
+- define `issuer_participant`, `verifier_participant` as null.
 
-For `issuer_participant_id` (always present):
+Issuer reference:
 
-- Load `issuer_participant` from `issuer_participant_id`.
-- if `issuer_participant.role` is not ISSUER, abort.
-- if `issuer_participant.effective_from` is null or later than now (the entry has never been validated, or is not yet effective), abort.
-- if the operation is a Credential Issuance, `issuer_participant` MUST be an [[ref: active participant]], else abort. In a Credential Verification no state is required of `issuer_participant`: the validity of the credential is established by trust resolution at its issuance time, and the unrepaid-slash filter of [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
+- if `issuer_participant_id` is provided: load `issuer_participant` from it (abort if not found); `issuer_participant.role` MUST be ISSUER and `issuer_participant.schema_id` MUST equal `schema_id`, else abort; `issuer_participant.effective_from` MUST be non-null and not later than now (the entry has been validated and became effective), else abort; in a Credential Issuance, `issuer_participant` MUST be an [[ref: active participant]], else abort. In a Credential Verification no state is required of it: the validity of the credential is established by trust resolution at its issuance time, and the unrepaid-slash filter of [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
+- else (`issuer_vs_id` provided): a `VerifiableService` entry `issuer_vs` with this id MUST exist, and `cs.issuer_onboarding_mode` MUST be OPEN, else abort. In a Credential Issuance, `issuer_vs.corporation_id` MUST equal `co.id` and no [[ref: active participant]] with role ISSUER, `vs_id` = `issuer_vs_id` and `schema_id` = `schema_id` MAY exist (the caller MUST reference such an entry instead), else abort.
 
-if `verifier_participant_id` is not null:
+Verifier reference (Credential Verification only):
 
-- Load `verifier_participant` from `verifier_participant_id`.
-- if `verifier_participant.role` is not VERIFIER, abort.
-- if `verifier_participant` is not a [[ref: active participant]], abort.
-- if `verifier_participant.schema_id` is not equal to `issuer_participant.schema_id`, abort.
-- load `CredentialSchema` `cs` from `issuer_participant.schema_id`. If `cs.presentation_validity_period` > 0 and `digest` is absent, abort: the ecosystem requires a dated receipt of every verification of this schema.
+- if `verifier_participant_id` is provided: load `verifier_participant` from it (abort if not found); `verifier_participant.role` MUST be VERIFIER, `verifier_participant.schema_id` MUST equal `schema_id`, and `verifier_participant` MUST be an [[ref: active participant]], else abort.
+- else (`verifier_vs_id` provided): a `VerifiableService` entry `verifier_vs` with this id MUST exist, `verifier_vs.corporation_id` MUST equal `co.id`, `cs.verifier_onboarding_mode` MUST be OPEN or CREDENTIAL, and no [[ref: active participant]] with role VERIFIER, `vs_id` = `verifier_vs_id` and `schema_id` = `schema_id` MAY exist, else abort.
+- if `cs.presentation_validity_period` > 0 and `digest` is absent, abort: the ecosystem requires a dated receipt of every verification of this schema.
 
-- in a Credential Issuance, load `CredentialSchema` `cs` from `issuer_participant.schema_id`; if `cs.credential_anchoring` is DIGEST and `digest` is absent, abort (the credential digest is anchored through this session); if `cs.credential_anchoring` is NONE and `digest` is present, abort (no credential digest is anchored for this schema).
-- in a Credential Issuance, if `digest` is present and a `Digest` entry with that value already exists whose `corporation_id` differs from `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort: another corporation anchored this credential first and would control its revocation; the issuer re-issues the credential with changed content, as the Verifiable Trust specification requires. An existing entry owned by `co.id` is accepted and left unchanged.
+- in a Credential Issuance: if `cs.credential_anchoring` is DIGEST and `digest` is absent, abort (the credential digest is anchored through this session); if `cs.credential_anchoring` is NONE and `digest` is present, abort (no credential digest is anchored for this schema).
+- in a Credential Issuance, if `digest` is present and a `Digest` entry with that value already exists whose `corporation_id` differs from `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort: another corporation anchored this credential first and would control its revocation; the issuer re-issues the credential with changed content, as the Verifiable Trust specification requires.
 - if `digest` is present and longer than 256 characters, abort.
 - in a Credential Verification, if `digest` is present and a `Digest` entry with that value already exists, abort: a presentation is unique to its session, and an existing entry indicates a replayed presentation.
 
-Define the **primary `Participant`** `perm`: if `verifier_participant` is not null (Credential Verification), `perm` = `verifier_participant`; else (Credential Issuance), `perm` = `issuer_participant`.
+Define the **primary party**: in a Credential Verification, `perm` = `verifier_participant` (null when `verifier_vs_id` was given) and `vs` = `VerifiableService[verifier_participant.vs_id]` or `verifier_vs`; in a Credential Issuance, `perm` = `issuer_participant` (null when `issuer_vs_id` was given) and `vs` = `VerifiableService[issuer_participant.vs_id]` or `issuer_vs`.
 
-- if `VerifiableService[perm.vs_id].vs_operator` is not equal to `operator`, abort.
-- if `perm.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
+- `vs.corporation_id` MUST equal `co.id`, and `vs.vs_operator` MUST equal `operator`, else abort.
 
-> Note: the `vs_operator` and `corporation_id` checks apply to the primary `Participant` (through its `VerifiableService` entry) only. In a Credential Verification, the issuer `Participant` entry generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only: an expired, revoked or slashed issuer entry does not prevent the verification of a credential it issued while authorized.
+> Note: the `vs_operator` and `corporation_id` checks apply to the primary party only. In a Credential Verification, the issuer reference generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only: an expired, revoked or slashed issuer entry does not prevent the verification of a credential it issued while authorized.
 
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
-[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`, `vs`) tuple (`perm` MAY be null).
+[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for the same tuple.
 
 agent:
 
@@ -4629,26 +4648,28 @@ we might want to check that credential schema of agent and wallet_agent perms is
 
 ##### [MOD-PP-MSG-10-3] Create or Update Participant Session fee checks
 
-- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` (always present).
+- Load `CredentialSchema` entry `cs` from `schema_id`.
 - Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]].
 
 For trust fees, `corporation` account MUST have sufficient available balance as explained below.
 
 **Step 1: Calculate total beneficiary fees in credential schema pricing asset**
 
-Use "Find Beneficiaries" query method to get the set of beneficiary `Participant` entries `found_participant_set` (in a Credential Verification the issuer entry and the ancestors of both branches, in a Credential Issuance the ancestors of the issuer entry only, filtered as defined there).
+Use "Find Beneficiaries" ([[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)) with `schema_id`, the issuer and verifier entries when provided, and `verification` = true for a Credential Verification, to get the set of beneficiary `Participant` entries `found_participant_set` (in a Credential Verification the issuer entry, when the issuer holds one, and the ancestors of both branches; in a Credential Issuance the ancestors of the issuer branch only; a party without an entry sits directly under the schema's root ECOSYSTEM entry; filtered as defined there).
+
+- define `issuer_discount` = `issuer_participant.issuance_fee_discount` if `issuer_participant` is not null, else 0; define `verifier_discount` = `verifier_participant.verification_fee_discount` if `verifier_participant` is not null, else 0.
 
 - define `total_beneficiary_fees` = 0
 
 If **Credential Issuance** (`verifier_participant` is null):
 
 - for each `perm` in `found_participant_set`:
-  - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.issuance_fees` × (1 - `issuer_participant.issuance_fee_discount`)
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.issuance_fees` × (1 - `issuer_discount`)
 
 If **Credential Verification** (`verifier_participant` is NOT null):
 
 - for each `perm` in `found_participant_set`:
-  - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.verification_fees` × (1 - `verifier_participant.verification_fee_discount`)
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.verification_fees` × (1 - `verifier_discount`)
 
 > Note: `total_beneficiary_fees` is expressed in the credential schema pricing asset `(cs.pricing_asset_type, cs.pricing_asset)`.
 
@@ -4792,10 +4813,10 @@ Required balance check:
 
 If all precondition checks passed, method is executed.
 
-- Load all `Participant` entries as in basic checks.
-- Load `CredentialSchema` entry `cs` from `issuer_participant.schema_id` (always present).
+- Load all `Participant` and `VerifiableService` entries as in basic checks.
+- Load `CredentialSchema` entry `cs` from `schema_id`.
 - define `now`: current timestamp.
-- use "Find Beneficiaries" to build `found_participant_set`.
+- use "Find Beneficiaries" to build `found_participant_set`, as in fee checks.
 
 > Note: All funds are transferred from the `corporation` account executing the method. The steps below describe what each recipient must receive. Implementation details (batching, order of transfers) are left to the implementer.
 
@@ -4812,13 +4833,15 @@ Determine the operation type and applicable discount:
 
 - If **Credential Issuance** (`verifier_participant` is null):
   - `fee_field` = `issuance_fees`
-  - `discount` = `issuer_participant.issuance_fee_discount`
-  - `payer_participant` = `issuer_participant`
+  - `discount` = `issuer_discount`
+  - `payer_participant` = `issuer_participant` (null when the issuer holds no entry)
 
 - Else if **Credential Verification** (`verifier_participant` is NOT null):
   - `fee_field` = `verification_fees`
-  - `discount` = `verifier_participant.verification_fee_discount`
-  - `payer_participant` = `verifier_participant`
+  - `discount` = `verifier_discount`
+  - `payer_participant` = `verifier_participant` (null when the verifier holds no entry)
+
+**Materialize the payer's entry, if needed.** If `payer_participant` is null and `total_payer_trust_deposit` (fee checks) is greater than 0, the payer's deposit needs a ledger line: create a `Participant` entry exactly as [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) would, with `role` = ISSUER (Credential Issuance) or VERIFIER (Credential Verification), `validator_participant_id` = the id of the active root ECOSYSTEM entry of `schema_id` (abort if none exists), `vs_id` = `vs.id`, `corporation_id` = `co.id`, all fees and discounts 0, `effective_from` = `now`, `effective_until` = the root entry's `effective_until`; set `payer_participant` and `perm` to it. The entry is created once: the next session of the same party references it.
 
 **For each beneficiary `Participant` `perm` in `found_participant_set`:**
 
@@ -4887,7 +4910,7 @@ If `participant.[fee_field]` > 0:
 
    - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to `Corporation[participant.corporation_id].policy_address` (in the appropriate denom).
    - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `participant.corporation_id` by `payee_trust_deposit`. Increase `participant.deposit` by the same value.
-   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer) by `payer_trust_deposit`. Increase `payer_participant.deposit` by the same value.
+   - Use [MOD-TD-MSG-1] to increase the [[ref: trust deposit]] of `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer) by `payer_trust_deposit`. Increase `payer_participant.deposit` by the same value (`payer_participant` is never null when `payer_trust_deposit` > 0, see above).
 
 4. Accumulate agent rewards:
 
@@ -4928,8 +4951,11 @@ Create a `ParticipantSessionRecord` `cspsr`:
 
 - `cspsr.id`: auto-incremented uint64
 - `cspsr.created`: `now`
-- `cspsr.issuer_participant_id`: `issuer_participant_id`
-- `cspsr.verifier_participant_id`: `verifier_participant_id`
+- `cspsr.schema_id`: `schema_id`
+- `cspsr.issuer_participant_id`: `issuer_participant_id` (null when `issuer_vs_id` was given)
+- `cspsr.issuer_vs_id`: `issuer_vs_id` (null when `issuer_participant_id` was given)
+- `cspsr.verifier_participant_id`: the id of `verifier_participant` (the materialized entry, if one was created in this session; null in a Credential Issuance)
+- `cspsr.verifier_vs_id`: `verifier_vs_id` (null when `verifier_participant_id` was given or in a Credential Issuance)
 - `cspsr.agent_participant_id`: `agent_participant_id`
 - `cspsr.wallet_agent_participant_id`: `wallet_agent_participant_id`
 
@@ -4947,10 +4973,10 @@ Else update:
 
 then, add the `cspsr` to `session.session_records`
 
-if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`: in a Credential Issuance it is the credential's `digestJCS` and, when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry, necessarily owned by `co.id` after the precondition checks, keeps its `created`, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op); in a Credential Verification it is the presentation digest and its `created` timestamp is the effective presentation time. In a Credential Verification, when `cs.presentation_validity_period` > 0, the call passes `presentation_valid_until` = `now` plus that duration; in every other case the `Digest` entry created by this transaction has a null `presentation_valid_until`.
+if `digest` is present, persist it by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`, passing `participant_id` = the id of `perm` (null when the primary party holds no entry), `vs_id` = `vs.id` and `schema_id` = `schema_id`: in a Credential Issuance it is the credential's `digestJCS` and, when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry, necessarily owned by `co.id` after the precondition checks, keeps its `created`, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op); in a Credential Verification it is the presentation digest and its `created` timestamp is the effective presentation time. In a Credential Verification, when `cs.presentation_validity_period` > 0, the call passes `presentation_valid_until` = `now` plus that duration; in every other case the `Digest` entry created by this transaction has a null `presentation_valid_until`.
 
 :::warning
-a `ParticipantSessionRecord` always carries `issuer_participant_id`; `verifier_participant_id` is set in a Credential Verification only
+a `ParticipantSessionRecord` always carries `schema_id` and exactly one of `issuer_participant_id` and `issuer_vs_id`; `verifier_participant_id` or `verifier_vs_id` is set in a Credential Verification only
 :::
 
 #### [MOD-PP-MSG-11] Update Participant Module Parameters
@@ -5115,7 +5141,7 @@ use [Adjust Trust Deposit](#mod-td-msg-1-adjust-trust-deposit) to transfer `owed
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-This simple `Participant`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Participant` entry if issuance mode (resp. verification mode) is set to `OPEN` for a given schema. As `Participant` entries are the anchor of ecosystem trust deposit operations, it is required for an issuer/verifier candidate to self-create a `Participant` entry for being issuer or verifier of a given schema.
+This simple `Participant`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Participant` entry if issuance mode (resp. verification mode) is set to `OPEN` (resp. `OPEN` or `CREDENTIAL`) for a given schema. Such an entry is **optional**: under these modes a service issues or verifies under its [VerifiableService](#verifiableservice) entry alone ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)). An issuer self-creates an entry to declare the `verification_fees` and `validation_fees` it charges; either party may self-create one to carry a deposit the [[ref: ecosystem governance authority]] can slash, and [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) creates one automatically at the party's first fee-bearing session, so that the trust deposit it funds has its ledger line.
 
 :::note
 Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their `Participant` entry may be revoked by the [[ref: ecosystem governance authority]] and their deposit slashed.
@@ -5164,7 +5190,7 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 
 - The related `CredentialSchema` entry is loaded with `validator_participant.schema_id`, and will be named `cs` in this section.
 - if `role` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
-- if `role` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is not equal to OPEN, MUST abort.
+- if `role` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is neither OPEN nor CREDENTIAL, MUST abort.
 - if `role` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
 - if `role` is equal to VERIFIER and `verification_fees` is specified and different than 0, MUST abort.
 
@@ -5384,7 +5410,7 @@ Obsoleted by [MOD-PP-QRY-1].
 
 Anyone can execute this method.
 
-To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the `Participant` tree (which is the ecosystem perm), starting from the 2 branches `issuer_participant` and `verifier_participant`. As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_participant` is null, `issuer_participant` is never added to the set. If `verifier_participant` is NOT null, `issuer_participant` is added to the set unless it has an unrepaid slash; `verifier_participant` itself is never added to the set.
+To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the `Participant` tree (which is the ecosystem perm), starting from the 2 branches `issuer_participant` and `verifier_participant`, either of which MAY be reduced to the schema's root entry when the party holds no `Participant` entry (OPEN or CREDENTIAL modes). As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_participant` is null, `issuer_participant` is never added to the set. If `verifier_participant` is NOT null, `issuer_participant` is added to the set unless it has an unrepaid slash; `verifier_participant` itself is never added to the set.
 
 Example 1: `verifier_participant`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
 
@@ -5461,12 +5487,14 @@ v --> vg
 
 ##### [MOD-PP-QRY-4-1] Find Beneficiaries parameters
 
-- `issuer_participant_id` (uint64) (*optional*): id of issuer `Participant` entry.
-- `verifier_participant_id` (uint64) (*optional*): id of verifier `Participant` entry.
+- `schema_id` (uint64) (*mandatory*): id of the `CredentialSchema` entry.
+- `verification` (boolean) (*mandatory*): true for a Credential Verification, false for a Credential Issuance.
+- `issuer_participant_id` (uint64) (*optional*): id of the issuer `Participant` entry; absent when the issuer holds none (OPEN issuer mode).
+- `verifier_participant_id` (uint64) (*optional*): id of the verifier `Participant` entry; absent in a Credential Issuance, and in a Credential Verification when the verifier holds none (OPEN or CREDENTIAL verifier mode).
 
 ##### [MOD-PP-QRY-4-2] Find Beneficiaries checks
 
-- if `issuer_participant_id` and `verifier_participant_id` are unset then MUST abort.
+- `schema_id` MUST refer to an existing `CredentialSchema` entry; if `issuer_participant_id` (resp. `verifier_participant_id`) is specified, the entry's `schema_id` MUST equal `schema_id`; if `verification` is false, `verifier_participant_id` MUST be absent.
 - if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`; the `Participant` entry MUST exist. Its state does not matter: an expired, revoked or slashed issuer entry still identifies the branch to pay (see the unrepaid-slash rule below).
 - if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Participant MUST exist and MUST be a [[ref: active participant]].
 
@@ -5481,27 +5509,24 @@ Algorithm. `Participant` entries with an unrepaid slash are not added to the set
 
 - define `current_participant` as null.
 
-- load perms `issuer_participant` and optional `verifier_participant` as specified in basic checks above.
+- load the optional `issuer_participant` and `verifier_participant` as specified in basic checks above.
+- define `root`: the active root ECOSYSTEM `Participant` entry of `schema_id` (`role` = ECOSYSTEM, `validator_participant_id` null, an [[ref: active participant]]); null if none exists.
 
-if `issuer_participant` is not null:
+Issuer branch:
 
-- set `current_participant` = `issuer_participant`
-- while `current_participant.validator_participant_id` is not null:
-  - current_participant = load(`current_participant.validator_participant_id`)
-  - unless `current_participant` has an unrepaid slash (see above), Add `current_participant` to `found_participant_set`.
+- if `issuer_participant` is not null: set `current_participant` = `issuer_participant`; while `current_participant.validator_participant_id` is not null: `current_participant` = load(`current_participant.validator_participant_id`); unless `current_participant` has an unrepaid slash (see above), add it to `found_participant_set`.
+- else (the issuer holds no entry): unless `root` is null or has an unrepaid slash, add `root` to `found_participant_set`.
 
-Additionally, if `verifier_participant` is not null:
+Additionally, if `verification` is true:
 
-- if `issuer_participant` is not null and has no unrepaid slash (see above), add `issuer_participant` to `found_participant_set`
-- set `current_participant` = `verifier_participant`
-- while `current_participant.validator_participant_id` != null:
-  - current_participant = load(`current_participant.validator_participant_id`)
-  - unless `current_participant` has an unrepaid slash (see above), Add `current_participant` to `found_participant_set`.
+- if `issuer_participant` is not null and has no unrepaid slash (see above), add `issuer_participant` to `found_participant_set` (an issuer without an entry has no fee terms and receives nothing).
+- if `verifier_participant` is not null: set `current_participant` = `verifier_participant`; while `current_participant.validator_participant_id` is not null: `current_participant` = load(`current_participant.validator_participant_id`); unless `current_participant` has an unrepaid slash, add it to `found_participant_set`.
+- else (the verifier holds no entry): unless `root` is null or has an unrepaid slash, add `root` to `found_participant_set`.
 
 return `found_participant_set`.
 
 :::note
-This works even is schema is open to any issuer or open to any verifier.
+A party without an entry sits directly under the root: it pays the ecosystem's fees and nothing to any grantor, and under OPEN or CREDENTIAL modes the schema has no grantors anyway.
 :::
 
 #### [MOD-PP-QRY-5] Get ParticipantSession
@@ -6420,7 +6445,7 @@ The agent of an issuer does not call this method itself: it anchors the digest o
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `digest` (string(256)) (*mandatory*): digest to store.
 
-Module-call inputs, set only when the method is called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) and MUST be absent on a direct Msg: `participant_id` (the primary participant of the session) and `presentation_valid_until` (for a presentation digest, see that message).
+Module-call inputs, set only when the method is called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) and MUST be absent on a direct Msg: `participant_id` (the primary participant of the session, if any), `vs_id` and `schema_id` (the primary party's `VerifiableService` entry and the schema of the session) and `presentation_valid_until` (for a presentation digest, see that message).
 
 ##### [MOD-DI-MSG-1-2] Store Digest precondition checks
 
@@ -6450,6 +6475,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `d.digest` to `digest`.
   - set `d.corporation_id` to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account; when this method is called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), the `corporation` of the session).
   - set `d.participant_id` to the primary participant of the session when called by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), else null.
+  - set `d.vs_id` and `d.schema_id` to the values passed by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), else null.
   - set `d.created` to `now`.
   - set `d.revoked` to null.
   - set `d.presentation_valid_until` to the value passed by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) for a presentation digest anchored while the active VERIFIER policy sets a `presentation_validity_period` greater than 0, else null.
@@ -6458,9 +6484,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 This method revokes a digest. It can be executed on behalf of:
 
-- the `corporation` that owns the `Digest` entry (`d.corporation_id`): by any of its operators under an OperatorAuthorization, or, while the anchoring entry `d.participant_id` is an [[ref: active participant]], by the vs-agent of that entry under a VS Operator Authorization whose record lists `RevokeDigest` (an `ISSUER` entry: `VERIFIER` entries carry no `RevokeDigest`);
+- the `corporation` that owns the `Digest` entry (`d.corporation_id`): by any of its operators under an OperatorAuthorization, or by the vs-agent of the anchoring `VerifiableService` entry `d.vs_id` under a VS Operator Authorization whose record lists `RevokeDigest`, while the anchoring `Participant` entry `d.participant_id`, if there is one, is an [[ref: active participant]] (an `ISSUER` entry, or none under an OPEN schema: `VERIFIER` entries carry no `RevokeDigest`);
 - the `corporation` of an **ancestor** of the anchoring entry (a validator in the branch of `d.participant_id`, up to the root ECOSYSTEM entry), while that ancestor is an [[ref: active participant]]: by any of its operators under an OperatorAuthorization, or by the vs-agent of that ancestor entry under a VS Operator Authorization whose record lists `RevokeDigest`;
-- the `corporation` controlling the `Ecosystem` of the schema of the anchoring entry, by any of its operators under an OperatorAuthorization, whatever the state of the tree (as for [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)).
+- the `corporation` controlling the `Ecosystem` of the schema of the session (`d.schema_id`), by any of its operators under an OperatorAuthorization, whatever the state of the tree (as for [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)).
 
 Revoking a digest is the on-chain revocation mechanism for an individual credential whose issuance was anchored through its issuance session ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)); revoking the holder's `HOLDER` `Participant` entry ([[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)) withdraws trust from every credential of that relationship instead. The authority structure mirrors [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant): the issuer, its grantors and the ecosystem can revoke, and the ecosystem governance framework bounds the use of the ancestor path. Trust resolution of a credential whose `digestJCS` has a `Digest` entry with a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp, whoever set it. Revocation is irreversible. Trust resolution looks up credential digests only, so revoking a presentation digest (anchored in a Credential Verification) has no effect.
 
@@ -6470,7 +6496,7 @@ Since any corporation may store any digest and the first to store it owns it, th
 
 - `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
-- `participant_id` (uint64) (*optional*): the `Participant` entry in whose context a `vs_operator` executes this message: the anchoring entry `d.participant_id`, or one of its ancestors (VS Operator Authorization path). Absent when the operator acts under an OperatorAuthorization.
+- `participant_id` (uint64) (*optional*): the `Participant` entry in whose context a `vs_operator` executes this message: the anchoring entry `d.participant_id`, or one of its ancestors (VS Operator Authorization path). Absent when the operator acts under an OperatorAuthorization, or when the vs-agent acts in the context of `d.vs_id` alone (anchoring without a `Participant` entry).
 - `digest` (string(256)) (*mandatory*): digest to revoke.
 
 ##### [MOD-DI-MSG-2-2] Revoke Digest precondition checks
@@ -6489,16 +6515,16 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - Authorization:
 
 either (executed by an operator under an OperatorAuthorization; `participant_id` absent):
-- `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) MUST equal `d.corporation_id`, or equal the `corporation_id` of an entry of `authority_set`, or, when `d.participant_id` is not null, equal `Ecosystem[cs.ecosystem_id].corporation_id` where `cs` is the `CredentialSchema` of `Participant[d.participant_id]`, else abort.
+- `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) MUST equal `d.corporation_id`, or equal the `corporation_id` of an entry of `authority_set`, or, when `d.schema_id` is not null, equal `Ecosystem[cs.ecosystem_id].corporation_id` where `cs` is `CredentialSchema[d.schema_id]`, else abort.
 [[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `RevokeDigest` message.
 [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `RevokeDigest` message.
-OR (executed by a vs-agent under a VS Operator Authorization; `participant_id` present):
-- `Participant[participant_id]` MUST be an entry of `authority_set`, else abort; define it as `context_participant`. `context_participant.corporation_id` MUST equal `co.id`, else abort.
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `context_participant`) tuple.
-[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `context_participant`) tuple.
+OR (executed by a vs-agent under a VS Operator Authorization):
+- if `participant_id` is present: `Participant[participant_id]` MUST be an entry of `authority_set`, else abort; define it as `context_participant`, and `context_vs` = `VerifiableService[context_participant.vs_id]`. `context_participant.corporation_id` MUST equal `co.id`, else abort. Else (`participant_id` absent): `d.vs_id` MUST be non-null and `VerifiableService[d.vs_id].corporation_id` MUST equal `co.id` = `d.corporation_id`, else abort; define `context_participant` as null and `context_vs` = `VerifiableService[d.vs_id]`.
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `context_participant`, `context_vs`) tuple.
+[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for the same tuple.
 else MUST abort.
 
-> Note: a digest stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) has no anchoring entry (`d.participant_id` is null): only the operators of the owner corporation can revoke it. Such a digest is not a valid anchor of a Verifiable Trust credential, whose digest is anchored through the issuance session; it serves other uses. The vs-agent of an `ISSUER` entry revokes the digests anchored under that entry, and its grantor and ecosystem can revoke them too; it cannot revoke the digests of the corporation's other entries.
+> Note: a digest stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) has no anchoring context (`d.vs_id` and `d.schema_id` are null): only the operators of the owner corporation can revoke it. Such a digest is not a valid anchor of a Verifiable Trust credential, whose digest is anchored through the issuance session; it serves other uses. A credential anchored by an issuer without an `ISSUER` entry (OPEN schema) is revocable by that issuer's operators or vs-agent and by the ecosystem controlling the schema, which is the whole governance path of an entry-less issuer.
 
 ###### [MOD-DI-MSG-2-2-2] Revoke Digest fee checks
 
@@ -6540,6 +6566,8 @@ Return found `Digest` entry (if any) matching `digest`.
     "digest": "GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP",
     "corporation_id": 12,
     "participant_id": 601,
+    "vs_id": 77,
+    "schema_id": 3,
     "created": "2025-01-14T19:40:37.967Z",
     "revoked": null,
     "presentation_valid_until": null
