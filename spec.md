@@ -2168,9 +2168,9 @@ When a method MUST credit an amount **to** a corporation `co` (fees received as 
 #### Example
 
 A corporation `corporationABC` wants to authorize an operator account `accountABC` to execute the  
-[`mod-pp-msg-1-start-participant-op`](#mod-ac-msg-1-start-accreditation-op),
-[`mod-pp-msg-3-set-participant-op-to-validated`](#mod-ac-msg-3-set-accreditation-op-to-validated), and
-[`mod-pp-msg-15-trigger-resolver`](#mod-ac-msg-15-trigger-resolver)
+[Start Accreditation OP](#mod-ac-msg-1-start-accreditation-op),
+[Set Accreditation OP to Validated](#mod-ac-msg-3-set-accreditation-op-to-validated), and
+[Trigger Resolver](#mod-ac-msg-15-trigger-resolver)
  messages.
 
 Additionally, the corporation wants `accountABC` to pay the transaction fees for this message using the corporation's funds.
@@ -2178,9 +2178,9 @@ Additionally, the corporation wants `accountABC` to pay the transaction fees for
 To achieve this, `corporationABC` MUST:
 
 - create an **authorization** from `corporationABC` to `accountABC` for the  
-  [`mod-pp-msg-1-start-participant-op`](#mod-ac-msg-1-start-accreditation-op),
-[`mod-pp-msg-3-set-participant-op-to-validated`](#mod-ac-msg-3-set-accreditation-op-to-validated), and
-[`mod-pp-msg-15-trigger-resolver`](#mod-ac-msg-15-trigger-resolver) message types, optionally enabling an associated fee grant.
+  [Start Accreditation OP](#mod-ac-msg-1-start-accreditation-op),
+[Set Accreditation OP to Validated](#mod-ac-msg-3-set-accreditation-op-to-validated), and
+[Trigger Resolver](#mod-ac-msg-15-trigger-resolver) message types, optionally enabling an associated fee grant.
 
 As a result, `accountABC` is authorized to:
 
