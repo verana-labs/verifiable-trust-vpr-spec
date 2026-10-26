@@ -1230,6 +1230,7 @@ enum "MsgType" as msgtype {
   RotateVerifiableIdentifier
   TransferVerifiableService
   AcceptVerifiableServiceTransfer
+  ReinstateParticipation
 }
 
 entity "OperatorAuthorization" as oauthz {
@@ -1316,7 +1317,8 @@ entity "ParticipantDeposit" as pdep {
   +tu: decimal
   +fiat_cost: decimal
   +unrepaid_slash: decimal
-  +slashed: boolean
+  +slash_count: number
+  +blacklisted: boolean
 }
 
 
@@ -1630,7 +1632,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### ParticipantDeposit
 
-A `ParticipantDeposit` is the [[ref: trust unit]] ledger of a **participation**: a service entry, a schema and a role, under the corporation that owns the service entry. Every `Participant` entry of that participation, successive or concurrent, uses the same deposit: the trust units minted on its onboarding, on its validations as a validator and on its sessions accrue here, the ecosystem slashes here ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), and a party acting under an OPEN or CREDENTIAL mode without any entry has a deposit all the same, created by its first mint. The deposit outlives its entries and is the lasting record of a slash.
+A `ParticipantDeposit` is the [[ref: trust unit]] ledger of a **participation**: a service entry, a schema and a role, under the corporation that owns the service entry. Every `Participant` entry of that participation, successive or concurrent, uses the same deposit: the trust units minted on its onboarding, on its validations as a validator and on its sessions accrue here, the ecosystem slashes here ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), and a party acting under an OPEN or CREDENTIAL mode without any entry has a deposit all the same, created by its first mint. The deposit outlives its entries and is the lasting record of a slash: an ecosystem slash revokes the participation's entries and blacklists it until the ecosystem reinstates it.
 
 `ParticipantDeposit`:
 
@@ -1641,10 +1643,11 @@ A `ParticipantDeposit` is the [[ref: trust unit]] ledger of a **participation**:
 - `tu` (decimal) (*mandatory*): accumulated [[ref: trust units]] minted to the corporation's [[ref: trust deposit]] in the context of this participation. Never freed on revocation or expiry; reduced only by slashing ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) and restored by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)).
 - `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of `tu`, in [[ref: main fiat currency]]: the sum of the fiat value, at mint time, of the trust units currently held here. Maintained by the trust deposit module together with `tu`; used to denominate slash obligations at mint-time cost.
 - `unrepaid_slash` (decimal) (*mandatory*): [[ref: trust units]] slashed from this deposit, by an ecosystem ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)) or by network governance ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)), and not yet repaid; decreased by the deposit's share of a `SlashObligation` when that obligation is repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)). Read by the definition of [[ref: active participant]].
-- `slashed` (boolean) (*mandatory*): true once the deposit has been slashed by an ecosystem ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)) or by network governance ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)), never reset: the lasting mark that bars the participation from a new entry ([[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) and from entry-less sessions ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)). It follows the deposit when the service entry is transferred ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)), which the obligations, kept by the corporation that incurred them, do not.
+- `slash_count` (number) (*mandatory*): the number of times this deposit has been slashed, by an ecosystem ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)) or by network governance ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)); never reset. It follows the deposit when the service entry is transferred ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)), which the obligations, kept by the corporation that incurred them, do not.
+- `blacklisted` (boolean) (*mandatory*): set to true by the ecosystem slash ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)): the participation can no longer take part in the schema, neither through a new entry ([[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) nor through entry-less sessions ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)), until the ecosystem controller reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)). A network slash does not set it: its bar is the open obligation. It follows the deposit when the service entry is transferred.
 - `participant_ids` (uint64[]) (*mandatory*): the ids of the current `Participant` entries of the participation (pending, future or effective), a few at most; appended when an entry is created ([[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant), [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)), removed when it is deleted. It is how the sibling checks, the session guards ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Participant` entries.
 
-A deposit is created by the first entry of its participation or by the first mint to it, whichever comes first, with `tu`, `fiat_cost` and `unrepaid_slash` at 0 and `slashed` false. It is deleted by the method that empties it when `participant_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slashed` is false (a slashed participation keeps its deposit, repaid or not: it bars a new entry, see [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). For an entry `p`, **deposit(`p`)** denotes `ParticipantDeposit[(p.corporation_id, p.vs_id, p.schema_id, p.role)]`.
+A deposit is created by the first entry of its participation or by the first mint to it, whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash` and `slash_count` at 0 and `blacklisted` false. It is deleted by the method that empties it when `participant_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0 (a slashed participation keeps its deposit, repaid or not: its count and its blacklisting are its record) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). For an entry `p`, **deposit(`p`)** denotes `ParticipantDeposit[(p.corporation_id, p.vs_id, p.schema_id, p.role)]`.
 
 ### ParticipantSession
 
@@ -1742,6 +1745,7 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 | 28 | `RotateVerifiableIdentifier` | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) |
 | 29 | `TransferVerifiableService` | [[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service) |
 | 30 | `AcceptVerifiableServiceTransfer` | [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer) |
+| 31 | `ReinstateParticipation` | [[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation) |
 
 > Note: the realization of fee allowances through `x/feegrant` ([Delegation Module](#delegation-module)) requires protobuf type URLs. The implementation maps each `MsgType` value to the type URL of its message when it creates or updates an allowance, and maps the type URL of an incoming message to its `MsgType` value when it checks an authorization ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Which values a list may contain is stated by each message: every value except `CreateOrUpdateParticipantSession` in an [OperatorAuthorization](#operatorauthorization) ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)), the values listed by [VerifiableService](#verifiableservice) in an entry's `msg_types`.
 
@@ -2227,6 +2231,7 @@ As a result, `accountABC` is authorized to:
 |                                | Create or update Participant Session     |           N/A (Tx)              | Msg    | [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)  |corporation + vs_operator (VS Operator Authorization) |
 |                                | Update Participant Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-PP-MSG-11]](#mod-pp-msg-11-update-participant-module-parameters) |governance proposal |
 |                                | Slash Participant Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) |corporation + operator |
+|                                | Reinstate Participation                  |                N/A (Tx)       | Msg    | [[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation) |corporation + operator |
 |                                | Self Create Participant (OPEN / CREDENTIAL modes) |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) |corporation + operator  |
 |                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver) |corporation + operator OR corporation + vs_operator |
 |                                | List Participants                        | /pp/v1/list                | Query  | [[MOD-PP-QRY-1]](#mod-pp-qry-1-list-participants)    |N/A |
@@ -2461,7 +2466,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipantDeposit](#participantdeposit) whose key starts with (`vs.corporation_id`, `vs.id`) (a key-prefix scan) MAY list an entry or carry an unrepaid slash (`unrepaid_slash` > 0: the owner repays first); else abort. The deposits themselves, their trust units and their `slashed` mark, move with the entry ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)) (entries belong to their corporation and do not move: the owner first revokes them or lets them expire, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
+- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipantDeposit](#participantdeposit) whose key starts with (`vs.corporation_id`, `vs.id`) (a key-prefix scan) MAY list an entry or carry an unrepaid slash (`unrepaid_slash` > 0: the owner repays first); else abort. The deposits themselves, their trust units, their slash count and their blacklisting, move with the entry ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)) (entries belong to their corporation and do not move: the owner first revokes them or lets them expire, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
 - `to_corporation_id` (uint64) (*optional*): if provided, a `Corporation` entry with this id MUST exist and MUST differ from `co.id`.
 
 ###### [MOD-VS-MSG-4-2-2] Transfer Verifiable Service fee checks
@@ -2494,7 +2499,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.transfer_to_corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipantDeposit](#participantdeposit) whose key starts with (`vs.corporation_id`, `vs.id`) (a key-prefix scan) MAY list an entry or carry an unrepaid slash (`unrepaid_slash` > 0: the owner repays first); else abort. The deposits themselves, their trust units and their `slashed` mark, move with the entry ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)).
+- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipantDeposit](#participantdeposit) whose key starts with (`vs.corporation_id`, `vs.id`) (a key-prefix scan) MAY list an entry or carry an unrepaid slash (`unrepaid_slash` > 0: the owner repays first); else abort. The deposits themselves, their trust units, their slash count and their blacklisting, move with the entry ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)).
 - the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks).
 
 ###### [MOD-VS-MSG-5-2-2] Accept Verifiable Service Transfer fee checks
@@ -2509,7 +2514,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration).
 - debit the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account.
-- let `former` be `vs.corporation_id`. For each [ParticipantDeposit](#participantdeposit) `d` whose key starts with (`former`, `vs.id`) (a key-prefix scan): delete it and create `ParticipantDeposit[(co.id, vs.id, d.schema_id, d.role)]` with the same `tu`, `fiat_cost` and `slashed`, `unrepaid_slash` 0 (guaranteed by the checks) and an empty `participant_ids`; set `TrustDeposit[former].tu` to `TrustDeposit[former].tu` - `d.tu` and `.fiat_cost` to `.fiat_cost` - `d.fiat_cost`; set `TrustDeposit[co.id].tu` (the entry created with 0 if absent) to `TrustDeposit[co.id].tu` + `d.tu` and `.fiat_cost` to `.fiat_cost` + `d.fiat_cost`. The trust units of the service and the mark of its slashes follow it; the obligations incurred by `former` stay with `former`.
+- let `former` be `vs.corporation_id`. For each [ParticipantDeposit](#participantdeposit) `d` whose key starts with (`former`, `vs.id`) (a key-prefix scan): delete it and create `ParticipantDeposit[(co.id, vs.id, d.schema_id, d.role)]` with the same `tu`, `fiat_cost`, `slash_count` and `blacklisted`, `unrepaid_slash` 0 (guaranteed by the checks) and an empty `participant_ids`; set `TrustDeposit[former].tu` to `TrustDeposit[former].tu` - `d.tu` and `.fiat_cost` to `.fiat_cost` - `d.fiat_cost`; set `TrustDeposit[co.id].tu` (the entry created with 0 if absent) to `TrustDeposit[co.id].tu` + `d.tu` and `.fiat_cost` to `.fiat_cost` + `d.fiat_cost`. The trust units of the service and the record of its slashes follow it; the obligations incurred by `former` stay with `former`.
 - set `vs.corporation_id` = `co.id`, `vs.vs_operator` = `vs_operator`, `vs.transfer_to_corporation_id` = null.
 - if `vs_operator_authz_msg_types` is provided, set the configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
 
@@ -3804,7 +3809,7 @@ A `corporation` with an unrepaid slash MUST NOT start an onboarding process: in 
 
 - define `ecosystem_id` = `cs.ecosystem_id` (where `cs` is the `CredentialSchema` entry loaded from `validator_participant.schema_id`).
 - [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) MUST pass for (`co.id`, `ecosystem_id`), else [[ref: transaction]] MUST abort: `corporation` MUST first repay using [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation).
-- the participation MUST NOT have been slashed: `ParticipantDeposit[(co.id, vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `slashed` false; else abort. A slash is the ecosystem's sanction on a participation and stands after repayment; an expired or revoked entry alone does not prevent a new one.
+- the participation MUST NOT have been slashed: `ParticipantDeposit[(co.id, vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `blacklisted` false; else abort. The blacklist is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)); an expired or revoked entry alone does not prevent a new one.
 
 ##### [MOD-PP-MSG-1-3] Start Participant OP execution
 
@@ -4096,6 +4101,7 @@ Now, let's verify `effective_until`:
 
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: trustable participant]].
 - `co.id` MUST equal `validator_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
+- deposit(`applicant_participant`), if it exists, MUST NOT be `blacklisted`, else abort: a blacklisted participation is not validated until the ecosystem reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)).
 
 If `validator_participant` is not a [[ref: trustable participant]] (expired, revoked, slashed...) then applicant MUST start a new onboarding process.
 
@@ -4636,7 +4642,7 @@ Determine the operation type:
 Primary party (the payer): let `R` be VERIFIER in a Credential Verification, ISSUER in a Credential Issuance, and the primary reference be the verifier's in a Credential Verification, the issuer's in a Credential Issuance.
 
 - if the primary reference is an entry id: load `perm` from it (abort if not found); `perm.role` MUST be `R` and `perm.schema_id` MUST equal `schema_id`, and `perm` MUST be an [[ref: active participant]], else abort. Let `vs` = `VerifiableService[perm.vs_id]`.
-- else (a service entry `vs_id`): `vs` = `VerifiableService[vs_id]` MUST exist, else abort. The schema's mode MUST allow a party without an entry: `cs.issuer_onboarding_mode` MUST be OPEN for an issuer, `cs.verifier_onboarding_mode` MUST be OPEN or CREDENTIAL for a verifier, else abort. Let `d` be `ParticipantDeposit[(co.id, vs.id, schema_id, R)]` if it exists: `d.participant_ids` MUST list no [[ref: active participant]] (the caller MUST reference it instead), and `d` MUST NOT have been slashed (`d.unrepaid_slash` = 0 and `d.slashed` false), else abort: a slash is the ecosystem's sanction on a participation it did not onboard. `perm` is null.
+- else (a service entry `vs_id`): `vs` = `VerifiableService[vs_id]` MUST exist, else abort. The schema's mode MUST allow a party without an entry: `cs.issuer_onboarding_mode` MUST be OPEN for an issuer, `cs.verifier_onboarding_mode` MUST be OPEN or CREDENTIAL for a verifier, else abort. Let `d` be `ParticipantDeposit[(co.id, vs.id, schema_id, R)]` if it exists: `d.participant_ids` MUST list no [[ref: active participant]] (the caller MUST reference it instead), and `d` MUST NOT be sanctioned (`d.unrepaid_slash` = 0 and `d.blacklisted` false), else abort: the blacklist is the ecosystem's sanction on a participation it did not onboard. `perm` is null.
 - `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `vs.vs_operator` MUST equal `operator`, else abort.
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`, `vs`) tuple (`perm` MAY be null).
@@ -4980,6 +4986,8 @@ This method can only be called by either:
 - a `corporation` ancestor validator of this `Participant` entry;
 - the `corporation` controller of the `Ecosystem` object, owner of the corresponding credential schema.
 
+A slash is the ecosystem's sanction on a participation: it removes trust units, revokes the participation's current entries and blacklists it until the ecosystem reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)).
+
 ##### [MOD-PP-MSG-12-1] Slash Participant Trust Deposit parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
@@ -5043,12 +5051,49 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - calculate `tu_amount` = `d.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `d.tu` exactly.
 - calculate `slashed_fiat` = `d.fiat_cost` × `tu_amount` / `d.tu` — the obligation in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 
-use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `d.corporation_id`, `ecosystem_id` = `cs.ecosystem_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`).
+use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `d.corporation_id`, `ecosystem_id` = `cs.ecosystem_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`), which also increments `d.slash_count` and sets `d.blacklisted`.
+
+- for each entry `p` listed in `d.participant_ids` whose `op_state` is VALIDATED: delete it exactly as [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant) does (removed from `d.participant_ids`, one event each). An entry under a pending onboarding process stays until its applicant cancels it ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)); it cannot be validated while the participation is blacklisted.
 
 
-#### [MOD-PP-MSG-13] Void
+#### [MOD-PP-MSG-13] Reinstate Participation
 
-Slash obligations, network or ecosystem, are repaid with [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation).
+Any authorized `operator` CAN execute this method on behalf of the `corporation` controlling the `Ecosystem` of the schema.
+
+This method lifts the blacklisting of a participation ([ParticipantDeposit](#participantdeposit)) set by an ecosystem slash ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)): the participation may again create entries and run entry-less sessions under the schema. The slash itself is not undone: the trust units stay slashed until repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)), `slash_count` keeps its value, and the revoked entries are not restored; the party onboards or self-creates anew.
+
+##### [MOD-PP-MSG-13-1] Reinstate Participation parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vs_id` (uint64), `schema_id` (uint64), `role` (ParticipantRole) (*mandatory*): the participation to reinstate, that is the [ParticipantDeposit](#participantdeposit) `d` = `ParticipantDeposit[(VerifiableService[vs_id].corporation_id, vs_id, schema_id, role)]`.
+
+##### [MOD-PP-MSG-13-2] Reinstate Participation precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-PP-MSG-13-2-1] Reinstate Participation basic checks
+
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vs_id` MUST name an existing `VerifiableService` entry, `schema_id` an existing `CredentialSchema` entry `cs`, and `d` MUST exist with `d.blacklisted` true, else abort.
+
+###### [MOD-PP-MSG-13-2-2] Reinstate Participation permission checks
+
+- load `Ecosystem` `ecosystem` from `cs.ecosystem_id`; `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else abort.
+
+###### [MOD-PP-MSG-13-2-3] Reinstate Participation fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
+
+##### [MOD-PP-MSG-13-3] Reinstate Participation execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+- set `d.blacklisted` to false.
+
+The method MUST emit an event carrying `vs_id`, `schema_id`, `role` and the current timestamp.
 
 #### [MOD-PP-MSG-14] Self Create Participant
 
@@ -5104,7 +5149,7 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 - The related `CredentialSchema` entry is loaded with `validator_participant.schema_id`, and will be named `cs` in this section.
 - if `role` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
 - if `role` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is neither OPEN nor CREDENTIAL, MUST abort.
-- the participation MUST NOT have been slashed: `ParticipantDeposit[(co.id, vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `slashed` false; else abort. A slash is the ecosystem's sanction on a participation and stands after repayment; an expired or revoked entry alone does not prevent a new one.
+- the participation MUST NOT have been slashed: `ParticipantDeposit[(co.id, vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `blacklisted` false; else abort. The blacklist is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)); an expired or revoked entry alone does not prevent a new one.
 
 ###### [MOD-PP-MSG-14-2-3] Self Create Participant fee checks
 
@@ -5563,7 +5608,7 @@ Only the modules that require trust deposit manipulation CAN call this method (i
 ##### [MOD-TD-MSG-1-1] Mint Trust Units method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]].
-- `vs_id` (uint64), `schema_id` (uint64), `role` (ParticipantRole) (*mandatory*): the participation the mint is attributed to, that is the [ParticipantDeposit](#participantdeposit) `ParticipantDeposit[(corporation_id, vs_id, schema_id, role)]`, created with an empty ledger (`slashed` false) and no entries when it does not exist (a party acting under an OPEN or CREDENTIAL mode without an entry).
+- `vs_id` (uint64), `schema_id` (uint64), `role` (ParticipantRole) (*mandatory*): the participation the mint is attributed to, that is the [ParticipantDeposit](#participantdeposit) `ParticipantDeposit[(corporation_id, vs_id, schema_id, role)]`, created with an empty ledger (`slash_count` 0, `blacklisted` false) and no entries when it does not exist (a party acting under an OPEN or CREDENTIAL mode without an entry).
 - `ecosystem_id` (uint64) (*mandatory*): `ecosystem_id` of `CredentialSchema[schema_id]`; `vs_id` MUST be owned by `corporation_id`.
 - `source_account` (account) (*mandatory*): account funding the mint (the payer's [[ref: funding account]], or the escrow account at validation time).
 - `amount` (number) (*mandatory*): deposit-bound amount, in [[ref: native denom]].
@@ -5595,7 +5640,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - calculate `minted_fiat` = `amount` × `P(now)` — the [[ref: main fiat currency]] cost of this mint.
 - calculate `minted_tu` = `minted_fiat` / `tu_peg_value(now)`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)) (equivalently `amount` / `price_tu_in_native_denom(now)`).
 - set `td.tu` to `td.tu` + `minted_tu`; set `td.fiat_cost` to `td.fiat_cost` + `minted_fiat`.
-- let `d` be `ParticipantDeposit[(corporation_id, vs_id, schema_id, role)]`, created with `tu`, `fiat_cost` and `unrepaid_slash` at 0, `slashed` false and an empty `participant_ids` if it does not exist; set `d.tu` to `d.tu` + `minted_tu`; set `d.fiat_cost` to `d.fiat_cost` + `minted_fiat`.
+- let `d` be `ParticipantDeposit[(corporation_id, vs_id, schema_id, role)]`, created with `tu`, `fiat_cost`, `unrepaid_slash` and `slash_count` at 0, `blacklisted` false and an empty `participant_ids` if it does not exist; set `d.tu` to `d.tu` + `minted_tu`; set `d.fiat_cost` to `d.fiat_cost` + `minted_fiat`.
 - transfer `amount` from `source_account` to the [[ref: distribution pool]] account.
 - return `minted_tu` and `minted_fiat` to the calling module.
 
@@ -5683,7 +5728,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - if `tu_amount` = `td.tu`: `share_tu` = `d.tu` and `share_fiat` = `d.fiat_cost`.
   - else: `share_tu` = min(`d.tu`, `remaining`, `tu_amount` × `d.tu` / `td.tu`); for the last entry of `deposits[]`, `share_tu` = min(`d.tu`, `remaining`); `share_fiat` = `d.fiat_cost` × `share_tu` / `d.tu`.
   - if `share_tu` = 0, skip `d`.
-  - set `d.tu` to `d.tu` - `share_tu`; set `d.fiat_cost` to `d.fiat_cost` - `share_fiat`; set `d.unrepaid_slash` to `d.unrepaid_slash` + `share_tu`; set `d.slashed` to true.
+  - set `d.tu` to `d.tu` - `share_tu`; set `d.fiat_cost` to `d.fiat_cost` - `share_fiat`; set `d.unrepaid_slash` to `d.unrepaid_slash` + `share_tu`; set `d.slash_count` to `d.slash_count` + 1.
   - append (`d.vs_id`, `d.schema_id`, `d.role`, `share_tu`, `share_fiat`) to `entries[]`; set `remaining` to `remaining` - `share_tu`.
 - define `slashed_tu` = Σ `entries[].tu` and `slashed_fiat` = Σ `entries[].fiat_cost`.
 - set `td.tu` to `td.tu` - `slashed_tu`; set `td.fiat_cost` to `td.fiat_cost` - `slashed_fiat`.
@@ -5772,7 +5817,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 - set `td.tu` to `td.tu` - `tu_amount`; set `td.fiat_cost` to `td.fiat_cost` - `fiat_amount`.
-- set `d.tu` to `d.tu` - `tu_amount`; set `d.fiat_cost` to `d.fiat_cost` - `fiat_amount`; set `d.unrepaid_slash` to `d.unrepaid_slash` + `tu_amount`; set `d.slashed` to true.
+- set `d.tu` to `d.tu` - `tu_amount`; set `d.fiat_cost` to `d.fiat_cost` - `fiat_amount`; set `d.unrepaid_slash` to `d.unrepaid_slash` + `tu_amount`; set `d.slash_count` to `d.slash_count` + 1; set `d.blacklisted` to true.
 - create a `SlashObligation` entry: `corporation_id`, `scope` = ECOSYSTEM, `ecosystem_id`, `tu` = `tu_amount`, `fiat_obligation` = `fiat_amount`, `entries` = [(`vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount`)], `created` = `now`, `repaid` = null.
 
 
