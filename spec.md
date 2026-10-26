@@ -1444,7 +1444,6 @@ gfv "1" --- "1..n" gfd: documents
 account "1" --- "1" corp : policy_address
 
 corp --o tr: corporation_id
-corp --o csp: corporation_id
 
 corp --o vs: corporation_id
 account --o vs: vs_operator
@@ -1483,7 +1482,7 @@ Several entities deviate from this convention and document their own key scheme 
 
 ### VID ownership
 
-Every [[ref: VID]] known to the VPR is registered once, as a [VerifiableService](#verifiableservice) entry owned by a single `Corporation` (`VerifiableService.corporation_id`). The entities that bind an identifier, `Corporation` (`vs_id`), `Ecosystem` (`vs_id`) and `Participant` (`vs_id`), never store the identifier string: they reference the entry, and MUST reference an entry owned by their own corporation (for a `Corporation`, by itself). The **owner `Corporation`** of an identifier is therefore a total function given by the entry, and a `vs_id` reference is checked with a single lookup at every binding message: [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-corporation-basic-checks) / [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks), [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks) and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks).
+Every [[ref: VID]] known to the VPR is registered once, as a [VerifiableService](#verifiableservice) entry owned by a single `Corporation` (`VerifiableService.corporation_id`). The entities that bind an identifier, `Corporation` (`vs_id`), `Ecosystem` (`vs_id`) and `Participant` (`vs_id`), never store the identifier string: they reference the entry, and MUST reference an entry owned by their own corporation (for a `Corporation`, by itself; a `Participant` stores no corporation of its own: the owner of the entry is its corporation). The **owner `Corporation`** of an identifier is therefore a total function given by the entry, and a `vs_id` reference is checked with a single lookup at every binding message: [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-corporation-basic-checks) / [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks), [[MOD-PP-MSG-1-2-1]](#mod-pp-msg-1-2-1-start-participant-op-basic-checks), [[MOD-PP-MSG-7-2-1]](#mod-pp-msg-7-2-1-create-root-participant-basic-checks) and [[MOD-PP-MSG-14-2-1]](#mod-pp-msg-14-2-1-self-create-participant-basic-checks).
 
 Uniqueness is enforced on the identifier string by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier): at any block height, a string is the current `vid` of at most one entry. The VPR stores only the current string. The former strings of an entry, and the transition window during which each of them remains acceptable to trust resolution, are known from the events emitted at registration and rotation; indexers keep that history and apply the continuity rules of the [[ref: VT spec]]. An entry MAY be referenced by several `Ecosystem` and `Participant` entries of its owner and by the owner `Corporation` itself: one service, one identifier, many roles.
 
@@ -1593,7 +1592,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for pricing business fees. Can be COIN (a token available on the VPR chain) or FIAT (fees are priced in a fiat currency; the fee itself is settled off-chain, while deposit-bound amounts and agent rewards are settled on-chain in [[ref: native denom]] at the oracle rate). [[ref: Trust units]] are **not** a pricing asset: a decaying unit cannot label prices. Note that in all cases, deposit-bound amounts are always paid in [[ref: native denom]] and minted as [[ref: trust units]].
 - `pricing_asset` (string) (*mandatory*): examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,... (multi-fiat pricing is supported; protocol-level accounting uses the [[ref: main fiat currency]]).
 - `digest_algorithm` (string) (*mandatory*): algorithm used to compute the credential digests of credentials issued under this schema (when `credential_anchoring` is DIGEST) and the presentation digests anchored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
-- `root_participant_ids` (uint64[]) (*mandatory*): the root ECOSYSTEM `Participant` entries of this schema, in creation order, appended by [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant); empty until the first is created. At most one of them is an [[ref: active participant]] at any time ([[MOD-PP-MSG-7-2-4]](#mod-pp-msg-7-2-4-create-root-participant-overlap-checks)): that one is the **active root entry** of the schema, read by [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries) and [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session). A few ids per schema, in place of an index of `Participant` entries by schema.
+- `root_participant_ids` (uint64[]) (*optional*): the root ECOSYSTEM `Participant` entries of this schema, in creation order, appended by [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant); absent until the first is created. At most one of them is an [[ref: active participant]] at any time ([[MOD-PP-MSG-7-2-4]](#mod-pp-msg-7-2-4-create-root-participant-overlap-checks)): that one is the **active root entry** of the schema, read by [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries) and [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session). A few ids per schema, in place of an index of `Participant` entries by schema.
 
 ### Participant
 
@@ -1602,8 +1601,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `id` (uint64) (*mandatory*) (key): the id of the participant.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `role` (ParticipantRole) (*mandatory*): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER. Set at create time and never rotated thereafter.
-- `vs_id` (uint64) (*mandatory*): id of the [VerifiableService](#verifiableservice) entry of the [[ref: VS]] this permission refers to. The referenced entry MUST be owned by `corporation_id` (see [VID ownership](#vid-ownership)). MAY be shared with other `Participant` entries (a single identifier MAY hold several roles); the `Participant` identity is its `id`. Set at create time and never changed thereafter; the identifier string is read from `VerifiableService[vs_id].vid` and rotated through [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) without touching this entry.
-- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns this permission. MUST equal `VerifiableService[vs_id].corporation_id`.
+- `vs_id` (uint64) (*mandatory*): id of the [VerifiableService](#verifiableservice) entry of the [[ref: VS]] this permission refers to. The referenced entry MUST be owned by the corporation that creates the entry (see [VID ownership](#vid-ownership)). MAY be shared with other `Participant` entries (a single identifier MAY hold several roles); the `Participant` identity is its `id`. Set at create time and never changed thereafter; the identifier string is read from `VerifiableService[vs_id].vid` and rotated through [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) without touching this entry. The corporation of an entry is not stored: for an entry `p`, `p.corporation_id` denotes `VerifiableService[p.vs_id].corporation_id` throughout this specification (one lookup).
 - `created` (timestamp) (*mandatory*): timestamp this `Participant` has been created.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Participant` is effective. It is null if, and only if, the entry has never been validated by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated): that is, `op_state` is PENDING (an onboarding process started by [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op) and not yet validated), or `op_state` is TERMINATED after cancellation ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)) of a never-validated onboarding process. Entries created by [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) always have `effective_from` set at creation time.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Participant` is effective, null if no time limit has been set for this permission.
@@ -3773,8 +3771,7 @@ Find all `Participant` entries `participants[]` where:
 
 - `p.validator_participant_id` = `validator_participant_id`,
 - `p.role` = `role`,
-- `p.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account),
-- `p.vs_id` = `vs_id`,
+- `p.vs_id` = `vs_id` (an entry owned by `co`, the `Corporation` entry resolved from the signing `corporation` account),
 - `p.revoked` is null and `p.unrepaid_slash` = 0,
 - `p.op_state` = PENDING.
 
@@ -4096,7 +4093,6 @@ Find all [[ref: active participants]] and [[ref: future participants]] `particip
 - `p.id` is not equal to `applicant_participant.id`,
 - `p.validator_participant_id` = `applicant_participant.validator_participant_id`,
 - `p.role` = `applicant_participant.role`,
-- `p.corporation_id` = `applicant_participant.corporation_id`,
 - `p.vs_id` = `applicant_participant.vs_id`.
 
 for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
@@ -4309,7 +4305,6 @@ A new entry `Participant` `perm` MUST be created:
 - `perm.schema_id`: `schema_id`.
 - `perm.role`: ECOSYSTEM.
 - `perm.vs_id`: `vs_id`.
-- `perm.corporation_id`: `co.id`.
 - `perm.created`: `now`
 - `perm.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
 - `perm.effective_until`: `effective_until`
@@ -4395,7 +4390,6 @@ Find all [[ref: active participants]] and [[ref: future participants]] `particip
 - `p.schema_id` = `applicant_participant.schema_id`,
 - `p.role` = `applicant_participant.role`,
 - `p.validator_participant_id` = `applicant_participant.validator_participant_id` (both NULL for root ECOSYSTEM entries),
-- `p.corporation_id` = `applicant_participant.corporation_id`,
 - `p.vs_id` = `applicant_participant.vs_id`.
 
 for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
@@ -4831,7 +4825,7 @@ Determine the operation type and applicable discount:
   - `discount` = `verifier_discount`
   - `payer_participant` = `verifier_participant` (null when the verifier holds no entry)
 
-**Materialize the payer's entry, if needed.** If `payer_participant` is null and `total_payer_trust_deposit` (fee checks) is greater than 0, the payer's deposit needs a ledger line: create a `Participant` entry exactly as [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) would, with `role` = ISSUER (Credential Issuance) or VERIFIER (Credential Verification), `validator_participant_id` = the id of the active root entry of `schema_id`, the entry of `cs.root_participant_ids` that is an [[ref: active participant]] (abort if none exists), `vs_id` = `vs.id`, `corporation_id` = `co.id`, all fees and discounts 0, `effective_from` = `now`, `effective_until` = the root entry's `effective_until`; set `payer_participant` and `perm` to it. The entry is created once: the next session of the same party references it.
+**Materialize the payer's entry, if needed.** If `payer_participant` is null and `total_payer_trust_deposit` (fee checks) is greater than 0, the payer's deposit needs a ledger line: create a `Participant` entry exactly as [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) would, with `role` = ISSUER (Credential Issuance) or VERIFIER (Credential Verification), `validator_participant_id` = the id of the active root entry of `schema_id`, the entry of `cs.root_participant_ids` that is an [[ref: active participant]] (abort if none exists), `vs_id` = `vs.id`, all fees and discounts 0, `effective_from` = `now`, `effective_until` = the root entry's `effective_until`; set `payer_participant` and `perm` to it. The entry is created once: the next session of the same party references it.
 
 **For each beneficiary `Participant` `perm` in `found_participant_set`:**
 
@@ -5109,8 +5103,7 @@ Find all [[ref: active participants]] and [[ref: future participants]] `particip
 
 - `p.validator_participant_id` = `validator_participant_id`,
 - `p.role` = `role`,
-- `p.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account),
-- `p.vs_id` = `vs_id`.
+- `p.vs_id` = `vs_id` (an entry owned by `co`, the `Corporation` entry resolved from the signing `corporation` account).
 
 for each `Participant` entry `p` from `participants[]`, [[ref: transaction]] MUST abort if:
 
@@ -5142,7 +5135,6 @@ A new entry `Participant` `perm` MUST be created:
 - `perm.schema_id`: `validator_participant.schema_id`
 - `perm.role`: `role`.
 - `perm.vs_id`: `vs_id`.
-- `perm.corporation_id`: `co.id`.
 - `perm.created`: `now`
 - `perm.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
 - `perm.effective_until`: `effective_until`
