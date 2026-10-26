@@ -4450,7 +4450,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `applicant_participant` MUST exist; its state does not matter: a pending, future or slashed entry can be revoked.
+- `applicant_participant` MUST exist and `applicant_participant.op_state` MUST be VALIDATED, else abort: an entry under a pending onboarding process, initial or renewal, is cancelled first by its applicant ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)), which refunds its escrow; a validated entry can be revoked whatever its window (current or future) and whether or not its participation is slashed.
 
 ###### [MOD-PP-MSG-9-2-2] Revoke Participant advanced checks
 
@@ -4545,7 +4545,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 
 - Load `Participant` entry `applicant_participant` from `id`.
-- if `applicant_participant.op_state` is PENDING, refund the escrow (`op_current_fees`, `op_current_deposit`) to `applicant_participant.op_funding_account` exactly as [MOD-PP-MSG-6-3](#mod-pp-msg-6-3-cancel-participant-op-last-request-execution) does: nothing was minted while PENDING.
 - delete `applicant_participant`, removing its id from deposit(`applicant_participant`).`participant_ids` and, for a root entry, from `cs.root_participant_ids` ([Participant](#participant)).
 
 The method MUST emit an event carrying `id`, `schema_id`, `role`, `vs_id` and `now`: the revocation is recorded by the transaction, the VPR keeps no revoked entry.
