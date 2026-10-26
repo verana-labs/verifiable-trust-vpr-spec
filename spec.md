@@ -169,7 +169,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The governance authority (GA) of an [[ref: ecosystem]].
 
 [[def: ecosystem governance framework, EGF]]:
-~ The governance framework (GF) of an ecosystem].
+~ The governance framework (GF) of an ecosystem.
 
 [[def: entity, entities]]:
 ~ An [[ref: account]] controller.
@@ -348,7 +348,8 @@ object "Ecosystem" as tra #3fbdb6 {
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Participants are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
   - `GRANTOR_ONBOARDING_PROCESS`: `ISSUER` Participants are created by one or several [[ref: issuer grantor]](s) — ecosystem operators responsible for onboarding issuers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
 - A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` `Participant` entries are created. Modes include:
-  - `OPEN`: `VERIFIER` Participants can be self-created by any [[ref: corporation]].
+  - `OPEN`: any [[ref: corporation]] verifies without an entry, and MAY self-create a `VERIFIER` entry.
+  - `CREDENTIAL`: any [[ref: corporation]] whose service holds a credential of one of the schemas listed in `verifier_credential_schema_ids` verifies without an entry, as under `OPEN`.
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `VERIFIER` Participants are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
   - `GRANTOR_ONBOARDING_PROCESS`: `VERIFIER` Participants are created by one or several [[ref: verifier grantor]](s) — ecosystem operators responsible for onboarding verifiers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
 - A **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` `Participant` entries are created. Modes include:
@@ -466,7 +467,7 @@ Example of a Json Schema credential schema:
 
 To participate in an [[ref: ecosystem]] and assume a role associated with a specific [[ref: credential schema]]:
 
-- if the schema is `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and a registered verifiable service entry for its identifier; a `Participant` entry is optional under `OPEN` (an issuer self-creates one to declare fees, either party to carry a deposit) (see `presentation_mode` in [CredentialSchema](#credentialschema)).
+- if the schema is `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and a registered verifiable service entry for its identifier; a `Participant` entry is optional under `OPEN` (an issuer self-creates one to declare fees, either party to bound its participation with a window) (see `presentation_mode` in [CredentialSchema](#credentialschema)).
 
 - if the schema is not `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and complete an [[ref: onboarding process]] to obtain its `Participant` entry.
 
@@ -1907,7 +1908,7 @@ Get an `Ecosystem`
 "ecosystem": {
   {
     "active_version": 0,
-    "corporation_id": 0,
+
     "created": "2025-01-14T19:40:37.967Z",
     "vs_id": 12,
     "id": "string",
@@ -1938,7 +1939,7 @@ Get an `Ecosystem`
 "ecosystems": [ {
   {
     "active_version": 0,
-    "corporation_id": 0,
+
     "created": "2025-01-14T19:40:37.967Z",
     "vs_id": 12,
     "id": "string",
@@ -1964,7 +1965,7 @@ Get an `Ecosystem`
     ]  
   }, {
     "active_version": 0,
-    "corporation_id": 0,
+
     "created": "2025-01-14T19:40:37.967Z",
     "vs_id": 12,
     "id": "string",
@@ -2227,7 +2228,7 @@ As a result, `accountABC` is authorized to:
 |                                | Create or update Participant Session     |           N/A (Tx)              | Msg    | [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)  |corporation + vs_operator (VS Operator Authorization) |
 |                                | Update Participant Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-PP-MSG-11]](#mod-pp-msg-11-update-participant-module-parameters) |governance proposal |
 |                                | Slash Participant Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) |corporation + operator |
-|                                | Self Create Participant (OPEN mode)      |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) |corporation + operator  |
+|                                | Self Create Participant (OPEN / CREDENTIAL modes) |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant) |corporation + operator  |
 |                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-PP-MSG-15]](#mod-pp-msg-15-trigger-resolver) |corporation + operator OR corporation + vs_operator |
 |                                | List Participants                        | /pp/v1/list                | Query  | [[MOD-PP-QRY-1]](#mod-pp-qry-1-list-participants)    |N/A |
 |                                | Get a Participant                        | /pp/v1/get                 | Query  | [[MOD-PP-QRY-2]](#mod-pp-qry-2-get-participant)    |N/A |
@@ -2461,7 +2462,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no `Participant` entry MAY reference it (index by `vs_id`); else abort (entries belong to their corporation and do not move: the owner first revokes them or lets them expire, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
+- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipantDeposit](#participantdeposit) MAY exist for it (no key starting with (`vs.corporation_id`, `vs.id`), a key-prefix scan): the entries, the trust units and the sanctions of a participation stay with the corporation that earned them; else abort (entries belong to their corporation and do not move: the owner first revokes them or lets them expire, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
 - `to_corporation_id` (uint64) (*optional*): if provided, a `Corporation` entry with this id MUST exist and MUST differ from `co.id`.
 
 ###### [MOD-VS-MSG-4-2-2] Transfer Verifiable Service fee checks
@@ -2494,7 +2495,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.transfer_to_corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no `Participant` entry MAY reference it (index by `vs_id`); else abort.
+- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipantDeposit](#participantdeposit) MAY exist for it (no key starting with (`vs.corporation_id`, `vs.id`), a key-prefix scan): the entries, the trust units and the sanctions of a participation stay with the corporation that earned them; else abort.
 - the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks).
 
 ###### [MOD-VS-MSG-5-2-2] Accept Verifiable Service Transfer fee checks
@@ -2516,7 +2517,7 @@ The method MUST emit an event carrying `vs.id`, `vs.vid`, the previous and the n
 
 #### [MOD-VS-MSG-6] Void
 
-> Note: there is no message to remove a `VerifiableService` entry. Once registered, an entry is permanent, like a `Participant` entry: the credential digests anchored under it, the sessions run in its context and the `Participant` entries bound to it reference its `id`, and trust resolution resolves the issuer of a credential through that link to the entry's identifier for as long as the credential may be evaluated, which the registry cannot know. A wrong identifier string is corrected by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) Rotate Verifiable Identifier, with a transition of 0 when nothing was issued under it; an identifier that is no longer operated has its operator cleared by [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service); an identifier its owner no longer needs is transferred ([[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)) or kept. The registration deposit is never refunded.
+> Note: there is no message to remove a `VerifiableService` entry. Once registered, an entry is permanent: the credential digests anchored under it, the sessions run in its context and the `Participant` entries bound to it, while they exist, reference its `id`, and trust resolution resolves the issuer of a credential through that link to the entry's identifier for as long as the credential may be evaluated, which the registry cannot know. A wrong identifier string is corrected by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) Rotate Verifiable Identifier, with a transition of 0 when nothing was issued under it; an identifier that is no longer operated has its operator cleared by [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service); an identifier its owner no longer needs is transferred ([[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)) or kept. The registration deposit is never refunded.
 
 #### [MOD-VS-MSG-7] Update Module Parameters
 
@@ -3232,6 +3233,8 @@ Return the `GovernanceFrameworkVersion` entry with `id`, including its owning su
 
 > Note: listing is an indexer function; the chain keeps no index for it ([Indexes](#identifier-conventions)).
 
+### Credential Schema Module
+
 #### [MOD-CS-MSG-1] Create Credential Schema
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
@@ -3249,7 +3252,7 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `issuer_validation_validity_period` (*mandatory*), default to 0 (days).
 - `verifier_validation_validity_period` (*mandatory*), default to 0 (days).
 - `holder_validation_validity_period` (*mandatory*), default to 0 (days).
-- `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*).
+- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*).
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*).
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): MUST be provided, non-empty, iff `verifier_onboarding_mode` is CREDENTIAL.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*).
@@ -3282,7 +3285,7 @@ If any of these precondition checks fail, method MUST abort.
 - `issuer_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
 - `verifier_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_validation_validity_period_max_days` days.
 - `holder_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
-- `issuer_onboarding_mode` (IssuerOnbpardingMode) (*mandatory*). MUST be a valid IssuerOnboardingMode.
+- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*). MUST be a valid IssuerOnboardingMode.
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*). MUST be a valid VerifierOnboardingMode.
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): if `verifier_onboarding_mode` is CREDENTIAL, MUST be present and non-empty, and each id MUST refer to an existing, non-archived `CredentialSchema` entry whose `subject_kind` is SERVICE and whose `presentation_mode` is PUBLIC; if the mode is not CREDENTIAL, MUST be absent; else abort.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*). MUST be a valid HolderOnboardingMode.
@@ -3651,7 +3654,7 @@ In all cases, the process is very similar. Example execution of an [[ref: onboar
 2. The [[ref: applicant]] connects to the [[ref: validator]]'s [[ref: VS]] (identified by its [[ref: DID]]) and executes the validation steps required for the [[ref: onboarding process]] to conclude.
 3. If the [[ref: applicant]] qualifies, the [[ref: validator]] runs [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) to update the Participant entry; the [[ref: applicant]] is then granted the new `Participant` entries and/or issued a credential.
 
-Once in the `VALIDATED` state, a Participant entry remains valid for a specific period (e.g., 365 days), configured in the [[ref: credential schema]] for credential-schema-related onboarding, or set by the [[ref: ecosystem]] for user-agent onboarding.
+Once in the `VALIDATED` state, a Participant entry remains valid for a specific period (e.g., 365 days), configured in the [[ref: credential schema]].
 
 :::note
 Even when the Participant entry remains in the `VALIDATED` state for the configured period, the resulting `Participant` entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the [[ref: applicant]] MUST provide updated information to the [[ref: validator]] before attribute expiration in order to be issued an updated `Participant` entry and/or credential.
@@ -3746,7 +3749,6 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
   
   - else abort.
 
-At the end, if a [[ref: trustable participant]] `validator_participant` is not found, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PP-MSG-1-2-3] Start Participant OP fee checks
 
@@ -3821,7 +3823,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
   - `applicant_participant.id`: auto-incremented uint64.
   - `applicant_participant.schema_id` = `validator_participant.schema_id`
-  - `applicant_participant.corporation_id`: `co.id`.
   - `applicant_participant.role`: `role`.
   - `applicant_participant.vs_id`: `vs_id`.
   - `applicant_participant.created`: `now`
@@ -3945,7 +3946,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - else MUST abort.
 
-> Note: these are the same mode/role compatibility checks as [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-participant-op-permission-checks), with `role` read from `applicant_participant.role`. Because onboarding modes are immutable ([[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)), a self-created entry ([[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) can never renew: its mode is OPEN, which always falls through to abort. Root ECOSYSTEM entries are blocked by the `validator_participant` existence check above (`validator_participant_id` is null).
+> Note: these are the same mode/role compatibility checks as [MOD-PP-MSG-1-2-2](#mod-pp-msg-1-2-2-start-participant-op-permission-checks), with `role` read from `applicant_participant.role`. Because onboarding modes are immutable ([[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)), a self-created entry ([[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) can never renew: its mode is OPEN or CREDENTIAL, which always falls through to abort. Root ECOSYSTEM entries are blocked by the `validator_participant` existence check above (`validator_participant_id` is null).
 - the participation MUST NOT have been slashed, as in [MOD-PP-MSG-1-2-5](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks).
 
 ###### [MOD-PP-MSG-2-2-3] Renew Participant OP fee checks
@@ -4041,7 +4042,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- Load `Participant` entry `validator_participant` from `applicant_participant_validator_participant_id`.
+- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
 - Authorization:
 
 either (executed by any operator of corporation):
@@ -4081,7 +4082,7 @@ Calculation of `op_exp`, the onboarding process expiration timestamp, required t
 
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_participant.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_participant.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_participant.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_participant.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_participant.role` is HOLDER).
 
-- if `validity_period` is NULL:  `op_exp` = NULL.
+- if `validity_period` is null or 0 (never expire): `op_exp` = NULL.
 - else if `applicant_participant.op_exp` is null, `op_exp` =  timestamp of now() plus `validity_period`.
 - else `op_exp` =  `applicant_participant.op_exp` plus `validity_period`
 
@@ -4133,7 +4134,7 @@ Calculate `op_exp`:
 - Load `CredentialSchema` `cs` from `applicant_participant.schema_id`.
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_participant.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_participant.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_participant.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_participant.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_participant.role` is HOLDER).
 
-- if `validity_period` is NULL:  `op_exp` = NULL.
+- if `validity_period` is null or 0 (never expire): `op_exp` = NULL.
 - else if `applicant_participant.op_exp` is null, `op_exp` =  timestamp of now() plus `validity_period`.
 - else `op_exp` =  `applicant_participant.op_exp` plus `validity_period`.
 
@@ -4189,7 +4190,7 @@ Update `Participant` `applicant_participant`:
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-At any time, [[ref: applicant]] of an onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and the escrowed [[ref: trust fees]] and deposit-bound amount are refunded. If `op_exp` is not null (a renewal), `op_state` is set back to VALIDATED; else the entry, never validated, is deleted.
+At any time, [[ref: applicant]] of an onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and the escrowed [[ref: trust fees]] and deposit-bound amount are refunded. If `effective_from` is set (a renewal), `op_state` is set back to VALIDATED; else the entry, never validated, is deleted.
 
 ##### [MOD-PP-MSG-6-1] Cancel Participant OP Last Request parameters
 
@@ -4235,7 +4236,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `applicant_participant.op_current_deposit` to 0.
 
 - set `applicant_participant.op_funding_account` to null.
-- if `applicant_participant.op_exp` is null (validation never completed): delete the entry, removing its id from deposit(`applicant_participant`).`participant_ids` ([Participant](#participant)).
+- if `applicant_participant.effective_from` is null (validation never completed): delete the entry, removing its id from deposit(`applicant_participant`).`participant_ids` ([Participant](#participant)).
 - else: set `applicant_participant.op_state` to VALIDATED and `applicant_participant.op_last_state_change` to `now`; if `applicant_participant.effective_until` is not null and not later than `now`, the entry has expired meanwhile: delete it likewise.
 
 The method MUST emit an event carrying `id` and the outcome.
@@ -4373,9 +4374,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `applicant_participant` MUST be a [[ref: active participant]]
-- `applicant_participant.effective_until` MUST be greater than now().
-- else MUST abort.
+- `applicant_participant.effective_from` MUST be set (a validated entry; its window may be current or future, and a slashed participation may shorten its entries).
 
 > Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null.
 
@@ -4385,11 +4384,11 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - if `applicant_participant.validator_participant_id` is null and `applicant_participant.role` is ECOSYSTEM, `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 
-2. Self-created `Participant` entries
+2. Self-created `Participant` entries: `applicant_participant.validator_participant_id` is set and the schema's mode for `applicant_participant.role` allows self-creation (`issuer_onboarding_mode` OPEN for an ISSUER, `verifier_onboarding_mode` OPEN or CREDENTIAL for a VERIFIER)
 
-- load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]] of role ECOSYSTEM. `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
+- let `validator_participant` be the active root entry of the schema (the entry of `cs.root_participant_ids` that is an [[ref: active participant]], where `cs` is `CredentialSchema[applicant_participant.schema_id]`; the entry's `validator_participant_id` may name a root since replaced). It MUST exist. `co.id` MUST equal `applicant_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 
-3. OP-managed `Participant` entries
+3. OP-managed `Participant` entries: every other entry with a `validator_participant_id`
 
 - `effective_until` MUST be lower or equal to `applicant_participant.op_exp` else MUST abort.
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: active participant]]. `co.id` MUST equal `validator_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
@@ -4454,7 +4453,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `applicant_participant` MUST be a [[ref: active participant]] or a [[ref: future participant]]
+- `applicant_participant` MUST exist; its state does not matter: a pending, future or slashed entry can be revoked.
 
 ###### [MOD-PP-MSG-9-2-2] Revoke Participant advanced checks
 
@@ -4549,6 +4548,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 
 - Load `Participant` entry `applicant_participant` from `id`.
+- if `applicant_participant.op_state` is PENDING, refund the escrow (`op_current_fees`, `op_current_deposit`) to `applicant_participant.op_funding_account` exactly as [MOD-PP-MSG-6-3](#mod-pp-msg-6-3-cancel-participant-op-last-request-execution) does: nothing was minted while PENDING.
 - delete `applicant_participant`, removing its id from deposit(`applicant_participant`).`participant_ids` and, for a root entry, from `cs.root_participant_ids` ([Participant](#participant)).
 
 The method MUST emit an event carrying `id`, `schema_id`, `role`, `vs_id` and `now`: the revocation is recorded by the transaction, the VPR keeps no revoked entry.
@@ -5164,7 +5164,7 @@ A new entry `Participant` `perm` MUST be created:
 
 Then register `perm.id` in `ParticipantDeposit[(co.id, vs_id, cs.id, role)].participant_ids`, creating the deposit with an empty ledger if it does not exist.
 
-The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_participant_id` (null for a root entry) and `vs_id`, so that indexers build the `Participant` tree of the schema without a query.
+The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_participant_id` and `vs_id`, so that indexers build the `Participant` tree of the schema without a query.
 
 > Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` value, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
@@ -5392,7 +5392,7 @@ v --> vg
 ##### [MOD-PP-QRY-4-2] Find Beneficiaries checks
 
 - `schema_id` MUST refer to an existing `CredentialSchema` entry; if `issuer_participant_id` (resp. `verifier_participant_id`) is specified, the entry's `schema_id` MUST equal `schema_id`; the reference forms MUST be as stated above.
-- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`; the `Participant` entry MUST exist. Its state does not matter: a future or pending entry still identifies the branch to pay (see the unrepaid-slash rule below).
+- if `issuer_participant_id` is specified, load `issuer_participant` from `issuer_participant_id`; the `Participant` entry MUST exist. Its state does not matter: a future entry (validated, window not yet open) still identifies the branch to pay (see the unrepaid-slash rule below); the session method applies its own, stricter, check.
 - if `verifier_participant_id` is specified, load `verifier_participant` from `verifier_participant_id`, Participant MUST exist and MUST be a [[ref: active participant]].
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
@@ -5419,6 +5419,8 @@ Additionally, if `verification` is true:
 - if `issuer_participant` is not null and has no unrepaid slash (see above), add `issuer_participant` to `found_participant_set` (an issuer without an entry has no fee terms and receives nothing).
 - if `verifier_participant` is not null: set `current_participant` = `verifier_participant`; while `current_participant.validator_participant_id` is not null: `current_participant` = load(`current_participant.validator_participant_id`), stopping if it no longer exists; unless `current_participant` has an unrepaid slash, add it to `found_participant_set`.
 - else (the verifier is referenced by its service entry): unless `root` is null or has an unrepaid slash, add `root` to `found_participant_set`.
+
+In every case, unless `root` is null or has an unrepaid slash, add `root` to `found_participant_set`: the ecosystem is a beneficiary of every session. A walk that stops at a deleted validator (a replaced root entry included) pays the ancestors it reached and the current root.
 
 return `found_participant_set`.
 
@@ -5534,7 +5536,7 @@ ApplicantBrowser <-- ValidatorVS: notify `Participant` entry added for your DID.
 
 *This section is non-normative.*
 
-Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (per-ecosystem attribution is derivable from the corporation's `Participant` entries), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. Alongside each `tu` balance, the module tracks its cumulative [[ref: main fiat currency]] **cost basis** (`fiat_cost`): slashing liabilities are denominated at mint-time cost, not at decayed value. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible. The [[ref: native denom]] spent MAY come from a [[ref: sponsor]] ([[FUND-CHECK]](#fund-check-funding-account-resolution)): trust units are always credited to the corporation that performed the trust operation, never to the account that paid.
+Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (per-ecosystem attribution is derivable from its `ParticipantDeposit` entries), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. Alongside each `tu` balance, the module tracks its cumulative [[ref: main fiat currency]] **cost basis** (`fiat_cost`): slashing liabilities are denominated at mint-time cost, not at decayed value. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible. The [[ref: native denom]] spent MAY come from a [[ref: sponsor]] ([[FUND-CHECK]](#fund-check-funding-account-resolution)): trust units are always credited to the corporation that performed the trust operation, never to the account that paid.
 
 Because the [[ref: trust unit peg value]] declines each [[ref: epoch]], a deposit that is not fed by new paid activity loses fiat value at exactly `tu_decay_rate` ("trust decay"): trust is a subscription. Decay is implemented through the single global index — there are **no per-account updates**: a deposit's fiat value at time `T` is `td.tu × tu_peg_value(T)`, and relative rankings compare raw `td.tu` directly (the common factor cancels).
 
