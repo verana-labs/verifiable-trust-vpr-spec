@@ -1605,7 +1605,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 `Participant`:
 
-- `id` (uint64) (*mandatory*) (key): the id of the participant. An entry exists while it is pending, effective or future: it is deleted when it expires (the expiry sweep below), when it is revoked ([[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)) or when a never-validated onboarding process is cancelled ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)); a new entry for the same participation is created afresh and shares its [ParticipantDeposit](#participantdeposit). The VPR keeps no expired or revoked entry; they live in the transaction history that indexers serve.
+- `id` (uint64) (*mandatory*) (key): the id of the participant. An entry exists while it is pending, effective or future: it is deleted when it expires (the expiry sweep below), when it is revoked ([[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)) or by an ecosystem slash ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), or when a never-validated onboarding process is cancelled ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)); a new entry for the same participation is created afresh and shares its [ParticipantDeposit](#participantdeposit). The VPR keeps no expired or revoked entry; they live in the transaction history that indexers serve.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `role` (ParticipantRole) (*mandatory*): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER. Set at create time and never rotated thereafter.
 - `vs_id` (uint64) (*mandatory*): id of the [VerifiableService](#verifiableservice) entry of the [[ref: VS]] this permission refers to. The referenced entry MUST be owned by the corporation that creates the entry (see [VID ownership](#vid-ownership)). MAY be shared with other `Participant` entries (a single identifier MAY hold several roles, and several entries for one role, under different validators or successive windows); the `Participant` identity is its `id`, its participation is (`vs_id`, `schema_id`, `role`). Set at create time and never changed thereafter; the identifier string is read from `VerifiableService[vs_id].vid` and rotated through [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) without touching this entry. The corporation of an entry is not stored: for an entry `p`, `p.corporation_id` denotes `VerifiableService[p.vs_id].corporation_id` throughout this specification (one lookup).
@@ -1632,7 +1632,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 ### ParticipantDeposit
 
-A `ParticipantDeposit` is the [[ref: trust unit]] ledger of a **participation**: a service entry, a schema and a role, under the corporation that owns the service entry. Every `Participant` entry of that participation, successive or concurrent, uses the same deposit: the trust units minted on its onboarding, on its validations as a validator and on its sessions accrue here, the ecosystem slashes here ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), and a party acting under an OPEN or CREDENTIAL mode without any entry has a deposit all the same, created by its first mint. The deposit outlives its entries and is the lasting record of a slash: an ecosystem slash revokes the participation's entries and blacklists it until the ecosystem reinstates it.
+A `ParticipantDeposit` is the [[ref: trust unit]] ledger of a **participation**: a service entry, a schema and a role, under the corporation that owns the service entry. Every `Participant` entry of that participation, successive or concurrent, uses the same deposit: the trust units minted on its onboarding, on its validations as a validator and on its sessions accrue here, the ecosystem slashes here ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)), and a party acting under an OPEN or CREDENTIAL mode without any entry has a deposit all the same, created by its first mint. The deposit outlives its entries and is the lasting record of a slash: an ecosystem slash revokes the participation's validated entries and blacklists it until the ecosystem reinstates it.
 
 `ParticipantDeposit`:
 
@@ -1644,10 +1644,10 @@ A `ParticipantDeposit` is the [[ref: trust unit]] ledger of a **participation**:
 - `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of `tu`, in [[ref: main fiat currency]]: the sum of the fiat value, at mint time, of the trust units currently held here. Maintained by the trust deposit module together with `tu`; used to denominate slash obligations at mint-time cost.
 - `unrepaid_slash` (decimal) (*mandatory*): [[ref: trust units]] slashed from this deposit, by an ecosystem ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)) or by network governance ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)), and not yet repaid; decreased by the deposit's share of a `SlashObligation` when that obligation is repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)). Read by the definition of [[ref: active participant]].
 - `slash_count` (number) (*mandatory*): the number of times this deposit has been slashed, by an ecosystem ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)) or by network governance ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)); never reset. It follows the deposit when the service entry is transferred ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)), which the obligations, kept by the corporation that incurred them, do not.
-- `blacklisted` (boolean) (*mandatory*): set to true by the ecosystem slash ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)): the participation can no longer take part in the schema, neither through a new entry ([[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) nor through entry-less sessions ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)), until the ecosystem controller reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)). A network slash does not set it: its bar is the open obligation. It follows the deposit when the service entry is transferred.
+- `blacklisted` (boolean) (*mandatory*): set to true by the ecosystem slash ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)): the participation can no longer take part in the schema, neither through a new entry ([[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)), a renewal ([[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op)) or a validation ([[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)), nor through entry-less sessions ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)), until the ecosystem controller reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)). A network slash does not set it: its bar is the open obligation. It follows the deposit when the service entry is transferred.
 - `participant_ids` (uint64[]) (*mandatory*): the ids of the current `Participant` entries of the participation (pending, future or effective), a few at most; appended when an entry is created ([[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant), [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)), removed when it is deleted. It is how the sibling checks, the session guards ([[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Participant` entries.
 
-A deposit is created by the first entry of its participation or by the first mint to it, whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash` and `slash_count` at 0 and `blacklisted` false. It is deleted by the method that empties it when `participant_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0 (a slashed participation keeps its deposit, repaid or not: its count and its blacklisting are its record) and [[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)). For an entry `p`, **deposit(`p`)** denotes `ParticipantDeposit[(p.corporation_id, p.vs_id, p.schema_id, p.role)]`.
+A deposit is created by the first entry of its participation or by the first mint to it, whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash` and `slash_count` at 0 and `blacklisted` false. It is deleted by the method that empties it when `participant_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0 (a slashed participation keeps its deposit, repaid or not: its count and its blacklisting are its record). For an entry `p`, **deposit(`p`)** denotes `ParticipantDeposit[(p.corporation_id, p.vs_id, p.schema_id, p.role)]`.
 
 ### ParticipantSession
 
@@ -1669,9 +1669,9 @@ A `ParticipantSession` is the set of credential exchanges (issuances, verificati
 - `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit, equal to the sum of `tu` over the corporation's [ParticipantDeposit](#participantdeposit) entries. Increased by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)), moved with a service entry by [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.44/year at the default `tu_decay_rate`): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
 - `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of the current `tu` balance, in [[ref: main fiat currency]], equal to the sum of `fiat_cost` over the corporation's [ParticipantDeposit](#participantdeposit) entries. Because the [[ref: trust unit peg value]] only declines, `fiat_cost` ≥ `tu × tu_peg_value(now)` always.
 
-The trust deposit module owns the [ParticipantDeposit](#participantdeposit) entries (their ledger fields are written only through this module; the participant module only maintains their `participant_ids`) and the `SlashObligation` entries; the participant module calls the trust deposit module, never the reverse.
+The trust deposit module owns the [ParticipantDeposit](#participantdeposit) entries (their ledger fields `tu`, `fiat_cost`, `unrepaid_slash` and `slash_count` are written only through this module and the transfer of a service entry ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)); the participant module maintains their `participant_ids` and clears `blacklisted` through [[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)) and the `SlashObligation` entries; the participant module calls the trust deposit module, never the reverse.
 
-Invariants: `td.tu` = Σ `d.tu` and `td.fiat_cost` = Σ `d.fiat_cost` over all `ParticipantDeposit` entries `d` whose key starts with `td.corporation_id`; all four values are ≥ 0. Divisions and multiplications in [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) and [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) round down to the ledger precision ([Trust Unit Index](#trust-unit-index)). Every write goes through [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation) or [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash), which update the `TrustDeposit` and the `ParticipantDeposit` entries together.
+Invariants: `td.tu` = Σ `d.tu` and `td.fiat_cost` = Σ `d.fiat_cost` over all `ParticipantDeposit` entries `d` whose key starts with `td.corporation_id`; all four values are ≥ 0. Divisions and multiplications in [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) and [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) round down to the ledger precision ([Trust Unit Index](#trust-unit-index)). Every write goes through [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation), [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) or the transfer of a service entry ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)), which update the `TrustDeposit` and the `ParticipantDeposit` entries together.
 
 ### SlashObligation
 
@@ -3886,7 +3886,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - Renewal only applies to entries managed by an [[ref: onboarding process]]: root ([[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant)) and self-created ([[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) entries cannot renew; use [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until) to adjust their `effective_until`.
 - If validator `Participant` is not valid anymore, applicant MUST perform a new onboarding process with another validator.
 - Renewal does not allow changing the `Participant.validation_fees`, `Participant.issuance_fees`, `Participant.verification_fees`. To change these values, applicant MUST start a new onboarding process.
-- if the participation carries an unrepaid slash (`unrepaid_slash` > 0 on its deposit), method MUST fail; a revoked entry no longer exists.
+- if the participation carries an unrepaid slash (`unrepaid_slash` > 0 on its deposit) or is blacklisted, method MUST fail; a revoked entry no longer exists.
 - if `corporation` has an unrepaid ecosystem slash in the ecosystem of the related schema, or an unrepaid network slash, method MUST fail (see [MOD-PP-MSG-2-2-4](#mod-pp-msg-2-2-4-renew-participant-op-unrepaid-slash-checks)).
 
 ##### [MOD-PP-MSG-2-1] Renew Participant OP parameters
@@ -4101,7 +4101,7 @@ Now, let's verify `effective_until`:
 
 - load `validator_participant` from `applicant_participant.validator_participant_id`. `validator_participant` MUST be a [[ref: trustable participant]].
 - `co.id` MUST equal `validator_participant.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
-- deposit(`applicant_participant`), if it exists, MUST NOT be `blacklisted`, else abort: a blacklisted participation is not validated until the ecosystem reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)).
+- deposit(`applicant_participant`) MUST NOT be `blacklisted`, else abort: a blacklisted participation is not validated until the ecosystem reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)).
 
 If `validator_participant` is not a [[ref: trustable participant]] (expired, revoked, slashed...) then applicant MUST start a new onboarding process.
 
@@ -4243,6 +4243,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - set `applicant_participant.op_funding_account` to null.
 - if `applicant_participant.effective_from` is null (validation never completed): delete the entry, removing its id from deposit(`applicant_participant`).`participant_ids` ([Participant](#participant)).
+- else, if deposit(`applicant_participant`).`blacklisted` is true (the participation was slashed while the renewal was pending, [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)): delete the entry likewise, as the slash would have done.
 - else: set `applicant_participant.op_state` to VALIDATED and `applicant_participant.op_last_state_change` to `now`; if `applicant_participant.effective_until` is not null and not later than `now`, the entry has expired meanwhile: delete it likewise.
 
 The method MUST emit an event carrying `id` and the outcome.
@@ -4380,7 +4381,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `applicant_participant.effective_from` MUST be set (a validated entry; its window may be current or future, and a slashed participation may shorten its entries).
+- `applicant_participant.effective_from` MUST be set (a validated entry; its window may be current or future, and a participation under a network slash may still shorten its entries).
 
 > Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null.
 
@@ -4459,7 +4460,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `applicant_participant` MUST exist and `applicant_participant.op_state` MUST be VALIDATED, else abort: an entry under a pending onboarding process, initial or renewal, is cancelled first by its applicant ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)), which refunds its escrow; a validated entry can be revoked whatever its window (current or future) and whether or not its participation is slashed.
+- `applicant_participant.op_state` MUST be VALIDATED, else abort: an entry under a pending onboarding process, initial or renewal, is cancelled first by its applicant ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)), which refunds its escrow; a validated entry can be revoked whatever its window (current or future) and whether or not its participation is slashed.
 
 ###### [MOD-PP-MSG-9-2-2] Revoke Participant advanced checks
 
@@ -4554,7 +4555,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 
 - Load `Participant` entry `applicant_participant` from `id`.
-- delete `applicant_participant`, removing its id from deposit(`applicant_participant`).`participant_ids` and, for a root entry, from `cs.root_participant_ids` ([Participant](#participant)).
+- delete `applicant_participant`, removing its id from deposit(`applicant_participant`).`participant_ids` and, for a root entry, from `CredentialSchema[applicant_participant.schema_id].root_participant_ids` ([Participant](#participant)).
 
 The method MUST emit an event carrying `id`, `schema_id`, `role`, `vs_id` and `now`: the revocation is recorded by the transaction, the VPR keeps no revoked entry.
 
@@ -4983,10 +4984,10 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 This method can only be called by either:
 
-- a `corporation` ancestor validator of this `Participant` entry;
+- a `corporation` ancestor validator of an entry of this participation;
 - the `corporation` controller of the `Ecosystem` object, owner of the corresponding credential schema.
 
-A slash is the ecosystem's sanction on a participation: it removes trust units, revokes the participation's current entries and blacklists it until the ecosystem reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)).
+A slash is the ecosystem's sanction on a participation: it removes trust units, revokes the participation's validated entries and blacklists it until the ecosystem reinstates it ([[MOD-PP-MSG-13]](#mod-pp-msg-13-reinstate-participation)).
 
 ##### [MOD-PP-MSG-12-1] Slash Participant Trust Deposit parameters
 
@@ -5051,9 +5052,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - calculate `tu_amount` = `d.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `d.tu` exactly.
 - calculate `slashed_fiat` = `d.fiat_cost` × `tu_amount` / `d.tu` — the obligation in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 
-use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `d.corporation_id`, `ecosystem_id` = `cs.ecosystem_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`), which also increments `d.slash_count` and sets `d.blacklisted`.
+use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `d.corporation_id`, `ecosystem_id` = `cs.ecosystem_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`), which also increments `d.slash_count` and sets `d.blacklisted`. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), `tu_amount`, `slashed_fiat` and the id of the `SlashObligation` created.
 
-- for each entry `p` listed in `d.participant_ids` whose `op_state` is VALIDATED: delete it exactly as [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant) does (removed from `d.participant_ids`, one event each). An entry under a pending onboarding process stays until its applicant cancels it ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request)); it cannot be validated while the participation is blacklisted.
+- for each entry `p` listed in `d.participant_ids` whose `op_state` is VALIDATED: delete it exactly as [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant) does (removed from `d.participant_ids`, one event each). An entry under a pending onboarding process stays until its applicant cancels it ([[MOD-PP-MSG-6]](#mod-pp-msg-6-cancel-participant-op-last-request), which deletes it, the participation being blacklisted); it cannot be validated while the participation is blacklisted.
 
 
 #### [MOD-PP-MSG-13] Reinstate Participation
@@ -5073,6 +5074,8 @@ This method lifts the blacklisting of a participation ([ParticipantDeposit](#par
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-PP-MSG-13-2-1] Reinstate Participation basic checks
+
+if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
@@ -5441,7 +5444,7 @@ v --> vg
 
 ##### [MOD-PP-QRY-4-3] Find Beneficiaries execution
 
-A `Participant` entry `p` has an **unrepaid slash** when [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) fails for (`p.corporation_id`, the ecosystem of `p.schema_id`): its corporation carries an open `SlashObligation` with NETWORK scope, or with ECOSYSTEM scope in that ecosystem, the same scope as the onboarding gates ([[MOD-PP-MSG-1-2-5]](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks)). Such entries are not added to the set.
+A `Participant` entry `p` has an **unrepaid slash** when [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) fails for (`p.corporation_id`, the ecosystem of `p.schema_id`): its corporation carries an open `SlashObligation` with NETWORK scope, or with ECOSYSTEM scope in that ecosystem, the same scope as the onboarding gates ([[MOD-PP-MSG-1-2-5]](#mod-pp-msg-1-2-5-start-participant-op-unrepaid-slash-checks)). This is a corporation-level condition, distinct from the `unrepaid_slash` field of a deposit that the definition of [[ref: active participant]] reads. Such entries are not added to the set.
 
 
 Algorithm. `Participant` entries with an unrepaid slash are not added to the set; an expired or revoked entry no longer exists, and a walk that reaches a missing validator stops there.
@@ -5733,6 +5736,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `slashed_tu` = Σ `entries[].tu` and `slashed_fiat` = Σ `entries[].fiat_cost`.
 - set `td.tu` to `td.tu` - `slashed_tu`; set `td.fiat_cost` to `td.fiat_cost` - `slashed_fiat`.
 - create a `SlashObligation` entry: `corporation_id`, `scope` = NETWORK, `ecosystem_id` = null, `tu` = `slashed_tu`, `fiat_obligation` = `slashed_fiat`, `entries` = `entries[]`, `created` = `now`, `repaid` = null.
+- emit an event carrying `corporation_id`, the id of the obligation, `slashed_tu`, `slashed_fiat` and `entries[]`.
 
 
 :::note
