@@ -1451,9 +1451,11 @@ account --o vs: vs_operator
 vs --o corp: vs_id
 vs --o tr: vs_id
 vs --o csp: vs_id
+account --o csp: op_funding_account
 
 valstate --o csp: op_state
 corp --o td: corporation_id
+td o-- "0..n" csp: participant_ids
 csp --o digest: participant_id
 vs --o digest: vs_id
 cs --o digest: schema_id
@@ -1477,7 +1479,7 @@ Clients MAY rely on `id` ordering as a deterministic cursor for keyset paginatio
 
 Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `OperatorAuthorization` (composite PK on `(corporation_id, operator)`), `SlashObligation` (composite PK on `(corporation_id, id)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsOperatorBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
-**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_operator` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)), and `Participant` by `vs_id` (the sibling, session and materialization checks). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_participant_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these three indexes, nothing else. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: a [ParticipantSession](#participantsession) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `OperatorAuthorization` by (`corporation_id`, `operator`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `SlashObligation` by (`corporation_id`, `id`), which [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) scans for the few obligations of a corporation. Entities that stay few, `Ecosystem` and `CredentialSchema`, are scanned by the checks that need them.
+**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_operator` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)), and `Participant` by `vs_id` (the sibling, session and materialization checks). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_participant_ids`) and the ledger entries of a corporation (`TrustDeposit.participant_ids`, walked by [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these four indexes, nothing else. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: a [ParticipantSession](#participantsession) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `OperatorAuthorization` by (`corporation_id`, `operator`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `SlashObligation` by (`corporation_id`, `id`), which [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) scans for the few obligations of a corporation. Entities that stay few, `Ecosystem` and `CredentialSchema`, are scanned by the checks that need them.
 
 ### VID ownership
 
@@ -1610,7 +1612,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `verification_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `tu` (decimal) (*mandatory*): accumulated [[ref: trust units]] minted to the grantee corporation's [[ref: trust deposit]] in the context of the *use* of this `Participant` entry, including its onboarding process and the validation mints it receives as a validator. Never freed on revocation or expiry; reduced only by slashing ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) and restored by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)).
 - `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of `tu`, in [[ref: main fiat currency]]: the sum of the fiat value, at mint time, of the trust units currently held in this `Participant` entry. Maintained by the trust deposit module together with `tu`; used to denominate slash obligations at mint-time cost.
-- `unrepaid_slash` (decimal) (*mandatory*): [[ref: trust units]] slashed from this entry by [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) and not yet repaid; set back to 0 when the covering `SlashObligation` is repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)). Read by the definition of [[ref: active participant]].
+- `unrepaid_slash` (decimal) (*mandatory*): [[ref: trust units]] slashed from this entry, by an ecosystem ([[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit)) or by network governance ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)), and not yet repaid; decreased by the entry's share of a `SlashObligation` when that obligation is repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)). Read by the definition of [[ref: active participant]].
 - `revoked` (timestamp) (*optional*): manual revocation timestamp of this Perm.
 - `validator_participant_id` (uint64) (*optional*): permission of the validator assigned to the onboarding process of this permission, ie *parent node* in the `Participant` tree.
 - `op_state` (enum) (*mandatory*): one of PENDING, VALIDATED, TERMINATED.
@@ -1644,10 +1646,11 @@ A `ParticipantSession` is the set of credential exchanges (issuances, verificati
 - `corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] this trust deposit belongs to.
 - `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit, equal to the sum of `tu` over the corporation's `Participant` entries. Increased by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation)); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.44/year at the default `tu_decay_rate`): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
 - `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of the current `tu` balance, in [[ref: main fiat currency]], equal to the sum of `fiat_cost` over the corporation's `Participant` entries. Because the [[ref: trust unit peg value]] only declines, `fiat_cost` ≥ `tu × tu_peg_value(now)` always.
+- `participant_ids` (uint64[]) (*mandatory*): ids of the corporation's `Participant` entries that have received [[ref: trust units]] at least once; appended by [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), never removed (`Participant` entries are never deleted). It is how [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) finds the ledger entries of a corporation: the VPR keeps no index of `Participant` by corporation ([Identifier conventions](#identifier-conventions)).
 
-The trust deposit module owns the per-`Participant` ledger fields `tu`, `fiat_cost` and `unrepaid_slash` (created with `tu` = 0 and `fiat_cost` = 0 on first mint) and the `SlashObligation` entries; the participant module calls the trust deposit module, never the reverse.
+The trust deposit module owns the per-`Participant` ledger fields `tu`, `fiat_cost` and `unrepaid_slash` (initialized to 0 by the method that creates the `Participant` entry, then written only through this module) and the `SlashObligation` entries; the participant module calls the trust deposit module, never the reverse.
 
-Invariants: `td.tu` = Σ `p.tu` and `td.fiat_cost` = Σ `p.fiat_cost` over all `Participant` entries `p` with `p.corporation_id` = `td.corporation_id`; all four values are ≥ 0. Divisions and multiplications in [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) and [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) round down to the ledger precision ([Trust Unit Index](#trust-unit-index)). Every write goes through [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation) or [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash), which update the `TrustDeposit` and the `Participant` entries together.
+Invariants: `td.tu` = Σ `p.tu` and `td.fiat_cost` = Σ `p.fiat_cost` over all `Participant` entries `p` with `p.corporation_id` = `td.corporation_id` (every such entry with `p.tu` > 0 is listed in `td.participant_ids`); all four values are ≥ 0. Divisions and multiplications in [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) and [[MOD-PP-MSG-12]](#mod-pp-msg-12-slash-participant-trust-deposit) round down to the ledger precision ([Trust Unit Index](#trust-unit-index)). Every write goes through [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation) or [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash), which update the `TrustDeposit` and the `Participant` entries together.
 
 ### SlashObligation
 
@@ -1671,7 +1674,7 @@ Invariants: `td.tu` = Σ `p.tu` and `td.fiat_cost` = Σ `p.fiat_cost` over all `
 ### Digest
 
 - `digest` (bytes) (*mandatory*) (key): the raw digest bytes, 48 for `sha384` and 64 for `sha512`, decoded from the base64 form defined by the Verifiable Trust specification; the API accepts and returns that base64 form. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), computed as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
-- `participant_id` (uint64) (*optional*): the `Participant` entry under which the digest was anchored: the primary participant of the session when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) (the `ISSUER` entry); null when the primary party holds no entry (OPEN or CREDENTIAL mode, see `vs_id`) or when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). Together with the validator chain of that entry, it determines who may revoke the digest ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)).
+- `participant_id` (uint64) (*optional*): the `Participant` entry under which the digest was anchored: the primary participant of the session when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) (the `ISSUER` entry); null when the primary party holds no entry (OPEN issuer mode, see `vs_id`) or when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). Together with the validator chain of that entry, it determines who may revoke the digest ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)).
 - `vs_id` (uint64) (*mandatory*): the [VerifiableService](#verifiableservice) entry under which the digest was anchored: the entry of the primary party of the session when the digest is stored by [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) (the issuer's entry), whether or not that party holds a `Participant` entry; the entry named by the signer when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). The **owner** of the digest is the corporation of this entry (`VerifiableService.corporation_id`); the digest follows the entry through a transfer ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)). With `schema_id`, this is the anchoring context of a credential issued under an OPEN schema by an issuer without an `ISSUER` entry.
 - `schema_id` (uint64) (*optional*): the `CredentialSchema` entry of the session that anchored the digest; null when stored directly.
 - `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential.
@@ -2103,7 +2106,7 @@ Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission
    - set `budget.remaining_spend := budget.spend_limit`.
    - set `budget.expiration := now() + vs.period`.
 
-   This step never aborts: `budget.expiration` carries no window semantics (step 1 enforces the entry window). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
+   This step never aborts: `budget.expiration` is the end of the current budget cycle, not a validity window (an entry has none; step 1 enforces the window of the primary permission when there is one). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
 6. If an [VsOperatorBudget](#vsoperatorbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
 
 > Note: step 1 is what prevents the use of a `Participant` entry that is not, or is no longer, an [[ref: active participant]]: an entry that has never been validated has no `effective_from` yet, and a revoked, slashed or expired entry fails the definition. The configuration itself is unaffected by the state of any single `Participant` entry: the same agent keeps operating the identifier's other entries. A renewal is unaffected too: [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op) sets `op_state` back to PENDING, but the entry stays active until its `effective_until`.
@@ -2239,7 +2242,7 @@ As a result, `accountABC` is authorized to:
 |             | Get Sponsorship                           | /de/v1/sponsorship/get | Query  | [[MOD-DE-QRY-5]](#mod-de-qry-5-get-sponsorship)   |N/A |
 |             | List Sponsorships                         | /de/v1/sponsorship/list | Query  | [[MOD-DE-QRY-6]](#mod-de-qry-6-list-sponsorships)   |N/A |
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + operator, or vs-agent of the entry, OR module call|
-|          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation + operator of the owner, of an active ancestor or of the schema's ecosystem (OperatorAuthorization), or vs_operator of the active anchoring entry or of an active ancestor |
+|          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation + operator of the owner, of an active ancestor or of the schema's ecosystem (OperatorAuthorization), or vs_operator of the anchoring entry or of an active ancestor |
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
 | Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
 |                   | Update Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
@@ -2333,7 +2336,7 @@ If `vs_operator_authz_msg_types` is provided, set the entry's operator configura
 
 The method MUST emit an event carrying `vs.id`, `vs.vid` and `co.id`, so that indexers learn the identifier without a query.
 
-> Note: registration is a declaration. The VPR never resolves `vid` and never verifies that `corporation` controls the identifier; trust in a registered service comes from the credentials its DID Document presents, verified by the [[ref: VT spec]] trust resolution. The deposit is a state fee: it prices the entry and gives network governance a base to slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) if the registration violates the governance framework.
+> Note: registration is a declaration. The VPR never resolves `vid` and never verifies that `corporation` controls the identifier; trust in a registered service comes from the credentials its DID Document presents, verified by the [[ref: VT spec]] trust resolution. The registration fee is a state fee: it prices the entry and is not refunded; a registration that violates the governance framework is sanctioned on the corporation's trust deposit ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)).
 
 #### [MOD-VS-MSG-2] Update Verifiable Service
 
@@ -2344,7 +2347,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`. 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to update.
-- `vs_operator` (account) (*optional*): the new agent account, or the current one when only the configuration changes. Null clears the operator together with its configuration and budget: the entry keeps its `Participant` entries and sessions but can no longer create sessions until an agent is set again.
+- `vs_operator` (account) (*optional*): the new agent account, or the current one when only the configuration changes. Null clears the operator together with its configuration and budget: the entry keeps its `Participant` entries, but no session can be run for it until an agent is set again.
 - the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: presence of `vs_operator_authz_msg_types` triggers the whole group, budget included, and implies that `vs_operator` is provided; the configuration is then applied incrementally by [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization), unchanged values leaving the budget balance and the fee allowance untouched. If `vs_operator_authz_msg_types` is not provided, no other parameter of the group MAY be, and the configuration and budget are cleared, whether or not `vs_operator` is provided.
 
 ##### [MOD-VS-MSG-2-2] Update Verifiable Service precondition checks
@@ -2374,7 +2377,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if `vs_operator` is null or `vs_operator_authz_msg_types` is not provided: call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration), then set `vs.vs_operator` := `vs_operator`.
 - else: call [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with `vs_operator` and the parameters, exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution): it changes the account if it differs, keeps the budget balance when the spend limit is unchanged, and adjusts the fee allowance only by the difference. An update that changes nothing writes the entry and nothing else.
 
-> Note: sessions are recorded for the entry, not for the account ([ParticipantSession](#participantsession)): the sessions begun under the previous operator are continued by the new one, and the previous account can no longer act for this entry.
+> Note: sessions are run for the entry, not for the account ([ParticipantSession](#participantsession)): a session begun under the previous operator is continued by the new one (its transactions are correlated by the session `id`), and the previous account can no longer act for this entry.
 
 #### [MOD-VS-MSG-3] Rotate Verifiable Identifier
 
@@ -3862,7 +3865,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - Renewal is only possible with the same validator.
 - Renewal only applies to entries managed by an [[ref: onboarding process]]: root ([[MOD-PP-MSG-7]](#mod-pp-msg-7-create-root-participant)) and self-created ([[MOD-PP-MSG-14]](#mod-pp-msg-14-self-create-participant)) entries cannot renew; use [[MOD-PP-MSG-8]](#mod-pp-msg-8-set-participant-effective-until) to adjust their `effective_until`.
 - If validator `Participant` is not valid anymore, applicant MUST perform a new onboarding process with another validator.
-- Renewal does not allow changing the `participant.validation_fees`, `participant.issuance_fees`, `participant.verification_fees`. To change these values, applicant MUST start a new onboarding process.
+- Renewal does not allow changing the `Participant.validation_fees`, `Participant.issuance_fees`, `Participant.verification_fees`. To change these values, applicant MUST start a new onboarding process.
 - if `applicant_participant` is revoked or carries an unrepaid slash (`unrepaid_slash` > 0), method MUST fail.
 - if `corporation` has an unrepaid ecosystem slash in the ecosystem of the related schema, or an unrepaid network slash, method MUST fail (see [MOD-PP-MSG-2-2-4](#mod-pp-msg-2-2-4-renew-participant-op-unrepaid-slash-checks)).
 
@@ -4302,28 +4305,28 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 A new entry `Participant` `perm` MUST be created:
 
-- `participant.id`: auto-incremented uint64.
-- `participant.schema_id`: `schema_id`.
-- `participant.role`: ECOSYSTEM.
-- `participant.vs_id`: `vs_id`.
-- `participant.corporation_id`: `co.id`.
-- `participant.created`: `now`
-- `participant.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
-- `participant.effective_until`: `effective_until`
-- `participant.validation_fees`: `validation_fees`
-- `participant.issuance_fees`: `issuance_fees`
-- `participant.verification_fees`: `verification_fees`
-- `participant.tu`: 0
-- `participant.fiat_cost`: 0
-- `participant.unrepaid_slash`: 0
-- `participant.op_state`: VALIDATED
-- `participant.op_last_state_change`: `now`
-- `participant.op_current_fees`: 0
-- `participant.op_current_deposit`: 0
-- `participant.issuance_fee_discount`: 0
-- `participant.verification_fee_discount`: 0
+- `perm.id`: auto-incremented uint64.
+- `perm.schema_id`: `schema_id`.
+- `perm.role`: ECOSYSTEM.
+- `perm.vs_id`: `vs_id`.
+- `perm.corporation_id`: `co.id`.
+- `perm.created`: `now`
+- `perm.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
+- `perm.effective_until`: `effective_until`
+- `perm.validation_fees`: `validation_fees`
+- `perm.issuance_fees`: `issuance_fees`
+- `perm.verification_fees`: `verification_fees`
+- `perm.tu`: 0
+- `perm.fiat_cost`: 0
+- `perm.unrepaid_slash`: 0
+- `perm.op_state`: VALIDATED
+- `perm.op_last_state_change`: `now`
+- `perm.op_current_fees`: 0
+- `perm.op_current_deposit`: 0
+- `perm.issuance_fee_discount`: 0
+- `perm.verification_fee_discount`: 0
 
-Then append `participant.id` to `cs.root_participant_ids`.
+Then append `perm.id` to `cs.root_participant_ids`.
 
 > Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
@@ -4675,12 +4678,12 @@ Use "Find Beneficiaries" ([[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)) wi
 If **Credential Issuance** (no verifier reference was given):
 
 - for each `perm` in `found_participant_set`:
-  - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.issuance_fees` × (1 - `issuer_discount`)
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.issuance_fees` × (1 - `issuer_discount`)
 
 If **Credential Verification** (a verifier reference was given):
 
 - for each `perm` in `found_participant_set`:
-  - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.verification_fees` × (1 - `verifier_discount`)
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.verification_fees` × (1 - `verifier_discount`)
 
 > Note: `total_beneficiary_fees` is expressed in the credential schema pricing asset `(cs.pricing_asset_type, cs.pricing_asset)`.
 
@@ -4739,7 +4742,7 @@ Required balance check:
 
 ---
 
-**Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
+**Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
 
 Pricing is in an arbitrary on-chain coin (e.g., USDC). Fees to payees are paid in that coin; deposits and agent rewards are converted to native denom.
 
@@ -4765,7 +4768,7 @@ Required balance check:
 
 ---
 
-**Case D: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
+**Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
 
 Pricing is in fiat currency (e.g., USD). Fiat fees are settled off-chain; only deposits and agent rewards are paid on-chain in native denom.
 
@@ -4832,10 +4835,10 @@ Determine the operation type and applicable discount:
 
 **For each beneficiary `Participant` `perm` in `found_participant_set`:**
 
-If `participant.[fee_field]` > 0:
+If `perm.[fee_field]` > 0:
 
 1. Calculate the discounted fee for this beneficiary:
-   - `beneficiary_fee_in_pricing_asset` = `participant.[fee_field]` × (1 - `discount`)
+   - `beneficiary_fee_in_pricing_asset` = `perm.[fee_field]` × (1 - `discount`)
 
 2. Calculate amounts based on pricing configuration (same logic as fee checks):
 
@@ -4853,7 +4856,7 @@ If `participant.[fee_field]` > 0:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
   
-   **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
+   **Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
    
    - `fee_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
    - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
@@ -4867,7 +4870,7 @@ If `participant.[fee_field]` > 0:
     - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
 
 
-   **Case D: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
+   **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
    
    - `fee_in_native_denom` = getPrice(`FIAT`, `<fiat_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
    - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
@@ -4883,7 +4886,7 @@ If `participant.[fee_field]` > 0:
 3. Execute transfers and mints for this beneficiary:
 
    - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to the [[ref: funding account]] of `Corporation[participant.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) (in the appropriate denom).
-   - if `payee_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `participant.corporation_id`, `participant_id` = `participant.id`, `ecosystem_id` = `cs.ecosystem_id`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payee_trust_deposit`).
+   - if `payee_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `perm.corporation_id`, `participant_id` = `perm.id`, `ecosystem_id` = `cs.ecosystem_id`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payee_trust_deposit`).
    - if `payer_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer), `participant_id` = `payer_participant.id`, `ecosystem_id` = `cs.ecosystem_id`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payer_trust_deposit`).
 
 4. Accumulate agent rewards:
@@ -4917,9 +4920,9 @@ If `wallet_agent_participant_id` is set AND `accumulated_wallet_agent_reward` > 
 
 ---
 
-**Step 3: Create or update session records**
+**Step 3: Report the session**
 
-> Now that all transfers have been done, the session is recorded.
+> Now that all transfers have been done, the session is reported.
 
 The method MUST emit a `ParticipantSession` event ([ParticipantSession](#participantsession)) carrying `id`, `schema_id`, `issuer_participant_id` (the id of `issuer_participant`, or of the entry materialized in this session for an issuer that held none; null when `issuer_vs_id` was given and no entry was materialized) or `issuer_vs_id`, `verifier_participant_id` (the id of `verifier_participant`, the materialized entry if one was created in this session; null in a Credential Issuance) or `verifier_vs_id`, `agent_participant_id`, `wallet_agent_participant_id`, `digest` when present, and `now`. Nothing is written for the session.
 
@@ -5029,7 +5032,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 
 - Load `Participant` entry `applicant_participant` from `id`.
-- Load `Participant` entry `validator_participant` from `applicant_participant.validator_participant_id`.
 - calculate `tu_amount` = `applicant_participant.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `applicant_participant.tu` exactly.
 - calculate `slashed_fiat` = `applicant_participant.fiat_cost` × `tu_amount` / `applicant_participant.tu` — the obligation in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 
@@ -5094,8 +5096,6 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 - The related `CredentialSchema` entry is loaded with `validator_participant.schema_id`, and will be named `cs` in this section.
 - if `role` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
 - if `role` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is neither OPEN nor CREDENTIAL, MUST abort.
-- if `role` is equal to VERIFIER and `validation_fees` is specified and different than 0, MUST abort.
-- if `role` is equal to VERIFIER and `verification_fees` is specified and different than 0, MUST abort.
 
 ###### [MOD-PP-MSG-14-2-3] Self Create Participant fee checks
 
@@ -5137,27 +5137,27 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 A new entry `Participant` `perm` MUST be created:
 
-- `participant.id`: auto-incremented uint64.
-- `participant.validator_participant_id`: `validator_participant_id`
-- `participant.schema_id`: `validator_participant.schema_id`
-- `participant.role`: `role`.
-- `participant.vs_id`: `vs_id`.
-- `participant.corporation_id`: `co.id`.
-- `participant.created`: `now`
-- `participant.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
-- `participant.effective_until`: `effective_until`
-- `participant.validation_fees`: `validation_fees` if specified and `role` is ISSUER, else 0.
-- `participant.issuance_fees`: 0
-- `participant.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
-- `participant.tu`: 0
-- `participant.fiat_cost`: 0
-- `participant.unrepaid_slash`: 0
-- `participant.op_state`: VALIDATED
-- `participant.op_last_state_change`: `now`
-- `participant.op_current_fees`: 0
-- `participant.op_current_deposit`: 0
-- `participant.issuance_fee_discount`: 0
-- `participant.verification_fee_discount`: 0
+- `perm.id`: auto-incremented uint64.
+- `perm.validator_participant_id`: `validator_participant_id`
+- `perm.schema_id`: `validator_participant.schema_id`
+- `perm.role`: `role`.
+- `perm.vs_id`: `vs_id`.
+- `perm.corporation_id`: `co.id`.
+- `perm.created`: `now`
+- `perm.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
+- `perm.effective_until`: `effective_until`
+- `perm.validation_fees`: `validation_fees` if specified and `role` is ISSUER, else 0.
+- `perm.issuance_fees`: 0
+- `perm.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
+- `perm.tu`: 0
+- `perm.fiat_cost`: 0
+- `perm.unrepaid_slash`: 0
+- `perm.op_state`: VALIDATED
+- `perm.op_last_state_change`: `now`
+- `perm.op_current_fees`: 0
+- `perm.op_current_deposit`: 0
+- `perm.issuance_fee_discount`: 0
+- `perm.verification_fee_discount`: 0
 
 > Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
@@ -5177,7 +5177,7 @@ This method is intended to be used by external services (such as the Verana inde
 
 - a service has been registered, or has published new credentials in its DID Document, and holds no `Participant` entry yet: its agent asks for trust to be (re-)evaluated by `vs_id`;
 - a new [[ref: verifiable service]] has been onboarded and its credentials are now present in the DID Document, so trust can be (re-)evaluated;
-- an issuer has revoked a credential issued to a holder: the issuer (acting as the validator of the corresponding HOLDER `Participant` entry) notifies the trust resolver to re-evaluate trust for the revoked HOLDER `Participant` entry;
+- an issuer has re-issued or changed a credential of a holder: the issuer (the validator of the corresponding HOLDER `Participant` entry) asks for the holder's trust to be re-evaluated by `id`, while that entry is active. A revocation needs no trigger: the revoking transaction ([[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant), [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) is itself the notification;
 - an issuer is no longer operating: a parent issuer grantor or root ecosystem `Participant` entry triggers a re-evaluation.
 
 The method does not modify the [[ref: VPR]] state; it only emits an event that off-chain components MAY consume.
@@ -5298,7 +5298,7 @@ Obsoleted by [MOD-PP-QRY-1].
 
 Anyone can execute this method.
 
-To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the `Participant` tree (which is the ecosystem perm), starting from the 2 branches `issuer_participant` and `verifier_participant`, either of which MAY be reduced to the schema's root entry when the party holds no `Participant` entry (OPEN or CREDENTIAL modes). As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. If `verifier_participant` is null, `issuer_participant` is never added to the set. If `verifier_participant` is NOT null, `issuer_participant` is added to the set unless it has an unrepaid slash; `verifier_participant` itself is never added to the set.
+To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the `Participant` tree (which is the ecosystem perm), starting from the 2 branches `issuer_participant` and `verifier_participant`, either of which MAY be reduced to the schema's root entry when the party holds no `Participant` entry (OPEN or CREDENTIAL modes). As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. In a Credential Issuance (no verifier reference), `issuer_participant` is never added to the set. In a Credential Verification (a verifier reference was given, with or without a `verifier_participant`), `issuer_participant`, if not null, is added to the set unless it has an unrepaid slash; `verifier_participant` itself is never added to the set.
 
 Example 1: `verifier_participant`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
 
@@ -5581,11 +5581,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - if a `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` does not exist, create entry `td`:
   - set `td.corporation_id` to `corporation_id`;
-  - set `td.tu` to 0; set `td.fiat_cost` to 0;
+  - set `td.tu` to 0; set `td.fiat_cost` to 0; set `td.participant_ids` to the empty list;
 - calculate `minted_fiat` = `amount` × `P(now)` — the [[ref: main fiat currency]] cost of this mint.
 - calculate `minted_tu` = `minted_fiat` / `tu_peg_value(now)`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)) (equivalently `amount` / `price_tu_in_native_denom(now)`).
 - set `td.tu` to `td.tu` + `minted_tu`; set `td.fiat_cost` to `td.fiat_cost` + `minted_fiat`.
-- for the `Participant` ledger entry `p` of `participant_id`: set `p.tu` to `p.tu` + `minted_tu`; set `p.fiat_cost` to `p.fiat_cost` + `minted_fiat`.
+- for the `Participant` ledger entry `p` of `participant_id`: set `p.tu` to `p.tu` + `minted_tu`; set `p.fiat_cost` to `p.fiat_cost` + `minted_fiat`; if `p.id` is not in `td.participant_ids`, append it.
 - transfer `amount` from `source_account` to the [[ref: distribution pool]] account.
 - return `minted_tu` and `minted_fiat` to the calling module.
 
@@ -5667,7 +5667,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 - load the `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id`.
 - calculate `tu_amount` = `td.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `td.tu` exactly.
-- load all `Participant` ledger entries `participants[]` of `corporation_id` with `p.tu` > 0, in ascending `p.id` order.
+- load the `Participant` ledger entries `participants[]` listed in `td.participant_ids`, keeping those with `p.tu` > 0, in ascending `p.id` order.
 - define `remaining` = `tu_amount`; define `entries[]` empty.
 - for each `p` in `participants[]`:
   - if `tu_amount` = `td.tu`: `share_tu` = `p.tu` and `share_fiat` = `p.fiat_cost`.
@@ -5813,7 +5813,7 @@ Any [[ref: account]] CAN run this [[ref: query]].
 
 ##### [MOD-TD-QRY-3-1] List Slash Obligations parameters
 
-- `corporation_id` (uint64) (*optional*): limit to entries where `corporation_id` is `corporation_id`.
+- `corporation_id` (uint64) (*mandatory*): the corporation whose obligations are listed (key prefix).
 - `open_only` (boolean) (*optional*): if set to true, only return entries where `repaid` is null.
 - `response_max_size` (small number) (*optional*): limit to `response_max_size` results. Must be min 1, max 1,024. Default to 64.
 
@@ -5823,7 +5823,7 @@ Any [[ref: account]] CAN run this [[ref: query]].
 
 ##### [MOD-TD-QRY-3-3] List Slash Obligations execution of the query
 
-Return the matching `SlashObligation` entries, ordered by `id`.
+Return the `SlashObligation` entries of `corporation_id` (only the open ones when `open_only` is true), in key order (`id` ascending).
 
 #### [MOD-TD-QRY-4] Get Network Gas Price
 
@@ -6059,10 +6059,10 @@ In the same [[ref: transaction]], also revoke the corresponding `x/feegrant` all
 - `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
 - `grantee` (account) (*mandatory*): the account that receives the authorization from `corporation`.
-- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the type of messages for which we want to grant the fee allowance.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the type of messages `grantee` is authorized to execute on behalf of `corporation`.
 - `expiration` (timestamp) (*optional*): when the authorization (and its optional feegrant) expires.
 - `authz_spend_limit` (DenomAmount[]) (*optional*): maximum spendable
-- `authz_spend_limit_period` (duration) (*optional*): can be combined with `spend_limit`
+- `authz_spend_limit_period` (duration) (*optional*): can be combined with `authz_spend_limit`
 - `with_feegrant` (boolean) (*mandatory*): means this authorization grants feegrant, too
 - `feegrant_spend_limit` (DenomAmount[]) (*optional*): maximum spendable
 - `feegrant_spend_limit_period` (duration) (*optional*): can be combined with `feegrant_spend_limit`
@@ -6273,7 +6273,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - let `co` be the `Corporation` entry resolved from the signing `corporation` account (the sponsor).
 - `sponsored_corporation_id`: a `Corporation` entry MUST exist with this `id`, and it MUST differ from `co.id`.
 - if a `Sponsorship` entry `s` already exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, the new terms MUST be at least as generous as the current ones, else abort with an error indicating that the sponsorship must be revoked first: `period` MUST be unchanged; `msg_types` MUST be absent or a superset of `s.msg_types` (absent counts as all); `spend_limit` MUST be absent or, for every denom of `s.spend_limit`, at least `s.spend_limit` (an absent `s.spend_limit` cannot be set); `expiration` MUST be null or later than `s.expiration` (a null `s.expiration` cannot be set); `covers_fees` MUST NOT change from true to false; `fee_spend_limit` MUST be absent or at least `s.fee_spend_limit` per denom (an absent `s.fee_spend_limit` cannot be set).
-- `msg_types`, if specified: MUST be a non-empty list of message types among those of [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op), [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session) and [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation).
+- `msg_types`, if specified: MUST be a non-empty list of message types among those of [[MOD-PP-MSG-1]](#mod-pp-msg-1-start-participant-op), [[MOD-PP-MSG-2]](#mod-pp-msg-2-renew-participant-op), [[MOD-PP-MSG-10]](#mod-pp-msg-10-create-or-update-participant-session), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash-obligation), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem) (the list of the [Sponsorship](#sponsorship) entity).
 - `spend_limit`, if specified: MUST be a list of valid DenomAmounts.
 - `period`, if specified: MUST be a valid duration, and `spend_limit` and `expiration` MUST also be specified.
 - `expiration`, if specified: MUST be in the future.
@@ -6288,7 +6288,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - define `now`: current timestamp.
-- if a `Sponsorship` entry `s` exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, update it in place (raise-only, see basic checks; the election of the sponsored corporation, if any, is kept, since no term became less favourable to it); else create it with `s.id` auto-incremented, `s.sponsor_corporation_id` = `co.id`, `s.sponsored_corporation_id` = `sponsored_corporation_id` and `s.created` = `now`. In both cases set:
+- if a `Sponsorship` entry `s` exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, update it in place (raise-only, see basic checks; the election of the sponsored corporation, if any, is kept, since no term became less favourable to it); else create it with `s.sponsor_corporation_id` = `co.id`, `s.sponsored_corporation_id` = `sponsored_corporation_id` and `s.created` = `now`. In both cases set:
   - `s.msg_types`: `msg_types`;
   - `s.spend_limit`: `spend_limit`; `s.remaining_spend`: on creation, `spend_limit` if set, else absent; on update, `s.remaining_spend` + (`spend_limit` − `s.spend_limit`) per denom when both are set, `spend_limit` when `s.spend_limit` was absent, absent when `spend_limit` is absent;
   - `s.period`: `period`; `s.expiration`: `expiration`;
@@ -6476,7 +6476,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 This method revokes a digest. It can be executed on behalf of:
 
-- the `corporation` that owns the `Digest` entry (the corporation of the anchoring `VerifiableService` entry `d.vs_id`): by any of its operators under an OperatorAuthorization, or by the vs-agent of the anchoring `VerifiableService` entry `d.vs_id` under a VS Operator Authorization whose entry's `msg_types` include `RevokeDigest`, while the anchoring `Participant` entry `d.participant_id`, if there is one, is an [[ref: active participant]] (an `ISSUER` entry, or none under an OPEN schema);
+- the `corporation` that owns the `Digest` entry (the corporation of the anchoring `VerifiableService` entry `d.vs_id`): by any of its operators under an OperatorAuthorization, or by the vs-agent of the anchoring `VerifiableService` entry `d.vs_id` under a VS Operator Authorization whose entry's `msg_types` include `RevokeDigest` (giving no `participant_id`), whatever the state of the anchoring `Participant` entry `d.participant_id` (an `ISSUER` entry, or none under an OPEN schema): revoking a credential is always open to the corporation that issued it;
 - the `corporation` of an **ancestor** of the anchoring entry (a validator in the branch of `d.participant_id`, up to the root ECOSYSTEM entry), while that ancestor is an [[ref: active participant]]: by any of its operators under an OperatorAuthorization, or by the vs-agent of that ancestor entry under a VS Operator Authorization whose entry's `msg_types` include `RevokeDigest`;
 - the `corporation` controlling the `Ecosystem` of the schema of the session (`d.schema_id`), by any of its operators under an OperatorAuthorization, whatever the state of the tree (as for [[MOD-PP-MSG-9]](#mod-pp-msg-9-revoke-participant)).
 
