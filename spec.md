@@ -129,20 +129,20 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: account, accounts]]:
 ~ A [[ref: verifiable public registry]] account.
 
+[[def: active participant, active participants]]:
+~ A participant of a given role, which effective_from timestamp is lower than or equal to current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and unrepaid_slash is 0.
+
 [[def: applicant, applicants]]:
 ~ A [[ref: account]] that starts a [[ref: onboarding process]].
+
+[[def: bonded tokens, bonded native denom]]:
+~ [[ref: native denom]] bonded through the bonding mechanism of [[DIST-2]](#dist-2-bonding) (subject to `unbonding_period`) in order to accrue the capped, fee-funded, pro-rata yield from the [[ref: distribution pool]]. Bonding confers **no consensus power and no governance power**: it is reward accounting only.
 
 [[def: corporation, corporations]]:
 ~ A legal/organizational entity that controls Participants in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` is a VPR-level entity with VPR-specific attributes (identifier, governance framework, lifecycle) anchored on-chain by a `policy_address` account that signs on its behalf.
 
 [[def: corporation governance framework, CGF]]:
 ~ The governance framework (GF) of a [[ref: corporation]].
-
-[[def: sponsor, sponsors, sponsorship, sponsored corporation]]:
-~ A [[ref: corporation]] that has agreed, through a `Sponsorship` entry, to pay the on-chain fund movements and, optionally, the [[ref: network fees]] of another corporation (the sponsored corporation) from its own `policy_address`. A sponsorship moves money only: trust units, `Participant` entries, slash obligations and authorizations stay with the sponsored corporation. See [Sponsored Corporations](#sponsored-corporations).
-
-[[def: funding account, funding accounts]]:
-~ The account a VPR method debits or credits for a [[ref: corporation]]: the `policy_address` of its active [[ref: sponsor]] when one exists, else its own `policy_address`. Resolved at execution time by [[FUND-CHECK]](#fund-check-funding-account-resolution).
 
 [[def: credential schema, credential schemas]]:
 ~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
@@ -153,40 +153,44 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: decentralized identifier, DID, DIDs]]:
 ~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]].
 
-[[def: verifiable identifier, VID, VIDs]]:
-~ A digital identifier bound to cryptographic key material, such that another party can verify control of the identifier and resolve it to keys and, when in public use, to endpoint addresses, as specified in the [Trust Spanning Protocol (TSP) Specification](https://trustoverip.github.io/tswg-tsp-specification/). [[ref: DIDs]] are one **type** of VID; other examples include KERI AIDs and X.509-backed identifiers. The [[ref: VPR]] stores VIDs without resolving them; which types of VID a [[ref: VS]] or [[ref: VUA]] accepts in trust resolution is defined by the [[ref: VT spec]], which currently requires [[ref: DIDs]].
-
-[[def: verifiable service entry, verifiable service entries]]:
-~ A `VerifiableService` entry: the registration of a [[ref: VID]] in a [[ref: VPR]], owned by a single [[ref: corporation]], that every other entity binding that identifier (`Corporation`, `Ecosystem`, `Participant`) references by `vs_id`. See [VerifiableService](#verifiableservice).
-
 [[def: decentralized identifier communication, DIDComm]]:
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
 
 [[def: denom, denoms]]:
 ~ Token that has been configured and is recognized in a [[ref: VPR]], example: uvna, USDC.  
 
-[[def: native denom]]:
-~ Native token of a [[ref: VPR]], example: uvna.
+[[def: distribution pool]]:
+~ The module account that collects, each [[ref: epoch]], all deposit-bound [[ref: native denom]] amounts and [[ref: network fees]]. At epoch end it is paid out in a fixed order (validator budgets, council budget, foundation budget, capped yield to bonded native denom holders) and the **residual is burned**.
 
-[[def: ecosystem, ecosystems]]: a network of interacting entities, both technical and human, that work together to establish and maintain digital trust. It encompasses applications, credentials, governance frameworks, and the underlying technical infrastructure, all designed to facilitate trustworthy interactions.
-
-[[def: ecosystem governance framework, EGF]]:
-~ The governance framework (GF) of an ecosystem].
+[[def: ecosystem, ecosystems]]:
+~ A network of interacting entities, both technical and human, that work together to establish and maintain digital trust. It encompasses applications, credentials, governance frameworks, and the underlying technical infrastructure, all designed to facilitate trustworthy interactions.
 
 [[def: ecosystem governance authority, EGA]]:
 ~ The governance authority (GA) of an [[ref: ecosystem]].
 
+[[def: ecosystem governance framework, EGF]]:
+~ The governance framework (GF) of an ecosystem].
+
 [[def: entity, entities]]:
 ~ An [[ref: account]] controller.
+
+[[def: epoch, epochs]]:
+~ A fixed-length period (`epoch_length`, e.g. 1 day) at whose boundary the [[ref: trust unit peg value]] index is updated, the [[ref: distribution pool]] is paid out and the [[ref: network gas price]] is converted into [[ref: native denom]] for the next epoch.
 
 [[def: estimated transaction fees]]:
 ~ Estimated fees required, in [[ref: denom]], that is passed when execute a [[ref: transaction]] in an [[ref: VPR]]. Usually, a estimated transaction fees are always slightly greater than [[ref: transaction fees]], to make sure the execution of the transaction will not be aborted for an out-of-gas situation. Unused gas is refunded to account.
 
-[[def: governance framework, GF]]:
-~ The governance framework (GF) of a [[ref: VPR]].
+[[def: funding account, funding accounts]]:
+~ The account a VPR method debits or credits for a [[ref: corporation]]: the `policy_address` of its active [[ref: sponsor]] when one exists, else its own `policy_address`. Resolved at execution time by [[FUND-CHECK]](#fund-check-funding-account-resolution).
+
+[[def: future participant, future participants]]:
+~ A participant of a given role, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and unrepaid_slash is 0.
 
 [[def: governance authority, GA]]:
 ~ The governance authority (GA) of a [[ref: VPR]].
+
+[[def: governance framework, GF]]:
+~ The governance framework (GF) of a [[ref: VPR]].
 
 [[def: grantor, grantors]]:
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: ecosystem]].
@@ -212,11 +216,29 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: linked-vp]]:
 ~ A presentation of a [[ref: verifiable credential]] as specified in [LINKED-VP](https://identity.foundation/linked-vp/).
 
+[[def: main fiat currency]]:
+~ The ISO-4217 fiat currency, defined in the genesis state and immutable thereafter, used to denominate the [[ref: trust unit peg value]], distribution budgets, slash obligations and the [[ref: network gas price]]. Fee pricing MAY use other fiat currencies (multi-fiat), but protocol-level accounting uses the main fiat currency.
+
+[[def: native denom]]:
+~ Native token of a [[ref: VPR]], example: uvna.
+
+[[def: network fee, network fees]]:
+~ Fees paid in [[ref: native denom]] for the execution of a [[ref: transaction]]: the transaction's gas limit times the [[ref: network gas price]] ([[NET-FEE-2]](#net-fee-2-required-fee)), deducted before execution and routed to the [[ref: distribution pool]].
+
+[[def: network gas price]]:
+~ The price of one unit of gas, a network parameter expressed in the [[ref: main fiat currency]] (`GlobalVariables.network_gas_price`) and converted into [[ref: native denom]] once per [[ref: epoch]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). It is the same for every validator and every block of an epoch: the VPR has no fee market and no validator-local price.
+
+[[def: onboarding process]]:
+~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
+
 [[def: participant, participants]]:
 ~ An entity that is recognized by one or several ecosystem(s) in a [[ref: VPR]].
 
 [[def: query]]:
 ~ A read-only action that perform some reading in an [[ref: VPR]] and returns value.
+
+[[def: sponsor, sponsors, sponsorship, sponsored corporation]]:
+~ A [[ref: corporation]] that has agreed, through a `Sponsorship` entry, to pay the on-chain fund movements and, optionally, the [[ref: network fees]] of another corporation (the sponsored corporation) from its own `policy_address`. A sponsorship moves money only: trust units, `Participant` entries, slash obligations and authorizations stay with the sponsored corporation. See [Sponsored Corporations](#sponsored-corporations).
 
 [[def: subject, subjects]]:
 ~ A thing about which claims are made. Example subjects include human beings, animals, things, and organization, a [[ref: DID]]...
@@ -233,50 +255,23 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: trust fee, trust fees]]:
 ~ Fees paid by a [[ref: participant]] that are distributed to other [[ref: participants]].
 
-[[def: network fee, network fees]]:
-~ Fees paid in [[ref: native denom]] for the execution of a [[ref: transaction]]: the transaction's gas limit times the [[ref: network gas price]] ([[NET-FEE-2]](#net-fee-2-required-fee)), deducted before execution and routed to the [[ref: distribution pool]].
-
-[[def: network gas price]]:
-~ The price of one unit of gas, a network parameter expressed in the [[ref: main fiat currency]] (`GlobalVariables.network_gas_price`) and converted into [[ref: native denom]] once per [[ref: epoch]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). It is the same for every validator and every block of an epoch: the VPR has no fee market and no validator-local price.
-
 [[def: trust unit, trust units, TU, TUs]]:
 ~ A non-transferable, non-convertible accounting unit that is the only balance held in a [[ref: trust deposit]]. Trust units are minted when a deposit-bound amount of [[ref: native denom]] is spent: the [[ref: native denom]] amount is routed to the [[ref: distribution pool]] (never held in reserve) and the corresponding trust units are credited to the payer's [[ref: trust deposit]] at the current [[ref: trust unit peg value]]. Trust units are **not** a token and **not** a pricing asset: they cannot be transferred, cannot be redeemed for tokens, and cannot be used to define fees. Their sole use is the computation of trust scores, which decay over time through the declining [[ref: trust unit peg value]] index.
 
 [[def: trust unit peg value, tu_peg_value]]:
 ~ The value of one [[ref: trust unit]] expressed in the [[ref: main fiat currency]]. Set at genesis and declining **deterministically** each [[ref: epoch]] by `tu_decay_rate` (a protocol schedule, **not** oracle-fed). Because trust units are minted at the current peg value, a static trust deposit balance loses fiat value at exactly `tu_decay_rate`: maintaining a trust score requires ongoing paid activity ("trust decay").
 
-[[def: main fiat currency]]:
-~ The ISO-4217 fiat currency, defined in the genesis state and immutable thereafter, used to denominate the [[ref: trust unit peg value]], distribution budgets, slash obligations and the [[ref: network gas price]]. Fee pricing MAY use other fiat currencies (multi-fiat), but protocol-level accounting uses the main fiat currency.
-
-[[def: epoch, epochs]]:
-~ A fixed-length period (`epoch_length`, e.g. 1 day) at whose boundary the [[ref: trust unit peg value]] index is updated, the [[ref: distribution pool]] is paid out and the [[ref: network gas price]] is converted into [[ref: native denom]] for the next epoch.
-
-[[def: distribution pool]]:
-~ The module account that collects, each [[ref: epoch]], all deposit-bound [[ref: native denom]] amounts and [[ref: network fees]]. At epoch end it is paid out in a fixed order (validator budgets, council budget, foundation budget, capped yield to bonded native denom holders) and the **residual is burned**.
-
-[[def: bonded tokens, bonded native denom]]:
-~ [[ref: native denom]] bonded through the bonding mechanism of [[DIST-2]](#dist-2-bonding) (subject to `unbonding_period`) in order to accrue the capped, fee-funded, pro-rata yield from the [[ref: distribution pool]]. Bonding confers **no consensus power and no governance power**: it is reward accounting only.
-
-[[def:ecosystem, ecosystems]]
-~ An approved list of [[ref: participants]] that are authorized to issue/verify certain credentials in an ecosystem.
-
-[[def: URI, URIs]]:
-~ A Universal Resource Identifier, as specified in [rfc3986](https://datatracker.ietf.org/doc/html/rfc3986).
-
-[[def: active participant, active participants]]:
-~ A participant of a given role, which effective_from timestamp is lower than or equal to current timestamp, and (effective_until timestamp is null or greater than current timestamp), and revoked is null and unrepaid_slash is 0.
-
 [[def: trustable participant, trustable participants]]:
 ~ An [[ref: active participant]] for which [[OBLIG-CHECK]](#oblig-check-open-slash-obligation-check) passes for (`corporation_id`, ecosystem of `schema_id`).
 
-[[def: future participant, future participants]]:
-~ A participant of a given role, which effective_from timestamp is higher than current timestamp, and (effective_until timestamp is null or greater than effective_from timestamp), and revoked is null and unrepaid_slash is 0.
-
-[[def: onboarding process]]:
-~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
-
 [[def: validator]]:
 ~ A role an [[ref: entity]] performs by participating in onboarding processes with [[ref: applicants]] in order to register them as [[ref: issuer]], or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them.
+
+[[def: verifiable credential, verifiable credentials]]:
+~ A verifiable credential as defined in [[spec-norm:VC-DATA-MODEL]].
+
+[[def: verifiable identifier, VID, VIDs]]:
+~ A digital identifier bound to cryptographic key material, such that another party can verify control of the identifier and resolve it to keys and, when in public use, to endpoint addresses, as specified in the [Trust Spanning Protocol (TSP) Specification](https://trustoverip.github.io/tswg-tsp-specification/). [[ref: DIDs]] are one **type** of VID; other examples include KERI AIDs and X.509-backed identifiers. The [[ref: VPR]] stores VIDs without resolving them; which types of VID a [[ref: VS]] or [[ref: VUA]] accepts in trust resolution is defined by the [[ref: VT spec]], which currently requires [[ref: DIDs]].
 
 [[def: verifiable public registry, VPR, VPRs]]:
 ~ a public, normally decentralized, ledger-based network, which provides: ecosystem features, that can be used by all its [[ref: participants]]: create ecosystems, for each ecosystem, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
@@ -284,20 +279,20 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: verifiable service, verifiable services, VS, VSs]]:
 ~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
 
-[[def: verifiable user agent, verifiable user agents, VUA, VUAs]]:
-~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: VT Spec]].
+[[def: verifiable service entry, verifiable service entries]]:
+~ A `VerifiableService` entry: the registration of a [[ref: VID]] in a [[ref: VPR]], owned by a single [[ref: corporation]], that every other entity binding that identifier (`Corporation`, `Ecosystem`, `Participant`) references by `vs_id`. See [VerifiableService](#verifiableservice).
 
 [[def: Verifiable Trust Specification, Verifiable Trust Spec, VT Specs, VT Spec]]:
 ~ see [VT Spec](https://github.com/verana-labs/verifiable-trust-spec).
+
+[[def: verifiable user agent, verifiable user agents, VUA, VUAs]]:
+~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: VT Spec]].
 
 [[def: verifier, verifiers]]:
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or a [[ref: verifier grantor]] for verifying credentials of a given [[ref: credential schema]].
 
 [[def: verifier grantor, verifier grantors]]:
 ~ An ecosystem operator role an [[ref: entity]] is granted by an [[ref: ecosystem]] for a given [[ref: credential schema]] for adding or revoking verifiers.
-
-[[def: verifiable credential, verifiable credentials]]:
-~ A verifiable credential as defined in [[spec-norm:VC-DATA-MODEL]].
 
 ## Naming Conventions
 
