@@ -1908,7 +1908,6 @@ Get an `Ecosystem`
 "ecosystem": {
   {
     "active_version": 0,
-
     "created": "2025-01-14T19:40:37.967Z",
     "vs_id": 12,
     "id": "string",
@@ -1939,7 +1938,6 @@ Get an `Ecosystem`
 "ecosystems": [ {
   {
     "active_version": 0,
-
     "created": "2025-01-14T19:40:37.967Z",
     "vs_id": 12,
     "id": "string",
@@ -1965,7 +1963,6 @@ Get an `Ecosystem`
     ]  
   }, {
     "active_version": 0,
-
     "created": "2025-01-14T19:40:37.967Z",
     "vs_id": 12,
     "id": "string",
