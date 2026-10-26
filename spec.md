@@ -6058,8 +6058,7 @@ In the same [[ref: transaction]], also revoke the corresponding `x/feegrant` all
 - `expiration` (timestamp) (*optional*): when the authorization (and its optional feegrant) expires.
 - `authz_spend_limit` (DenomAmount[]) (*optional*): maximum spendable
 - `authz_spend_limit_period` (duration) (*optional*): can be combined with `authz_spend_limit`
-- `with_feegrant` (boolean) (*mandatory*): means this authorization grants feegrant, too
-- `feegrant_spend_limit` (DenomAmount[]) (*optional*): maximum spendable
+- `feegrant_spend_limit` (DenomAmount[]) (*optional*): when present, the corporation also pays the network fees of `grantee` for these message types, through a fee allowance ([FeeGrant](#feegrant)) capped at this amount; absent means no fee allowance.
 - `feegrant_spend_limit_period` (duration) (*optional*): can be combined with `feegrant_spend_limit`
 
 ##### [MOD-DE-MSG-3-2] Grant Operator Authorization basic checks
@@ -6073,8 +6072,8 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `authz_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `authz_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `authz_spend_limit` is not set.
-- `feegrant_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts. Ignored if `with_feegrant` is false.
-- `feegrant_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `feegrant_spend_limit` is not set or if `with_feegrant` is false.
+- `feegrant_spend_limit` (DenomAmount[]) if specified, MUST be a non-empty list of valid DenomAmounts.
+- `feegrant_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `feegrant_spend_limit` is not set.
 - if `authz_spend_limit_period` or `feegrant_spend_limit_period` is specified, `expiration` MUST also be specified.
 
 - `grantee` MUST NOT be the `vs_operator` of any `VerifiableService` entry of the corporation (index of entries by operator account); else abort.
@@ -6105,11 +6104,11 @@ Then set / overwrite the following fields on `authz`:
 - if `authz_spend_limit` is set, set `authz.remaining_spend` to `authz_spend_limit`
 - set `authz.period` to `authz_spend_limit_period`
 
-if `with_feegrant` is false:
+if `feegrant_spend_limit` is absent:
 
 - call Revoke Fee Allowance (`co.id`, `grantee`).
 
-else if `with_feegrant` is true:
+else:
 
 - grant Fee Allowance (`co.id`, `grantee`, `msg_types`, `expiration`, `feegrant_spend_limit`, `feegrant_spend_limit_period`).
 
