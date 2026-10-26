@@ -1137,10 +1137,7 @@ entity "CredentialSchema" as cs {
   +issuer_validation_validity_period: number
   +verifier_validation_validity_period: number
   +holder_validation_validity_period: number
-  +issuer_onboarding_mode: IssuerOnboardingMode
-  +verifier_onboarding_mode: VerifierOnboardingMode
   verifier_credential_schema_ids: uint64[]
-  +holder_onboarding_mode: HolderOnboardingMode
   presentation_validity_period: duration
   +pricing_asset: string
   +digest_algorithm: string
@@ -1229,7 +1226,6 @@ enum "MsgType" as msgtype {
 }
 
 entity "OperatorAuthorization" as oauthz {
-   +msg_types: MsgType[]
    expiration: timestamp
    period: duration
 }
@@ -1241,7 +1237,6 @@ entity "VsOperatorBudget" as obudget {
 entity "VerifiableService" as vs {
   *id: uint64
   +vid: string
-  +msg_types: MsgType[]
   period: duration
   +created: timestamp
   transfer_to_corporation_id: uint64
@@ -1270,14 +1265,12 @@ entity "ExchangeRate" as xr {
 }
 
 entity "FeeGrant" as fg {
-  +msg_types: MsgType[]
   expiration: timestamp
   period: duration
 }
 
 entity "Sponsorship" as sp {
   +covers_fees: boolean
-  msg_types: MsgType[]
   expiration: timestamp
   period: duration
   +created: timestamp
@@ -1368,7 +1361,6 @@ entity "GlobalVariables" as gv {
   +ecosystem_creation_deposit: number
   +vid_rotation_max_transition: duration
   +network_gas_price: decimal
-  +max_gas_per_msg_type: map<MsgType, number>
 }
 
 entity "TrustDeposit" as td {
@@ -1379,7 +1371,6 @@ entity "TrustDeposit" as td {
 entity "SlashObligation" as so {
   *id: uint64
   +corporation_id: uint64
-  +scope: SlashScope
   ecosystem_id: uint64
   +tu: decimal
   +fiat_obligation: decimal
@@ -1394,11 +1385,13 @@ enum "SlashScope" as slashscope {
 
 corp --o fg: grantor_corporation_id
 account --o fg: grantee
+fg o-- "0..n" msgtype: msg_types
 fg "1" --- "0..n" da: spend_limit
 fg "1" --- "0..n" da: remaining_spend
 
 corp --o sp: sponsor_corporation_id
 corp --o sp: sponsored_corporation_id
+sp o-- "0..n" msgtype: msg_types
 corp o-- "0..1" corp: sponsor_corporation_id
 sp "1" --- "0..n" da: spend_limit
 sp "1" --- "0..n" da: remaining_spend
@@ -1416,11 +1409,16 @@ cs o-- presentationmode: presentation_mode
 cs o-- credentialformat: credential_format
 cs o-- credentialanchoring: credential_anchoring
 cs o-- credentialrevocation: credential_revocation
+cs o-- iom: issuer_onboarding_mode
+cs o-- vom: verifier_onboarding_mode
+cs o-- hom: holder_onboarding_mode
 
 corp --o oauthz: corporation_id
 account --o oauthz: operator
+oauthz o-- "0..n" msgtype: msg_types
 
 vs "1" --- "0..1" obudget: vs_id
+vs o-- "0..n" msgtype: msg_types
 
 csp o-- cspt: role
 csp o-- cs: schema_id
@@ -1462,6 +1460,7 @@ vs --o digest: vs_id
 cs --o digest: schema_id
 so --> corp: corporation_id
 so o-- slashscope: scope
+gv o-- "0..n" msgtype: max_gas_per_msg_type (number per type)
 
 @enduml
 
