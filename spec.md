@@ -886,8 +886,7 @@ Key Points for "Pay-Per" Business Models
 - In such cases, an `ISSUER` (or `VERIFIER`) `Accreditation` **must pay**:
   - the corresponding **issuance** (or **verification**) trust fees for each involved `Accreditation` entry along the `Accreditation` tree;
   - an additional amount equal to the `trust_deposit_rate` of the calculated trust fees, which is deposit-bound: minted as [[ref: trust units]] to the **payer's [[ref: trust deposit]]**;
-  - (optional) an amount equal to `wallet_user_agent_reward_rate` of the calculated trust fees, used to **reward the Wallet User Agent**;
-  - (optional) an amount equal to `user_agent_reward_rate` of the calculated trust fees, used to **reward the User Agent**.
+  - (optional) an amount equal to the `vua_reward_rate` of the calculated trust fees, used to **reward the Verifiable User Agent** of the peer: paid to the vendor that issued its User Agent credential, at the rate that vendor declares on its `ISSUER` entry, at most `GlobalVariables.vua_reward_rate`.
 
 Fee Distribution Model
 
@@ -900,10 +899,9 @@ Trust fees are **consistently distributed** across participants:
 Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment, or has sent the required `ParticipantSession` transaction whenever [[MOD-AC-MSG-10]](#mod-ac-msg-10-create-or-update-participant-session) requires one (a `presentation_validity_period` greater than 0, or a presentation digest to anchor).  
 If not, they **must reject** the issuance or verification request.
 
-Note: The **User Agent** and **Wallet User Agent** may refer to the same implementation.
 :::
 
-Distribution example for the issuance by `ISSUER` #C of a credential, using the `Accreditation` tree above, 5% for `trust_deposit_rate`, 5% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`. Total fees along the tree: 2 + 1 = 3 VNA; the issuer pays 3 × (1 + 0.05 + 0.05 + 0.05) = 3.45 VNA. Deposit-bound amounts (payer surcharge and 5% of each payee share, agents included) total 0.315 VNA, routed to the [[ref: distribution pool]] with the equivalent trust units minted to each party's deposit.
+Distribution example for the issuance by `ISSUER` #C of a credential, using the `Accreditation` tree above, 5% for `trust_deposit_rate` and 5% for `vua_reward_rate`. Total fees along the tree: 2 + 1 = 3 VNA; the issuer pays 3 × (1 + 0.05 + 0.05) = 3.30 VNA. Deposit-bound amounts (payer surcharge and 5% of each payee share, the VUA issuer's included) total 0.3075 VNA, routed to the [[ref: distribution pool]] with the equivalent trust units minted to each party's deposit.
 
 ```plantuml
 
@@ -930,7 +928,7 @@ package "Issuer Grantor #B" as ig {
 }
 package "Issuer #C" as issuer #7677ed {
     object "I Account" as issuera {
-         \t-3.45 VNA
+         \t-3.30 VNA
     }
     object "I Trust Deposit" as issuertd {
          \tmint TU worth 0.15 VNA
@@ -938,7 +936,7 @@ package "Issuer #C" as issuer #7677ed {
 
 }
 
-package "User Agent" as ua {
+package "VUA Issuer" as ua {
     object "UA Account" as uaa {
          \t+0.1425 VNA
     }
@@ -947,18 +945,9 @@ package "User Agent" as ua {
     }
 
 }
-package "Wallet User Agent" as wua {
-    object "WUA Account" as wuaa {
-         \t+0.1425 VNA
-    }
-    object "WUA Trust Deposit" as wuatd {
-        \tmint TU worth 0.0075 VNA
-    }
-
-}
 
 object "Distribution Pool" as pool #cccccc {
-    \t+0.315 VNA (deposit-bound)
+    \t+0.3075 VNA (deposit-bound)
 }
 
 issuera -r-> tr: \t+2 VNA
@@ -967,15 +956,13 @@ issuera -r-> ig: \t+1 VNA
 
 issuera -d-> ua: \t+0.15 VNA
 
-issuera -d-> wua: \t+0.15 VNA
-
 issuera --> pool:  \t+0.15 VNA
 
 @enduml
 
 ```
 
-Distribution example for the verification by `VERIFIER` #E of a credential issued by `ISSUER` #C, using the `Accreditation` tree above, 5% for `trust_deposit_rate`, 5% for `wallet_user_agent_reward_rate` and `user_agent_reward_rate`. Total fees along the tree: 3 + 0.5 + 1.5 + 5 = 10 VNA; the verifier pays 10 × 1.15 = 11.5 VNA. Deposit-bound amounts total 1.05 VNA, routed to the [[ref: distribution pool]] with the equivalent trust units minted to each party's deposit.
+Distribution example for the verification by `VERIFIER` #E of a credential issued by `ISSUER` #C, using the `Accreditation` tree above, 5% for `trust_deposit_rate` and 5% for `vua_reward_rate`. Total fees along the tree: 3 + 0.5 + 1.5 + 5 = 10 VNA; the verifier pays 10 × 1.10 = 11 VNA. Deposit-bound amounts total 1.025 VNA, routed to the [[ref: distribution pool]] with the equivalent trust units minted to each party's deposit.
 
 ```plantuml
 
@@ -1020,14 +1007,14 @@ package "Verifier Grantor #D" as vg {
 }
 package "Verifier #E" as verifier #00b0f0 {
     object "V Account" as verifiera {
-        \t-11.5 VNA
+        \t-11 VNA
     }
     object "V Trust Deposit" as verifiertd {
         \tmint TU worth 0.5 VNA
     }
 
 }
-package "User Agent" as ua {
+package "VUA Issuer" as ua {
     object "UA Account" as uaa {
          \t+0.475 VNA
     }
@@ -1036,18 +1023,9 @@ package "User Agent" as ua {
     }
 
 }
-package "Wallet User Agent" as wua {
-    object "WUA Account" as wuaa {
-         \t+0.475 VNA
-    }
-    object "WUA Trust Deposit" as wuatd {
-        \tmint TU worth 0.025 VNA
-    }
-
-}
 
 object "Distribution Pool" as pool #cccccc {
-    \t+1.05 VNA (deposit-bound)
+    \t+1.025 VNA (deposit-bound)
 }
 
 
@@ -1060,8 +1038,6 @@ verifiera -r-> ig: \t+1.5 VNA
 verifiera -d-> issuer: \t+5 VNA
 
 verifiera -d-> ua: \t+0.5 VNA
-
-verifiera -d-> wua: \t+0.5 VNA
 
 verifiera --> pool:  \t+0.5 VNA
 
@@ -1296,6 +1272,7 @@ entity "Accreditation" as csp {
   op_summary_digest: bytes
   +issuance_fee_discount: number
   +verification_fee_discount: number
+  +vua_reward_rate: decimal
 }
 
 entity "AccreditationDeposit" as pdep {
@@ -1344,8 +1321,7 @@ entity "GlobalVariables" as gv {
   +tu_peg_value_genesis: decimal
   +tu_decay_rate: decimal
   +epoch_length: duration
-  +user_agent_reward_rate:number
-  +wallet_user_agent_reward_rate:number
+  +vua_reward_rate:number
   +validator_node_budget: decimal
   +validator_target_uptime: decimal
   +validator_min_uptime: decimal
@@ -1602,6 +1578,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 - `op_summary_digest` (bytes) (*optional*): an optional digest, set by the [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]]; computed with the `digest_algorithm` of the schema, given in SRI form at the API and stored as the decoded 48 or 64 bytes.
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
+- `vua_reward_rate` (decimal) (*optional*): on an `ISSUER` entry of a User Agent schema, the rate of the reward the vendor claims on the trust fees of the sessions its Verifiable User Agents take part in ([[MOD-AC-MSG-10]](#mod-ac-msg-10-create-or-update-participant-session)), between 0 and `GlobalVariables.vua_reward_rate`; null means the global rate. Declared by the applicant at [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op) like its fees, fixed for the life of the entry (a renewal keeps it); meaningless, and null, on any other entry.
 
 **Expiry.** At the end of every block, the accreditation module deletes every entry whose `op_state` is VALIDATED and whose `effective_until` is not null and not later than the block time (implementations keep an expiry queue, bucketed by time, written whenever `effective_until` is set or changed), removes its id from its [AccreditationDeposit](#accreditationdeposit) and, for a root entry, from `CredentialSchema.root_accreditation_ids`, and emits an event for each. An entry whose `op_state` is PENDING (a renewal in progress) is not swept: it ends at validation, with its new `effective_until`, or at cancellation, which deletes it at once if its window has already ended.
 
@@ -1634,7 +1611,7 @@ A `ParticipantSession` is the set of credential exchanges (issuances, verificati
 - `schema_id` (uint64): the `CredentialSchema` entry of the credential.
 - `issuer_accreditation_id` (uint64) or `issuer_vs_id` (uint64): the `ISSUER` `Accreditation` entry of the issuer of the credential (the payer's own entry in a Credential Issuance, the entry the credential was anchored under in a Credential Verification), or the `VerifiableService` entry of an issuer that holds no active entry for the schema. Exactly one is set.
 - `verifier_accreditation_id` (uint64) or `verifier_vs_id` (uint64): in a Credential Verification, the `VERIFIER` entry of the verifier, or the `VerifiableService` entry of a verifier acting without an entry (OPEN or CREDENTIAL verifier mode).
-- `wallet_agent_accreditation_id` (uint64), `agent_accreditation_id` (uint64): the wallet agent and agent `Accreditation` entries, when applicable.
+- `vua_issuer_accreditation_id` (uint64): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the VUA's User Agent credential, set by the payer from the credential it verified at connection ([[ref: VT spec]]), when applicable.
 - `digest` (bytes): in a Credential Issuance, the credential digest, also persisted as a [Digest](#digest) entry when the schema's `credential_anchoring` is REVOCABLE_DIGEST; in a Credential Verification, the presentation digest, carried by the event only.
 - the block time of the transaction: the effective issuance time of the credential, or the effective presentation time of the presentation.
 
@@ -1823,8 +1800,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 - `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in [[ref: main fiat currency]] at genesis (index start): 1.00, so that at genesis one trust unit equals one unit of [[ref: main fiat currency]] and a trust score reads directly as recent fiat-equivalent spend. Immutable: the index only moves through decay.
 - `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default value: 0.001 (0.1% per epoch; with the default 1-day `epoch_length`, an index half-life of ≈ 693 days ≈ 23 months). A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash debts are never recomputed.
 - `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day.
-- `wallet_user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating wallet user agent rewards from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
-- `user_agent_reward_rate`(number) (*mandatory*): Rate used for dynamically calculating user agent rewards from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
+- `vua_reward_rate` (number) (*mandatory*): default and maximum rate of the reward a payer adds to its trust fees for the Verifiable User Agent of its peer, paid to the vendor that issued the VUA's User Agent credential at the rate declared on its `ISSUER` entry (`Accreditation.vua_reward_rate`, [[MOD-AC-MSG-10]](#mod-ac-msg-10-create-or-update-participant-session)). Default value: 5% (0.05). Adjustable by governance proposal.
 
 **Distribution:**
 
@@ -3645,6 +3621,7 @@ An Applicant that would like to start an onboarding process MUST execute this me
 - `validation_fees` (number) (*optional*): Requested validation_fees for this accreditation (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Accreditation` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Accreditation` entry (can be modified by validator).
+- `vua_reward_rate` (decimal) (*optional*): for an `ISSUER` entry of a User Agent schema, the reward rate the vendor claims ([Accreditation](#accreditation)); absent means the global rate.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Accreditation` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 
 Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
@@ -3665,6 +3642,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this `Accreditation` entry (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Accreditation` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Accreditation` entry (can be modified by validator).
+- `vua_reward_rate` (decimal) (*optional*): if given, MUST be between 0 and `GlobalVariables.vua_reward_rate` inclusive, else abort.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort ([VID ownership](#vid-ownership)).
 
 :::note
@@ -3789,6 +3767,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_accreditation.validation_fees`: `validation_fees`.
   - `applicant_accreditation.issuance_fees`: `issuance_fees`.
   - `applicant_accreditation.verification_fees`: `verification_fees`.
+  - `applicant_accreditation.vua_reward_rate`: `vua_reward_rate` if given, else null.
   - `applicant_accreditation.validator_accreditation_id`: `validator_accreditation_id`.
   - `applicant_accreditation.op_last_state_change`: `now`
   - `applicant_accreditation.op_state`: PENDING.
@@ -3840,7 +3819,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - Renewal is only possible with the same validator.
 - Renewal only applies to entries managed by an [[ref: onboarding process]]: root ([[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation)) and self-created ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) entries cannot renew; use [[MOD-AC-MSG-8]](#mod-ac-msg-8-set-accreditation-effective-until) to adjust their `effective_until`.
 - If validator `Accreditation` is not valid anymore, applicant MUST perform a new onboarding process with another validator.
-- Renewal does not allow changing the `Accreditation.validation_fees`, `Accreditation.issuance_fees`, `Accreditation.verification_fees`. To change these values, applicant MUST start a new onboarding process.
+- Renewal does not allow changing the `Accreditation.validation_fees`, `Accreditation.issuance_fees`, `Accreditation.verification_fees` or `Accreditation.vua_reward_rate`. To change these values, applicant MUST start a new onboarding process.
 - if the participation is [[ref: barred]] (`unrepaid_slash` > 0 or `blacklisted` on its deposit), method MUST fail; a revoked entry no longer exists.
 - if `corporation` is [[ref: barred]] (a network debt or blacklist on its trust deposit), method MUST fail (see [MOD-AC-MSG-2-2-4](#mod-ac-msg-2-2-4-renew-accreditation-op-unrepaid-slash-checks)).
 
@@ -4523,18 +4502,15 @@ Any credential exchange that requires issuer or verifier to pay fees, anchor a d
 If the peer wants to issue a credential, the `agent`, the Verifiable User Agent or Verifiable Service that receive the request MUST send to peer:
 
 - a `uuid` for session identification;
-- *optional*: the `agent_accreditation_id` `Accreditation` id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
-- *optional*: the `wallet_agent_accreditation_id` `Accreditation` id of the agent wallet that will store the credential. If this is the same software than the agent, then it should be equal to `agent_accreditation_id`. It MUST NOT be set if peer is a **Verifiable Service**.
 
 If the peer wants to verify a credential, agent must send to peer:
 
 - a `uuid` for session identification;
-- *optional*: the `agent_accreditation_id` `Accreditation` id of the agent that will receive the credential, if peer is a **Verifiable User Agent**. it MUST NOT be set if peer is a **Verifiable Service**.
-- *mandatory*: a map of compatible found credentials in available wallets for the requested schema_id, with at least one entry (an empty map means that the agent holds no matching credential and the exchange ends without a session): for each matching credential, the reference of its issuer (the id of the `ISSUER` `Accreditation` entry its digest was anchored under while that entry exists, else the `vs_id` of the issuer's service entry) and, for a VUA, the `wallet_agent_accreditation_id` of the wallet storing it. The payer selects from it the issuer reference of the session. wallet_agent_accreditation_id MUST NOT be set if the agent is a **Verifiable Service**.
+- *mandatory*: a map of compatible found credentials in available wallets for the requested schema_id, with at least one entry (an empty map means that the agent holds no matching credential and the exchange ends without a session): for each matching credential, the reference of its issuer (the id of the `ISSUER` `Accreditation` entry its digest was anchored under while that entry exists, else the `vs_id` of the issuer's service entry). The payer selects from it the issuer reference of the session.
 - *mandatory*: whether the agent requires a `ParticipantSession` for this verification: it does when the `presentation_validity_period` of the schema, read at that time, is greater than 0, or when the fees it computes with [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) (for the schema, the issuer reference of each credential of the map and the verifier reference named in the request: the verifier's `VERIFIER` entry, which the agent checks belongs to the verifier's service entry, or that service entry when it holds none) are greater than 0 for any credential of the map; when the agent requires one, the payer MUST create it whatever its own reading.
 - *mandatory* when the schema's `presentation_validity_period` is greater than 0 (the agent reads the `CredentialSchema` entry at the time of the verification, the VPR evaluates the value at the block), otherwise *optional* and only if the verifier asked for it in its request: the **presentation digest**, computed by the agent over the presentation it is about to send (the signed presentation as it will be transmitted: canonicalized with [JCS](https://www.rfc-editor.org/rfc/rfc8785) when it is a JSON document, its exact bytes otherwise; hashed with the `digest_algorithm` of the schema). The agent builds and signs the presentation first and sends only its digest at this step; the verifier anchors it through the `digest` parameter of the session transaction. When it sends a presentation digest, the agent has selected the credential it will present, and the map of compatible credentials above contains that single credential. Unless the schema's `presentation_validity_period` is greater than 0, anchoring a presentation digest is decided by the verifier: a verifier that did not ask for it MUST NOT expect one, and a verifier that asked for it MUST anchor it, since the agent sends the presentation only after checking the session transaction. The presentation MUST be a Verifiable Presentation signed by the holder and bound to the session identifier (or to the verifier's nonce), so that its digest differs from the credential's `digestJCS` and from any earlier presentation.
 
-In case peer is a **Verifiable Service** and illegaly set `agent_accreditation_id` and/or `wallet_agent_accreditation_id`, the other end MUST refuse the request.
+In an exchange with a **Verifiable User Agent**, the payer sets `vua_issuer_accreditation_id` itself, from the User Agent credential it verified at connection ([[ref: VT spec]]); the agent sends nothing for it, and the parameter is absent when the peer is a **Verifiable Service**.
 
 When a session is required (fees greater than 0; a `presentation_validity_period` of the schema greater than 0; a presentation digest requested by the verifier; or a Credential Issuance under a schema whose `credential_anchoring` is not NONE, since the digest is anchored through the session), `payer` MUST create it using the above information, then `agent` MUST check, through the notification of an indexer of its whitelist ([[ref: VT spec]]), that the session transaction was included and is valid: signed for the payer's entry, carrying the session `id`, the schema and, in a Credential Verification, the issuer reference of the credential it is about to present (fees are routed by that reference) and the presentation digest it sent, before performing the action (storing the issued credential, or sending the presentation). The VPR stores no session: the transaction is the receipt ([ParticipantSession](#participantsession)).
 
@@ -4547,14 +4523,14 @@ participant "Indexer" as indexer
 
 
 Issued <-- Issuer: I want to issue a credential from schema id ... to you
-Issued --> Issuer: Here is the session uuid and the wallet_agent_accreditation_id
+Issued --> Issuer: Here is the session uuid
 Issuer --> vpr: create session
 Issued <-- Issuer: session created, you can verify
 vpr --> indexer: session event
 Issued <-- indexer: session notification
 Issued --> Issuer: I verified the session transaction, you can send the credential
 Issued <-- Issuer: Send credential
-Issued <-- Issued: Store credential in wallet agent
+Issued <-- Issued: Store credential
 
 ```
 
@@ -4572,8 +4548,7 @@ An [[ref: account]] that would like to run a `ParticipantSession` MUST send a Ms
 - `issuer_vs_id` (uint64) (*conditional*): the `VerifiableService` entry of the issuer, when the issuer holds no active `ISSUER` entry for the schema: the payer's own entry in a Credential Issuance (the schema's `issuer_onboarding_mode` is OPEN), the issuer's entry in a Credential Verification (an issuer acting under OPEN, or whose accreditation has since ended); the issuer branch of the fees is then the schema's root ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
 - `verifier_accreditation_id` (uint64) (*conditional*): the id of the `VERIFIER` entry of the verifier, in a Credential Verification. At most one of `verifier_accreditation_id` and `verifier_vs_id` MAY be provided; the presence of either makes the operation a Credential Verification.
 - `verifier_vs_id` (uint64) (*conditional*): the payer's own `VerifiableService` entry in a Credential Verification, when the verifier holds no active `VERIFIER` entry for the schema (the schema's `verifier_onboarding_mode` is OPEN or CREDENTIAL).
-- `agent_accreditation_id` (uint64) (*optional*): the agent credential issuer `Accreditation` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
-- `wallet_agent_accreditation_id` (uint64) (*optional*): the wallet credential issuer `Accreditation` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_accreditation_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
+- `vua_issuer_accreditation_id` (uint64) (*optional*): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the User Agent credential the VUA presented at connection, as identified by the payer's own trust resolution of that credential ([[ref: VT spec]]): the vendor that receives the Verifiable User Agent reward. Absent when the peer is a Verifiable Service.
 - `digest` (bytes, base64 in the API) (*conditional*): in a Credential Issuance, the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential), mandatory unless the schema's `credential_anchoring` is NONE, absent then (its anchoring fixes the effective issuance time, see [Digest](#digest)); in a Credential Verification, the presentation digest sent by the agent (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
 - `credential_valid_until` (timestamp) (*conditional*): in a Credential Issuance under a schema whose `credential_anchoring` is REVOCABLE_DIGEST, the expiry of the credential (`validUntil`, `exp` or `validityInfo.validUntil`, see the [[ref: VT spec]]), mandatory; absent otherwise. The `Digest` entry is kept until then ([Digests Module](#digests-module)).
 
@@ -4621,16 +4596,12 @@ Verifier reference (Credential Verification only): `verifier_accreditation` = `p
 - in a Credential Issuance under a schema whose `credential_anchoring` is REVOCABLE_DIGEST, if a `Digest` entry with the value of `digest` already exists whose owner, the corporation of its `vs_id` entry, differs from `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort: another corporation anchored this credential first and would control its revocation; the issuer re-issues the credential with changed content, as the Verifiable Trust specification requires.
 - if `digest` is present, its decoded length MUST be the output size of `cs.digest_algorithm` (48 bytes for `sha384`, 64 for `sha512`), else abort.
 
-agent:
+VUA issuer:
 
-- if `agent_accreditation_id` is set: load `agent_accreditation` from `agent_accreditation_id`; if `agent_accreditation.role` is not ISSUER, abort; if `agent_accreditation` is not a [[ref: active accreditation]], abort.
-
-wallet_agent:
-
-- if `wallet_agent_accreditation_id` is set: load `wallet_agent_accreditation` from `wallet_agent_accreditation_id`; if `wallet_agent_accreditation.role` is not ISSUER, abort; if `wallet_agent_accreditation` is not a [[ref: active accreditation]], abort.
+- if `vua_issuer_accreditation_id` is set: load `vua_issuer_accreditation` from `vua_issuer_accreditation_id`; if `vua_issuer_accreditation.role` is not ISSUER, abort; if `vua_issuer_accreditation` is not a [[ref: active accreditation]], abort. Define `vua_rate` = min(`vua_issuer_accreditation.vua_reward_rate`, `GlobalVariables.vua_reward_rate`) when the entry sets a rate, else `GlobalVariables.vua_reward_rate`.
 
 :::warning
-we might want to check that credential schema of agent and wallet_agent perms is an Essential Credential Schema of type UserAgent. At the moment there is no way of doing it. We consider User Agent will not report a `Accreditation` entry that is not controlled by its owner.
+The VPR cannot check that the schema of `vua_issuer_accreditation` is a User Agent schema. The payer derives the entry from the User Agent credential it verified at connection and pays the reward itself, so it has no reason to name another entry ([[ref: VT spec]]).
 :::
 
 ##### [MOD-AC-MSG-10-3] Create or Update Participant Session fee checks
@@ -4673,8 +4644,7 @@ Define the following variables:
 | `total_payer_trust_deposit` | Trust deposit payer must stake for themselves |
 | `total_payees_trust_deposit` | Trust deposit payer must stake on behalf of payees |
 | `total_payees_fees_to_account` | Fees to be transferred to payees' accounts |
-| `total_user_agent_reward` | Reward for user agent (in [[ref: native denom]]) |
-| `total_wallet_agent_reward` | Reward for wallet agent (in [[ref: native denom]]) |
+| `total_vua_reward` | Reward for the Verifiable User Agent (in [[ref: native denom]]) |
 
 Initialize:
 
@@ -4683,8 +4653,7 @@ Initialize:
 - `total_payer_trust_deposit` = 0
 - `total_payees_trust_deposit` = 0
 - `total_payees_fees_to_account` = 0
-- `total_user_agent_reward` = 0
-- `total_wallet_agent_reward` = 0
+- `total_vua_reward` = 0
 
 > If a conversion is needed below, use [Get Price](#mod-xr-qry-3-get-price) to convert amounts.
 
@@ -4701,23 +4670,19 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-if `agent_accreditation_id` is set:
+if `vua_issuer_accreditation_id` is set:
 
-- `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-
-if `wallet_agent_accreditation_id` is set:
-
-- `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`
 
 Required balance check:
 
-- the [[ref: funding account]] of `corporation` MUST cover `total_fees_in_native_denom` + `total_payer_trust_deposit` + `total_user_agent_reward` + `total_wallet_agent_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
+- the [[ref: funding account]] of `corporation` MUST cover `total_fees_in_native_denom` + `total_payer_trust_deposit` + `total_vua_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
 
 ---
 
 **Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
 
-Pricing is in an arbitrary on-chain coin (e.g., USDC). Fees to payees are paid in that coin; deposits and agent rewards are converted to native denom.
+Pricing is in an arbitrary on-chain coin (e.g., USDC). Fees to payees are paid in that coin; deposits and the VUA reward are converted to native denom.
 
 Calculate:
 
@@ -4726,24 +4691,20 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = `total_fees_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-if `agent_accreditation_id` is set:
+if `vua_issuer_accreditation_id` is set:
 
-- `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-
-if `wallet_agent_accreditation_id` is set:
-
-- `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`
 
 Required balance check:
 
-- the [[ref: funding account]] of `corporation` MUST cover `total_payer_trust_deposit` + `total_payees_trust_deposit` + `total_user_agent_reward` + `total_wallet_agent_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
+- the [[ref: funding account]] of `corporation` MUST cover `total_payer_trust_deposit` + `total_payees_trust_deposit` + `total_vua_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
 - AND the [[ref: funding account]] of `corporation` MUST cover `total_payees_fees_to_account` in `<arbitrary_denom>` ([[FUND-CHECK-1]](#fund-check-1-debit)).
 
 ---
 
 **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
 
-Pricing is in fiat currency (e.g., USD). Fiat fees are settled off-chain; only deposits and agent rewards are paid on-chain in native denom.
+Pricing is in fiat currency (e.g., USD). Fiat fees are settled off-chain; only deposits and the VUA reward are paid on-chain in native denom.
 
 Calculate:
 
@@ -4752,17 +4713,13 @@ Calculate:
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = 0 (FIAT payments are managed off-chain)
 
-if `agent_accreditation_id` is set:
+if `vua_issuer_accreditation_id` is set:
 
-- `total_user_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-
-if `wallet_agent_accreditation_id` is set:
-
-- `total_wallet_agent_reward` = `total_fees_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`
 
 Required balance check:
 
-- the [[ref: funding account]] of `corporation` MUST cover `total_payer_trust_deposit` + `total_payees_trust_deposit` + `total_user_agent_reward` + `total_wallet_agent_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
+- the [[ref: funding account]] of `corporation` MUST cover `total_payer_trust_deposit` + `total_payees_trust_deposit` + `total_vua_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
 
 ---
 
@@ -4787,10 +4744,9 @@ If all precondition checks passed, method is executed.
 
 **Step 1: Process fee distribution to each beneficiary**
 
-Initialize accumulators for agent rewards:
+Initialize the accumulator of the VUA reward:
 
-- `accumulated_user_agent_reward` = 0
-- `accumulated_wallet_agent_reward` = 0
+- `accumulated_vua_reward` = 0
 
 Determine the operation type and applicable discount:
 
@@ -4820,11 +4776,8 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
 
-  if `agent_accreditation_id` is set:
-    - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-
-  if `wallet_agent_accreditation_id` is set:
-    - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+  if `vua_issuer_accreditation_id` is set:
+    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`
 
   
    **Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
@@ -4834,11 +4787,8 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = `beneficiary_fee_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`) *(in `<arbitrary_denom>`)*
 
-  if `agent_accreditation_id` is set:
-    - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-
-  if `wallet_agent_accreditation_id` is set:
-    - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+  if `vua_issuer_accreditation_id` is set:
+    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`
 
 
    **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
@@ -4848,11 +4798,8 @@ If `perm.[fee_field]` > 0:
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = 0 *(FIAT payments are managed off-chain)*
 
-  if `agent_accreditation_id` is set:
-    - `user_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.user_agent_reward_rate`
-
-  if `wallet_agent_accreditation_id` is set:
-    - `wallet_agent_reward_portion` = `fee_in_native_denom` × `GlobalVariables.wallet_user_agent_reward_rate`
+  if `vua_issuer_accreditation_id` is set:
+    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`
 
 3. Execute transfers and mints for this beneficiary:
 
@@ -4860,34 +4807,24 @@ If `perm.[fee_field]` > 0:
    - if `payee_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `perm.corporation_id`, `vs_id` = `perm.vs_id`, `schema_id` = `perm.schema_id`, `role` = `perm.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payee_trust_deposit`).
    - if `payer_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account, the payer), (`vs_id`, `schema_id`, `role`) = `payer`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payer_trust_deposit`).
 
-4. Accumulate agent rewards:
+4. Accumulate the VUA reward:
 
-   - `accumulated_user_agent_reward` = `accumulated_user_agent_reward` + `user_agent_reward_portion`
-   - `accumulated_wallet_agent_reward` = `accumulated_wallet_agent_reward` + `wallet_agent_reward_portion`
+   - `accumulated_vua_reward` = `accumulated_vua_reward` + `vua_reward_portion`
 
 ---
 
-**Step 2: Process agent rewards**
+**Step 2: Process the VUA reward**
 
-After processing all beneficiaries, distribute accumulated rewards to agents.
+After processing all beneficiaries, pay the accumulated reward to the VUA issuer.
 
-**User Agent Reward:**
+**Verifiable User Agent Reward:**
 
-If `agent_accreditation_id` is set AND `accumulated_user_agent_reward` > 0 AND `agent_accreditation` is not barred in the sense of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) (otherwise the reward is not paid and no deposit is funded):
+If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 AND `vua_issuer_accreditation` is not barred in the sense of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) (otherwise the reward is not paid and no deposit is funded):
 
-- `agent_trust_deposit` = `accumulated_user_agent_reward` × `GlobalVariables.trust_deposit_rate`
-- `agent_fees_to_account` = `accumulated_user_agent_reward` - `agent_trust_deposit`
-- Transfer `agent_fees_to_account` to the [[ref: funding account]] of `Corporation[agent_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) in [[ref: native denom]].
-- if `agent_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `agent_accreditation.corporation_id`, `vs_id` = `agent_accreditation.vs_id`, `schema_id` = `agent_accreditation.schema_id`, `role` = `agent_accreditation.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `agent_trust_deposit`).
-
-**Wallet Agent Reward:**
-
-If `wallet_agent_accreditation_id` is set AND `accumulated_wallet_agent_reward` > 0 AND `wallet_agent_accreditation` is not barred in the sense of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries):
-
-- `wallet_agent_trust_deposit` = `accumulated_wallet_agent_reward` × `GlobalVariables.trust_deposit_rate`
-- `wallet_agent_fees_to_account` = `accumulated_wallet_agent_reward` - `wallet_agent_trust_deposit`
-- Transfer `wallet_agent_fees_to_account` to the [[ref: funding account]] of `Corporation[wallet_agent_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) in [[ref: native denom]].
-- if `wallet_agent_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `wallet_agent_accreditation.corporation_id`, `vs_id` = `wallet_agent_accreditation.vs_id`, `schema_id` = `wallet_agent_accreditation.schema_id`, `role` = `wallet_agent_accreditation.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `wallet_agent_trust_deposit`).
+- `vua_trust_deposit` = `accumulated_vua_reward` × `GlobalVariables.trust_deposit_rate`
+- `vua_fees_to_account` = `accumulated_vua_reward` - `vua_trust_deposit`
+- Transfer `vua_fees_to_account` to the [[ref: funding account]] of `Corporation[vua_issuer_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) in [[ref: native denom]].
+- if `vua_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `vua_issuer_accreditation.corporation_id`, `vs_id` = `vua_issuer_accreditation.vs_id`, `schema_id` = `vua_issuer_accreditation.schema_id`, `role` = `vua_issuer_accreditation.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `vua_trust_deposit`).
 
 ---
 
@@ -4895,7 +4832,7 @@ If `wallet_agent_accreditation_id` is set AND `accumulated_wallet_agent_reward` 
 
 > Now that all transfers have been done, the session is reported.
 
-The method MUST emit a `ParticipantSession` event ([ParticipantSession](#participantsession)) carrying `id`, `schema_id`, `issuer_accreditation_id` or `issuer_vs_id` as given, `verifier_accreditation_id` or `verifier_vs_id` as given (none in a Credential Issuance), `agent_accreditation_id`, `wallet_agent_accreditation_id`, `digest` when present, and `now`. Nothing is written for the session.
+The method MUST emit a `ParticipantSession` event ([ParticipantSession](#participantsession)) carrying `id`, `schema_id`, `issuer_accreditation_id` or `issuer_vs_id` as given, `verifier_accreditation_id` or `verifier_vs_id` as given (none in a Credential Issuance), `vua_issuer_accreditation_id`, `digest` when present, and `now`. Nothing is written for the session.
 
 In a Credential Issuance under a schema whose `credential_anchoring` is REVOCABLE_DIGEST, persist `digest` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`, passing `vs_id` = `vs.id`, `schema_id` = `schema_id` and `expires` = `credential_valid_until`: when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry, necessarily owned by `co.id` after the precondition checks, keeps its `created`, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op). Under DIGEST the credential digest is carried by the event only: the block time of the transaction is the effective issuance time, and nothing is written. In a Credential Verification the presentation digest is carried by the event only: the block time of the transaction is the effective presentation time, from which the reliance period of the presentation runs when `cs.presentation_validity_period` is greater than 0.
 
@@ -7004,8 +6941,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `tu_peg_value_genesis` (decimal) (*mandatory*): 1.00.
 - `tu_decay_rate` (decimal) (*mandatory*): 0.001 (0.1% per epoch; ≈ 23-month index half-life with a 1-day epoch).
 - `epoch_length` (duration) (*mandatory*): 1 day.
-- `wallet_user_agent_reward_rate`(number) (*mandatory*): 0.05.
-- `user_agent_reward_rate`(number) (*mandatory*): 0.05.
+- `vua_reward_rate` (number) (*mandatory*): 0.05.
 
 **Distribution:**
 
