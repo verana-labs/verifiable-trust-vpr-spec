@@ -3822,6 +3822,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_participant.issuance_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
   - `applicant_participant.verification_fee_discount`: 0 (overwritten at first validation by [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated)).
 
+The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_participant_id` (null for a root entry) and `vs_id`, so that indexers build the `Participant` tree of the schema without a query.
+
 > Note: the agent that will run sessions for this entry is `VerifiableService[vs_id].vs_operator`, and its authorization is the entry's `msg_types`: nothing is created here. It cannot be used in the context of `applicant_participant` until [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) sets its `effective_from` ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) step 1).
 
 #### Connecting to the VS of the Validator
@@ -4319,6 +4321,8 @@ A new entry `Participant` `perm` MUST be created:
 - `perm.verification_fee_discount`: 0
 
 Then append `perm.id` to `cs.root_participant_ids`.
+
+The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_participant_id` (null for a root entry) and `vs_id`, so that indexers build the `Participant` tree of the schema without a query.
 
 > Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
@@ -5147,6 +5151,8 @@ A new entry `Participant` `perm` MUST be created:
 - `perm.op_current_deposit`: 0
 - `perm.issuance_fee_discount`: 0
 - `perm.verification_fee_discount`: 0
+
+The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_participant_id` (null for a root entry) and `vs_id`, so that indexers build the `Participant` tree of the schema without a query.
 
 > Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` or `TERMINATED` values, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-PP-MSG-3]](#mod-pp-msg-3-set-participant-op-to-validated) negotiates them for OP-managed entries only.
 
