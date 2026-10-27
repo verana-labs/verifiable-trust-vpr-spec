@@ -136,7 +136,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A [[ref: account]] that starts a [[ref: onboarding process]].
 
 [[def: barred, barred participation, barred corporation]]:
-~ A participation is **barred** while its [AccreditationDeposit](#accreditationdeposit) carries a slash debt (`unrepaid_slash` > 0) or is `blacklisted`; a corporation is barred while its [TrustDeposit](#trustdeposit) carries a slash debt (`unrepaid_slash` > 0) or is `blacklisted`. A barred participation creates no entry, is not validated, renewed or minted to, and runs no exchange; a barred corporation can do none of these for any of its participations, cannot register or transfer a service entry, and none of its entries is active. A debt is lifted by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), a blacklist by reinstatement ([[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation), [[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)). A debt bars; only a blacklist also withdraws trust from what the party issued or validated before ([[ref: VT spec]]).
+~ A participation is **barred** while its [ParticipationTrustDeposit](#participationtrustdeposit) carries a slash debt (`unrepaid_slash` > 0) or is `excluded`; a corporation is barred while its [TrustDeposit](#trustdeposit) carries a slash debt (`unrepaid_slash` > 0) or is `excluded`. A barred participation creates no entry, is not validated, renewed or minted to, and runs no exchange; a barred corporation can do none of these for any of its participations, cannot register or transfer a service entry, and none of its entries is active. A debt is lifted by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), an exclusion by the authority that set it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion), [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)). A debt bars; only an exclusion also withdraws trust from what the party issued or validated before ([[ref: VT spec]]).
 
 [[def: bonded tokens, bonded native denom]]:
 ~ [[ref: native denom]] bonded through the bonding mechanism of [[DIST-2]](#dist-2-bonding) (subject to `unbonding_period`) in order to accrue the capped, fee-funded, pro-rata yield from the [[ref: distribution pool]]. Bonding confers **no consensus power and no governance power**: it is reward accounting only.
@@ -236,6 +236,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: participant, participants]]:
 ~ An entity that is recognized by one or several ecosystem(s) in a [[ref: VPR]].
+
+[[def: participation, participations]]:
+~ A service entry taking part in a [[ref: credential schema]] in a role: the triple (`vs_id`, `schema_id`, `role`) that keys its [ParticipationTrustDeposit](#participationtrustdeposit) and groups its `Accreditation` entries, successive or concurrent; a participation outlives its entries, and the ecosystem's sanctions apply to it.
 
 [[def: query]]:
 ~ A read-only action that perform some reading in an [[ref: VPR]] and returns value.
@@ -677,8 +680,8 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 - **Trust is a subscription**: because the [[ref: trust unit peg value]] declines each [[ref: epoch]] by `tu_decay_rate`, a static deposit loses fiat value over time. The trust score therefore reflects **recent** paid usage: earned, never bought, and gone if not maintained.
 - **network-level penalties**: If a participant violates the [[ref: NGF]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority. The debt is recorded in [[ref: main fiat currency]] at the **mint-time cost basis** of the slashed trust units — what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**, and misbehavior costs the same whether the deposit was funded yesterday or a year ago.
 - **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), the **portion of its trust deposit minted in the context of that ecosystem** can be slashed by the corresponding [[ref: ecosystem governance authority]].
-- While a slash debt is unrepaid, the slashed participation (ecosystem slash) or every participation of the corporation (network slash) is **barred**: its entries are not active and no new trust units can be minted to it. The debt is recorded on the slashed [AccreditationDeposit](#accreditationdeposit) or [TrustDeposit](#trustdeposit) entry, at the mint-time cost basis. Repayment is made in [[ref: native denom]] worth that cost basis at current rates, and **restores the slashed trust units** at their decayed current value: the gap between the basis paid and the value restored is the penalty premium, and restoring trust costs **more tokens when the token is cheap**.
-- A slash MAY also **blacklist**, by decision of the slashing governance: the participation, or the whole corporation, stays barred after repayment until reinstated, and everything it issued or validated resolves as untrusted while the blacklist stands ([[ref: VT spec]]). A debt alone withdraws nothing from the past.
+- While a slash debt is unrepaid, the slashed participation (ecosystem slash) or every participation of the corporation (network slash) is **barred**: its entries are not active and no new trust units can be minted to it. The debt is recorded on the slashed [ParticipationTrustDeposit](#participationtrustdeposit) or [TrustDeposit](#trustdeposit) entry, at the mint-time cost basis. Repayment is made in [[ref: native denom]] worth that cost basis at current rates, and **restores the slashed trust units** at their decayed current value: the gap between the basis paid and the value restored is the penalty premium, and restoring trust costs **more tokens when the token is cheap**.
+- A slash MAY also **exclude**, by decision of the slashing governance: the participation, or the whole corporation, stays barred after repayment until the exclusion is lifted, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]). A debt alone withdraws nothing from the past.
 - Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size.
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
@@ -1182,7 +1185,7 @@ enum "MsgType" as msgtype {
   SetAccreditationEffectiveUntil
   RevokeAccreditation
   RecordCredentialExchange
-  SlashAccreditationDeposit
+  SlashParticipationTrustDeposit
   SelfCreateAccreditation
   TriggerResolver
   RepaySlash
@@ -1195,8 +1198,8 @@ enum "MsgType" as msgtype {
   RotateVerifiableIdentifier
   TransferVerifiableService
   AcceptVerifiableServiceTransfer
-  ReinstateParticipation
-  ReinstateCorporation
+  SetParticipationExclusion
+  SetCorporationExclusion
 }
 
 entity "OperatorAuthorization" as oauthz {
@@ -1275,14 +1278,14 @@ entity "Accreditation" as csp {
   +vua_reward_rate: decimal
 }
 
-entity "AccreditationDeposit" as pdep {
+entity "ParticipationTrustDeposit" as pdep {
   *(vs_id, schema_id, role)
   +tu: decimal
   +fiat_cost: decimal
   +unrepaid_slash: decimal
   +unrepaid_fiat: decimal
   +slash_count: number
-  +blacklisted: boolean
+  +excluded: boolean
 }
 
 
@@ -1345,7 +1348,7 @@ entity "TrustDeposit" as td {
   +unrepaid_slash: decimal
   +unrepaid_fiat: decimal
   +slash_count: number
-  +blacklisted: boolean
+  +excluded: boolean
 }
 
 
@@ -1440,9 +1443,9 @@ Unless otherwise stated, every entity's `id` field is:
 
 Clients MAY rely on `id` ordering as a deterministic cursor for keyset pagination.
 
-Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `OperatorAuthorization` (composite PK on `(corporation_id, operator)`), `AccreditationDeposit` (composite PK on `(vs_id, schema_id, role)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsOperatorBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
+Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `OperatorAuthorization` (composite PK on `(corporation_id, operator)`), `ParticipationTrustDeposit` (composite PK on `(vs_id, schema_id, role)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsOperatorBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
-**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_operator` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [AccreditationDeposit](#accreditationdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these three indexes, nothing else. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: a [CredentialExchange](#credentialexchange) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `OperatorAuthorization` by (`corporation_id`, `operator`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `AccreditationDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem` and `CredentialSchema`, are scanned by the checks that need them.
+**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_operator` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these three indexes, nothing else. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: a [CredentialExchange](#credentialexchange) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `OperatorAuthorization` by (`corporation_id`, `operator`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem` and `CredentialSchema`, are scanned by the checks that need them.
 
 ### VID ownership
 
@@ -1541,8 +1544,8 @@ A `GovernanceFrameworkVersion` represents a single version of an [[ref: EGF]], o
 - `issuer_validation_validity_period` (number) (*mandatory*): number of days after which an issuer onboarding process expires and must be renewed.
 - `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier onboarding process expires and must be renewed.
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder onboarding process expires and must be renewed.
-- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credentials of this schema without an onboarding process: an issuer acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [AccreditationDeposit](#accreditationdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)); it MAY self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the `verification_fees` and `validation_fees` it charges; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
-- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means any service can verify credentials of this schema without an onboarding process: a verifier acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [AccreditationDeposit](#accreditationdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash; it MAY self-create a `VERIFIER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)); CREDENTIAL means any service whose identifier is the subject of a valid credential of one of the schemas listed in `verifier_credential_schema_ids`, as established by the holder's trust resolution ([[ref: VT spec]]), can verify, under its service entry likewise; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credentials of this schema without an onboarding process: an issuer acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)); it MAY self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the `verification_fees` and `validation_fees` it charges; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
+- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means any service can verify credentials of this schema without an onboarding process: a verifier acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash; it MAY self-create a `VERIFIER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)); CREDENTIAL means any service whose identifier is the subject of a valid credential of one of the schemas listed in `verifier_credential_schema_ids`, as established by the holder's trust resolution ([[ref: VT spec]]), can verify, under its service entry likewise; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): ids of the `CredentialSchema` entries whose holders are authorized verifiers when `verifier_onboarding_mode` is CREDENTIAL; MUST be set, non-empty, iff the mode is CREDENTIAL. Each id MUST refer to a `CredentialSchema` entry whose `subject_kind` is SERVICE and whose `presentation_mode` is PUBLIC, so that a holder can establish the verifier's credential from its DID Document alone, before any exchange. The VPR stores the list and does not evaluate it; the holder does, per the [[ref: VT spec]]. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema); a change applies to the presentations that follow it.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
 - `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the UserAgent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to PERMISSIONLESS, since a natural person holds no `Accreditation` entry. Immutable.
@@ -1559,7 +1562,7 @@ A `GovernanceFrameworkVersion` represents a single version of an [[ref: EGF]], o
 
 `Accreditation`:
 
-- `id` (uint64) (*mandatory*) (key): the id of the accreditation. An entry exists while it is pending, effective or future: it is deleted when it expires (the expiry sweep below), when it is revoked ([[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)) or by an ecosystem slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)), or when a never-validated onboarding process is cancelled ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)); a new entry for the same participation is created afresh and shares its [AccreditationDeposit](#accreditationdeposit). The VPR keeps no expired or revoked entry; they live in the transaction history that indexers serve.
+- `id` (uint64) (*mandatory*) (key): the id of the accreditation. An entry exists while it is pending, effective or future: it is deleted when it expires (the expiry sweep below), when it is revoked ([[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)) or by an ecosystem slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)), or when a never-validated onboarding process is cancelled ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)); a new entry for the same participation is created afresh and shares its [ParticipationTrustDeposit](#participationtrustdeposit). The VPR keeps no expired or revoked entry; they live in the transaction history that indexers serve.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `role` (AccreditationRole) (*mandatory*): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER. Set at create time and never rotated thereafter.
 - `vs_id` (uint64) (*mandatory*): id of the [VerifiableService](#verifiableservice) entry of the [[ref: VS]] this permission refers to. The referenced entry MUST be owned by the corporation that creates the entry (see [VID ownership](#vid-ownership)). MAY be shared with other `Accreditation` entries (a single identifier MAY hold several roles, and several entries for one role, under different validators or successive windows); the `Accreditation` identity is its `id`, its participation is (`vs_id`, `schema_id`, `role`). Set at create time and never changed thereafter; the identifier string is read from `VerifiableService[vs_id].vid` and rotated through [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) without touching this entry. The corporation of an entry is not stored: for an entry `p`, `p.corporation_id` denotes `VerifiableService[p.vs_id].corporation_id` throughout this specification (one lookup).
@@ -1574,35 +1577,35 @@ A `GovernanceFrameworkVersion` represents a single version of an [[ref: EGF]], o
 - `op_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Accreditation` expiration timestamp.
 - `op_last_state_change` (timestamp) (*mandatory*)
 - `op_current_fees` (number) (*mandatory*): current action escrowed fees that will be paid to [[ref: validator]] upon onboarding process completion, in [[ref: denom]].
-- `op_current_deposit` (number) (*mandatory*): current action deposit-bound amount, in [[ref: native denom]], **held in the escrow account** while the onboarding process is PENDING. No trust units are minted and nothing is routed to the [[ref: distribution pool]] while PENDING: upon completion (VALIDATED), this amount is converted to trust units (minted to the applicant's and validator's [AccreditationDeposit](#accreditationdeposit) entries) and the [[ref: native denom]] is routed to the [[ref: distribution pool]]; upon cancellation, it is refunded as-is from escrow.
+- `op_current_deposit` (number) (*mandatory*): current action deposit-bound amount, in [[ref: native denom]], **held in the escrow account** while the onboarding process is PENDING. No trust units are minted and nothing is routed to the [[ref: distribution pool]] while PENDING: upon completion (VALIDATED), this amount is converted to trust units (minted to the applicant's and validator's [ParticipationTrustDeposit](#participationtrustdeposit) entries) and the [[ref: native denom]] is routed to the [[ref: distribution pool]]; upon cancellation, it is refunded as-is from escrow.
 - `op_funding_account` (account) (*optional*): the account that funded the escrowed `op_current_fees` and `op_current_deposit` of the current onboarding process (the [[ref: funding account]] selected by [[FUND-CHECK-1]](#fund-check-1-debit) at [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op) or [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op)); the escrow is refunded to this account by [[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request). Null while nothing is escrowed.
 - `op_summary_digest` (bytes) (*optional*): an optional digest, set by the [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]]; computed with the `digest_algorithm` of the schema, given in SRI form at the API and stored as the decoded 48 or 64 bytes.
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `vua_reward_rate` (decimal) (*optional*): on an `ISSUER` entry of a User Agent schema, the rate of the reward the vendor claims on the trust fees of the exchanges its Verifiable User Agents take part in ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), between 0 and `GlobalVariables.vua_reward_rate`; null means the global rate. Declared by the applicant at [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op) like its fees, fixed for the life of the entry (a renewal keeps it); meaningless, and null, on any other entry.
 
-**Expiry.** At the end of every block, the accreditation module deletes every entry whose `op_state` is VALIDATED and whose `effective_until` is not null and not later than the block time (implementations keep an expiry queue, bucketed by time, written whenever `effective_until` is set or changed), removes its id from its [AccreditationDeposit](#accreditationdeposit) and, for a root entry, from `CredentialSchema.root_accreditation_ids`, and emits an event for each. An entry whose `op_state` is PENDING (a renewal in progress) is not swept: it ends at validation, with its new `effective_until`, or at cancellation, which deletes it at once if its window has already ended.
+**Expiry.** At the end of every block, the accreditation module deletes every entry whose `op_state` is VALIDATED and whose `effective_until` is not null and not later than the block time (implementations keep an expiry queue, bucketed by time, written whenever `effective_until` is set or changed), removes its id from its [ParticipationTrustDeposit](#participationtrustdeposit) and, for a root entry, from `CredentialSchema.root_accreditation_ids`, and emits an event for each. An entry whose `op_state` is PENDING (a renewal in progress) is not swept: it ends at validation, with its new `effective_until`, or at cancellation, which deletes it at once if its window has already ended.
 
 > Note: the agent account that operates a `Accreditation` entry is `VerifiableService[vs_id].vs_operator`, and its authorization settings (message types, spend limits, operation-budget cycle, fee grant) are the entry's own `msg_types`, `period` and `fee_spend_limit`, with its [VsOperatorBudget](#vsoperatorbudget). A `Accreditation` entry carries no operator configuration of its own. See [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
-### AccreditationDeposit
+### ParticipationTrustDeposit
 
-An `AccreditationDeposit` is the part of a corporation's single [[ref: trust deposit]] attributed to a **participation**: a service entry, a schema and a role; the corporation is the owner of the service entry. Every `Accreditation` entry of that participation, successive or concurrent, uses the same deposit: the trust units minted on its onboarding, on its validations as a validator and on its exchanges accrue here, the ecosystem slashes here ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)), and a party acting under an OPEN or CREDENTIAL mode without any entry has a deposit all the same, created by its first mint. The deposit outlives its entries and is the lasting record of a slash: an ecosystem slash revokes the participation's validated entries, leaves a debt until repaid and, when the ecosystem so decides, blacklists the participation until the ecosystem reinstates it; the participation is [[ref: barred]] meanwhile.
+A `ParticipationTrustDeposit` is the part of a corporation's single [[ref: trust deposit]] attributed to a **participation**: a service entry, a schema and a role; the corporation is the owner of the service entry. Every `Accreditation` entry of that participation, successive or concurrent, uses the same deposit: the trust units minted on its onboarding, on its validations as a validator and on its exchanges accrue here, the ecosystem slashes here ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)), and a party acting under an OPEN or CREDENTIAL mode without any entry has a deposit all the same, created by its first mint. The deposit outlives its entries and is the lasting record of a slash: an ecosystem slash revokes the participation's validated entries, leaves a debt until repaid and, when the ecosystem so decides, excludes the participation until the ecosystem lifts it; the participation is [[ref: barred]] meanwhile.
 
-`AccreditationDeposit`:
+`ParticipationTrustDeposit`:
 
 - `vs_id` (uint64) (*mandatory*) (key): the [VerifiableService](#verifiableservice) entry of the participation; first component of the key, so that the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). The corporation of the deposit is the owner of this entry, and the deposit follows the entry through a transfer ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
 - `schema_id` (uint64) (*mandatory*) (key): the `CredentialSchema` entry of the participation.
 - `role` (AccreditationRole) (*mandatory*) (key): the role of the participation.
-- `tu` (decimal) (*mandatory*): accumulated [[ref: trust units]] minted to the corporation's [[ref: trust deposit]] in the context of this participation. Never freed on revocation or expiry; reduced only by an ecosystem slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)) and restored by its repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)); a network slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) does not touch it.
+- `tu` (decimal) (*mandatory*): accumulated [[ref: trust units]] minted to the corporation's [[ref: trust deposit]] in the context of this participation. Never freed on revocation or expiry; reduced only by an ecosystem slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) and restored by its repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)); a network slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) does not touch it.
 - `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of `tu`, in [[ref: main fiat currency]]: the sum of the fiat value, at mint time, of the trust units currently held here. Maintained by the trust deposit module together with `tu`; used to denominate slash debts at mint-time cost.
-- `unrepaid_slash` (decimal) (*mandatory*): [[ref: trust units]] slashed from this deposit by an ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)) and not yet repaid, accumulated over successive slashes; set back to 0 by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)). The participation is [[ref: barred]] while it is greater than 0. A network slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) leaves it untouched: the network debt is on the [TrustDeposit](#trustdeposit).
+- `unrepaid_slash` (decimal) (*mandatory*): [[ref: trust units]] slashed from this deposit by an ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) and not yet repaid, accumulated over successive slashes; set back to 0 by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)). The participation is [[ref: barred]] while it is greater than 0. A network slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) leaves it untouched: the network debt is on the [TrustDeposit](#trustdeposit).
 - `unrepaid_fiat` (decimal) (*mandatory*): the mint-time cost basis of `unrepaid_slash`, in [[ref: main fiat currency]], fixed at each slash and accumulated with it; what its repayment costs ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)): trust scores decay, liabilities do not. 0 when `unrepaid_slash` is 0.
-- `slash_count` (number) (*mandatory*): the number of times this participation has been slashed by an ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)); never reset. It follows the deposit when the service entry is transferred ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)). Network slashes are counted on the [TrustDeposit](#trustdeposit).
-- `blacklisted` (boolean) (*mandatory*): set to true by an ecosystem slash whose `blacklist` parameter is true ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)): the ecosystem's decision to also withdraw trust from what the participation issued or validated before the slash ([[ref: VT spec]]). The participation is [[ref: barred]]: it can no longer take part in the schema, neither through a new entry ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), a renewal ([[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op)) or a validation ([[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)), nor through entry-less exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), until the ecosystem controller reinstates it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation)), the repayment of its debt notwithstanding. A network slash does not set it: the corporation's own flag is on its [TrustDeposit](#trustdeposit). It follows the deposit when the service entry is transferred.
+- `slash_count` (number) (*mandatory*): the number of times this participation has been slashed by an ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)); never reset. It follows the deposit when the service entry is transferred ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)). Network slashes are counted on the [TrustDeposit](#trustdeposit).
+- `excluded` (boolean) (*mandatory*): set to true by an ecosystem slash whose `exclude` parameter is true ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)): the ecosystem's decision to also withdraw trust from what the participation issued or validated before the slash ([[ref: VT spec]]). The participation is [[ref: barred]]: it can no longer take part in the schema, neither through a new entry ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), a renewal ([[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op)) or a validation ([[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)), nor through entry-less exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), until the ecosystem controller lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), the repayment of its debt notwithstanding. A network slash does not set it: the corporation's own flag is on its [TrustDeposit](#trustdeposit). It follows the deposit when the service entry is transferred.
 - `accreditation_ids` (uint64[]) (*mandatory*): the ids of the current `Accreditation` entries of the participation (pending, future or effective), a few at most; appended when an entry is created ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op), [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), removed when it is deleted. It is how the sibling checks, the exchange guards ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Accreditation` entries.
 
-A deposit is created by the first entry of its participation or by the first mint to it, whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0 and `blacklisted` false. It is deleted by the method that empties it when `accreditation_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0 (a slashed participation keeps its deposit, repaid or not: its count and its blacklisting are its record). For an entry `p`, **deposit(`p`)** denotes `AccreditationDeposit[(p.vs_id, p.schema_id, p.role)]`.
+A deposit is created by the first entry of its participation, by the first mint to it or by an exclusion ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0 and `excluded` false. It is deleted by the method that empties it when `accreditation_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0 (a slashed participation keeps its deposit, repaid or not: its count and its exclusion are its record). For an entry `p`, **deposit(`p`)** denotes `ParticipationTrustDeposit[(p.vs_id, p.schema_id, p.role)]`.
 
 ### CredentialExchange
 
@@ -1621,16 +1624,16 @@ A `CredentialExchange` is the record of a credential exchange, an issuance or a 
 `TrustDeposit`:
 
 - `corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] this trust deposit belongs to.
-- `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit: the sum of `tu` over the corporation's [AccreditationDeposit](#accreditationdeposit) entries, less its own `unrepaid_slash`. Increased by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), moved with a service entry by [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.44/year at the default `tu_decay_rate`): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
-- `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of the current `tu` balance, in [[ref: main fiat currency]]: the sum of `fiat_cost` over the corporation's [AccreditationDeposit](#accreditationdeposit) entries, less its own `unrepaid_fiat`. Because the [[ref: trust unit peg value]] only declines, `fiat_cost` ≥ `tu × tu_peg_value(now)` always.
+- `tu` (decimal) (*mandatory*): total [[ref: trust unit]] balance of this trust deposit: the sum of `tu` over the corporation's [ParticipationTrustDeposit](#participationtrustdeposit) entries, less its own `unrepaid_slash`. Increased by minting ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), moved with a service entry by [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer); decreased only by slashing ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)). Because the [[ref: trust unit peg value]] declines each epoch, raw `tu` balances grow over time (~×1.44/year at the default `tu_decay_rate`): implementations MUST use 128-bit or arbitrary-precision decimal arithmetic.
+- `fiat_cost` (decimal) (*mandatory*): cumulative **cost basis** of the current `tu` balance, in [[ref: main fiat currency]]: the sum of `fiat_cost` over the corporation's [ParticipationTrustDeposit](#participationtrustdeposit) entries, less its own `unrepaid_fiat`. Because the [[ref: trust unit peg value]] only declines, `fiat_cost` ≥ `tu × tu_peg_value(now)` always.
 - `unrepaid_slash` (decimal) (*mandatory*): [[ref: trust units]] removed from this trust deposit by network slashes ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) and not yet repaid, accumulated over successive slashes; set back to 0 by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)). The corporation is [[ref: barred]] while it is greater than 0: none of its participations can act, and none of its entries is active.
 - `unrepaid_fiat` (decimal) (*mandatory*): the mint-time cost basis of `unrepaid_slash`, in [[ref: main fiat currency]], fixed at each slash and accumulated with it; what its repayment costs ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)). 0 when `unrepaid_slash` is 0.
 - `slash_count` (number) (*mandatory*): the number of network slashes of this corporation ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)); never reset.
-- `blacklisted` (boolean) (*mandatory*): set to true by a network slash whose `blacklist` parameter is true ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)): the network's decision to also withdraw trust from everything the corporation issued or validated ([[ref: VT spec]]). The corporation is [[ref: barred]] until network governance reinstates it ([[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)), the repayment of its debt notwithstanding.
+- `excluded` (boolean) (*mandatory*): set to true by a network slash whose `exclude` parameter is true ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)): the network's decision to also withdraw trust from everything the corporation issued or validated ([[ref: VT spec]]). The corporation is [[ref: barred]] until network governance lifts it ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)), the repayment of its debt notwithstanding.
 
-The trust deposit module owns the [AccreditationDeposit](#accreditationdeposit) entries (their ledger fields `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat`, `slash_count` and `blacklisted` are written only through this module; the accreditation module maintains their `accreditation_ids` and clears `blacklisted` through [[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation)) and the `TrustDeposit` entries, whose totals the transfer of a service entry also moves ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)); the accreditation module calls the trust deposit module, never the reverse.
+The trust deposit module owns the [ParticipationTrustDeposit](#participationtrustdeposit) entries (their ledger fields `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat`, `slash_count` and `excluded` are written only through this module; the accreditation module maintains their `accreditation_ids` and clears `excluded` through [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)) and the `TrustDeposit` entries, whose totals the transfer of a service entry also moves ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)); the accreditation module calls the trust deposit module, never the reverse.
 
-Invariants: `td.tu` + `td.unrepaid_slash` = Σ `d.tu` and `td.fiat_cost` + `td.unrepaid_fiat` = Σ `d.fiat_cost` over the `AccreditationDeposit` entries `d` of the corporation's service entries, the parts, which a network slash leaves untouched; all values are ≥ 0. While a network debt is open the trust deposit holds less than its parts say, which is why an ecosystem slash waits for its repayment ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)). Divisions and multiplications in [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) and [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit) round down to the ledger precision ([Trust Unit Index](#trust-unit-index)). Every write goes through [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) or the transfer of a service entry ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)), which update the `TrustDeposit` and the `AccreditationDeposit` entries together.
+Invariants: `td.tu` + `td.unrepaid_slash` = Σ `d.tu` and `td.fiat_cost` + `td.unrepaid_fiat` = Σ `d.fiat_cost` over the `ParticipationTrustDeposit` entries `d` of the corporation's service entries, the parts, which a network slash leaves untouched; all values are ≥ 0. While a network debt is open the trust deposit holds less than its parts say, which is why an ecosystem slash waits for its repayment ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)). Divisions and multiplications in [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit) and [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit) round down to the ledger precision ([Trust Unit Index](#trust-unit-index)). Every write goes through [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units), [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) or the transfer of a service entry ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)), which update the `TrustDeposit` and the `ParticipationTrustDeposit` entries together.
 
 ### DenomAmount
 
@@ -1677,7 +1680,7 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 | 15 | `SetAccreditationEffectiveUntil` | [[MOD-AC-MSG-8]](#mod-ac-msg-8-set-accreditation-effective-until) |
 | 16 | `RevokeAccreditation` | [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) |
 | 17 | `RecordCredentialExchange` | [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) |
-| 18 | `SlashAccreditationDeposit` | [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit) |
+| 18 | `SlashParticipationTrustDeposit` | [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit) |
 | 19 | `SelfCreateAccreditation` | [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation) |
 | 20 | `TriggerResolver` | [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) |
 | 21 | `RepaySlash` | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash) |
@@ -1690,8 +1693,8 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 | 28 | `RotateVerifiableIdentifier` | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) |
 | 29 | `TransferVerifiableService` | [[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service) |
 | 30 | `AcceptVerifiableServiceTransfer` | [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer) |
-| 31 | `ReinstateParticipation` | [[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation) |
-| 32 | `ReinstateCorporation` | [[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation) |
+| 31 | `SetParticipationExclusion` | [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion) |
+| 32 | `SetCorporationExclusion` | [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion) |
 
 > Note: the realization of fee allowances through `x/feegrant` ([Delegation Module](#delegation-module)) requires protobuf type URLs. The implementation maps each `MsgType` value to the type URL of its message when it creates or updates an allowance, and maps the type URL of an incoming message to its `MsgType` value when it checks an authorization ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Which values a list may contain is stated by each message: every value except `RecordCredentialExchange` in an [OperatorAuthorization](#operatorauthorization) ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)), the values listed by [VerifiableService](#verifiableservice) in an entry's `msg_types`.
 
@@ -1737,7 +1740,7 @@ A `Sponsorship` records the agreement of a [[ref: sponsor]] corporation to fund 
 
 A `Sponsorship` entry is immutable except for **raise-only** updates by the sponsor ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)): every other change of terms requires a revocation, which clears the sponsored corporation's election, and a fresh grant that the sponsored corporation elects again.
 
-> Note: a sponsorship moves money only. Trust units minted by a sponsor-funded operation are credited to the corporations that performed the trust operation, never to the sponsor (the payer's sponsor also funds the payees' and agents' deposit-bound amounts under FIAT and foreign-coin pricing, and those trust units go to the payees and agents); slash debts, blacklists, `Accreditation` entries, `OperatorAuthorization` and `FeeGrant` entries and the operator configuration of `VerifiableService` entries are unaffected by the existence, change or end of a sponsorship. Nothing owned by the sponsored corporation references the sponsor: the sponsor is resolved at execution time from `Corporation.sponsor_corporation_id`.
+> Note: a sponsorship moves money only. Trust units minted by a sponsor-funded operation are credited to the corporations that performed the trust operation, never to the sponsor (the payer's sponsor also funds the payees' and agents' deposit-bound amounts under FIAT and foreign-coin pricing, and those trust units go to the payees and agents); slash debts, excludes, `Accreditation` entries, `OperatorAuthorization` and `FeeGrant` entries and the operator configuration of `VerifiableService` entries are unaffected by the existence, change or end of a sponsorship. Nothing owned by the sponsored corporation references the sponsor: the sponsor is resolved at execution time from `Corporation.sponsor_corporation_id`.
 
 ### VsOperatorBudget
 
@@ -2060,8 +2063,8 @@ As a result, `accountABC` is authorized to:
 |                                | Revoke Accreditation                       |          N/A (Tx)              | Msg    | [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)  |corporation + operator |
 |                                | Record Credential Exchange     |           N/A (Tx)              | Msg    | [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)  |corporation + vs_operator (VS Operator Authorization) |
 |                                | Update Accreditation Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters) |governance proposal |
-|                                | Slash Accreditation Deposit          |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit) |corporation + operator |
-|                                | Reinstate Participation                  |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation) |corporation + operator |
+|                                | Slash Participation Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit) |corporation + operator |
+|                                | Set Participation Exclusion                  |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion) |corporation + operator |
 |                                | Self Create Accreditation (OPEN / CREDENTIAL modes) |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation) |corporation + operator  |
 |                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) |corporation + operator OR corporation + vs_operator |
 |                                | List Accreditations                        | /pp/v1/list                | Query  | [[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)    |N/A |
@@ -2073,11 +2076,11 @@ As a result, `accountABC` is authorized to:
 |                                | Slash Trust Deposit             |           N/A (Tx)               | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |governance proposal |
 |                                | Repay Slash          |         N/A (Tx)                    | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)   |corporation + operator |
 |                                | Record Ecosystem Slash          |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)   | module call|
-|                                | Reinstate Corporation           |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)   | governance proposal |
+|                                | Set Corporation Exclusion           |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)   | governance proposal |
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |N/A |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |N/A |
 |                                | Get Network Gas Price                   | /td/v1/gas-price              | Query  | [[MOD-TD-QRY-4]](#mod-td-qry-4-get-network-gas-price)   |N/A  |
-|                                | Get Accreditation Deposit                 | /td/v1/deposit/get            | Query  | [[MOD-TD-QRY-5]](#mod-td-qry-5-get-accreditation-deposit)   |N/A  |
+|                                | Get Participation Trust Deposit                 | /td/v1/deposit/get            | Query  | [[MOD-TD-QRY-5]](#mod-td-qry-5-get-participation-trust-deposit)   |N/A  |
 | Distribution                   | Update Module Parameters                | N/A (Tx)                      | Msg    | [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters)   | governance proposal |
 | Delegation  | Grant Fee Allowance         |   N/A (Tx)  | Msg  | [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)   |module call|
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
@@ -2296,7 +2299,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [AccreditationDeposit](#accreditationdeposit) whose key starts with `vs.id` (a key-prefix scan) MAY list an entry or carry a slash debt (`unrepaid_slash` > 0: the owner repays first), and neither the owner corporation nor the receiving one MAY be [[ref: barred]]; else abort. The deposits themselves, their trust units, their slash count and their blacklisting, are keyed by the entry and follow it ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)) (entries belong to their corporation and do not move: the owner first revokes them or lets them expire, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
+- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipationTrustDeposit](#participationtrustdeposit) whose key starts with `vs.id` (a key-prefix scan) MAY list an entry or carry a slash debt (`unrepaid_slash` > 0: the owner repays first), and neither the owner corporation nor the receiving one MAY be [[ref: barred]]; else abort. The deposits themselves, their trust units, their slash count and their exclusion, are keyed by the entry and follow it ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)) (entries belong to their corporation and do not move: the owner first revokes them or lets them expire, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
 - `to_corporation_id` (uint64) (*optional*): if provided, a `Corporation` entry with this id MUST exist and MUST differ from `co.id`.
 
 ###### [MOD-VS-MSG-4-2-2] Transfer Verifiable Service fee checks
@@ -2329,7 +2332,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.transfer_to_corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [AccreditationDeposit](#accreditationdeposit) whose key starts with `vs.id` (a key-prefix scan) MAY list an entry or carry a slash debt (`unrepaid_slash` > 0: the owner repays first), and neither the owner corporation nor the receiving one MAY be [[ref: barred]]; else abort. The deposits themselves, their trust units, their slash count and their blacklisting, are keyed by the entry and follow it ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)).
+- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipationTrustDeposit](#participationtrustdeposit) whose key starts with `vs.id` (a key-prefix scan) MAY list an entry or carry a slash debt (`unrepaid_slash` > 0: the owner repays first), and neither the owner corporation nor the receiving one MAY be [[ref: barred]]; else abort. The deposits themselves, their trust units, their slash count and their exclusion, are keyed by the entry and follow it ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)).
 - the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks).
 
 ###### [MOD-VS-MSG-5-2-2] Accept Verifiable Service Transfer fee checks
@@ -2344,7 +2347,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration).
 - debit the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account.
-- let `former` be `vs.corporation_id`. For each [AccreditationDeposit](#accreditationdeposit) `d` whose key starts with `vs.id` (a key-prefix scan): set `TrustDeposit[former].tu` to `TrustDeposit[former].tu` - `d.tu` and `.fiat_cost` to `.fiat_cost` - `d.fiat_cost`; set `TrustDeposit[co.id].tu` (the entry created with 0 if absent) to `TrustDeposit[co.id].tu` + `d.tu` and `.fiat_cost` to `.fiat_cost` + `d.fiat_cost`. The deposits are keyed by the service entry and need no change: the trust units of the service and the record of its slashes follow it; a network debt or blacklist of `former` would stay with `former`, which is why the transfer is refused while one is open.
+- let `former` be `vs.corporation_id`. For each [ParticipationTrustDeposit](#participationtrustdeposit) `d` whose key starts with `vs.id` (a key-prefix scan): set `TrustDeposit[former].tu` to `TrustDeposit[former].tu` - `d.tu` and `.fiat_cost` to `.fiat_cost` - `d.fiat_cost`; set `TrustDeposit[co.id].tu` (the entry created with 0 if absent) to `TrustDeposit[co.id].tu` + `d.tu` and `.fiat_cost` to `.fiat_cost` + `d.fiat_cost`. The deposits are keyed by the service entry and need no change: the trust units of the service and the record of its slashes follow it; a network debt or exclusion of `former` would stay with `former`, which is why the transfer is refused while one is open.
 - set `vs.corporation_id` = `co.id`, `vs.vs_operator` = `vs_operator`, `vs.transfer_to_corporation_id` = null.
 - if `vs_operator_authz_msg_types` is provided, set the configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
 
@@ -3468,10 +3471,10 @@ issuer --> holder
 
 `ECOSYSTEM` Accreditations are created directly by the [[ref: credential schema]] owner. All other Accreditations are created by running an [[ref: onboarding process]], except under the `OPEN` and `CREDENTIAL` modes, where no entry is required at all:
 
-- when `issuer_onboarding_mode` is `OPEN`, any service issues under its [VerifiableService](#verifiableservice) entry: its [AccreditationDeposit](#accreditationdeposit) for the schema is created by the first trust units minted on its payments ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and holds what the ecosystem can slash; it MAY self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the fees it charges;
+- when `issuer_onboarding_mode` is `OPEN`, any service issues under its [VerifiableService](#verifiableservice) entry: its [ParticipationTrustDeposit](#participationtrustdeposit) for the schema is created by the first trust units minted on its payments ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and holds what the ecosystem can slash; it MAY self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the fees it charges;
 - when `verifier_onboarding_mode` is `OPEN` or `CREDENTIAL`, any authorized service verifies under its `VerifiableService` entry likewise; it MAY self-create a `VERIFIER` entry.
 
-Entries are not kept once they end: an expired or revoked entry is deleted, and the deposit of its participation remains ([AccreditationDeposit](#accreditationdeposit)).
+Entries are not kept once they end: an expired or revoked entry is deleted, and the deposit of its participation remains ([ParticipationTrustDeposit](#participationtrustdeposit)).
 
 An [[ref: onboarding process]] (OP) involves an [[ref: applicant]] (the [[ref: corporation]] of a given Accreditation entry) and a [[ref: validator]] Accreditation. It MAY require the applicant to pay `validation_fees` in addition to [[ref: transaction fees]].
 
@@ -3625,7 +3628,7 @@ Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the on
 
 An applicant `corporation` MUST NOT have two onboarding processes running at the same time for the same `vs_id` and `role` with the same validator. This does not prevent a `corporation` from running concurrent OPs with different validators for the same `vs_id` and `role`, nor concurrent OPs with the same validator for different identifiers. A completed (VALIDATED) onboarding process does not prevent starting a new one: overlapping *effectiveness* of the resulting `Accreditation` entries is prevented at validation time by [MOD-AC-MSG-3-2-4](#mod-ac-msg-3-2-4-set-accreditation-op-to-validated-overlap-checks).
 
-Let `d` be `AccreditationDeposit[(vs_id, validator_accreditation.schema_id, role)]`, if it exists, and `accreditations[]` the entries listed in `d.accreditation_ids` where:
+Let `d` be `ParticipationTrustDeposit[(vs_id, validator_accreditation.schema_id, role)]`, if it exists, and `accreditations[]` the entries listed in `d.accreditation_ids` where:
 
 - `p.validator_accreditation_id` = `validator_accreditation_id`,
 - `p.op_state` = PENDING.
@@ -3638,10 +3641,10 @@ Additionally, if any entry of `d.accreditation_ids` matches the same validator w
 
 ###### [MOD-AC-MSG-1-2-5] Start Accreditation OP unrepaid slash checks
 
-A [[ref: barred]] corporation MUST NOT start an onboarding process, nor may a corporation start one for a barred participation: a slash debt is repaid first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), a blacklist is lifted by reinstatement ([[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation), [[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)).
+A [[ref: barred]] corporation MUST NOT start an onboarding process, nor may a corporation start one for a barred participation: a slash debt is repaid first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), an exclusion is lifted by the authority that set it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion), [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
 
-- `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `blacklisted` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for its reinstatement ([[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)).
-- the participation MUST NOT have been slashed: `AccreditationDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `blacklisted` false; else abort. The blacklist is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem reinstates it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation)); an expired or revoked entry alone does not prevent a new one.
+- `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
+- the participation MUST NOT have been slashed: `ParticipationTrustDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false; else abort. The exclusion is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); an expired or revoked entry alone does not prevent a new one.
 
 ##### [MOD-AC-MSG-1-3] Start Accreditation OP execution
 
@@ -3677,7 +3680,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_accreditation.issuance_fee_discount`: 0 (overwritten at first validation by [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)).
   - `applicant_accreditation.verification_fee_discount`: 0 (overwritten at first validation by [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)).
 
-- register `applicant_accreditation.id` in `AccreditationDeposit[(vs_id, applicant_accreditation.schema_id, role)].accreditation_ids`, creating the deposit with an empty ledger if it does not exist.
+- register `applicant_accreditation.id` in `ParticipationTrustDeposit[(vs_id, applicant_accreditation.schema_id, role)].accreditation_ids`, creating the deposit with an empty ledger if it does not exist.
 
 The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_accreditation_id` and `vs_id`, so that indexers build the `Accreditation` tree of the schema without a query.
 
@@ -3719,8 +3722,8 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - Renewal only applies to entries managed by an [[ref: onboarding process]]: root ([[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation)) and self-created ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) entries cannot renew; use [[MOD-AC-MSG-8]](#mod-ac-msg-8-set-accreditation-effective-until) to adjust their `effective_until`.
 - If validator `Accreditation` is not valid anymore, applicant MUST perform a new onboarding process with another validator.
 - Renewal does not allow changing the `Accreditation.validation_fees`, `Accreditation.issuance_fees`, `Accreditation.verification_fees` or `Accreditation.vua_reward_rate`. To change these values, applicant MUST start a new onboarding process.
-- if the participation is [[ref: barred]] (`unrepaid_slash` > 0 or `blacklisted` on its deposit), method MUST fail; a revoked entry no longer exists.
-- if `corporation` is [[ref: barred]] (a network debt or blacklist on its trust deposit), method MUST fail (see [MOD-AC-MSG-2-2-4](#mod-ac-msg-2-2-4-renew-accreditation-op-unrepaid-slash-checks)).
+- if the participation is [[ref: barred]] (`unrepaid_slash` > 0 or `excluded` on its deposit), method MUST fail; a revoked entry no longer exists.
+- if `corporation` is [[ref: barred]] (a network debt or exclusion on its trust deposit), method MUST fail (see [MOD-AC-MSG-2-2-4](#mod-ac-msg-2-2-4-renew-accreditation-op-unrepaid-slash-checks)).
 
 ##### [MOD-AC-MSG-2-1] Renew Accreditation OP parameters
 
@@ -3824,8 +3827,8 @@ Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the re
 
 Same as [MOD-AC-MSG-1-2-5](#mod-ac-msg-1-2-5-start-accreditation-op-unrepaid-slash-checks), for the corporation and the participation of the entry being renewed:
 
-- `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `blacklisted` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for its reinstatement ([[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)).
-- deposit(`applicant_accreditation`) MUST have `unrepaid_slash` = 0 and `blacklisted` false, else [[ref: transaction]] MUST abort.
+- `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
+- deposit(`applicant_accreditation`) MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort.
 
 ##### [MOD-AC-MSG-2-3] Renew Accreditation OP execution
 
@@ -3934,7 +3937,7 @@ Now, let's verify `effective_until`:
 
 - load `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`. `validator_accreditation` MUST be a [[ref: active accreditation]].
 - `co.id` MUST equal `validator_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
-- neither deposit(`applicant_accreditation`) nor `TrustDeposit[applicant_accreditation.corporation_id]` MAY be [[ref: barred]] (`unrepaid_slash` > 0 or `blacklisted`), else abort: a slashed participation or corporation is not validated until its debt is repaid and its blacklist lifted ([[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation), [[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)).
+- neither deposit(`applicant_accreditation`) nor `TrustDeposit[applicant_accreditation.corporation_id]` MAY be [[ref: barred]] (`unrepaid_slash` > 0 or `excluded`), else abort: a slashed participation or corporation is not validated until its debt is repaid and its exclusion lifted ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion), [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
 
 If `validator_accreditation` is not a [[ref: active accreditation]] (expired, revoked, slashed...) then applicant MUST start a new onboarding process.
 
@@ -4076,7 +4079,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - set `applicant_accreditation.op_funding_account` to null.
 - if `applicant_accreditation.effective_from` is null (validation never completed): delete the entry, removing its id from deposit(`applicant_accreditation`).`accreditation_ids` ([Accreditation](#accreditation)).
-- else, if the participation is [[ref: barred]] (slashed while the renewal was pending, [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)): delete the entry likewise, as the slash would have done.
+- else, if the participation is [[ref: barred]] (slashed while the renewal was pending, [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)): delete the entry likewise, as the slash would have done.
 - else: set `applicant_accreditation.op_state` to VALIDATED and `applicant_accreditation.op_last_state_change` to `now`; if `applicant_accreditation.effective_until` is not null and not later than `now`, the entry has expired meanwhile: delete it likewise.
 
 The method MUST emit an event carrying `id` and the outcome.
@@ -4149,7 +4152,7 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 
 ###### [MOD-AC-MSG-7-2-5] Create Root Accreditation unrepaid slash checks
 
-- `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `blacklisted` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for its reinstatement ([[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)).
+- `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
 
 ##### [MOD-AC-MSG-7-3] Create Root Accreditation execution
 
@@ -4178,7 +4181,7 @@ A new entry `Accreditation` `perm` MUST be created:
 - `perm.issuance_fee_discount`: 0
 - `perm.verification_fee_discount`: 0
 
-Then append `perm.id` to `cs.root_accreditation_ids`, and register it in `AccreditationDeposit[(vs_id, schema_id, ECOSYSTEM)].accreditation_ids`, creating the deposit with an empty ledger if it does not exist.
+Then append `perm.id` to `cs.root_accreditation_ids`, and register it in `ParticipationTrustDeposit[(vs_id, schema_id, ECOSYSTEM)].accreditation_ids`, creating the deposit with an empty ledger if it does not exist.
 
 The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_accreditation_id` (null for a root entry) and `vs_id`, so that indexers build the `Accreditation` tree of the schema without a query.
 
@@ -4472,7 +4475,7 @@ Determine the operation type:
 Primary party (the payer): let `R` be VERIFIER in a Credential Verification, ISSUER in a Credential Issuance, and the primary reference be the verifier's in a Credential Verification, the issuer's in a Credential Issuance.
 
 - if the primary reference is an entry id: load `perm` from it (abort if not found); `perm.role` MUST be `R` and `perm.schema_id` MUST equal `schema_id`, and `perm` MUST be an [[ref: active accreditation]], else abort. Let `vs` = `VerifiableService[perm.vs_id]`.
-- else (a service entry `vs_id`): `vs` = `VerifiableService[vs_id]` MUST exist, else abort. The schema's mode MUST allow a party without an entry: `cs.issuer_onboarding_mode` MUST be OPEN for an issuer, `cs.verifier_onboarding_mode` MUST be OPEN or CREDENTIAL for a verifier, else abort. Let `d` be `AccreditationDeposit[(vs.id, schema_id, R)]` if it exists: `d.accreditation_ids` MUST list no [[ref: active accreditation]] (the caller MUST reference it instead), and `d` MUST NOT be [[ref: barred]] (`d.unrepaid_slash` = 0 and `d.blacklisted` false), else abort: the blacklist is the ecosystem's sanction on a participation it did not onboard. `TrustDeposit[co.id]`, if it exists, MUST NOT be barred either (`unrepaid_slash` = 0 and `blacklisted` false), else abort. `perm` is null.
+- else (a service entry `vs_id`): `vs` = `VerifiableService[vs_id]` MUST exist, else abort. The schema's mode MUST allow a party without an entry: `cs.issuer_onboarding_mode` MUST be OPEN for an issuer, `cs.verifier_onboarding_mode` MUST be OPEN or CREDENTIAL for a verifier, else abort. Let `d` be `ParticipationTrustDeposit[(vs.id, schema_id, R)]` if it exists: `d.accreditation_ids` MUST list no [[ref: active accreditation]] (the caller MUST reference it instead), and `d` MUST NOT be [[ref: barred]] (`d.unrepaid_slash` = 0 and `d.excluded` false), else abort: the exclusion is the ecosystem's sanction on a participation it did not onboard. `TrustDeposit[co.id]`, if it exists, MUST NOT be barred either (`unrepaid_slash` = 0 and `excluded` false), else abort. `perm` is null.
 - `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `vs.vs_operator` MUST equal `operator`, else abort.
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`, `vs`) tuple (`perm` MAY be null).
@@ -4482,7 +4485,7 @@ Issuer reference:
 
 - in a Credential Issuance, `issuer_accreditation` = `perm`.
 - in a Credential Verification, if `issuer_accreditation_id` is provided: load `issuer_accreditation` from it (abort if not found); `issuer_accreditation.role` MUST be ISSUER and `issuer_accreditation.schema_id` MUST equal `schema_id`, else abort; `issuer_accreditation.effective_from` MUST be non-null and not later than now (the entry has been validated and became effective), else abort. No other state is required of it: the validity of the credential is established by trust resolution at its issuance time, and the unrepaid-slash filter of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
-- in a Credential Verification, else (`issuer_vs_id` provided): `VerifiableService[issuer_vs_id]` MUST exist, else abort; let `d_i` be `AccreditationDeposit[(issuer_vs_id, schema_id, ISSUER)]` if it exists: `d_i.accreditation_ids` MUST list no [[ref: active accreditation]], else abort (the caller MUST reference it, so that the issuer's branch is paid). `issuer_accreditation` stays null: the issuer branch is the schema's root.
+- in a Credential Verification, else (`issuer_vs_id` provided): `VerifiableService[issuer_vs_id]` MUST exist, else abort; let `d_i` be `ParticipationTrustDeposit[(issuer_vs_id, schema_id, ISSUER)]` if it exists: `d_i.accreditation_ids` MUST list no [[ref: active accreditation]], else abort (the caller MUST reference it, so that the issuer's branch is paid). `issuer_accreditation` stays null: the issuer branch is the schema's root.
 
 > Note: the `vs_operator` and `corporation_id` checks apply to the primary party only. In a Credential Verification, the issuer reference generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only. An issuer whose entry has since expired or been revoked holds none, and is referenced by its service entry.
 
@@ -4771,28 +4774,28 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 - update parameter set value = `value` where key = `key`.
 
-#### [MOD-AC-MSG-12] Slash Accreditation Deposit
+#### [MOD-AC-MSG-12] Slash Participation Trust Deposit
 
 This method can only be called by either:
 
 - a `corporation` ancestor validator of an entry of this participation;
 - the `corporation` controller of the `Ecosystem` object, owner of the corresponding credential schema.
 
-A slash is the ecosystem's sanction on a participation: it removes trust units, which the corporation owes back ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), revokes the participation's validated entries and, when the ecosystem so decides (`blacklist`), blacklists it until the ecosystem reinstates it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation)). The participation is [[ref: barred]] while its debt is unrepaid or its blacklist stands. An ecosystem cannot slash while the corporation carries a network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)): the trust deposit then holds less than its parts say, and the network debt is repaid first.
+A slash is the ecosystem's sanction on a participation: it removes trust units, which the corporation owes back ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), revokes the participation's validated entries and, when the ecosystem so decides (`exclude`), excludes it until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). The participation is [[ref: barred]] while its debt is unrepaid or its exclusion stands. An ecosystem cannot slash while the corporation carries a network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)): the trust deposit then holds less than its parts say, and the network debt is repaid first.
 
-##### [MOD-AC-MSG-12-1] Slash Accreditation Deposit parameters
+##### [MOD-AC-MSG-12-1] Slash Participation Trust Deposit parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation to slash, that is the [AccreditationDeposit](#accreditationdeposit) `d` = `AccreditationDeposit[(vs_id, schema_id, role)]`.
+- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation to slash, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]`.
 - `percent` (decimal) (*mandatory*): the fraction of the [[ref: trust units]] currently held by this participation (`d.tu`) to slash, greater than 0 and at most 1. The ecosystem governance framework defines the fractions of its sanction schedule; a corporation holding several participations in the ecosystem is slashed participation by participation, one message each, which lets the ecosystem target the ones that breached.
-- `blacklist` (boolean) (*mandatory*): the ecosystem's decision to blacklist the participation in addition to the debt: true withdraws trust from everything the participation issued or validated before the slash ([[ref: VT spec]]) and bars it until the ecosystem reinstates it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation)); false bars it until the debt is repaid only. A later slash with false does not clear an earlier blacklist.
+- `exclude` (boolean) (*mandatory*): the ecosystem's decision to exclude the participation in addition to the debt: true withdraws trust from everything the participation issued or validated before the slash ([[ref: VT spec]]) and bars it until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); false bars it until the debt is repaid only. A later slash with false does not clear an earlier exclusion.
 
-##### [MOD-AC-MSG-12-2] Slash Accreditation Deposit precondition checks
+##### [MOD-AC-MSG-12-2] Slash Participation Trust Deposit precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-AC-MSG-12-2-1] Slash Accreditation Deposit basic checks
+###### [MOD-AC-MSG-12-2-1] Slash Participation Trust Deposit basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
@@ -4807,7 +4810,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 A participation keeps its deposit after its entries expired or were revoked: it can still be slashed, by the ecosystem controller (Option #2), since no validator chain exists any more.
 :::
 
-###### [MOD-AC-MSG-12-2-2] Slash Accreditation Deposit validator perms
+###### [MOD-AC-MSG-12-2-2] Slash Participation Trust Deposit validator perms
 
 Either Option #1, or #2 MUST return true, else abort.
 
@@ -4830,11 +4833,11 @@ return false.
 - if `co.id` equals `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), return true.
 - else return false.
 
-###### [MOD-AC-MSG-12-2-3] Slash Accreditation Deposit fee checks
+###### [MOD-AC-MSG-12-2-3] Slash Participation Trust Deposit fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-AC-MSG-12-3] Slash Accreditation Deposit execution
+##### [MOD-AC-MSG-12-3] Slash Participation Trust Deposit execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
@@ -4845,57 +4848,60 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - calculate `tu_amount` = `d.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `d.tu` exactly.
 - calculate `slashed_fiat` = `d.fiat_cost` × `tu_amount` / `d.tu` — the debt in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 
-use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `VerifiableService[vs_id].corporation_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`, `blacklist`), which records the debt on `d`, increments `d.slash_count` and sets `d.blacklisted` when `blacklist` is true. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), `tu_amount`, `slashed_fiat`, `blacklist` and `now`.
+use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `VerifiableService[vs_id].corporation_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`, `exclude`), which records the debt on `d`, increments `d.slash_count` and sets `d.excluded` when `exclude` is true. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), `tu_amount`, `slashed_fiat`, `exclude` and `now`.
 
 - for each entry `p` listed in `d.accreditation_ids` whose `op_state` is VALIDATED: delete it exactly as [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) does (removed from `d.accreditation_ids`, one event each). An entry under a pending onboarding process stays until its applicant cancels it ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request), which deletes it while the participation is [[ref: barred]]); it cannot be validated while the participation is barred.
 
 
-#### [MOD-AC-MSG-13] Reinstate Participation
+#### [MOD-AC-MSG-13] Set Participation Exclusion
 
 Any authorized `operator` CAN execute this method on behalf of the `corporation` controlling the `Ecosystem` of the schema.
 
-This method lifts the blacklisting of a participation ([AccreditationDeposit](#accreditationdeposit)) set by an ecosystem slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)): the participation may again create entries and run entry-less exchanges under the schema. The slash itself is not undone: the trust units stay slashed until repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), and the participation stays [[ref: barred]] while that debt is open; `slash_count` keeps its value, and the revoked entries are not restored; the party onboards or self-creates anew. Trust resolution stops treating what the participation issued or validated as untrusted from the reinstatement ([[ref: VT spec]]).
+This method sets or lifts the exclusion of a [[ref: participation]] (`ParticipationTrustDeposit.excluded`). With `excluded` true, the ecosystem withdraws trust from the participation without slashing it: the participation is [[ref: barred]], its entries stay in state but are not active, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]); a slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) sets the same flag while also taking trust units and deleting the validated entries. With `excluded` false, it lifts an exclusion set by a slash or by this method: the participation may again create entries and run entry-less exchanges under the schema, and the entries it still holds resume within their windows. A slash itself is not undone: the trust units stay slashed until repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), the participation stays barred while that debt is open, `slash_count` keeps its value, and the entries a slash deleted are not restored; the party onboards or self-creates anew.
 
-##### [MOD-AC-MSG-13-1] Reinstate Participation parameters
+##### [MOD-AC-MSG-13-1] Set Participation Exclusion parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation to reinstate, that is the [AccreditationDeposit](#accreditationdeposit) `d` = `AccreditationDeposit[(vs_id, schema_id, role)]`.
+- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]`.
+- `excluded` (boolean) (*mandatory*): the new value of the flag.
 
-##### [MOD-AC-MSG-13-2] Reinstate Participation precondition checks
+##### [MOD-AC-MSG-13-2] Set Participation Exclusion precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-AC-MSG-13-2-1] Reinstate Participation basic checks
+###### [MOD-AC-MSG-13-2-1] Set Participation Exclusion basic checks
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `vs_id` MUST name an existing `VerifiableService` entry, `schema_id` an existing `CredentialSchema` entry `cs`, and `d` MUST exist with `d.blacklisted` true, else abort.
+- `vs_id` MUST name an existing `VerifiableService` entry and `schema_id` an existing `CredentialSchema` entry `cs`, else abort. If `d` exists, `d.excluded` MUST differ from `excluded`, else abort (nothing to change); if `d` does not exist, `excluded` MUST be true, else abort.
 
-###### [MOD-AC-MSG-13-2-2] Reinstate Participation permission checks
+###### [MOD-AC-MSG-13-2-2] Set Participation Exclusion permission checks
 
 - load `Ecosystem` `ecosystem` from `cs.ecosystem_id`; `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else abort.
 
-###### [MOD-AC-MSG-13-2-3] Reinstate Participation fee checks
+###### [MOD-AC-MSG-13-2-3] Set Participation Exclusion fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-AC-MSG-13-3] Reinstate Participation execution
+##### [MOD-AC-MSG-13-3] Set Participation Exclusion execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
-- set `d.blacklisted` to false.
+- if `d` does not exist, create it with an empty ledger (`tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0, `excluded` false, no entries).
+- set `d.excluded` to `excluded`.
+- if `excluded` is false and `d` is now empty (`accreditation_ids` empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0), delete `d`.
 
-The method MUST emit an event carrying `vs_id`, `schema_id`, `role` and the current timestamp.
+The method MUST emit an event carrying `vs_id`, `schema_id`, `role`, `excluded` and the current timestamp.
 
 #### [MOD-AC-MSG-14] Self Create Accreditation
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-This simple `Accreditation`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Accreditation` entry if issuance mode (resp. verification mode) is set to `OPEN` (resp. `OPEN` or `CREDENTIAL`) for a given schema. Such an entry is **optional**: under these modes a service issues or verifies under its [VerifiableService](#verifiableservice) entry alone ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), and the [AccreditationDeposit](#accreditationdeposit) of its participation, created by its first mint, holds what the [[ref: ecosystem governance authority]] can slash. An issuer self-creates an entry to declare the `verification_fees` and `validation_fees` it charges; either party may self-create one to bound its participation with a window.
+This simple `Accreditation`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Accreditation` entry if issuance mode (resp. verification mode) is set to `OPEN` (resp. `OPEN` or `CREDENTIAL`) for a given schema. Such an entry is **optional**: under these modes a service issues or verifies under its [VerifiableService](#verifiableservice) entry alone ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), and the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by its first mint, holds what the [[ref: ecosystem governance authority]] can slash. An issuer self-creates an entry to declare the `verification_fees` and `validation_fees` it charges; either party may self-create one to bound its participation with a window.
 
 :::note
 Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their `Accreditation` entry may be revoked by the [[ref: ecosystem governance authority]] and their deposit slashed; a slashed participation can no longer act under the schema.
@@ -4945,7 +4951,7 @@ To execute this method, [[ref: account]] MUST match at least one these rules, el
 - The related `CredentialSchema` entry is loaded with `validator_accreditation.schema_id`, and will be named `cs` in this section.
 - if `role` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
 - if `role` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is neither OPEN nor CREDENTIAL, MUST abort.
-- the participation MUST NOT have been slashed: `AccreditationDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `blacklisted` false; else abort. The blacklist is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem reinstates it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-reinstate-participation)); an expired or revoked entry alone does not prevent a new one.
+- the participation MUST NOT have been slashed: `ParticipationTrustDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false; else abort. The exclusion is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); an expired or revoked entry alone does not prevent a new one.
 
 ###### [MOD-AC-MSG-14-2-3] Self Create Accreditation fee checks
 
@@ -4955,7 +4961,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 Two `Accreditation` entries of the same applicant (`corporation_id`, `vs_id`) MUST NOT be effective at the same time under the same `validator_accreditation_id` for the same `role`. If `corporation` wishes to create a new `Accreditation` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Accreditation Effective Until](#mod-ac-msg-8-set-accreditation-effective-until) to set or adjust the `effective_until` value.
 
-Let `accreditations[]` be the [[ref: active accreditations]] and [[ref: future accreditations]] listed in `AccreditationDeposit[(vs_id, cs.id, role)].accreditation_ids`, if that deposit exists, where:
+Let `accreditations[]` be the [[ref: active accreditations]] and [[ref: future accreditations]] listed in `ParticipationTrustDeposit[(vs_id, cs.id, role)].accreditation_ids`, if that deposit exists, where:
 
 - `p.validator_accreditation_id` = `validator_accreditation_id`.
 
@@ -4970,7 +4976,7 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 
 Same as [MOD-AC-MSG-1-2-5](#mod-ac-msg-1-2-5-start-accreditation-op-unrepaid-slash-checks):
 
-- `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `blacklisted` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for its reinstatement ([[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)).
+- `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
 
 ##### [MOD-AC-MSG-14-3] Self Create Accreditation execution
 
@@ -5001,7 +5007,7 @@ A new entry `Accreditation` `perm` MUST be created:
 - `perm.issuance_fee_discount`: 0
 - `perm.verification_fee_discount`: 0
 
-Then register `perm.id` in `AccreditationDeposit[(vs_id, cs.id, role)].accreditation_ids`, creating the deposit with an empty ledger if it does not exist.
+Then register `perm.id` in `ParticipationTrustDeposit[(vs_id, cs.id, role)].accreditation_ids`, creating the deposit with an empty ledger if it does not exist.
 
 The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_accreditation_id` and `vs_id`, so that indexers build the `Accreditation` tree of the schema without a query.
 
@@ -5236,7 +5242,7 @@ v --> vg
 
 ##### [MOD-AC-QRY-4-3] Find Beneficiaries execution
 
-An `Accreditation` entry `p` is **barred** when its participation or its corporation is [[ref: barred]]: a slash debt or a blacklist on deposit(`p`) or on `TrustDeposit[p.corporation_id]`, the condition the definition of [[ref: active accreditation]] reads. Such entries are not added to the set: a barred party receives no fees.
+An `Accreditation` entry `p` is **barred** when its participation or its corporation is [[ref: barred]]: a slash debt or an exclusion on deposit(`p`) or on `TrustDeposit[p.corporation_id]`, the condition the definition of [[ref: active accreditation]] reads. Such entries are not added to the set: a barred party receives no fees.
 
 
 Algorithm. Barred `Accreditation` entries are not added to the set; an expired or revoked entry no longer exists, and a walk that reaches a missing validator stops there.
@@ -5375,7 +5381,7 @@ ApplicantBrowser <-- ValidatorVS: notify `Accreditation` entry added for your DI
 
 *This section is non-normative.*
 
-Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (per-ecosystem attribution is derivable from its `AccreditationDeposit` entries), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. Alongside each `tu` balance, the module tracks its cumulative [[ref: main fiat currency]] **cost basis** (`fiat_cost`): slashing liabilities are denominated at mint-time cost, not at decayed value. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible. The [[ref: native denom]] spent MAY come from a [[ref: sponsor]] ([[FUND-CHECK]](#fund-check-funding-account-resolution)): trust units are always credited to the corporation that performed the trust operation, never to the account that paid.
+Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (per-ecosystem attribution is derivable from its `ParticipationTrustDeposit` entries), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. Alongside each `tu` balance, the module tracks its cumulative [[ref: main fiat currency]] **cost basis** (`fiat_cost`): slashing liabilities are denominated at mint-time cost, not at decayed value. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible. The [[ref: native denom]] spent MAY come from a [[ref: sponsor]] ([[FUND-CHECK]](#fund-check-funding-account-resolution)): trust units are always credited to the corporation that performed the trust operation, never to the account that paid.
 
 Because the [[ref: trust unit peg value]] declines each [[ref: epoch]], a deposit that is not fed by new paid activity loses fiat value at exactly `tu_decay_rate` ("trust decay"): trust is a subscription. Decay is implemented through the single global index — there are **no per-account updates**: a deposit's fiat value at time `T` is `td.tu × tu_peg_value(T)`, and relative rankings compare raw `td.tu` directly (the common factor cancels).
 
@@ -5403,7 +5409,7 @@ Only the modules that require trust deposit manipulation CAN call this method (i
 ##### [MOD-TD-MSG-1-1] Mint Trust Units method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]]; `vs_id` MUST be owned by it.
-- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation the mint is attributed to, that is the [AccreditationDeposit](#accreditationdeposit) `AccreditationDeposit[(vs_id, schema_id, role)]`, created with an empty ledger (`slash_count` 0, `blacklisted` false) and no entries when it does not exist (a party acting under an OPEN or CREDENTIAL mode without an entry).
+- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation the mint is attributed to, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, created with an empty ledger (`slash_count` 0, `excluded` false) and no entries when it does not exist (a party acting under an OPEN or CREDENTIAL mode without an entry).
 - `source_account` (account) (*mandatory*): account funding the mint (the payer's [[ref: funding account]], or the escrow account at validation time).
 - `amount` (number) (*mandatory*): deposit-bound amount, in [[ref: native denom]].
 
@@ -5415,7 +5421,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `amount` MUST be strictly positive.
-- neither `TrustDeposit[corporation_id]` (if it exists) nor `AccreditationDeposit[(vs_id, schema_id, role)]` (if it exists) MAY be [[ref: barred]] (`unrepaid_slash` > 0 or `blacklisted`), else [[ref: transaction]] MUST abort: no trust units are minted to a barred participation or corporation.
+- neither `TrustDeposit[corporation_id]` (if it exists) nor `ParticipationTrustDeposit[(vs_id, schema_id, role)]` (if it exists) MAY be [[ref: barred]] (`unrepaid_slash` > 0 or `excluded`), else [[ref: transaction]] MUST abort: no trust units are minted to a barred participation or corporation.
 - a valid (non-expired) exchange rate between [[ref: native denom]] and [[ref: main fiat currency]] MUST be available through [Get Price](#mod-xr-qry-3-get-price), else [[ref: transaction]] MUST abort.
 
 ###### [MOD-TD-MSG-1-2-2] Mint Trust Units fee checks
@@ -5434,7 +5440,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - calculate `minted_fiat` = `amount` × `P(now)` — the [[ref: main fiat currency]] cost of this mint.
 - calculate `minted_tu` = `minted_fiat` / `tu_peg_value(now)`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)) (equivalently `amount` / `price_tu_in_native_denom(now)`).
 - set `td.tu` to `td.tu` + `minted_tu`; set `td.fiat_cost` to `td.fiat_cost` + `minted_fiat`.
-- let `d` be `AccreditationDeposit[(vs_id, schema_id, role)]`, created with `tu`, `fiat_cost`, `unrepaid_slash` and `slash_count` at 0, `blacklisted` false and an empty `accreditation_ids` if it does not exist; set `d.tu` to `d.tu` + `minted_tu`; set `d.fiat_cost` to `d.fiat_cost` + `minted_fiat`.
+- let `d` be `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, created with `tu`, `fiat_cost`, `unrepaid_slash` and `slash_count` at 0, `excluded` false and an empty `accreditation_ids` if it does not exist; set `d.tu` to `d.tu` + `minted_tu`; set `d.fiat_cost` to `d.fiat_cost` + `minted_fiat`.
 - transfer `amount` from `source_account` to the [[ref: distribution pool]] account.
 - return `minted_tu` and `minted_fiat` to the calling module.
 
@@ -5485,15 +5491,15 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 This method is used by the network governance authority to **globally slash** the trust deposit of a [[ref: corporation]], under the rules of the [[ref: NGF]].
 
-This method can only be called by a governance proposal. Slashing removes [[ref: trust units]] from the corporation's [[ref: trust deposit]] and records a debt denominated in [[ref: main fiat currency]], equal to their **mint-time cost basis** — what was originally paid for them, not their decayed value: reputation decays, **liabilities do not** (misbehavior against the network costs the same whether the deposit was funded yesterday or a year ago). A slashed corporation MUST repay the debt ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) in order to continue to use the services provided by the VPR: while the debt is unrepaid the corporation is [[ref: barred]], none of its entries is active and no trust units can be minted to its deposit. Network governance MAY also blacklist the corporation (`blacklist`): it then stays barred after repayment until reinstated ([[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)), and everything it issued or validated resolves as untrusted while the blacklist stands ([[ref: VT spec]]).
+This method can only be called by a governance proposal. Slashing removes [[ref: trust units]] from the corporation's [[ref: trust deposit]] and records a debt denominated in [[ref: main fiat currency]], equal to their **mint-time cost basis** — what was originally paid for them, not their decayed value: reputation decays, **liabilities do not** (misbehavior against the network costs the same whether the deposit was funded yesterday or a year ago). A slashed corporation MUST repay the debt ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) in order to continue to use the services provided by the VPR: while the debt is unrepaid the corporation is [[ref: barred]], none of its entries is active and no trust units can be minted to its deposit. Network governance MAY also exclude the corporation (`exclude`): it then stays barred after repayment until the exclusion is lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)), and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]).
 
-The parts of the trust deposit, the [AccreditationDeposit](#accreditationdeposit) entries, are not touched: a network slash takes a fraction of what the trust deposit currently holds, after any ecosystem slash, and the corporation repays it in one payment. For ecosystem slash, see [Slash Accreditation Deposit](#mod-ac-msg-12-slash-accreditation-deposit).
+The parts of the trust deposit, the [ParticipationTrustDeposit](#participationtrustdeposit) entries, are not touched: a network slash takes a fraction of what the trust deposit currently holds, after any ecosystem slash, and the corporation repays it in one payment. For ecosystem slash, see [Slash Participation Trust Deposit](#mod-ac-msg-12-slash-participation-trust-deposit).
 
 ##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation we want to slash.
 - `percent` (decimal) (*mandatory*): the fraction of the corporation's [[ref: trust deposit]] to slash, greater than 0 and at most 1.
-- `blacklist` (boolean) (*mandatory*): the network's decision to blacklist the corporation in addition to the debt: true withdraws trust from everything the corporation issued or validated ([[ref: VT spec]]) and bars it until network governance reinstates it ([[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)); false bars it until the debt is repaid only. A later slash with false does not clear an earlier blacklist.
+- `exclude` (boolean) (*mandatory*): the network's decision to exclude the corporation in addition to the debt: true withdraws trust from everything the corporation issued or validated ([[ref: VT spec]]) and bars it until network governance lifts it ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)); false bars it until the debt is repaid only. A later slash with false does not clear an earlier exclusion.
 
 ##### [MOD-TD-MSG-5-2] Slash Trust Deposit precondition checks
 
@@ -5519,8 +5525,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - calculate `tu_amount` = `td.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `td.tu` exactly.
 - calculate `fiat_amount` = `td.fiat_cost` × `tu_amount` / `td.tu`, rounded down to the ledger precision: the mint-time cost basis of the removed units; with `percent` = 1, `fiat_amount` equals `td.fiat_cost` exactly.
 - set `td.tu` to `td.tu` - `tu_amount`; set `td.fiat_cost` to `td.fiat_cost` - `fiat_amount`.
-- set `td.unrepaid_slash` to `td.unrepaid_slash` + `tu_amount`; set `td.unrepaid_fiat` to `td.unrepaid_fiat` + `fiat_amount`; set `td.slash_count` to `td.slash_count` + 1; if `blacklist` is true, set `td.blacklisted` to true. The `AccreditationDeposit` entries of the corporation are not touched.
-- emit an event carrying `corporation_id`, `tu_amount`, `fiat_amount`, `blacklist` and `now`.
+- set `td.unrepaid_slash` to `td.unrepaid_slash` + `tu_amount`; set `td.unrepaid_fiat` to `td.unrepaid_fiat` + `fiat_amount`; set `td.slash_count` to `td.slash_count` + 1; if `exclude` is true, set `td.excluded` to true. The `ParticipationTrustDeposit` entries of the corporation are not touched.
+- emit an event carrying `corporation_id`, `tu_amount`, `fiat_amount`, `exclude` and `now`.
 
 
 :::note
@@ -5529,13 +5535,13 @@ Nothing is burned here: [[ref: trust units]] are not a token. The economic penal
 
 #### [MOD-TD-MSG-6] Repay Slash
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation` to repay a slash debt: the debt of one of its participations (an ecosystem slash, [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)) or its network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)). Repayment is made in [[ref: native denom]] worth the debt's mint-time cost basis (`unrepaid_fiat`) at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the [AccreditationDeposit](#accreditationdeposit) entry, or to the [TrustDeposit](#trustdeposit) for a network debt, and the debt is cleared; the slash count and any blacklist stay. No trust units are minted. A debt is repaid in full in one message, successive unrepaid slashes having accumulated into it; partial repayment (installments) is a candidate for a later version.
+Any authorized `operator` CAN execute this method on behalf of a `corporation` to repay a slash debt: the debt of one of its participations (an ecosystem slash, [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) or its network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)). Repayment is made in [[ref: native denom]] worth the debt's mint-time cost basis (`unrepaid_fiat`) at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the [ParticipationTrustDeposit](#participationtrustdeposit) entry, or to the [TrustDeposit](#trustdeposit) for a network debt, and the debt is cleared; the slash count and any exclusion stay. No trust units are minted. A debt is repaid in full in one message, successive unrepaid slashes having accumulated into it; partial repayment (installments) is a candidate for a later version.
 
 ##### [MOD-TD-MSG-6-1] Repay Slash method parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*conditional*): the participation whose debt is repaid, `AccreditationDeposit[(vs_id, schema_id, role)]`; all three present, or none to repay the corporation's network debt.
+- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*conditional*): the participation whose debt is repaid, `ParticipationTrustDeposit[(vs_id, schema_id, role)]`; all three present, or none to repay the corporation's network debt.
 
 ##### [MOD-TD-MSG-6-2] Repay Slash precondition checks
 
@@ -5548,7 +5554,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- if `vs_id` is given: `d` = `AccreditationDeposit[(vs_id, schema_id, role)]` MUST exist, `VerifiableService[vs_id].corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `d.unrepaid_slash` MUST be greater than 0; else: `td` = `TrustDeposit[co.id]` MUST exist, with `td.unrepaid_slash` greater than 0. Let `debt_tu` and `debt_fiat` be the `unrepaid_slash` and `unrepaid_fiat` of that entry.
+- if `vs_id` is given: `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]` MUST exist, `VerifiableService[vs_id].corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `d.unrepaid_slash` MUST be greater than 0; else: `td` = `TrustDeposit[co.id]` MUST exist, with `td.unrepaid_slash` greater than 0. Let `debt_tu` and `debt_fiat` be the `unrepaid_slash` and `unrepaid_fiat` of that entry.
 - a valid (non-expired) exchange rate between [[ref: native denom]] and [[ref: main fiat currency]] MUST be available through [Get Price](#mod-xr-qry-3-get-price).
 
 ###### [MOD-TD-MSG-6-2-2] Repay Slash fee checks
@@ -5569,7 +5575,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-TD-MSG-7] Record Ecosystem Slash
 
-Removes [[ref: trust units]] slashed by [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit) from the corporation's [[ref: trust deposit]] and records the debt, and the blacklist when decided, on the participation's [AccreditationDeposit](#accreditationdeposit). This method can only be called by the accreditation module.
+Removes [[ref: trust units]] slashed by [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit) from the corporation's [[ref: trust deposit]] and records the debt, and the exclusion when decided, on the participation's [ParticipationTrustDeposit](#participationtrustdeposit). This method can only be called by the accreditation module.
 
 :::warning
 Make sure to **properly protect access to the execution of this method** else it may lead to very destructive actions.
@@ -5578,10 +5584,10 @@ Make sure to **properly protect access to the execution of this method** else it
 ##### [MOD-TD-MSG-7-1] Record Ecosystem Slash method parameters
 
 - `corporation_id` (uint64) (*mandatory*): id of the corporation of the [[ref: trust deposit]].
-- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the slashed participation, `AccreditationDeposit[(vs_id, schema_id, role)]`, whose service entry belongs to `corporation_id`.
+- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the slashed participation, `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, whose service entry belongs to `corporation_id`.
 - `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] removed.
 - `fiat_amount` (decimal) (*mandatory*): cost basis of the removed trust units, in [[ref: main fiat currency]], as computed by the caller.
-- `blacklist` (boolean) (*mandatory*): whether the participation is blacklisted as well ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-accreditation-deposit)).
+- `exclude` (boolean) (*mandatory*): whether the participation is excluded as well ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)).
 
 ##### [MOD-TD-MSG-7-2] Record Ecosystem Slash precondition checks
 
@@ -5593,7 +5599,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `tu_amount` must be > 0 and `fiat_amount` must be ≥ 0.
 - `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, with `td.tu` ≥ `tu_amount`, `td.fiat_cost` ≥ `fiat_amount` and `td.unrepaid_slash` = 0 (no open network debt).
-- the deposit `d` = `AccreditationDeposit[(vs_id, schema_id, role)]` MUST exist, with `d.tu` ≥ `tu_amount` and `d.fiat_cost` ≥ `fiat_amount`.
+- the deposit `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]` MUST exist, with `d.tu` ≥ `tu_amount` and `d.fiat_cost` ≥ `fiat_amount`.
 
 ###### [MOD-TD-MSG-7-2-2] Record Ecosystem Slash fee checks
 
@@ -5605,35 +5611,37 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 - set `td.tu` to `td.tu` - `tu_amount`; set `td.fiat_cost` to `td.fiat_cost` - `fiat_amount`.
-- set `d.tu` to `d.tu` - `tu_amount`; set `d.fiat_cost` to `d.fiat_cost` - `fiat_amount`; set `d.unrepaid_slash` to `d.unrepaid_slash` + `tu_amount`; set `d.unrepaid_fiat` to `d.unrepaid_fiat` + `fiat_amount`; set `d.slash_count` to `d.slash_count` + 1; if `blacklist` is true, set `d.blacklisted` to true.
+- set `d.tu` to `d.tu` - `tu_amount`; set `d.fiat_cost` to `d.fiat_cost` - `fiat_amount`; set `d.unrepaid_slash` to `d.unrepaid_slash` + `tu_amount`; set `d.unrepaid_fiat` to `d.unrepaid_fiat` + `fiat_amount`; set `d.slash_count` to `d.slash_count` + 1; if `exclude` is true, set `d.excluded` to true.
 
-#### [MOD-TD-MSG-8] Reinstate Corporation
+#### [MOD-TD-MSG-8] Set Corporation Exclusion
 
-This method can only be called by a governance proposal. It lifts the blacklisting of a [[ref: corporation]] set by a network slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)): the network's decision that the corporation may take part again. The slash itself is not undone: the corporation stays [[ref: barred]] while its debt is unrepaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), and `slash_count` keeps its value. Trust resolution stops treating what the corporation issued or validated as untrusted from the reinstatement ([[ref: VT spec]]).
+This method can only be called by a governance proposal. It sets or lifts the exclusion of a [[ref: corporation]] (`TrustDeposit.excluded`). With `excluded` true, the network withdraws trust from the corporation without slashing it: the corporation is [[ref: barred]], none of its entries is active, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]); a network slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) sets the same flag while also taking trust units. With `excluded` false, it lifts an exclusion set by a slash or by this method: the network's decision that the corporation may take part again. A slash itself is not undone: the corporation stays barred while its debt is unrepaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), and `slash_count` keeps its value.
 
-##### [MOD-TD-MSG-8-1] Reinstate Corporation method parameters
+##### [MOD-TD-MSG-8-1] Set Corporation Exclusion method parameters
 
-- `corporation_id` (uint64) (*mandatory*): id of the corporation to reinstate.
+- `corporation_id` (uint64) (*mandatory*): id of the corporation.
+- `excluded` (boolean) (*mandatory*): the new value of the flag.
 
-##### [MOD-TD-MSG-8-2] Reinstate Corporation precondition checks
+##### [MOD-TD-MSG-8-2] Set Corporation Exclusion precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-TD-MSG-8-2-1] Reinstate Corporation basic checks
+###### [MOD-TD-MSG-8-2-1] Set Corporation Exclusion basic checks
 
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, with `td.blacklisted` true.
+- `Corporation[corporation_id]` MUST exist, else abort. If the `TrustDeposit` entry `td` whose `td.corporation_id` equals `corporation_id` exists, `td.excluded` MUST differ from `excluded`, else abort (nothing to change); if it does not exist, `excluded` MUST be true, else abort.
 
-###### [MOD-TD-MSG-8-2-2] Reinstate Corporation fee checks
+###### [MOD-TD-MSG-8-2-2] Set Corporation Exclusion fee checks
 
 Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], else [[ref: transaction]] MUST abort.
 
-##### [MOD-TD-MSG-8-3] Reinstate Corporation execution of the method
+##### [MOD-TD-MSG-8-3] Set Corporation Exclusion execution of the method
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- set `td.blacklisted` to false.
+- if `td` does not exist, create it with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0 and `excluded` false.
+- set `td.excluded` to `excluded`.
 
-The method MUST emit an event carrying `corporation_id` and the current timestamp.
+The method MUST emit an event carrying `corporation_id`, `excluded` and the current timestamp.
 
 #### [MOD-TD-QRY-1] Get Trust Deposit
 
@@ -5693,21 +5701,21 @@ Return:
 - `epoch` (number): the current epoch number, and `epoch_ends` (timestamp): the start of the next epoch, after which `network_gas_price_native` may change;
 - `max_gas_per_msg_type` (map<MsgType, number>): `GlobalVariables.max_gas_per_msg_type`.
 
-#### [MOD-TD-QRY-5] Get Accreditation Deposit
+#### [MOD-TD-QRY-5] Get Participation Trust Deposit
 
 Any [[ref: account]] CAN run this [[ref: query]].
 
-##### [MOD-TD-QRY-5-1] Get Accreditation Deposit query parameters
+##### [MOD-TD-QRY-5-1] Get Participation Trust Deposit query parameters
 
 - `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation; the corporation of the deposit is the owner of `vs_id`.
 
-##### [MOD-TD-QRY-5-2] Get Accreditation Deposit query checks
+##### [MOD-TD-QRY-5-2] Get Participation Trust Deposit query checks
 
 - `vs_id` and `schema_id` MUST be valid uint64, `role` a valid AccreditationRole.
 
-##### [MOD-TD-QRY-5-3] Get Accreditation Deposit execution of the query
+##### [MOD-TD-QRY-5-3] Get Participation Trust Deposit execution of the query
 
-Return the [AccreditationDeposit](#accreditationdeposit) entry `AccreditationDeposit[(vs_id, schema_id, role)]`, if any, with the current `tu_peg_value`. If no entry exists, return not found.
+Return the [ParticipationTrustDeposit](#participationtrustdeposit) entry `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, if any, with the current `tu_peg_value`. If no entry exists, return not found.
 
 ### Network Fees
 
@@ -6342,7 +6350,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 This method revokes a digest. It can be executed on behalf of:
 
 - the `corporation` that owns the `Digest` entry (the corporation of the anchoring `VerifiableService` entry `d.vs_id`): by any of its operators under an OperatorAuthorization, or by the vs-agent of the anchoring `VerifiableService` entry `d.vs_id` under a VS Operator Authorization whose entry's `msg_types` include `RevokeDigest` (giving no `accreditation_id`), whether or not the issuer still holds an `ISSUER` entry: revoking a credential is always open to the corporation that issued it;
-- the `corporation` of an **ancestor** of a current `ISSUER` entry of the issuer's participation (an entry listed in `AccreditationDeposit[(d.vs_id, d.schema_id, ISSUER)].accreditation_ids`, and a validator in its branch up to the root ECOSYSTEM entry), while that ancestor is an [[ref: active accreditation]]: by any of its operators under an OperatorAuthorization, or by the vs-agent of that ancestor entry under a VS Operator Authorization whose entry's `msg_types` include `RevokeDigest`;
+- the `corporation` of an **ancestor** of a current `ISSUER` entry of the issuer's participation (an entry listed in `ParticipationTrustDeposit[(d.vs_id, d.schema_id, ISSUER)].accreditation_ids`, and a validator in its branch up to the root ECOSYSTEM entry), while that ancestor is an [[ref: active accreditation]]: by any of its operators under an OperatorAuthorization, or by the vs-agent of that ancestor entry under a VS Operator Authorization whose entry's `msg_types` include `RevokeDigest`;
 - the `corporation` controlling the `Ecosystem` of `d.schema_id`, by any of its operators under an OperatorAuthorization, whatever the state of the tree (as for [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)).
 
 Revoking a digest is the on-chain revocation mechanism for an individual credential whose issuance was anchored through its issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); revoking the holder's `HOLDER` `Accreditation` entry ([[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)) withdraws trust from every credential of that relationship instead. The authority structure mirrors [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation): the issuer, its grantors and the ecosystem can revoke, and the ecosystem governance framework bounds the use of the ancestor path. Trust resolution of a credential whose `digestJCS` has a `Digest` entry with a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp, whoever set it. Revocation is irreversible.
@@ -6369,7 +6377,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - a `Digest` entry `d` with `d.digest` = `digest` MUST exist, else abort.
 - `d.expires` MUST be null or later than `now()`, else abort (the credential it anchored has expired and the entry is about to be swept).
 - [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass: `co` is the `Corporation` entry whose `policy_address` is the signing `corporation` account.
-- define `authority_set`: the empty set if `d.schema_id` is null or no `AccreditationDeposit[(d.vs_id, d.schema_id, ISSUER)]` exists; else the entries listed in its `accreditation_ids` and every ancestor reached from them by following `validator_accreditation_id` until null or a missing entry, keeping only the entries that are [[ref: active accreditations]] (a slashed participation confers no authority; an expired or revoked entry no longer exists).
+- define `authority_set`: the empty set if `d.schema_id` is null or no `ParticipationTrustDeposit[(d.vs_id, d.schema_id, ISSUER)]` exists; else the entries listed in its `accreditation_ids` and every ancestor reached from them by following `validator_accreditation_id` until null or a missing entry, keeping only the entries that are [[ref: active accreditations]] (a slashed participation confers no authority; an expired or revoked entry no longer exists).
 - Authorization:
 
 either (executed by an operator under an OperatorAuthorization; `accreditation_id` absent):
