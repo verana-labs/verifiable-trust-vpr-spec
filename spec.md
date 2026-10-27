@@ -2399,7 +2399,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-CO-QRY-1-3] Get Corporation execution
 
-Return the `Corporation` entry whose `id` equals `corporation_id` (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
+Return the `Corporation` entry whose `id` equals `corporation_id` (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries, the documents filtered by `preferred_language` if set, as [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version) does. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
 
 #### [MOD-CO-QRY-2] Void
 
@@ -2627,13 +2627,13 @@ Anyone CAN execute this method.
 
 - `id` (uint64) (*mandatory*): id of the [[ref: ecosystem]].
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
-- `preferred_language` (string) (*optional*): if set, return only one document per version, with language=`preferred_language` when possible, else if no document exist with this language, return language. If not set, return all documents of all languages.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, in `preferred_language` when the version has one, else in the version's primary `language`. If not set, return all documents of all languages.
 
 ##### [MOD-ES-QRY-1-2] Get Ecosystem checks
 
 ##### [MOD-ES-QRY-1-3] Get Ecosystem execution
 
-return found `Ecosystem` entry (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
+return found `Ecosystem` entry (if any), as well as *all its nested* `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries, the documents filtered by `preferred_language` if set, as [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version) does. If `active_gf_only` is true, return only nested `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries for the active version.
 
 #### [MOD-ES-QRY-2] Void
 
