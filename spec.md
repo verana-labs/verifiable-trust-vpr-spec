@@ -1799,6 +1799,8 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 Amounts in [[ref: main fiat currency]] below are in its minor units ([[ref: main fiat currency]]).
 
+Each group below is owned by the module whose Update Module Parameters message changes it: Credential Schema by [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters); Trust Deposit and Trust Unit Index, Native denom and Network fees by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters); Distribution by [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters); Exchange Rate by [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters); Delegation and Verifiable Service by [[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters). The Network governance group is set at genesis and maintained by the Governance Framework module; no Update Module Parameters message changes it. The immutable parameters, `main_fiat_currency`, `tu_peg_value_genesis`, `epoch_length`, `vna_total_supply` and `council_account`, are refused by every Update Module Parameters message.
+
 **Credential Schema:**
 
 - `credential_schema_schema_max_size` (number) (*mandatory*): maximum size of the `schema` string attribute for a `CredentialSchema`.
@@ -1850,9 +1852,12 @@ Amounts in [[ref: main fiat currency]] below are in its minor units ([[ref: main
 **Network fees:**
 
 - `network_gas_price` (decimal) (*mandatory*): price of one unit of gas in [[ref: main fiat currency]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). Converted once per [[ref: epoch]] into the derived state `network_gas_price_native`, which every validator applies to every transaction of the epoch. Adjustable by [[ref: governance proposal]]; a change takes effect at the next epoch boundary.
+- `max_gas_per_msg_type` (map<string, number>) (*mandatory*): maximum gas per message type, keyed by the protobuf type URL of the message, that a transaction may declare when its fee is paid by an account other than its signer ([[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions)). Keyed by type URL rather than by [MsgType](#msgtype) because it MUST list every VPR message, delegable or not (Create Corporation, Set Sponsor, Grant Sponsorship, Update Exchange Rate and the governance messages included), and the messages of the group module (proposal submission, vote, execution, withdrawal, membership update); a message type absent from the map cannot be fee-granted. Set at genesis from the measured gas profile of each message type with a margin for state-dependent messages, and adjusted by [[ref: governance proposal]].
+
+**Network governance:**
+
 - `council_account` (account) (*mandatory*): the group policy account of the [[ref: council]] ([GOV-1](#network-governance)); set at genesis, immutable.
 - `network_governance_framework_versions` (uint64[]) (*mandatory*): the ids of the `GovernanceFrameworkVersion` entries of the [[ref: NGF]], in version order, a few ids ever: the version in force is the last one whose `active_since` is set, a draft in preparation is a last one with `active_since` null ([[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document), [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)). Set at genesis ([[NGG]](#ngg-genesis-network-governance-framework)).
-- `max_gas_per_msg_type` (map<string, number>) (*mandatory*): maximum gas per message type, keyed by the protobuf type URL of the message, that a transaction may declare when its fee is paid by an account other than its signer ([[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions)). Keyed by type URL rather than by [MsgType](#msgtype) because it MUST list every VPR message, delegable or not (Create Corporation, Set Sponsor, Grant Sponsorship, Update Exchange Rate and the governance messages included), and the messages of the group module (proposal submission, vote, execution, withdrawal, membership update); a message type absent from the map cannot be fee-granted. Set at genesis from the measured gas profile of each message type with a margin for state-dependent messages, and adjusted by [[ref: governance proposal]].
 
 ## Network Governance
 
@@ -5183,7 +5188,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 ###### [MOD-TD-MSG-4-2-1] Update Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
-- `tu_peg_value_genesis` MUST NOT be updatable: the index only moves through decay.
+- `tu_peg_value_genesis`, `main_fiat_currency`, `epoch_length` and `vna_total_supply` MUST NOT be updatable ([GlobalVariables](#globalvariables)): the index only moves through decay, and the other three would re-denominate or re-index everything.
+- `network_gas_price` and `max_gas_per_msg_type`, if updated, take effect as stated by [[NET-FEE-1]](#net-fee-1-network-gas-price) and [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions).
 - `tu_decay_rate`, if updated, MUST satisfy 0 ≤ value < 1, else abort.
 - an update of `tu_decay_rate` MUST be applied prospectively, at step (4) of the next epoch boundary (see [Trust Unit Index](#trust-unit-index)).
 
@@ -6780,7 +6786,7 @@ The method MUST emit an event carrying `vs.id`, `vs.vid`, the previous and the n
 
 #### [MOD-VS-MSG-7] Update Module Parameters
 
-Update Module Parameters.
+Update the Verifiable Service and Delegation parameters of [[GLO]](#glo-global-variables): `vs_registration_deposit`, `ecosystem_creation_deposit`, `vid_rotation_max_transition` and `vs_operator_fee_period`.
 
 Can only be executed through a [[ref: governance proposal]].
 
@@ -6852,14 +6858,14 @@ Anyone CAN execute this method.
 
 ##### [MOD-VS-QRY-3-3] List Module Parameters execution
 
-Return the module parameters: `vs_registration_deposit`, `ecosystem_creation_deposit` and `vid_rotation_max_transition`.
+Return the module parameters: `vs_registration_deposit`, `ecosystem_creation_deposit`, `vid_rotation_max_transition` and `vs_operator_fee_period`.
 
 
 ## Initial Data Requirements
 
 ### [GLO] Global Variables
 
-Global variables CAN only be changed by the [[ref: governance authority]] through proposals.
+Global variables CAN only be changed by the [[ref: governance authority]] through proposals, except the immutable ones ([GlobalVariables](#globalvariables)).
 
 Default values MUST be set at VPR initialization (genesis). Below you'll find some possible values. These values will have to be defined in the [[ref: governance framework]].
 
@@ -6914,9 +6920,12 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 **Network fees:**
 
 - `network_gas_price` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]] per unit of gas.
+- `max_gas_per_msg_type` (map<string, number>) (*mandatory*): to be set at genesis from the measured gas profile of each message type, with a margin for state-dependent messages (exchanges with many beneficiaries, large schemas, VS operator allowance adjustments, group executions).
+
+**Network governance:**
+
 - `council_account` (account) (*mandatory*): the policy account of the genesis council group ([GCO](#gco-genesis-council)).
 - `network_governance_framework_versions` (uint64[]) (*mandatory*): the id of the genesis version ([[NGG]](#ngg-genesis-network-governance-framework)).
-- `max_gas_per_msg_type` (map<string, number>) (*mandatory*): to be set at genesis from the measured gas profile of each message type, with a margin for state-dependent messages (exchanges with many beneficiaries, large schemas, VS operator allowance adjustments, group executions).
 
 ### [XRG] Genesis Exchange Rate
 
