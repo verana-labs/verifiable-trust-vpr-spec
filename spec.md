@@ -4440,7 +4440,7 @@ After processing all beneficiaries, pay the accumulated reward to the VUA issuer
 
 **Verifiable User Agent Reward:**
 
-If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 AND `vua_issuer_accreditation` is not barred in the sense of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) (otherwise the reward is not paid and no deposit is funded):
+If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 (the entry is an [[ref: active accreditation]], checked in the preconditions, so it is not barred):
 
 - `vua_trust_deposit` = `accumulated_vua_reward` × `GlobalVariables.trust_deposit_rate`
 - `vua_fees_to_account` = `accumulated_vua_reward` - `vua_trust_deposit`
