@@ -31,11 +31,11 @@
 
 Decentralized trust ecosystems need shared infrastructure to answer a fundamental question: who is authorized to issue, verify, or govern credentials in a given context? Without a common registry layer, each ecosystem operates in isolation, trust decisions depend on ad hoc configurations, and there is no interoperable way for Verifiable Services and Verifiable User Agents to resolve the legitimacy of a credential or its issuer.
 
-The **Verifiable Public Registry (VPR)** is a decentralized "registry of registries" that provides this foundational infrastructure. It allows corporations to create and manage ecosystems, define credential schemas with fine-grained permission policies, and assign roles — issuers, verifiers, grantors — through a transparent, on-chain governance model.
+The **Verifiable Public Registry (VPR)** is a decentralized "registry of registries" that provides this foundational infrastructure. It allows corporations to create and manage ecosystems, define credential schemas with fine-grained onboarding policies, and assign roles — issuers, verifiers, grantors — through a transparent, on-chain governance model.
 
 The VPR exposes a standardized query API that Verifiable Services and Verifiable User Agents use during trust resolution to confirm, in real time, whether a given accreditation is authorized to perform a specific action under a specific credential schema. This is what makes the trust in [Verifiable Trust](https://verana-labs.github.io/verifiable-trust-spec/) actually verifiable.
 
-The VPR is DID-method-agnostic — it stores registrations, not validations — leaving trust decisions and cryptographic verification where they belong: with the relying parties. It supports flexible permission management modes (open, credential-gated, ecosystem-controlled, or grantor-delegated), enabling ecosystems to tailor governance to their specific requirements.
+The VPR is DID-method-agnostic — it stores registrations, not validations — leaving trust decisions and cryptographic verification where they belong: with the relying parties. It supports flexible onboarding modes (open, credential-gated, ecosystem-controlled, or grantor-delegated), enabling ecosystems to tailor governance to their specific requirements.
 
 This specification defines the data model, API, and normative requirements for implementing and interacting with a Verifiable Public Registry.
 
@@ -154,7 +154,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The group policy account of the [[ref: council]], `GlobalVariables.council_account`: the authority that executes the messages a [[ref: governance proposal]] carries.
 
 [[def: credential schema, credential schemas]]:
-~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
+~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated accreditations and business rules for issuing, verifying or holding a credential linked to this credential schema.
 
 [[def: credential schema accreditation, credential schema accreditations, CSA]]:
 ~ An `Accreditation` entry, linked to a [[ref: credential schema]], that represents, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], [[ref: verifier grantor]] or [[ref: holder]] of credentials of a [[ref: credential schema]], or its root (the ECOSYSTEM entry of the controlling ecosystem).
@@ -602,7 +602,7 @@ A corporation that must not hold [[ref: native denom]] itself (a public entity, 
 
 *This section is non-normative.*
 
-The registry of [[ref: verifiable service entries]] and `Accreditation` entries is the foundation for building **searchable indexes of [[ref: verifiable services]] and the verifiable metadata they expose**. Indexers follow the registration, rotation and accreditation events of the VPR, resolve each service identifier (currently a [[ref: DID]], extensible in the future), verify that the service is a [[ref: verifiable service]], and extract its verifiable metadata — most notably the credentials presented through [[ref: linked-vp]] — together with the [[ref: ecosystem]] memberships, [[ref: credential schema]] permissions, and [[ref: trust deposit]] level associated with the controlling [[ref: corporation]].
+The registry of [[ref: verifiable service entries]] and `Accreditation` entries is the foundation for building **searchable indexes of [[ref: verifiable services]] and the verifiable metadata they expose**. Indexers follow the registration, rotation and accreditation events of the VPR, resolve each service identifier (currently a [[ref: DID]], extensible in the future), verify that the service is a [[ref: verifiable service]], and extract its verifiable metadata — most notably the credentials presented through [[ref: linked-vp]] — together with the [[ref: ecosystem]] memberships, [[ref: credential schema]] accreditations, and [[ref: trust deposit]] level associated with the controlling [[ref: corporation]].
 
 Unlike a traditional web index, this index is **trust-typed**: every entry carries cryptographically verifiable claims about *what* the service is, *who* operates it, and *under which governance frameworks* it is accredited. This unlocks a class of discovery use cases that traditional search engines cannot serve.
 
@@ -625,7 +625,7 @@ Typical VUA queries include:
 
 - *"Show only services accredited under ecosystem X"* — filter by [[ref: ecosystem]] membership.
 - *"Show services that accept the credentials currently in my wallet"* — match the holder's credentials against each [[ref: VS]]'s expected presentations.
-- *"Show issuers of schema Y operating in jurisdiction Z"* — combine [[ref: credential schema]] permissions with corporation metadata.
+- *"Show issuers of schema Y operating in jurisdiction Z"* — combine [[ref: credential schema]] accreditations with corporation metadata.
 - *"Show services my user has previously interacted with successfully"* — combine the index with the VUA's local history.
 
 The result is a feed of [[ref: VSs]] for which a proof of trust can be displayed to the user *before* connection, in line with the VUA enforcement obligations defined in this spec and in the [[ref: VT Spec]].
@@ -1070,7 +1070,7 @@ The [[ref: council]], a group of member corporations ([Network Governance](#netw
 :::note
 **Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: NGF]].
 
-While the **network governance framework** defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each **ecosystem** must define its own **EGF** to govern roles, permissions, credential policies, and compliance within its specific domain.
+While the **network governance framework** defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each **ecosystem** must define its own **EGF** to govern roles, accreditations, credential policies, and compliance within its specific domain.
 
 This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, within the network-level rules of the [[ref: NGF]], which bind every participant.
 :::
@@ -3824,7 +3824,7 @@ An [[ref: account]] that would like to create an `Accreditation` entry MUST call
 - `schema_id` (uint64) (*mandatory*)
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Accreditation` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Accreditation` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-AC-MSG-7-2-1](#mod-ac-msg-7-2-1-create-root-accreditation-basic-checks)).
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Accreditation` entry is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-AC-MSG-7-2-1](#mod-ac-msg-7-2-1-create-root-accreditation-basic-checks)).
 - `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running an onboarding process that uses this entry as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that validation fees apply only to the roles whose mode requires an onboarding process (an issuance mode other than OPEN, a verification mode other than OPEN and CREDENTIAL, the holder mode ISSUER_ONBOARDING_PROCESS); for the other roles they have no effect.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the `corporation` of this entry when a credential is issued, in the denom specified in the credential schema. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the `corporation` of this entry when a credential is verified, in the denom specified in the credential schema. Default to 0.
@@ -4643,7 +4643,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `validator_accreditation_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active accreditation]] or [[ref: future accreditation]].
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Accreditation` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Accreditation` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-AC-MSG-14-2-1](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks)).
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Accreditation` entry is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-AC-MSG-14-2-1](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks)).
 - `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the `corporation` of this ISSUER entry when a credential is verified, in the denom specified in the credential schema. Default to 0.
 - `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing an onboarding process to obtain a credential, in the denom specified in the credential schema. Default to 0.
 
