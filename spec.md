@@ -2194,6 +2194,7 @@ If any of these precondition checks fail, method MUST abort.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters.
 - `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else method MUST abort ([VID ownership](#vid-ownership)).
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of `VerifiableService.msg_types`; if `vs_operator_authz_fee_spend_limit` is provided, every amount MUST be strictly positive; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
+- `vs_operator`, if provided, MUST NOT be the `policy_address` of the Corporation being created, else abort ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`.
@@ -5578,6 +5579,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `period` (duration): if specified MUST be a valid period.
+- `grantee` MUST NOT be the `policy_address` of `Corporation[grantor_corporation_id]`, else abort: x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked. Every caller inherits this check.
 - if `period` is specified, `expiration` MUST also be specified.
 
 ##### [MOD-DE-MSG-1-3] Grant Fee Allowance fee checks
@@ -5666,6 +5668,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - if `authz_spend_limit_period` or `feegrant_spend_limit_period` is specified, `expiration` MUST also be specified.
 
 - `grantee` MUST NOT be the `vs_operator` of any `VerifiableService` entry of the corporation (index of entries by operator account); else abort.
+- `grantee` MUST NOT be `co.policy_address` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), with or without a fee grant, else abort: a corporation needs no authorization to itself, and x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked.
 
 ::: warning
 An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for the same (`corporation_id`, `operator`) pair, that is, if `operator` is not the `vs_operator` of any `VerifiableService` entry of the corporation. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
@@ -5758,6 +5761,7 @@ All authorization configuration is provided by the caller, which has already che
 If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `corporation_id` and `vs_operator` MUST NOT be null.
+- `vs_operator` MUST NOT be the `policy_address` of `Corporation[corporation_id]`, else abort: the corporation acts for itself through its own account, and x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked ([[MOD-DE-MSG-1-2]](#mod-de-msg-1-2-grant-fee-allowance-basic-checks)).
 - `msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
 - if `fee_spend_limit` is set, every amount MUST be strictly positive (the fee allowance is never unlimited nor zero).
 - if `period` is set, `spend_limit` MUST be set.
@@ -6567,7 +6571,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters.
 - `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else method MUST abort ([VID ownership](#vid-ownership)).
 - VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of `VerifiableService.msg_types`; if `vs_operator_authz_fee_spend_limit` is provided, every amount MUST be strictly positive; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
-- if `vs_operator` is provided: no `OperatorAuthorization` `oauthz` where `oauthz.corporation_id` = `co.id` and `oauthz.operator` = `vs_operator` MUST exist, and no `VerifiableService` entry owned by another corporation MAY have `vs_operator` as its `vs_operator` (a vs-agent account cannot be controlled by multiple corporations, see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)).
+- if `vs_operator` is provided: it MUST NOT be `co.policy_address` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)), no `OperatorAuthorization` `oauthz` where `oauthz.corporation_id` = `co.id` and `oauthz.operator` = `vs_operator` MUST exist, and no `VerifiableService` entry owned by another corporation MAY have `vs_operator` as its `vs_operator` (a vs-agent account cannot be controlled by multiple corporations, see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)).
 
 ###### [MOD-VS-MSG-1-2-2] Register Verifiable Service fee checks
 
@@ -6627,7 +6631,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
 - `vs.transfer_to_corporation_id` MUST be null (no transfer pending), else abort.
-- the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks), including the mutual-exclusion checks on `vs_operator` when it is provided.
+- the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks), including the policy-address and mutual-exclusion checks on `vs_operator` when it is provided.
 
 ###### [MOD-VS-MSG-2-2-2] Update Verifiable Service fee checks
 
