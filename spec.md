@@ -775,7 +775,7 @@ The **total amount** paid by the applicant consists of:
 - an additional amount equal to the `trust_deposit_rate` of that validation [[ref: trust fees]] (the applicant's deposit-bound amount), **plus**
 - [[ref: network fees]] (not part of the escrowed amount).
 
-While the onboarding process is PENDING, both the validation fees **and** the deposit-bound amount are **held in the escrow account**: no trust units are minted and nothing enters the [[ref: distribution pool]]. If the process is cancelled, the escrowed amount is refunded as-is — this is the only refund path; trust deposits themselves are never freed.
+While the onboarding process is PENDING, both the validation fees **and** the deposit-bound amount are **held in the escrow account**: no trust units are minted and nothing enters the [[ref: distribution pool]]. If the process is cancelled, or the entry under renewal is revoked or slashed, the escrowed amount is refunded as-is: refunds exist only at the escrow level; trust deposits themselves are never freed.
 
 Example, using 5% for `trust_deposit_rate` and validation fees of 100 VNA:
 
