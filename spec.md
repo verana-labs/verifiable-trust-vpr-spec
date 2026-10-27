@@ -1447,7 +1447,7 @@ Unless otherwise stated, every entity's `id` field is:
 - a server-assigned, strictly monotonically increasing `uint64`;
 - globally unique within the entity class (the entity's primary key);
 - assigned at the entity's creation by the corresponding Create-* Msg, and immutable thereafter;
-- never reused after deletion: if a new entry is later created for the same logical referent (e.g. the same `(corporation_id, operator)` pair after a revoke followed by a fresh grant), it is a brand-new entry with a brand-new `id`; the previous `id` is never re-issued.
+- never reused after deletion: if a new entry is later created for the same logical referent (e.g. a new `Accreditation` entry for the same participation after the previous one was revoked), it is a brand-new entry with a brand-new `id`; the previous `id` is never re-issued.
 
 Clients MAY rely on `id` ordering as a deterministic cursor for keyset pagination.
 
