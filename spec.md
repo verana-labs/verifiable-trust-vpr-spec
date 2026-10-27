@@ -193,7 +193,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The governance authority (GA) of a [[ref: VPR]].
 
 [[def: governance framework, GF]]:
-~ The governance framework (GF) of a [[ref: VPR]].
+~ A set of rules that bind the parties of a [[ref: VPR]] ([[ref: NGF]]), of an [[ref: ecosystem]] ([[ref: EGF]]) or of a [[ref: corporation]] ([[ref: CGF]]), anchored on the ledger as versions and documents ([GovernanceFrameworkVersion](#governanceframeworkversion)).
 
 [[def: grantor, grantors]]:
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: ecosystem]].
@@ -230,6 +230,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: network gas price]]:
 ~ The price of one unit of gas, a network parameter expressed in the [[ref: main fiat currency]] (`GlobalVariables.network_gas_price`) and converted into [[ref: native denom]] once per [[ref: epoch]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). It is the same for every validator and every block of an epoch: the VPR has no fee market and no validator-local price.
+
+[[def: network governance framework, NGF]]:
+~ The governance framework (GF) of the [[ref: VPR]] itself: the rules that bind its validators, its governance proposals and its participants network-wide. Anchored on the ledger as the [GovernanceFrameworkVersion](#governanceframeworkversion) entries that have no owner, listed in `GlobalVariables.network_governance_framework_versions`; the version in force is the last listed one whose `active_since` is set ([[NGG]](#ngg-genesis-network-governance-framework)).
 
 [[def: onboarding process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
@@ -675,7 +678,7 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 
 - The more a [[ref: corporation]] uses the [[ref: VPR]], the more its [[ref: trust deposit]] grows.
 - **Trust is a subscription**: because the [[ref: trust unit peg value]] declines each [[ref: epoch]] by `tu_decay_rate`, a static deposit loses fiat value over time. The trust score therefore reflects **recent** paid usage: earned, never bought, and gone if not maintained.
-- **network-level penalties**: If a participant violates the [[ref: governance framework]] of the [[ref: VPR]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority. The debt is recorded in [[ref: main fiat currency]] at the **mint-time cost basis** of the slashed trust units — what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**, and misbehavior costs the same whether the deposit was funded yesterday or a year ago.
+- **network-level penalties**: If a participant violates the [[ref: NGF]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority. The debt is recorded in [[ref: main fiat currency]] at the **mint-time cost basis** of the slashed trust units — what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**, and misbehavior costs the same whether the deposit was funded yesterday or a year ago.
 - **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), the **portion of its trust deposit minted in the context of that ecosystem** can be slashed by the corresponding [[ref: ecosystem governance authority]].
 - While a slash debt is unrepaid, the slashed participation (ecosystem slash) or every participation of the corporation (network slash) is **barred**: its entries are not active and no new trust units can be minted to it. The debt is recorded on the slashed [AccreditationDeposit](#accreditationdeposit) or [TrustDeposit](#trustdeposit) entry, at the mint-time cost basis. Repayment is made in [[ref: native denom]] worth that cost basis at current rates, and **restores the slashed trust units** at their decayed current value: the gap between the basis paid and the value restored is the penalty premium, and restoring trust costs **more tokens when the token is cheap**.
 - A slash MAY also **blacklist**, by decision of the slashing governance: the participation, or the whole corporation, stays barred after repayment until reinstated, and everything it issued or validated resolves as untrusted while the blacklist stands ([[ref: VT spec]]). A debt alone withdraws nothing from the past.
@@ -1049,14 +1052,14 @@ verifiera --> pool:  \t+0.5 VNA
 
 *This section is non-normative.*
 
-A [[ref: governance framework]] must define the governance rules that apply to a [[ref: VPR]].
+The [[ref: NGF]] defines the governance rules that apply to a [[ref: VPR]]; it is anchored on the ledger like every governance framework ([GovernanceFrameworkVersion](#governanceframeworkversion), [[NGG]](#ngg-genesis-network-governance-framework)).
 
 A designated [[ref: governance authority]] (aka a council) is responsible for **enforcing these rules** and, when necessary, **applying financial sanctions** to participants who violate the rules.
 
 :::note
-**Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: VPR]] [[ref: governance framework]].
+**Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: NGF]].
 
-While the **VPR governance framework** defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each **ecosystem** must define its own **EGF** to govern roles, permissions, credential policies, and compliance within its specific domain.
+While the **network governance framework** defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each **ecosystem** must define its own **EGF** to govern roles, permissions, credential policies, and compliance within its specific domain.
 
 This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.
 :::
@@ -1402,6 +1405,7 @@ obudget "1" --- "0..n" da: remaining_spend
 
 tr "1" --- "0..n" gfv: versions (ecosystem_id)
 corp "1" --- "0..n" gfv: versions (corporation_id)
+gv "1" --- "0..n" gfv: network_governance_framework_versions
 gfv "1" --- "1..n" gfd: documents
 
 account "1" --- "1" corp : policy_address
@@ -1500,18 +1504,18 @@ A `Corporation` is the VPR-level entity representing an authority that acts in t
 
 ### GovernanceFrameworkVersion
 
-A `GovernanceFrameworkVersion` represents a single version of either an [[ref: EGF]] or a [[ref: CGF]]. Its owning subject is identified by exactly one of `ecosystem_id` or `corporation_id` (XOR).
+A `GovernanceFrameworkVersion` represents a single version of an [[ref: EGF]], of a [[ref: CGF]] or of the [[ref: NGF]]. Its owning subject is identified by `ecosystem_id`, by `corporation_id`, or by neither: a version with no owner is a version of the network governance framework, listed in `GlobalVariables.network_governance_framework_versions`.
 
 `GovernanceFrameworkVersion`:
 
 - `id` (uint64) (*mandatory*) (key): the id of the GFV.
-- `ecosystem_id` (uint64) (*conditional*): the id of the [[ref: ecosystem]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `corporation_id` is null.
-- `corporation_id` (uint64) (*conditional*): id of the [[ref: corporation]] that controls this `GovernanceFrameworkVersion` entry. MUST be set if `ecosystem_id` is null.
+- `ecosystem_id` (uint64) (*conditional*): the id of the [[ref: ecosystem]] that controls this `GovernanceFrameworkVersion` entry; null for a [[ref: CGF]] or [[ref: NGF]] version.
+- `corporation_id` (uint64) (*conditional*): id of the [[ref: corporation]] that controls this `GovernanceFrameworkVersion` entry; null for an [[ref: EGF]] or [[ref: NGF]] version.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkVersion has been created.
 - `version` (int) (*mandatory*): version of this GF. MUST Starts with 1.
 - `active_since` (timestamp) (*optional*): the datetime from which this version is valid.
 
-> Constraint: exactly one of `ecosystem_id` and `corporation_id` MUST be set.
+> Constraint: at most one of `ecosystem_id` and `corporation_id` MAY be set; both null denotes the [[ref: NGF]].
 
 ### GovernanceFrameworkDocument
 
@@ -1834,6 +1838,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 **Network fees:**
 
 - `network_gas_price` (decimal) (*mandatory*): price of one unit of gas in [[ref: main fiat currency]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). Converted once per [[ref: epoch]] into the derived state `network_gas_price_native`, which every validator applies to every transaction of the epoch. Adjustable by governance proposal; a change takes effect at the next epoch boundary.
+- `network_governance_framework_versions` (uint64[]) (*mandatory*): the ids of the `GovernanceFrameworkVersion` entries of the [[ref: NGF]], in version order, a few ids ever: the version in force is the last one whose `active_since` is set, a draft in preparation is a last one with `active_since` null ([[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document), [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)). Set at genesis ([[NGG]](#ngg-genesis-network-governance-framework)).
 - `max_gas_per_msg_type` (map<MsgType, number>) (*mandatory*): maximum gas per message type that a transaction may declare when its fee is paid by an account other than its signer ([[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions)). MUST list every VPR message type and the messages of the corporation group policy (proposal submission, vote, execution, withdrawal); a message type absent from the map cannot be fee-granted. Set at genesis from the measured gas profile of each message type with a margin for state-dependent messages, and adjusted by governance proposal.
 
 ## Module Requirements
@@ -2038,8 +2043,8 @@ As a result, `accountABC` is authorized to:
 |                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters)   |governance proposal |
 |                                | Get Ecosystem                      | /ec/v1/get                  | Query  | [[MOD-ES-QRY-1]](#mod-es-qry-1-get-ecosystem)   |N/A |
 |                                | List Ecosystem Module Parameters               | /ec/v1/params                 | Query  | [[MOD-ES-QRY-3]](#mod-es-qry-3-list-module-parameters)   |N/A |
-| Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation + operator |
-|                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + operator |
+| Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation + operator, or governance proposal (NGF) |
+|                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + operator, or governance proposal (NGF) |
 |                                | Get Governance Framework Version             | /gf/v1/get                       | Query  | [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version)   | N/A |
 | Credential Schema              | Create Credential Schema              |       N/A (Tx)                   | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema)   |corporation + operator |
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation + operator |
@@ -2937,13 +2942,14 @@ The initial `GovernanceFrameworkVersion` and its first `GovernanceFrameworkDocum
 
 #### [MOD-GF-MSG-1] Add Governance Framework Document
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. For the [[ref: NGF]] (`network` true) it can only be executed through a governance proposal.
 
 ##### [MOD-GF-MSG-1-1] Add Governance Framework Document parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]] whose governance framework will be modified. If set, the signing `corporation` MUST be the controller of the target `Ecosystem`. If not set, the target subject is the signing `corporation`'s own [[ref: CGF]].
+- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `operator` are absent, and the message is executed through a governance proposal.
 - `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the governance framework document.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
@@ -2957,15 +2963,16 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-GF-MSG-1-2-1] Add Governance Framework Document basic checks
 
-if a mandatory parameter is not present, method MUST abort.
+if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a governance proposal, else abort; the signer and authorization checks below then do not apply.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - Define `subject` as:
+  - if `network` is true: the [[ref: NGF]]; `ecosystem_id` MUST be absent.
   - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
   - if `ecosystem_id` is not set: the `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account. The entry MUST exist (a Corporation may only edit its own governance framework, so no further check is required).
-- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` whose owner matches `subject` (i.e., `gfv.ecosystem_id = ecosystem_id` if subject is an Ecosystem, else `gfv.corporation_id = co.id`) and `gfv.version = version`, OR `version` MUST be exactly equal to the biggest `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries owned by `subject`. `version` MUST be greater than `subject.active_version`.
+- `version`: there MUST exist a `GovernanceFrameworkVersion` entry `gfv` whose owner matches `subject` (i.e., `gfv.ecosystem_id = ecosystem_id` if subject is an Ecosystem, else `gfv.corporation_id = co.id`) and `gfv.version = version`, OR `version` MUST be exactly equal to the biggest `gfv.version` + 1 of all `GovernanceFrameworkVersion` entries owned by `subject`. `version` MUST be greater than `subject.active_version`. For the network, let `last` be the entry of `GlobalVariables.network_governance_framework_versions` with the highest `version`: `version` MUST equal `last.version` when `last.active_since` is null (a draft in preparation), or `last.version` + 1 otherwise; no lookup by owner is needed.
 - `doc_language` (string) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`.
@@ -2982,11 +2989,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - if a `GovernanceFrameworkVersion` entry `gfv` matching `subject` and `version` does not exist, create and persist a new one:
   - `gfv.id`: auto-incremented uint64
-  - `gfv.ecosystem_id`: `ecosystem_id` (or null if subject is a Corporation)
-  - `gfv.corporation_id`: `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account; null if subject is an Ecosystem)
+  - `gfv.ecosystem_id`: `ecosystem_id` (null if subject is a Corporation or the network)
+  - `gfv.corporation_id`: `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account; null if subject is an Ecosystem or the network)
   - `gfv.created`: current timestamp
   - `gfv.version`: `version`
   - `gfv.active_since`: null
+  - for the network, append `gfv.id` to `GlobalVariables.network_governance_framework_versions`.
 
 - if a `GovernanceFrameworkDocument` entry `gfd` exists with `gfd.gfv_id = gfv.id` and `gfd.language = doc_language`, update it:
   - `gfd.url`: `doc_url`
@@ -3002,13 +3010,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-GF-MSG-2] Increase Active Governance Framework Version
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. For the [[ref: NGF]] (`network` true) it can only be executed through a governance proposal.
 
 ##### [MOD-GF-MSG-2-1] Increase Active Governance Framework Version parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]]. If set, the signing `corporation` MUST be its controller. If not set, the target subject is the signing `corporation`'s own [[ref: CGF]].
+- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `operator` are absent, and the message is executed through a governance proposal.
 
 ##### [MOD-GF-MSG-2-2] Increase Active Governance Framework Version precondition checks
 
@@ -3016,16 +3025,17 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-GF-MSG-2-2-1] Increase Active Governance Framework Version basic checks
 
-- if a mandatory parameter is not present, method MUST abort.
+- if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a governance proposal, else abort; the signer and authorization checks below then do not apply.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - Define `subject` as:
+  - if `network` is true: the [[ref: NGF]]; `ecosystem_id` MUST be absent.
   - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
   - if `ecosystem_id` is not set: the `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account. The entry MUST exist.
-- Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` (matching `gfv.ecosystem_id` or `gfv.corporation_id` as appropriate) whose `gfv.version` is equal to `subject.active_version` + 1. If none is found, transaction MUST abort.
-- Find a `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `subject.language`. If no document is found (and thus no document exists for the default language of this version for this subject), transaction MUST abort.
+- Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` (matching `gfv.ecosystem_id` or `gfv.corporation_id` as appropriate) whose `gfv.version` is equal to `subject.active_version` + 1. If none is found, transaction MUST abort. For the network, `gfv` is the entry of `GlobalVariables.network_governance_framework_versions` with the highest `version`; its `active_since` MUST be null, else abort.
+- Find a `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `subject.language`. If no document is found (and thus no document exists for the default language of this version for this subject), transaction MUST abort. For the network, at least one document MUST exist for `gfv`, whatever its language.
 
 ###### [MOD-GF-MSG-2-2-2] Increase Active Governance Framework Version fee checks
 
@@ -3038,6 +3048,7 @@ If all precondition checks passed, method is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - Load `subject` (`Ecosystem` or `Corporation` as identified above).
+- For the network (`network` true): `gfv` is the entry of `GlobalVariables.network_governance_framework_versions` with the highest `version`; set `gfv.active_since` to the current timestamp, persist, and skip the steps below.
 - Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` whose `gfv.version` is equal to `subject.active_version` + 1.
 - Update `subject.active_version` to `subject.active_version` + 1.
 - Set `gfv.active_since` to current timestamp.
@@ -3060,11 +3071,15 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-GF-QRY-1-3] Get Governance Framework Version execution
 
-Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id` or `corporation_id`) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
+Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id`, `corporation_id`, or neither for a version of the [[ref: NGF]]) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
 
 #### [MOD-GF-QRY-2] Void
 
 > Note: listing is an indexer function; the chain keeps no index for it ([Indexes](#identifier-conventions)).
+
+### [NGG] Genesis Network Governance Framework
+
+The genesis state MUST contain one `GovernanceFrameworkVersion` entry with neither `ecosystem_id` nor `corporation_id`, `version` 1 and `active_since` equal to the genesis time, at least one `GovernanceFrameworkDocument` for it, and `GlobalVariables.network_governance_framework_versions` listing its id: the [[ref: NGF]] is in force from the first block, like the [[ref: main fiat currency]], the [[ref: network gas price]] and the genesis exchange rate ([XRG](#xrg-genesis-exchange-rate)). Later versions are prepared with [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and activated with [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version) through governance proposals; the version in force at any block is the last listed version whose `active_since` is not later than the block time.
 
 ### Credential Schema Module
 
@@ -5471,7 +5486,7 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 #### [MOD-TD-MSG-5] Slash Trust Deposit
 
-This method is used by the network governance authority to **globally slash** the trust deposit of a [[ref: corporation]].
+This method is used by the network governance authority to **globally slash** the trust deposit of a [[ref: corporation]], under the rules of the [[ref: NGF]].
 
 This method can only be called by a governance proposal. Slashing removes [[ref: trust units]] from the corporation's [[ref: trust deposit]] and records a debt denominated in [[ref: main fiat currency]], equal to their **mint-time cost basis** — what was originally paid for them, not their decayed value: reputation decays, **liabilities do not** (misbehavior against the network costs the same whether the deposit was funded yesterday or a year ago). A slashed corporation MUST repay the debt ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) in order to continue to use the services provided by the VPR: while the debt is unrepaid the corporation is [[ref: barred]], none of its entries is active and no trust units can be minted to its deposit. Network governance MAY also blacklist the corporation (`blacklist`): it then stays barred after repayment until reinstated ([[MOD-TD-MSG-8]](#mod-td-msg-8-reinstate-corporation)), and everything it issued or validated resolves as untrusted while the blacklist stands ([[ref: VT spec]]).
 
@@ -6862,6 +6877,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 **Network fees:**
 
 - `network_gas_price` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]] per unit of gas.
+- `network_governance_framework_versions` (uint64[]) (*mandatory*): the id of the genesis version ([[NGG]](#ngg-genesis-network-governance-framework)).
 - `max_gas_per_msg_type` (map<MsgType, number>) (*mandatory*): to be set at genesis from the measured gas profile of each message type, with a margin for state-dependent messages (exchanges with many beneficiaries, large schemas, VS operator allowance adjustments, group executions).
 
 ### [XRG] Genesis Exchange Rate
