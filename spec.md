@@ -2120,319 +2120,6 @@ As a result, `accountABC` is authorized to:
 Any method failure in the precondition/basic checks SHOULD lead to a CLI ERROR / HTTP BAD REQUEST error with a human readable message giving a clue of the reason why method failed.
 :::
 
-### Verifiable Service Module
-
-The Verifiable Service module keeps the [VerifiableService](#verifiableservice) entries: the registration of every [[ref: VID]] known to the VPR, its owner [[ref: corporation]], its agent account and the agent's configuration. All other entities that bind an identifier reference these entries by `vs_id` (see [VID ownership](#vid-ownership)). The identifier of a corporation is registered by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) in the same transaction as the corporation; every other identifier is registered here.
-
-#### [MOD-VS-MSG-1] Register Verifiable Service
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`.
-
-##### [MOD-VS-MSG-1-1] Register Verifiable Service parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vid` (string) (*mandatory*): the [[ref: VID]] to register.
-- `vs_operator` (account) (*optional*): the agent account that operates the service identified by `vid`. Null when no software acts for the identifier, which is the common case for the identifier of a legal entity or of an ecosystem, or for a validator that works through corporation operators: such an entry holds its `Accreditation` entries but cannot run exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) is reserved to a vs-agent), so it neither issues nor verifies through the VPR.
-
-The following VS Operator Authorization parameters are **optional** and collectively define the initial operator configuration of the registered entry: its `msg_types`, `period` and `fee_spend_limit`, and its operation budget ([VsOperatorBudget](#vsoperatorbudget)) when `vs_operator_authz_spend_limit` is given. Presence of `vs_operator_authz_msg_types` is the trigger for the whole group, budget included, and implies that `vs_operator` is provided: no configuration, and no budget, can be set without an agent to apply it to. If `vs_operator_authz_msg_types` is not provided, no other parameter of the group MAY be, `msg_types` stays empty and the entry has no VS operator authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
-
-- `vs_operator_authz_msg_types[]` ([MsgType](#msgtype)[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of the entry, among `RecordCredentialExchange`, `SetAccreditationOPtoValidated`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_operator` MUST be specified.
-- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of the entry as a direct consequence of executing authorized messages.
-- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): the entry's contribution to the fee allowance of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [VerifiableService](#verifiableservice)). When provided, the corporation pays the agent's transaction fees and every amount MUST be strictly positive.
-- `vs_operator_authz_period` (duration) (*optional*): operation-budget cycle length for `vs_operator_authz_spend_limit` (requires it to be provided). Does not apply to fees.
-
-##### [MOD-VS-MSG-1-2] Register Verifiable Service precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-VS-MSG-1-2-1] Register Verifiable Service basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters.
-- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else method MUST abort ([VID ownership](#vid-ownership)).
-- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of `VerifiableService.msg_types`; if `vs_operator_authz_fee_spend_limit` is provided, every amount MUST be strictly positive; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
-- if `vs_operator` is provided: no `OperatorAuthorization` `oauthz` where `oauthz.corporation_id` = `co.id` and `oauthz.operator` = `vs_operator` MUST exist, and no `VerifiableService` entry owned by another corporation MAY have `vs_operator` as its `vs_operator` (a vs-agent account cannot be controlled by multiple corporations, see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)).
-
-###### [MOD-VS-MSG-1-2-2] Register Verifiable Service fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)).
-
-##### [MOD-VS-MSG-1-3] Register Verifiable Service execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- debit the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account; the deposit is never refunded.
-- create and persist a new `VerifiableService` entry `vs`:
-
-- `vs.id`: auto-incremented uint64
-- `vs.corporation_id`: `co.id`
-- `vs.vid`: `vid`
-- `vs.vs_operator`: `vs_operator`
-- `vs.transfer_to_corporation_id`: null
-- `vs.created`: current timestamp
-
-If `vs_operator_authz_msg_types` is provided, set the entry's operator configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with:
-
-- `corporation_id`: `co.id`
-- `vs_operator`: `vs_operator`
-- `vs_id`: `vs.id`
-- `msg_types`: `vs_operator_authz_msg_types`
-- `spend_limit`: `vs_operator_authz_spend_limit`
-- `period`: `vs_operator_authz_period`
-- `fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
-
-The method MUST emit an event carrying `vs.id`, `vs.vid` and `co.id`, so that indexers learn the identifier without a query.
-
-> Note: registration is a declaration. The VPR never resolves `vid` and never verifies that `corporation` controls the identifier; trust in a registered service comes from the credentials its DID Document presents, verified by the [[ref: VT spec]] trust resolution. The registration fee is a state fee: it prices the entry and is not refunded; a registration that violates the governance framework is sanctioned on the corporation's trust deposit ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)).
-
-#### [MOD-VS-MSG-2] Update Verifiable Service
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`. It sets, replaces or clears the agent account of an entry together with its operator configuration.
-
-##### [MOD-VS-MSG-2-1] Update Verifiable Service parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to update.
-- `vs_operator` (account) (*optional*): the new agent account, or the current one when only the configuration changes. Null clears the operator together with its configuration and budget: the entry keeps its `Accreditation` entries, but no exchange can be run for it until an agent is set again.
-- the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: presence of `vs_operator_authz_msg_types` triggers the whole group, budget included, and implies that `vs_operator` is provided; the configuration is then applied incrementally by [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization), unchanged values leaving the budget balance and the fee allowance untouched. If `vs_operator_authz_msg_types` is not provided, no other parameter of the group MAY be, and the configuration and budget are cleared, whether or not `vs_operator` is provided.
-
-##### [MOD-VS-MSG-2-2] Update Verifiable Service precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-VS-MSG-2-2-1] Update Verifiable Service basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- `vs.transfer_to_corporation_id` MUST be null (no transfer pending), else abort.
-- the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks), including the mutual-exclusion checks on `vs_operator` when it is provided.
-
-###### [MOD-VS-MSG-2-2-2] Update Verifiable Service fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-VS-MSG-2-3] Update Verifiable Service execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- if `vs_operator` is null or `vs_operator_authz_msg_types` is not provided: call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration), then set `vs.vs_operator` := `vs_operator`.
-- else: call [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with `vs_operator` and the parameters, exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution): it changes the account if it differs, keeps the budget balance when the spend limit is unchanged, and adjusts the fee allowance only by the difference. An update that changes nothing writes the entry and nothing else.
-
-> Note: exchanges are run for the entry, not for the account ([CredentialExchange](#credentialexchange)): an exchange begun under the previous operator is continued by the new one (its transactions are correlated by the `exchange_id`), and the previous account can no longer act for this entry.
-
-#### [MOD-VS-MSG-3] Rotate Verifiable Identifier
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`. It replaces the identifier string of an entry. Every `Corporation`, `Ecosystem` and `Accreditation` entry that references the entry, every accreditation, fee term, deposit and operator configuration, is unaffected: they reference `vs_id`, never the string.
-
-##### [MOD-VS-MSG-3-1] Rotate Verifiable Identifier parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry whose identifier is rotated.
-- `vid` (string) (*mandatory*): the new identifier string.
-- `transition` (duration) (*optional*): length of the transition window during which the former string remains acceptable to trust resolution for credentials issued under it as defined by the [[ref: VT spec]]. Defaults to `GlobalVariables.vid_rotation_max_transition`; 0 ends the former string at once, for instance after a key compromise. The window is carried by the event of this method and applied by indexers; the VPR does not store it.
-
-##### [MOD-VS-MSG-3-2] Rotate Verifiable Identifier precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-VS-MSG-3-2-1] Rotate Verifiable Identifier basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- `vs.transfer_to_corporation_id` MUST be null, else abort.
-- `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters, and MUST differ from `vs.vid`.
-- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else abort ([VID ownership](#vid-ownership)).
-- `transition` (duration) (*optional*): if provided, MUST be between 0 and `GlobalVariables.vid_rotation_max_transition` (inclusive).
-
-###### [MOD-VS-MSG-3-2-2] Rotate Verifiable Identifier fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-VS-MSG-3-3] Rotate Verifiable Identifier execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- define `now`: current timestamp; define `transition_r`: `transition` if provided, else `GlobalVariables.vid_rotation_max_transition`; define `former`: `vs.vid`.
-- set `vs.vid` = `vid`.
-
-The method MUST emit an event carrying `vs.id`, `former`, `vid` and `transition_until` = `now` + `transition_r`. This event is the only record of the former string: indexers MUST keep it, MUST re-evaluate trust for the entry under the new string and MUST treat `former` as rotated, valid evidence only for credentials issued before `now` and only until `transition_until`, as specified by the [[ref: VT spec]]. A string rotated away MAY be registered or rotated to again at once, by the same entry or by another; while the window of the former holder is open, trust resolution keeps matching the string to the former holder.
-
-> Note: the VPR does not re-validate anything at rotation. The ecosystems that accredited the service validated an organization, not a string; an [[ref: ecosystem governance authority]] whose framework binds accreditation to a particular identifier (a method, a domain) learns the rotation from the event and keeps its usual remedy, revocation of the `Accreditation` entry. Credentials that carry the former string, as issuer or as subject, are re-issued by their issuers during the transition window, and the former DID Document SHOULD stay resolvable until then so that proofs made with its keys still verify.
-
-#### [MOD-VS-MSG-4] Transfer Verifiable Service
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`. It offers an entry to another corporation, or withdraws a pending offer. Ownership changes only when the receiving corporation accepts ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
-
-##### [MOD-VS-MSG-4-1] Transfer Verifiable Service parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to transfer.
-- `to_corporation_id` (uint64) (*optional*): id of the receiving corporation; null withdraws a pending offer.
-
-##### [MOD-VS-MSG-4-2] Transfer Verifiable Service precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-VS-MSG-4-2-1] Transfer Verifiable Service basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipationTrustDeposit](#participationtrustdeposit) whose key starts with `vs.id` (a key-prefix scan) MAY list an entry or carry a slash debt (`unrepaid_slash` > 0: the owner repays first), and neither the owner corporation nor the receiving one MAY be [[ref: barred]]; else abort. The deposits themselves, their trust units, their slash count and their exclusion, are keyed by the entry and follow it ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)) (entries belong to their corporation and do not move: the owner first revokes them or lets them expire, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
-- `to_corporation_id` (uint64) (*optional*): if provided, a `Corporation` entry with this id MUST exist and MUST differ from `co.id`.
-
-###### [MOD-VS-MSG-4-2-2] Transfer Verifiable Service fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-VS-MSG-4-3] Transfer Verifiable Service execution
-
-- set `vs.transfer_to_corporation_id` = `to_corporation_id`.
-
-#### [MOD-VS-MSG-5] Accept Verifiable Service Transfer
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`, the receiving corporation of a pending offer.
-
-##### [MOD-VS-MSG-5-1] Accept Verifiable Service Transfer parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_id` (uint64) (*mandatory*): id of the offered `VerifiableService` entry.
-- `vs_operator` (account) (*optional*) and the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: the agent and configuration of the entry under its new owner; presence of `vs_operator_authz_msg_types` triggers the whole group, budget included, and implies that `vs_operator` is provided.
-
-##### [MOD-VS-MSG-5-2] Accept Verifiable Service Transfer precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-VS-MSG-5-2-1] Accept Verifiable Service Transfer basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.transfer_to_corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipationTrustDeposit](#participationtrustdeposit) whose key starts with `vs.id` (a key-prefix scan) MAY list an entry or carry a slash debt (`unrepaid_slash` > 0: the owner repays first), and neither the owner corporation nor the receiving one MAY be [[ref: barred]]; else abort. The deposits themselves, their trust units, their slash count and their exclusion, are keyed by the entry and follow it ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)).
-- the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks).
-
-###### [MOD-VS-MSG-5-2-2] Accept Verifiable Service Transfer fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)): the receiving corporation pays its own registration deposit; the previous owner's payment is not refunded.
-
-##### [MOD-VS-MSG-5-3] Accept Verifiable Service Transfer execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration).
-- debit the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account.
-- let `former` be `vs.corporation_id`. For each [ParticipationTrustDeposit](#participationtrustdeposit) `d` whose key starts with `vs.id` (a key-prefix scan): set `TrustDeposit[former].tu` to `TrustDeposit[former].tu` - `d.tu` and `.fiat_cost` to `.fiat_cost` - `d.fiat_cost`; set `TrustDeposit[co.id].tu` (the entry created with 0 if absent) to `TrustDeposit[co.id].tu` + `d.tu` and `.fiat_cost` to `.fiat_cost` + `d.fiat_cost`. The deposits are keyed by the service entry and need no change: the trust units of the service and the record of its slashes follow it; a network debt or exclusion of `former` would stay with `former`, which is why the transfer is refused while one is open.
-- set `vs.corporation_id` = `co.id`, `vs.vs_operator` = `vs_operator`, `vs.transfer_to_corporation_id` = null.
-- if `vs_operator_authz_msg_types` is provided, set the configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
-
-The method MUST emit an event carrying `vs.id`, `vs.vid`, the previous and the new `corporation_id`.
-
-#### [MOD-VS-MSG-6] Void
-
-> Note: there is no message to remove a `VerifiableService` entry. Once registered, an entry is permanent: the credential digests anchored under it, the exchanges run in its context and the `Accreditation` entries bound to it, while they exist, reference its `id`, and trust resolution resolves the issuer of a credential through that link to the entry's identifier for as long as the credential may be evaluated, which the registry cannot know. A wrong identifier string is corrected by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) Rotate Verifiable Identifier, with a transition of 0 when nothing was issued under it; an identifier that is no longer operated has its operator cleared by [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service); an identifier its owner no longer needs is transferred ([[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)) or kept. The registration deposit is never refunded.
-
-#### [MOD-VS-MSG-7] Update Module Parameters
-
-Update Module Parameters.
-
-Can only be executed through a governance proposal.
-
-##### [MOD-VS-MSG-7-1] Update Module Parameters parameters
-
-- `params` (KeySet<String, String>): the parameters to update and their values.
-
-##### [MOD-VS-MSG-7-2] Update Module Parameters precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-VS-MSG-7-2-1] Update Module Parameters basic checks
-
-- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
-
-###### [MOD-VS-MSG-7-2-2] Update Module Parameters fee checks
-
-provided transaction fees MUST be sufficient for execution.
-
-##### [MOD-VS-MSG-7-3] Update Module Parameters execution
-
-for each parameter `param` <`key`, `value`> in `parameters`:
-
-- update parameter set value = `value` where key = `key`.
-
-#### [MOD-VS-QRY-1] Get Verifiable Service
-
-Anyone CAN execute this method.
-
-##### [MOD-VS-QRY-1-1] Get Verifiable Service query parameters
-
-- `id` (uint64) (*conditional*): the id of the `VerifiableService` entry.
-- `vid` (string) (*conditional*): an identifier string; matches the entry whose current `vid` is the string. Exactly one of `id` and `vid` MUST be provided.
-
-##### [MOD-VS-QRY-1-2] Get Verifiable Service query checks
-
-If any of these checks fail, [[ref: query]] MUST fail.
-
-- exactly one of `id` and `vid` MUST be provided.
-
-##### [MOD-VS-QRY-1-3] Get Verifiable Service execution
-
-Return the matching `VerifiableService` entry with, if any, its [VsOperatorBudget](#vsoperatorbudget), or an error if none is found. Former identifier strings are not resolvable through this query: they are served by indexers from the rotation events ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)).
-
-#### [MOD-VS-QRY-2] List Verifiable Services
-
-Anyone CAN execute this method.
-
-##### [MOD-VS-QRY-2-1] List Verifiable Services query parameters
-
-The following parameters are optional:
-
-- `vs_operator` (account) (*optional*): if specified, filter by agent account, served by the index the one-corporation rule requires ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)). Listing by corporation or by time is an indexer function.
-- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
-
-##### [MOD-VS-QRY-2-2] List Verifiable Services query checks
-
-If any of these checks fail, [[ref: query]] MUST fail.
-
-- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
-
-##### [MOD-VS-QRY-2-3] List Verifiable Services execution
-
-Return a list of `VerifiableService` entries matching the filter criteria, ordered by `id`, or an empty list if nothing found.
-
-#### [MOD-VS-QRY-3] List Module Parameters
-
-Anyone CAN execute this method.
-
-##### [MOD-VS-QRY-3-3] List Module Parameters execution
-
-Return the module parameters: `vs_registration_deposit`, `ecosystem_creation_deposit` and `vid_rotation_max_transition`.
-
 ### Corporation Module
 
 This module manages [[ref: corporation]] entries — the VPR-level entity that references the verifiable service entry of its identifier and carries a governance framework and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A `Corporation` entry MUST exist before its `policy_address` can sign as the `corporation` in any other VPR Create-* method, and before its `id` can be referenced as `corporation_id` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)).
@@ -6822,6 +6509,320 @@ Anyone CAN run this [[ref: query]].
 ##### [MOD-XR-QRY-4-3] List Module Parameters execution of the query
 
 Return the list of the existing parameters and their values.
+
+### Verifiable Service Module
+
+The Verifiable Service module keeps the [VerifiableService](#verifiableservice) entries: the registration of every [[ref: VID]] known to the VPR, its owner [[ref: corporation]], its agent account and the agent's configuration. All other entities that bind an identifier reference these entries by `vs_id` (see [VID ownership](#vid-ownership)). The identifier of a corporation is registered by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) in the same transaction as the corporation; every other identifier is registered here.
+
+#### [MOD-VS-MSG-1] Register Verifiable Service
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`.
+
+##### [MOD-VS-MSG-1-1] Register Verifiable Service parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vid` (string) (*mandatory*): the [[ref: VID]] to register.
+- `vs_operator` (account) (*optional*): the agent account that operates the service identified by `vid`. Null when no software acts for the identifier, which is the common case for the identifier of a legal entity or of an ecosystem, or for a validator that works through corporation operators: such an entry holds its `Accreditation` entries but cannot run exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) is reserved to a vs-agent), so it neither issues nor verifies through the VPR.
+
+The following VS Operator Authorization parameters are **optional** and collectively define the initial operator configuration of the registered entry: its `msg_types`, `period` and `fee_spend_limit`, and its operation budget ([VsOperatorBudget](#vsoperatorbudget)) when `vs_operator_authz_spend_limit` is given. Presence of `vs_operator_authz_msg_types` is the trigger for the whole group, budget included, and implies that `vs_operator` is provided: no configuration, and no budget, can be set without an agent to apply it to. If `vs_operator_authz_msg_types` is not provided, no other parameter of the group MAY be, `msg_types` stays empty and the entry has no VS operator authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
+
+- `vs_operator_authz_msg_types[]` ([MsgType](#msgtype)[]) (*optional*): list of VPR delegable message types `vs_operator` is authorized to execute on behalf of `corporation` in the context of the entry, among `RecordCredentialExchange`, `SetAccreditationOPtoValidated`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_operator` MUST be specified.
+- `vs_operator_authz_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_operator` is allowed to spend in the context of the entry as a direct consequence of executing authorized messages.
+- `vs_operator_authz_fee_spend_limit` (DenomAmount[]) (*optional*): the entry's contribution to the fee allowance of `vs_operator`, per `GlobalVariables.vs_operator_fee_period` (see [VerifiableService](#verifiableservice)). When provided, the corporation pays the agent's transaction fees and every amount MUST be strictly positive.
+- `vs_operator_authz_period` (duration) (*optional*): operation-budget cycle length for `vs_operator_authz_spend_limit` (requires it to be provided). Does not apply to fees.
+
+##### [MOD-VS-MSG-1-2] Register Verifiable Service precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-1-2-1] Register Verifiable Service basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters.
+- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else method MUST abort ([VID ownership](#vid-ownership)).
+- VS Operator Authorization parameters: if any of `vs_operator_authz_*` parameters is provided, `vs_operator_authz_msg_types` MUST also be provided and `vs_operator` MUST NOT be null, else abort. If `vs_operator_authz_msg_types` is provided, it MUST be a non-empty list of the permitted message types of `VerifiableService.msg_types`; if `vs_operator_authz_fee_spend_limit` is provided, every amount MUST be strictly positive; if `vs_operator_authz_period` is provided, `vs_operator_authz_spend_limit` MUST be provided.
+- if `vs_operator` is provided: no `OperatorAuthorization` `oauthz` where `oauthz.corporation_id` = `co.id` and `oauthz.operator` = `vs_operator` MUST exist, and no `VerifiableService` entry owned by another corporation MAY have `vs_operator` as its `vs_operator` (a vs-agent account cannot be controlled by multiple corporations, see [[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)).
+
+###### [MOD-VS-MSG-1-2-2] Register Verifiable Service fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)).
+
+##### [MOD-VS-MSG-1-3] Register Verifiable Service execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- debit the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account; the deposit is never refunded.
+- create and persist a new `VerifiableService` entry `vs`:
+
+- `vs.id`: auto-incremented uint64
+- `vs.corporation_id`: `co.id`
+- `vs.vid`: `vid`
+- `vs.vs_operator`: `vs_operator`
+- `vs.transfer_to_corporation_id`: null
+- `vs.created`: current timestamp
+
+If `vs_operator_authz_msg_types` is provided, set the entry's operator configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with:
+
+- `corporation_id`: `co.id`
+- `vs_operator`: `vs_operator`
+- `vs_id`: `vs.id`
+- `msg_types`: `vs_operator_authz_msg_types`
+- `spend_limit`: `vs_operator_authz_spend_limit`
+- `period`: `vs_operator_authz_period`
+- `fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
+
+The method MUST emit an event carrying `vs.id`, `vs.vid` and `co.id`, so that indexers learn the identifier without a query.
+
+> Note: registration is a declaration. The VPR never resolves `vid` and never verifies that `corporation` controls the identifier; trust in a registered service comes from the credentials its DID Document presents, verified by the [[ref: VT spec]] trust resolution. The registration fee is a state fee: it prices the entry and is not refunded; a registration that violates the governance framework is sanctioned on the corporation's trust deposit ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)).
+
+#### [MOD-VS-MSG-2] Update Verifiable Service
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. It sets, replaces or clears the agent account of an entry together with its operator configuration.
+
+##### [MOD-VS-MSG-2-1] Update Verifiable Service parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to update.
+- `vs_operator` (account) (*optional*): the new agent account, or the current one when only the configuration changes. Null clears the operator together with its configuration and budget: the entry keeps its `Accreditation` entries, but no exchange can be run for it until an agent is set again.
+- the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: presence of `vs_operator_authz_msg_types` triggers the whole group, budget included, and implies that `vs_operator` is provided; the configuration is then applied incrementally by [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization), unchanged values leaving the budget balance and the fee allowance untouched. If `vs_operator_authz_msg_types` is not provided, no other parameter of the group MAY be, and the configuration and budget are cleared, whether or not `vs_operator` is provided.
+
+##### [MOD-VS-MSG-2-2] Update Verifiable Service precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-2-2-1] Update Verifiable Service basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
+- `vs.transfer_to_corporation_id` MUST be null (no transfer pending), else abort.
+- the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks), including the mutual-exclusion checks on `vs_operator` when it is provided.
+
+###### [MOD-VS-MSG-2-2-2] Update Verifiable Service fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-VS-MSG-2-3] Update Verifiable Service execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- if `vs_operator` is null or `vs_operator_authz_msg_types` is not provided: call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration), then set `vs.vs_operator` := `vs_operator`.
+- else: call [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with `vs_operator` and the parameters, exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution): it changes the account if it differs, keeps the budget balance when the spend limit is unchanged, and adjusts the fee allowance only by the difference. An update that changes nothing writes the entry and nothing else.
+
+> Note: exchanges are run for the entry, not for the account ([CredentialExchange](#credentialexchange)): an exchange begun under the previous operator is continued by the new one (its transactions are correlated by the `exchange_id`), and the previous account can no longer act for this entry.
+
+#### [MOD-VS-MSG-3] Rotate Verifiable Identifier
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. It replaces the identifier string of an entry. Every `Corporation`, `Ecosystem` and `Accreditation` entry that references the entry, every accreditation, fee term, deposit and operator configuration, is unaffected: they reference `vs_id`, never the string.
+
+##### [MOD-VS-MSG-3-1] Rotate Verifiable Identifier parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry whose identifier is rotated.
+- `vid` (string) (*mandatory*): the new identifier string.
+- `transition` (duration) (*optional*): length of the transition window during which the former string remains acceptable to trust resolution for credentials issued under it as defined by the [[ref: VT spec]]. Defaults to `GlobalVariables.vid_rotation_max_transition`; 0 ends the former string at once, for instance after a key compromise. The window is carried by the event of this method and applied by indexers; the VPR does not store it.
+
+##### [MOD-VS-MSG-3-2] Rotate Verifiable Identifier precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-3-2-1] Rotate Verifiable Identifier basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
+- `vs.transfer_to_corporation_id` MUST be null, else abort.
+- `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters, and MUST differ from `vs.vid`.
+- `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else abort ([VID ownership](#vid-ownership)).
+- `transition` (duration) (*optional*): if provided, MUST be between 0 and `GlobalVariables.vid_rotation_max_transition` (inclusive).
+
+###### [MOD-VS-MSG-3-2-2] Rotate Verifiable Identifier fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-VS-MSG-3-3] Rotate Verifiable Identifier execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- define `now`: current timestamp; define `transition_r`: `transition` if provided, else `GlobalVariables.vid_rotation_max_transition`; define `former`: `vs.vid`.
+- set `vs.vid` = `vid`.
+
+The method MUST emit an event carrying `vs.id`, `former`, `vid` and `transition_until` = `now` + `transition_r`. This event is the only record of the former string: indexers MUST keep it, MUST re-evaluate trust for the entry under the new string and MUST treat `former` as rotated, valid evidence only for credentials issued before `now` and only until `transition_until`, as specified by the [[ref: VT spec]]. A string rotated away MAY be registered or rotated to again at once, by the same entry or by another; while the window of the former holder is open, trust resolution keeps matching the string to the former holder.
+
+> Note: the VPR does not re-validate anything at rotation. The ecosystems that accredited the service validated an organization, not a string; an [[ref: ecosystem governance authority]] whose framework binds accreditation to a particular identifier (a method, a domain) learns the rotation from the event and keeps its usual remedy, revocation of the `Accreditation` entry. Credentials that carry the former string, as issuer or as subject, are re-issued by their issuers during the transition window, and the former DID Document SHOULD stay resolvable until then so that proofs made with its keys still verify.
+
+#### [MOD-VS-MSG-4] Transfer Verifiable Service
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. It offers an entry to another corporation, or withdraws a pending offer. Ownership changes only when the receiving corporation accepts ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
+
+##### [MOD-VS-MSG-4-1] Transfer Verifiable Service parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to transfer.
+- `to_corporation_id` (uint64) (*optional*): id of the receiving corporation; null withdraws a pending offer.
+
+##### [MOD-VS-MSG-4-2] Transfer Verifiable Service precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-4-2-1] Transfer Verifiable Service basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
+- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipationTrustDeposit](#participationtrustdeposit) whose key starts with `vs.id` (a key-prefix scan) MAY list an entry or carry a slash debt (`unrepaid_slash` > 0: the owner repays first), and neither the owner corporation nor the receiving one MAY be [[ref: barred]]; else abort. The deposits themselves, their trust units, their slash count and their exclusion, are keyed by the entry and follow it ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)) (entries belong to their corporation and do not move: the owner first revokes them or lets them expire, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
+- `to_corporation_id` (uint64) (*optional*): if provided, a `Corporation` entry with this id MUST exist and MUST differ from `co.id`.
+
+###### [MOD-VS-MSG-4-2-2] Transfer Verifiable Service fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-VS-MSG-4-3] Transfer Verifiable Service execution
+
+- set `vs.transfer_to_corporation_id` = `to_corporation_id`.
+
+#### [MOD-VS-MSG-5] Accept Verifiable Service Transfer
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`, the receiving corporation of a pending offer.
+
+##### [MOD-VS-MSG-5-1] Accept Verifiable Service Transfer parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `vs_id` (uint64) (*mandatory*): id of the offered `VerifiableService` entry.
+- `vs_operator` (account) (*optional*) and the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: the agent and configuration of the entry under its new owner; presence of `vs_operator_authz_msg_types` triggers the whole group, budget included, and implies that `vs_operator` is provided.
+
+##### [MOD-VS-MSG-5-2] Accept Verifiable Service Transfer precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-5-2-1] Accept Verifiable Service Transfer basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.transfer_to_corporation_id` MUST equal `co.id`; else abort.
+- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipationTrustDeposit](#participationtrustdeposit) whose key starts with `vs.id` (a key-prefix scan) MAY list an entry or carry a slash debt (`unrepaid_slash` > 0: the owner repays first), and neither the owner corporation nor the receiving one MAY be [[ref: barred]]; else abort. The deposits themselves, their trust units, their slash count and their exclusion, are keyed by the entry and follow it ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)).
+- the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks).
+
+###### [MOD-VS-MSG-5-2-2] Accept Verifiable Service Transfer fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)): the receiving corporation pays its own registration deposit; the previous owner's payment is not refunded.
+
+##### [MOD-VS-MSG-5-3] Accept Verifiable Service Transfer execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration).
+- debit the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account.
+- let `former` be `vs.corporation_id`. For each [ParticipationTrustDeposit](#participationtrustdeposit) `d` whose key starts with `vs.id` (a key-prefix scan): set `TrustDeposit[former].tu` to `TrustDeposit[former].tu` - `d.tu` and `.fiat_cost` to `.fiat_cost` - `d.fiat_cost`; set `TrustDeposit[co.id].tu` (the entry created with 0 if absent) to `TrustDeposit[co.id].tu` + `d.tu` and `.fiat_cost` to `.fiat_cost` + `d.fiat_cost`. The deposits are keyed by the service entry and need no change: the trust units of the service and the record of its slashes follow it; a network debt or exclusion of `former` would stay with `former`, which is why the transfer is refused while one is open.
+- set `vs.corporation_id` = `co.id`, `vs.vs_operator` = `vs_operator`, `vs.transfer_to_corporation_id` = null.
+- if `vs_operator_authz_msg_types` is provided, set the configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
+
+The method MUST emit an event carrying `vs.id`, `vs.vid`, the previous and the new `corporation_id`.
+
+#### [MOD-VS-MSG-6] Void
+
+> Note: there is no message to remove a `VerifiableService` entry. Once registered, an entry is permanent: the credential digests anchored under it, the exchanges run in its context and the `Accreditation` entries bound to it, while they exist, reference its `id`, and trust resolution resolves the issuer of a credential through that link to the entry's identifier for as long as the credential may be evaluated, which the registry cannot know. A wrong identifier string is corrected by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) Rotate Verifiable Identifier, with a transition of 0 when nothing was issued under it; an identifier that is no longer operated has its operator cleared by [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service); an identifier its owner no longer needs is transferred ([[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)) or kept. The registration deposit is never refunded.
+
+#### [MOD-VS-MSG-7] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a governance proposal.
+
+##### [MOD-VS-MSG-7-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-VS-MSG-7-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-VS-MSG-7-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
+
+###### [MOD-VS-MSG-7-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution.
+
+##### [MOD-VS-MSG-7-3] Update Module Parameters execution
+
+for each parameter `param` <`key`, `value`> in `parameters`:
+
+- update parameter set value = `value` where key = `key`.
+
+#### [MOD-VS-QRY-1] Get Verifiable Service
+
+Anyone CAN execute this method.
+
+##### [MOD-VS-QRY-1-1] Get Verifiable Service query parameters
+
+- `id` (uint64) (*conditional*): the id of the `VerifiableService` entry.
+- `vid` (string) (*conditional*): an identifier string; matches the entry whose current `vid` is the string. Exactly one of `id` and `vid` MUST be provided.
+
+##### [MOD-VS-QRY-1-2] Get Verifiable Service query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- exactly one of `id` and `vid` MUST be provided.
+
+##### [MOD-VS-QRY-1-3] Get Verifiable Service execution
+
+Return the matching `VerifiableService` entry with, if any, its [VsOperatorBudget](#vsoperatorbudget), or an error if none is found. Former identifier strings are not resolvable through this query: they are served by indexers from the rotation events ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)).
+
+#### [MOD-VS-QRY-2] List Verifiable Services
+
+Anyone CAN execute this method.
+
+##### [MOD-VS-QRY-2-1] List Verifiable Services query parameters
+
+The following parameters are optional:
+
+- `vs_operator` (account) (*optional*): if specified, filter by agent account, served by the index the one-corporation rule requires ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)). Listing by corporation or by time is an indexer function.
+- `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
+
+##### [MOD-VS-QRY-2-2] List Verifiable Services query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
+
+##### [MOD-VS-QRY-2-3] List Verifiable Services execution
+
+Return a list of `VerifiableService` entries matching the filter criteria, ordered by `id`, or an empty list if nothing found.
+
+#### [MOD-VS-QRY-3] List Module Parameters
+
+Anyone CAN execute this method.
+
+##### [MOD-VS-QRY-3-3] List Module Parameters execution
+
+Return the module parameters: `vs_registration_deposit`, `ecosystem_creation_deposit` and `vid_rotation_max_transition`.
+
 
 ## Initial Data Requirements
 
