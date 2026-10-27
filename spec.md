@@ -4632,7 +4632,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 This simple `Accreditation`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Accreditation` entry if issuance mode (resp. verification mode) is set to `OPEN` (resp. `OPEN` or `CREDENTIAL`) for a given schema. Such an entry is **optional**: under these modes a service issues or verifies under its [VerifiableService](#verifiableservice) entry alone ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), and the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by its first mint, holds what the [[ref: ecosystem governance authority]] can slash. An issuer self-creates an entry to declare the `verification_fees` and `validation_fees` it charges; either party may self-create one to bound its participation with a window.
 
 :::note
-Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their `Accreditation` entry may be revoked by the [[ref: ecosystem governance authority]] and their deposit slashed; a slashed participation can no longer act under the schema.
+Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their `Accreditation` entry may be revoked by the [[ref: ecosystem governance authority]] and their deposit slashed; a slashed participation cannot act under the schema while it is [[ref: barred]].
 :::
 
 ##### [MOD-AC-MSG-14-1] Self Create Accreditation parameters
