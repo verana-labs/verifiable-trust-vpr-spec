@@ -4959,7 +4959,7 @@ v --> vg
 - `verification` (boolean) (*mandatory*): true for a Credential Verification, false for a Credential Issuance.
 - `issuer_accreditation_id` (uint64) (*conditional*): id of the issuer `Accreditation` entry. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
 - `issuer_vs_id` (uint64) (*conditional*): the issuer's service entry, when the issuer holds no active entry: its branch is the root.
-- `verifier_accreditation_id` (uint64) (*conditional*): id of the verifier `Accreditation` entry; in a Credential Verification, exactly one of `verifier_accreditation_id` and `verifier_vs_id` MUST be provided, and none in a Credential Issuance.
+- `verifier_accreditation_id` (uint64) (*conditional*): id of the verifier `Accreditation` entry; in a Credential Verification, at most one of `verifier_accreditation_id` and `verifier_vs_id` is provided, none meaning a verifier without a service entry (a Verifiable User Agent, [[ref: VT spec]]); none in a Credential Issuance.
 - `verifier_vs_id` (uint64) (*conditional*): the verifier's service entry, when the verifier holds no active entry: its branch is the root.
 
 ##### [MOD-AC-QRY-4-2] Find Beneficiaries checks
@@ -4991,7 +4991,7 @@ Additionally, if `verification` is true:
 
 - if `issuer_accreditation` is not null and not barred (see above), add `issuer_accreditation` to `found_accreditation_set` (an issuer without an entry has no fee terms and receives nothing).
 - if `verifier_accreditation` is not null: set `current_accreditation` = `verifier_accreditation`; while `current_accreditation.validator_accreditation_id` is not null: `current_accreditation` = load(`current_accreditation.validator_accreditation_id`), stopping if it no longer exists; unless `current_accreditation` is barred, add it to `found_accreditation_set`.
-- else (the verifier is referenced by its service entry): unless `root` is null or barred, add `root` to `found_accreditation_set`.
+- else (the verifier is referenced by its service entry, or has none): unless `root` is null or barred, add `root` to `found_accreditation_set`.
 
 In every case, unless `root` is null or barred, add `root` to `found_accreditation_set`: the ecosystem is a beneficiary of every exchange. A walk that stops at a deleted validator (a replaced root entry included) pays the ancestors it reached and the current root.
 
