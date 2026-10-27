@@ -213,9 +213,6 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: json schema, json schemas, Json Schema, Json Schemas]]
 ~ a Json Schema, as specified in [https://json-schema.org/specification](https://json-schema.org/specification).
 
-[[def: keeper]]:
-~ A storage map(key, value) in the ledger of an [[ref: VPR]].
-
 [[def: linked-vp]]:
 ~ A presentation of a [[ref: verifiable credential]] as specified in [LINKED-VP](https://identity.foundation/linked-vp/).
 
