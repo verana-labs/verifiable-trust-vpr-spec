@@ -3363,7 +3363,7 @@ Let `d` be `ParticipationTrustDeposit[(vs_id, validator_accreditation.schema_id,
 
 if size of `accreditations[]` > 0, an onboarding process is already running in this context, so [[ref: transaction]] MUST abort.
 
-Additionally, if any entry of `d.accreditation_ids` matches the same validator with `op_state` = VALIDATED and `effective_until` = NULL, [[ref: transaction]] MUST abort: that entry never expires, so a successor entry could never pass [MOD-AC-MSG-3-2-4](#mod-ac-msg-3-2-4-set-accreditation-op-to-validated-overlap-checks); `corporation` MUST first use [Set Accreditation Effective Until](#mod-ac-msg-8-set-accreditation-effective-until) to set an `effective_until`.
+Additionally, if any entry of `d.accreditation_ids` matches the same validator with `op_state` = VALIDATED and `effective_until` = NULL, [[ref: transaction]] MUST abort: that entry never expires, so a successor entry could never pass [MOD-AC-MSG-3-2-4](#mod-ac-msg-3-2-4-set-accreditation-op-to-validated-overlap-checks); the validator's corporation MUST first set an `effective_until` on that entry ([Set Accreditation Effective Until](#mod-ac-msg-8-set-accreditation-effective-until)), or `corporation` MUST revoke it ([Revoke Accreditation](#mod-ac-msg-9-revoke-accreditation)).
 
 > Note: the candidates are the current entries of the participation, listed on its deposit; no index of entries exists. `role` and `vs_id` are those of the key; all entries sharing a `validator_accreditation_id` share its `schema_id` by construction.
 
