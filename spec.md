@@ -1788,8 +1788,8 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 - `xr_id` (uint64) (*mandatory*) (key): id of the `ExchangeRate` this authorization applies to. Together with `operator`, forms the composite key.
 - `operator` (account) (*mandatory*) (key): account authorized to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) on `xr_id`. Together with `xr_id`, forms the composite key.
 - `expiration` (timestamp) (*mandatory*): authorization end-of-life. When `now() >= expiration`, the authorization is dead and [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected.
-- `min_interval` (duration) (*optional*): anti-spam guard. If set, two successive successful [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls under this authorization MUST be separated by at least `min_interval`.
-- `max_deviation_bps` (uint32) (*optional*): circuit breaker, expressed in basis points (1 bps = 0.01%). If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh [[ref: governance proposal]] (typically a new [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate) or an updated authorization).
+- `min_interval` (duration) (*optional*): anti-spam guard. If set, two successive successful [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls on the `ExchangeRate` entry, whoever pushed the previous value, MUST be separated by at least `min_interval` (measured on `xr.updated`).
+- `max_deviation_bps` (uint32) (*optional*): circuit breaker, expressed in basis points (1 bps = 0.01%). If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh [[ref: governance proposal]] (an updated authorization with a wider `max_deviation_bps`, [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization)).
 
 ### GlobalVariables
 
@@ -6256,7 +6256,7 @@ Create `ExchangeRate` entry `xr`:
 The **Update Exchange Rate** method allows an operator authorized by network governance (via an `ExchangeRateAuthorization`) to push a fresh `rate` for a given `ExchangeRate` entry.
 
 - Only the `operator` designated in an `ExchangeRateAuthorization` matching the target `ExchangeRate` CAN execute this method.
-- `rate` MUST be the time-weighted average of the operator's source price over `GlobalVariables.twap_window`.
+- `rate` MUST be the time-weighted average of the operator's source price over `GlobalVariables.twap_window` or, before the native denom is listed on a market, the reference price declared by the governance framework ([[XRG]](#xrg-genesis-exchange-rate)).
 
 ##### [MOD-XR-MSG-2-1] Update Exchange Rate method parameters
 
@@ -6325,7 +6325,6 @@ Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 Load `ExchangeRate` `xr`.
 
 - set `xr.state` to `state`.
-- set `xr.updated` to block time.
 
 #### [MOD-XR-MSG-4] Grant Exchange Rate Authorization
 
@@ -6338,7 +6337,7 @@ The **Grant Exchange Rate Authorization** method creates (or updates) an `Exchan
 - `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
 - `operator` (account) (*mandatory*): the account receiving the authorization.
 - `expiration` (timestamp) (*mandatory*): authorization end-of-life.
-- `min_interval` (duration) (*optional*): minimum time between two successive [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls under this authorization.
+- `min_interval` (duration) (*optional*): minimum time between two successive [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls on the entry (measured on `xr.updated`).
 - `max_deviation_bps` (uint32) (*optional*): maximum relative change per update, in basis points.
 
 ##### [MOD-XR-MSG-4-2] Grant Exchange Rate Authorization precondition checks
@@ -6933,7 +6932,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 
 ### [XRG] Genesis Exchange Rate
 
-The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]), its `rate` being the number of base units of native denom per minor unit of the main fiat currency, scaled by `rate_scale`, with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch oracle operator for that entry. Without this state no [[ref: trust unit]] can be minted and no slash debt repaid until governance creates the rate and an operator pushes it. Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the operator pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
+The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]), its `rate` being the number of base units of native denom per minor unit of the main fiat currency, scaled by `rate_scale`, with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch oracle operator for that entry. Without this state no [[ref: trust unit]] can be minted and no slash debt repaid until governance creates and enables the rate ([[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate), [[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)) and an operator pushes it. Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the operator pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
 
 ### [GCO] Genesis Council
 
