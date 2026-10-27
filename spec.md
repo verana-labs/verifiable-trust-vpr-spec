@@ -1096,13 +1096,13 @@ entity "Corporation" as corp {
   +created: timestamp
   +active_version: int
   +language: string
-  sponsor_corporation_id: uint64
 }
 
 entity "GovernanceFrameworkVersion" as gfv {
   *id: uint64
   +created: timestamp
   +version: integer
+  active_since: timestamp
 }
 
 entity "GovernanceFrameworkDocument" as gfd {
@@ -1240,7 +1240,7 @@ entity "ExchangeRate" as xr {
   *id: uint64
   +base_asset: string
   +quote_asset: string
-  +rate: string
+  +rate: uint64
   +rate_scale: uint32
   +updated: timestamp
   +expires: timestamp
@@ -1282,7 +1282,7 @@ entity "Accreditation" as csp {
   op_summary_digest: bytes
   +issuance_fee_discount: number
   +verification_fee_discount: number
-  +vua_reward_rate: decimal
+  vua_reward_rate: decimal
 }
 
 entity "ParticipationTrustDeposit" as pdep {
@@ -1374,7 +1374,7 @@ sp "1" --- "0..n" da: spend_limit
 sp "1" --- "0..n" da: remaining_spend
 sp "1" --- "0..n" da: fee_spend_limit
 
-xrauthz o-- xr
+xrauthz o-- xr: xr_id
 xrauthz o-- account: operator
 
 xr o-- pricingassettype: base_asset_type
