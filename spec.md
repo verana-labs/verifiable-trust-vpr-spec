@@ -115,7 +115,7 @@ package "Verifiable Public Registry" as vpr {
 
 ```
 
-Accreditation directory is intended to be **crawled by indexers**, which resolve the listed DIDs, identify associated [[ref: verifiable services]], and index them.
+The registry is intended to be **consumed by indexers**, which follow its registration, rotation and accreditation events, resolve each identifier, identify the associated [[ref: verifiable services]], and index them.
 
 Indexers may expose this data through APIs for querying the indexed services or use it to build a search engine for querying the database of indexed [[ref: verifiable services]].
 
@@ -598,7 +598,7 @@ A corporation that must not hold [[ref: native denom]] itself (a public entity, 
 
 *This section is non-normative.*
 
-The `Accreditation` registry is the foundation for building **searchable indexes of [[ref: verifiable services]] and the verifiable metadata they expose**. Crawlers iterate over `Accreditation` entries, resolve each service identifier (currently a [[ref: DID]], extensible in the future), verify that the service is a [[ref: verifiable service]], and extract its verifiable metadata — most notably the credentials presented through [[ref: linked-vp]] — together with the [[ref: ecosystem]] memberships, [[ref: credential schema]] permissions, and [[ref: trust deposit]] level associated with the controlling [[ref: corporation]].
+The registry of [[ref: verifiable service entries]] and `Accreditation` entries is the foundation for building **searchable indexes of [[ref: verifiable services]] and the verifiable metadata they expose**. Indexers follow the registration, rotation and accreditation events of the VPR, resolve each service identifier (currently a [[ref: DID]], extensible in the future), verify that the service is a [[ref: verifiable service]], and extract its verifiable metadata — most notably the credentials presented through [[ref: linked-vp]] — together with the [[ref: ecosystem]] memberships, [[ref: credential schema]] permissions, and [[ref: trust deposit]] level associated with the controlling [[ref: corporation]].
 
 Unlike a traditional web index, this index is **trust-typed**: every entry carries cryptographically verifiable claims about *what* the service is, *who* operates it, and *under which governance frameworks* it is accredited. This unlocks a class of discovery use cases that traditional search engines cannot serve.
 
@@ -643,7 +643,7 @@ The same index serves additional consumers:
 @startuml
 scale max 1000 width
 
-object "Accreditation registry" as didd
+object "VPR events\n(service entries, accreditations)" as didd
 object "Crawler" as crawler #3fbdb6
 object "Index" as index #3fbdb6
 
@@ -657,7 +657,7 @@ object "Governance /\nAudit / Analytics" as gov #f5b7b1
 
 object "User" as user
 
-didd <|-- crawler : iterate Accreditation registry
+didd <|-- crawler : follow registration and\naccreditation events
 crawler --|> dts1 : resolve DID, fetch linked-vps,\nindex verifiable metadata
 crawler --|> dts2 : resolve DID, fetch linked-vps,\nindex verifiable metadata
 crawler --|> index : create / update index
@@ -744,19 +744,17 @@ participant "Verifiable Public Registry" as VPR #3fbdb6
 ApplicantAccount --> VPR: start onboarding process with Validator
 VPR <-- VPR: create applicant Accreditation entry\n(op_state = PENDING)
 ApplicantAccount <-- VPR: applicant Accreditation entry created
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in\napplicant_accreditation.validator_accreditation\nby creating a DIDComm connection
+ApplicantBrowser --> ValidatorVS: connect to the validator VS, VerifiableService[validator_accreditation.vs_id].vid,\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
 ApplicantBrowser --> ValidatorVS: I want to proceed with applicant_accreditation.id=...
 ValidatorVS --> ValidatorVS: load applicant Accreditation with this id\nand verify validator_accreditation_id refers to me
-ApplicantBrowser <-- ValidatorVS: request proof of control\nof applicant_accreditation.corporation_id account (blind sign)
-ApplicantBrowser --> ValidatorVS: send blind sign proof of operator account
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are an operator\nof the applicant Accreditation, I trust you.
-ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
-ApplicantBrowser --> ValidatorVS: send DID
-ValidatorVS --> ValidatorVS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be registered on your `ISSUER` `Accreditation` entry (blind sign)
+ApplicantBrowser <-- ValidatorVS: request proof of control of the vs_operator account\nof VerifiableService[applicant_accreditation.vs_id] (blind sign)
+ApplicantBrowser --> ValidatorVS: send blind sign proof of the vs_operator account
+ApplicantBrowser <-- ValidatorVS: proof accepted, you operate the applicant's service entry, I trust you.
+ValidatorVS --> ValidatorVS: resolve VerifiableService[applicant_accreditation.vs_id].vid and get its keys
+ApplicantBrowser <-- ValidatorVS: request proof of control of that identifier (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proofs
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of this DID, I trust you.
+ApplicantBrowser <-- ValidatorVS: proof accepted, you control the identifier, I trust you.
 note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
 ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
@@ -764,7 +762,7 @@ note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
 ApplicantBrowser <-- ValidatorVS: You are a legitimate candidate. I'll now finalize your `ISSUER` `Accreditation` entry.
 ValidatorAccount --> VPR #3fbdb6: set applicant_accreditation.op_state to VALIDATED\n(finalize the `ISSUER` `Accreditation` entry)
 VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify `ISSUER` `Accreditation` entry validated for your corporation and DID.\nDID can now issue credentials of this schema.
+ApplicantBrowser <-- ValidatorVS: notify `ISSUER` `Accreditation` entry validated for your service entry.\nIt can now issue credentials of this schema.
 ```
 
 The **total amount** paid by the applicant consists of:
@@ -5031,13 +5029,11 @@ actor "Applicant" as Applicant
 actor "Validator" as CE
 participant "Verifiable Public Registry" as VPR #3fbdb6
 autonumber "<font color='#7677ed'><b>(run start method)"
-Applicant --> VPR #3fbdb6: Create Validation Entry (and pay required Trust Fees).
-autonumber stop
-VPR <-- VPR: Assign Validator (or use provided Validator).
+Applicant --> VPR #3fbdb6: Start Accreditation OP with the chosen validator and vs_id (trust fees escrowed).
 autonumber "<font color='#7677ed'><b>(end start method)"
-Applicant <-- VPR: Transaction completed and Validation entry created
+Applicant <-- VPR: `Accreditation` entry created (PENDING)
 autonumber stop
-autonumber "<font color='#7677ed'><b>(connects to Certification Entity Validation VS)"
+autonumber "<font color='#7677ed'><b>(connects to the validator VS)"
 Applicant --> CE: share id of Accreditation
 autonumber stop
 Applicant <-- CE: Request proof of account and DID ownership (blind sign)
@@ -5047,14 +5043,14 @@ Applicant <-- CE: Form fill-ins, request proof documents
 Applicant --> CE: fill-in forms, provides requested documents...
 note over Applicant, CE #EEEEEE: tasks completed
 autonumber "<font color='#7677ed'><b>(run validated method)"
-CE --> VPR #3fbdb6: Update Validation Entry. Applicant VALIDATED, fees transferred to Validator.
+CE --> VPR #3fbdb6: Set Accreditation OP to Validated: escrow settled, trust units minted.
 autonumber stop
-CE --> VPR #3fbdb6: Record Credential Exchange (digest = credential digestJCS, anchored before delivery).
+CE --> VPR #3fbdb6: Record Credential Exchange under the exchange_id agreed with the applicant\n(credential digest anchored before delivery, exchange checked by the applicant through its indexer).
 CE --> Applicant #3fbdb6: Issue Credential.
 autonumber stop
 ```
 
-##### Add a DID to the List of Granted Issuers of a Credential Schema
+##### Obtaining an ISSUER Accreditation Entry for a Credential Schema
 
 *This section is non-normative.*
 
@@ -5070,28 +5066,26 @@ participant "Verifiable Public Registry" as VPR #3fbdb6
 
 ApplicantAccount --> VPR: Start Accreditation OP
 VPR <-- VPR: create `Accreditation` entry.
-ApplicantAccount <-- VPR: `Accreditation` entry created,\nassigned accreditation.validator_accreditation_id from ISSUER_GRANTOR `Accreditation` entries.
+ApplicantAccount <-- VPR: `Accreditation` entry created (PENDING)\nunder the chosen ISSUER_GRANTOR validator entry.
 ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in VerifiableService[validator_accreditation.vs_id].vid\nby creating a DIDComm connection
 ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
 ApplicantBrowser --> ValidatorVS: I want to proceed with accreditation.id=...
 ValidatorVS --> ValidatorVS: load perm with id=...\nand verify the associated accreditation.validator_accreditation_id is referring to me
-ApplicantBrowser <-- ValidatorVS: request proof of control\nof accreditation.applicant account (blind sign)
-ApplicantBrowser --> ValidatorVS: send blind sign proof of account
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller\nof validation entry, I trust you.
-ApplicantBrowser <-- ValidatorVS: which DID do you want to register as an issuer?
-ApplicantBrowser --> ValidatorVS: send DID
-ValidatorVS --> ValidatorVS: resolve DID and get pub keys
-ApplicantBrowser <-- ValidatorVS: request proof of ownership\nof the DID to be added in an ISSUER `Accreditation` entry (blind sign)
+ApplicantBrowser <-- ValidatorVS: request proof of control of the vs_operator account\nof the applicant's service entry (blind sign)
+ApplicantBrowser --> ValidatorVS: send blind sign proof of the vs_operator account
+ApplicantBrowser <-- ValidatorVS: proof accepted, you operate the applicant's service entry, I trust you.
+ValidatorVS --> ValidatorVS: resolve the identifier of the applicant's service entry and get its keys
+ApplicantBrowser <-- ValidatorVS: request proof of control of that identifier (blind sign)
 ApplicantBrowser --> ValidatorVS: send blind sign proofs
-ApplicantBrowser <-- ValidatorVS: proof accepted, you are the controller of the DID, I trust you.
+ApplicantBrowser <-- ValidatorVS: proof accepted, you control the identifier, I trust you.
 note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
 ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
 note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorVS: Your are a legitimate issuer. I'll now create an ISSUER `Accreditation` entry for your account and DID.
-ValidatorAccount --> VPR #3fbdb6: Set Accreditation OP to Validated\nset validation.state to VALIDATED\n.
+ApplicantBrowser <-- ValidatorVS: You are a legitimate issuer. I'll now validate your ISSUER `Accreditation` entry.
+ValidatorAccount --> VPR #3fbdb6: Set Accreditation OP to Validated.
 VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify `Accreditation` entry added for your DID.\nDID can now issue credentials of this schema.
+ApplicantBrowser <-- ValidatorVS: notify `Accreditation` entry validated for your service entry.\nIt can now issue credentials of this schema.
 ```
 
 ### Trust Deposit Module
