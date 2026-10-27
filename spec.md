@@ -3659,17 +3659,17 @@ If `validator_accreditation` is not a [[ref: active accreditation]] (expired, re
 
 Two `Accreditation` entries of the same applicant (`corporation_id`, `vs_id`) MUST NOT be effective at the same time under the same `validator_accreditation_id` for the same `role`. That should not occur if [MOD-AC-MSG-1-2-4](#mod-ac-msg-1-2-4-start-accreditation-op-overlap-checks) is enforced, but better do the check anyway.
 
-Let `accreditations[]` be the [[ref: active accreditations]] and [[ref: future accreditations]] listed in deposit(`applicant_accreditation`).`accreditation_ids` where:
+Let `accreditations[]` be the validated entries (`effective_from` set, whether or not their participation or corporation is [[ref: barred]]: a bar suspends an entry, it does not end it) listed in deposit(`applicant_accreditation`).`accreditation_ids` where:
 
 - `p.id` is not equal to `applicant_accreditation.id`,
 - `p.validator_accreditation_id` = `applicant_accreditation.validator_accreditation_id`.
 
 for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]] MUST abort if:
 
-- `p` is a [[ref: active accreditation]] (the entry being validated becomes effective at `now` and would overlap it), OR
-- `p` is a [[ref: future accreditation]] and (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`).
+- `p.effective_from` is not later than `now` and (`p.effective_until` is NULL or later than `now`): `p` is effective now, and the entry being validated becomes effective at `now`; OR
+- `p.effective_from` is later than `now` and (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`).
 
-> Note: excluding `applicant_accreditation` itself is required: on a renewal, the entry being validated is itself a [[ref: active accreditation]] and would otherwise always match. The candidates are the current entries of the same participation (same `vs_id`, `schema_id` and `role`), read from its deposit.
+> Note: excluding `applicant_accreditation` itself is required: on a renewal, the entry being validated is itself effective and would otherwise always match. The candidates are the current entries of the same participation (same `vs_id`, `schema_id` and `role`), read from its deposit.
 
 ##### [MOD-AC-MSG-3-3] Set Accreditation OP to Validated execution
 
@@ -3850,7 +3850,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 Two root ECOSYSTEM `Accreditation` entries MUST NOT be effective at the same time for the same `schema_id`. If `corporation` wishes to create a new `Accreditation` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Accreditation Effective Until](#mod-ac-msg-8-set-accreditation-effective-until) to set or adjust the `effective_until` value.
 
-Let `accreditations[]` be the entries of `cs.root_accreditation_ids` that are [[ref: active accreditations]] or [[ref: future accreditations]].
+Let `accreditations[]` be the entries of `cs.root_accreditation_ids` (all validated at creation; a barred one is suspended, not ended, and counts).
 
 > Note: unlike overlap checks from other methods, here we do not need to check for `validator_accreditation_id`, as for ECOSYSTEM-role `Accreditation` entries it is NULL, nor for `vs_id` or `corporation_id`: a root entry represents the ecosystem itself for the schema, and only the corporation controlling the ecosystem creates one. The candidates are read from the schema, not from an index of entries.
 
@@ -3862,6 +3862,7 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 ###### [MOD-AC-MSG-7-2-5] Create Root Accreditation unrepaid slash checks
 
 - `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
+- `ParticipationTrustDeposit[(vs_id, schema_id, ECOSYSTEM)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else abort: a [[ref: barred]] participation creates no entry.
 
 ##### [MOD-AC-MSG-7-3] Create Root Accreditation execution
 
@@ -3926,7 +3927,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` from `id`. If no entry found, abort.
-- `applicant_accreditation.effective_from` MUST be set (a validated entry; its window may be current or future, and a participation under a network slash may still shorten its entries).
+- `applicant_accreditation.effective_from` MUST be set (a validated entry; its window may be current or future, and the entries of a barred participation or corporation may still be adjusted).
 
 > Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null.
 
@@ -4671,7 +4672,7 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] available.
 
 Two `Accreditation` entries of the same applicant (`corporation_id`, `vs_id`) MUST NOT be effective at the same time under the same `validator_accreditation_id` for the same `role`. If `corporation` wishes to create a new `Accreditation` entry but the existing one never expires (or expires too far from now), `corporation` MUST use first the [Set Accreditation Effective Until](#mod-ac-msg-8-set-accreditation-effective-until) to set or adjust the `effective_until` value.
 
-Let `accreditations[]` be the [[ref: active accreditations]] and [[ref: future accreditations]] listed in `ParticipationTrustDeposit[(vs_id, cs.id, role)].accreditation_ids`, if that deposit exists, where:
+Let `accreditations[]` be the validated entries (`effective_from` set, barred or not) listed in `ParticipationTrustDeposit[(vs_id, cs.id, role)].accreditation_ids`, if that deposit exists, where:
 
 - `p.validator_accreditation_id` = `validator_accreditation_id`.
 
