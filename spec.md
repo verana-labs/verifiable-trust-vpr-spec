@@ -226,7 +226,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A presentation of a [[ref: verifiable credential]] as specified in [LINKED-VP](https://identity.foundation/linked-vp/).
 
 [[def: main fiat currency]]:
-~ The ISO-4217 fiat currency, defined in the genesis state and immutable thereafter, used to denominate the [[ref: trust unit peg value]], distribution budgets, slash debts and the [[ref: network gas price]]. Fee pricing MAY use other fiat currencies (multi-fiat), but protocol-level accounting uses the main fiat currency.
+~ The ISO-4217 fiat currency, defined in the genesis state and immutable thereafter, used to denominate the [[ref: trust unit peg value]], distribution budgets, slash debts and the [[ref: network gas price]]. Fee pricing MAY use other fiat currencies (multi-fiat), but protocol-level accounting uses the main fiat currency. Every fiat amount the VPR stores, compares or converts, in this currency or in a pricing fiat currency, is expressed in the ISO-4217 **minor unit** of that currency (cents for USD or EUR); the examples of this specification read them in major units.
 
 [[def: native denom]]:
 ~ Native token of a [[ref: VPR]], example: uvna.
@@ -1772,7 +1772,7 @@ Represents an on-chain exchange rate between two assets.
 - `base_asset` (string) (*mandatory*): Identifier of the base asset (a [[ref: denom]] for COIN, an ISO-4217 code for FIAT).
 - `quote_asset_type` (PricingAssetType) (*mandatory*): Type of the quote asset.
 - `quote_asset` (string) (*mandatory*): Identifier of the quote asset.
-- `rate` (uint64) (*mandatory*): fixed-point integer representing the exchange rate from base asset to quote asset.
+- `rate` (uint64) (*mandatory*): fixed-point integer representing the exchange rate from base asset to quote asset, in base units of both (the ISO-4217 minor unit for FIAT, the base denomination for COIN): one base unit of `base_asset` is worth `rate` / 10^`rate_scale` base units of `quote_asset`.
 - `rate_scale` (uint32) (*mandatory*): Number of decimal digits used to scale rate.
 - `validity_duration` (duration) (*mandatory*): when updated, set `expires` to block time plus `validity_duration`.
 - `updated` (timestamp) (*mandatory*): Timestamp of the last exchange rate update.
@@ -1797,6 +1797,8 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 `GlobalVariables`:
 
+Amounts in [[ref: main fiat currency]] below are in its minor units ([[ref: main fiat currency]]).
+
 **Credential Schema:**
 
 - `credential_schema_schema_max_size` (number) (*mandatory*): maximum size of the `schema` string attribute for a `CredentialSchema`.
@@ -1811,7 +1813,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 - `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
 - `main_fiat_currency` (string) (*mandatory*): ISO-4217 code of the [[ref: main fiat currency]], defined in the genesis state and **immutable** thereafter (a change would re-denominate every fiat-fixed obligation and budget). Used to denominate the trust unit peg value, distribution budgets, slash debts and the network gas price. The genesis state MUST also contain the exchange rate between this currency and the [[ref: native denom]] ([[XRG]](#xrg-genesis-exchange-rate)).
-- `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in [[ref: main fiat currency]] at genesis (index start): 1.00, so that at genesis one trust unit equals one unit of [[ref: main fiat currency]] and a trust score reads directly as recent fiat-equivalent spend. Immutable: the index only moves through decay.
+- `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in minor units of the [[ref: main fiat currency]] at genesis (index start): 10^e, e being the ISO-4217 exponent of the main fiat currency (100 for a currency with two decimals), so that at genesis one trust unit equals one unit of [[ref: main fiat currency]] and a trust score reads directly as recent fiat-equivalent spend. Immutable: the index only moves through decay.
 - `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default value: 0.001 (0.1% per epoch; with the default 1-day `epoch_length`, an index half-life of ≈ 693 days ≈ 23 months). A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash debts are never recomputed.
 - `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day.
 - `vua_reward_rate` (number) (*mandatory*): default and maximum rate of the reward a payer adds to its trust fees for the Verifiable User Agent of its peer, paid to the vendor that issued the VUA's User Agent credential at the rate declared on its `ISSUER` entry (`Accreditation.vua_reward_rate`, [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)). Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
@@ -5109,7 +5111,7 @@ The module maintains a single global index, the [[ref: trust unit peg value]] `t
 - `tu_decay_rate` MUST satisfy 0 ≤ `tu_decay_rate` < 1, at genesis and on every update. The index half-life in epochs is ln 2 / −ln(1 − `tu_decay_rate`); the default 0.001 with a one-day epoch gives about 693 days.
 - A governance change of `tu_decay_rate` is **prospective only**: it is applied at step (4) of the next boundary and first affects the decline that follows. The index path already elapsed MUST NOT be recomputed: past mints, scores, and fiat-fixed slash debts are unaffected; only the future decline steepens or flattens.
 - The price of one trust unit in [[ref: native denom]] is derived from the oracle: `price_tu_in_native_denom(t) = tu_peg_value(t) / P(t)`, where `P(t)` is the current price of one base unit of [[ref: native denom]] in minor units of the [[ref: main fiat currency]], derived from the genesis exchange rate entry `xr` of [[XRG]](#xrg-genesis-exchange-rate) (base (FIAT, `main_fiat_currency`), quote (COIN, native denom): `xr.rate` base units of native denom per minor unit of fiat, scaled by `xr.rate_scale`): `P(t)` = 10^`xr.rate_scale` / `xr.rate`, computed at the ledger precision. It is not obtained through [Get Price](#mod-xr-qry-3-get-price), which converts whole amounts in the stored direction and rounds them down to base units (the price of one base unit of native denom would round to 0). If `xr` is disabled or expired, minting and repayment operations MUST abort.
-- **Ledger precision.** `tu_peg_value`, every `tu` and `fiat_cost` balance, and every amount derived from them (minted, slashed, restored) are decimals with exactly 18 fractional digits: the **ledger precision**. Every operation that produces such an amount rounds down to the ledger precision; an amount that rounds to 0 is 0. A fraction of a trust unit is an ordinary balance (at the genesis peg, a deposit-bound amount worth 0.15 units of [[ref: main fiat currency]] mints 0.15 trust units) and is slashed like any other. Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic: raw balances grow as the index declines (~×1.44/year at the default `tu_decay_rate`). A redenomination MAY be performed at a chain upgrade.
+- **Ledger precision.** `tu_peg_value`, every `tu` and `fiat_cost` balance, and every amount derived from them (minted, slashed, restored) are decimals with exactly 18 fractional digits: the **ledger precision**. Every operation that produces such an amount rounds down to the ledger precision; an amount that rounds to 0 is 0. A fraction of a trust unit is an ordinary balance (at the genesis peg, a deposit-bound amount worth 0.15 units of [[ref: main fiat currency]], 15 minor units of a two-decimal currency, mints 0.15 trust units) and is slashed like any other. Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic: raw balances grow as the index declines (~×1.44/year at the default `tu_decay_rate`). A redenomination MAY be performed at a chain upgrade.
 
 #### [MOD-TD-MSG-1] Mint Trust Units
 
@@ -6453,7 +6455,7 @@ If a valid `ExchangeRate` entry exists with:
 - `quote_asset_type = COIN`
 - `quote_asset = "uvna"`
 
-then the price of **`amount` USD expressed in uvna** MUST be computed using the following formula:
+then the price of **`amount` (in cents, the minor unit of USD) expressed in uvna** MUST be computed using the following formula:
 
 ```text
 price_uvna = floor(amount * rate / 10^rate_scale)
@@ -6489,7 +6491,7 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 
 ::: warning
 
-- Conversions use base units only.
+- Conversions use base units only: the ISO-4217 minor unit for FIAT, the base denomination for COIN.
 - Integer arithmetic MUST be used.
 - `quote_amount = floor(base_amount × rate / 10^rate_scale)`.
 - Expired rates MUST NOT be used.
@@ -6872,7 +6874,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 
 - `trust_deposit_rate`(number) (*mandatory*): 0.05.
 - `main_fiat_currency` (string) (*mandatory*): to be defined in the genesis state (ISO-4217 code); immutable.
-- `tu_peg_value_genesis` (decimal) (*mandatory*): 1.00.
+- `tu_peg_value_genesis` (decimal) (*mandatory*): 10^e, the number of minor units in one unit of the main fiat currency (100 for USD or EUR), so that one trust unit equals one unit of main fiat currency at genesis.
 - `tu_decay_rate` (decimal) (*mandatory*): 0.001 (0.1% per epoch; ≈ 23-month index half-life with a 1-day epoch).
 - `epoch_length` (duration) (*mandatory*): 1 day.
 - `vua_reward_rate` (number) (*mandatory*): 0.05.
