@@ -3276,7 +3276,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
 
 :::note
-A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. When the schema's `holder_onboarding_mode` is `ISSUER_ONBOARDING_PROCESS`, the onboarding process MUST have reached `VALIDATED` before the credential is issued: the Verifiable Trust specification requires an active `HOLDER` entry at issuance, and trust resolution requires it to stay active. When it is `PERMISSIONLESS`, no `HOLDER` entry exists and the issuer applies its own checks.
+A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. When the schema's `holder_onboarding_mode` is `ISSUER_ONBOARDING_PROCESS`, the onboarding process MUST have reached `VALIDATED` before the credential is issued: the Verifiable Trust specification requires an active `HOLDER` entry at issuance, and trust resolution requires it to stay in force (its window open, neither its participation nor its corporation excluded; a slash debt withdraws nothing). When it is `PERMISSIONLESS`, no `HOLDER` entry exists and the issuer applies its own checks.
 :::
 
 ###### [MOD-AC-MSG-1-2-2] Start Accreditation OP role and mode checks
