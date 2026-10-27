@@ -1629,6 +1629,7 @@ A `CredentialExchange` is the record of a credential exchange, an issuance or a 
 - `verifier_accreditation_id` (uint64) or `verifier_vs_id` (uint64): in a Credential Verification, the `VERIFIER` entry of the verifier, or the `VerifiableService` entry of a verifier acting without an entry (OPEN or CREDENTIAL verifier mode).
 - `vua_issuer_accreditation_id` (uint64): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the VUA's User Agent credential, set by the payer from the credential it verified at connection ([[ref: VT spec]]), when applicable.
 - `digest` (bytes): in a Credential Issuance, the credential digest, also persisted as a [Digest](#digest) entry when the schema's `credential_anchoring` is REVOCABLE_DIGEST; in a Credential Verification, the presentation digest, carried by the event only.
+- `credential_valid_until` (timestamp): in a Credential Issuance under REVOCABLE_DIGEST, the expiry given to the `Digest` entry, so that indexers can serve a mismatch with the credential's own expiry ([[ref: VT spec]]).
 - the block time of the transaction: the effective issuance time of the credential, or the effective presentation time of the presentation.
 
 ### TrustDeposit
@@ -4455,7 +4456,7 @@ If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 (the en
 
 > Now that all transfers have been done, the exchange is reported.
 
-The method MUST emit a `CredentialExchange` event ([CredentialExchange](#credentialexchange)) carrying `exchange_id`, `schema_id`, `issuer_accreditation_id` or `issuer_vs_id` as given, `verifier_accreditation_id` or `verifier_vs_id` as given (none in a Credential Issuance), `vua_issuer_accreditation_id`, `digest` when present, and `now`. Nothing is written for the exchange.
+The method MUST emit a `CredentialExchange` event ([CredentialExchange](#credentialexchange)) carrying `exchange_id`, `schema_id`, `issuer_accreditation_id` or `issuer_vs_id` as given, `verifier_accreditation_id` or `verifier_vs_id` as given (none in a Credential Issuance), `vua_issuer_accreditation_id`, `digest` when present, `credential_valid_until` when given, and `now`. Nothing is written for the exchange.
 
 In a Credential Issuance under a schema whose `credential_anchoring` is REVOCABLE_DIGEST, persist `digest` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the signing `corporation`, passing `vs_id` = `vs.id`, `schema_id` = `schema_id` and `expires` = `credential_valid_until`: when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry, necessarily anchored under the same entry and schema after the precondition checks, keeps its `created`, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op). Under DIGEST the credential digest is carried by the event only: the block time of the transaction is the effective issuance time, and nothing is written. In a Credential Verification the presentation digest is carried by the event only: the block time of the transaction is the effective presentation time, from which the reliance period of the presentation runs when `cs.presentation_validity_period` is greater than 0.
 
