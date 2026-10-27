@@ -3935,6 +3935,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` from `id`. If no entry found, abort.
 - `applicant_accreditation.effective_from` MUST be set (a validated entry; its window may be current or future, and the entries of a barred participation or corporation may still be adjusted).
+- `effective_until` MUST be greater than `applicant_accreditation.effective_from`, else abort.
 
 > Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null.
 
@@ -3946,11 +3947,11 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 2. Self-created `Accreditation` entries: `applicant_accreditation.validator_accreditation_id` is set and the schema's mode for `applicant_accreditation.role` allows self-creation (`issuer_onboarding_mode` OPEN for an ISSUER, `verifier_onboarding_mode` OPEN or CREDENTIAL for a VERIFIER)
 
-- let `validator_accreditation` be the active root entry of the schema (the entry of `cs.root_accreditation_ids` that is an [[ref: active accreditation]], where `cs` is `CredentialSchema[applicant_accreditation.schema_id]`; the entry's `validator_accreditation_id` may name a root since replaced). It MUST exist. `co.id` MUST equal `applicant_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
+- let `validator_accreditation` be the active root entry of the schema (the entry of `cs.root_accreditation_ids` that is an [[ref: active accreditation]], where `cs` is `CredentialSchema[applicant_accreditation.schema_id]`; the entry's `validator_accreditation_id` may name a root since replaced). It MUST exist. `co.id` MUST equal `applicant_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account). If `validator_accreditation.effective_until` is not null, `effective_until` MUST be lower or equal to it, else abort (the bound of [[MOD-AC-MSG-14-2-1]](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks), under the root in force).
 
 3. OP-managed `Accreditation` entries: every other entry with a `validator_accreditation_id`
 
-- `effective_until` MUST be lower or equal to `applicant_accreditation.op_exp` else MUST abort.
+- if `applicant_accreditation.op_exp` is not null, `effective_until` MUST be lower or equal to it, else MUST abort.
 - load `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`. `validator_accreditation` MUST be a [[ref: active accreditation]]. `co.id` MUST equal `validator_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
 
 ###### [MOD-AC-MSG-8-2-3] Set Accreditation Effective Until fee checks
