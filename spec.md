@@ -2106,8 +2106,8 @@ As a result, `accountABC` is authorized to:
 | Distribution                   | Update Module Parameters                | N/A (Tx)                      | Msg    | [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters)   | [[ref: governance proposal]] |
 | Delegation  | Grant Fee Allowance         |   N/A (Tx)  | Msg  | [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)   |module call|
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
-|             | Grant Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
-|             | Revoke Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
+|             | Grant Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)   |corporation (group proposal) OR corporation + operator|
+|             | Revoke Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-4]](#mod-de-msg-4-revoke-operator-authorization)   |corporation (group proposal) OR corporation + operator|
 |             | Set VS Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization)   |module call|
 |             | Revoke VS Operator Authorization        |     N/A (Tx) | Msg  | [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization)   |module call|
 |             | Grant Sponsorship | N/A (Tx) | Msg | [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship) |corporation (group proposal)|
@@ -5643,7 +5643,7 @@ In the same [[ref: transaction]], also revoke the corresponding `x/feegrant` all
 ##### [MOD-DE-MSG-3-1] Grant Operator Authorization method parameters
 
 - `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
+- `operator` (account) (*conditional*): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal: the `corporation` account then signs alone (an implementation whose message carries a single signer field realizes this path by setting `operator` to the `corporation` account itself, which the group policy signs).
 - `grantee` (account) (*mandatory*): the account that receives the authorization from `corporation`.
 - `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the type of messages `grantee` is authorized to execute on behalf of `corporation`.
 - `expiration` (timestamp) (*optional*): when the authorization (and its optional feegrant) expires.
@@ -5657,8 +5657,7 @@ In the same [[ref: transaction]], also revoke the corresponding `x/feegrant` all
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- if `operator` is present: `operator` (account): (Signer) signature must be verified, and [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type. Else (group proposal) [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
 - `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `RecordCredentialExchange` which is not allowed.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `authz_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
@@ -5712,7 +5711,7 @@ else:
 ##### [MOD-DE-MSG-4-1] Revoke Operator Authorization method parameters
 
 - `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
+- `operator` (account) (*conditional*): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal ([[MOD-DE-MSG-3-1]](#mod-de-msg-3-1-grant-operator-authorization-method-parameters)).
 - `grantee` (account) (*mandatory*): the account that will be revoked its authorization`.
 
 ##### [MOD-DE-MSG-4-2] Revoke Operator Authorization basic checks
@@ -5720,8 +5719,7 @@ else:
 MUST abort if one of these conditions fails:
 
 - `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- if `operator` is present: `operator` (account): (Signer) signature must be verified, and [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type. Else (group proposal) [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
 - An `OperatorAuthorization` entry MUST exist for this (`co.id`, `grantee`) (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
 
 ##### [MOD-DE-MSG-4-3] Revoke Operator Authorization fee checks
