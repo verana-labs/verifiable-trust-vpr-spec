@@ -4228,7 +4228,7 @@ Verifier reference (Credential Verification only): `verifier_accreditation` = `p
 
 VUA issuer:
 
-- if `vua_issuer_accreditation_id` is set: load `vua_issuer_accreditation` from `vua_issuer_accreditation_id`; if `vua_issuer_accreditation.role` is not ISSUER, abort; if `vua_issuer_accreditation` is not a [[ref: active accreditation]], abort. Define `vua_rate` = min(`vua_issuer_accreditation.vua_reward_rate`, `GlobalVariables.vua_reward_rate`) when the entry sets a rate, else `GlobalVariables.vua_reward_rate`.
+- if `vua_issuer_accreditation_id` is set: load `vua_issuer_accreditation` from `vua_issuer_accreditation_id`; if `vua_issuer_accreditation.role` is not ISSUER, abort; if `vua_issuer_accreditation.effective_from` is null or later than `now()`, abort (a validated entry whose window has opened; whether it is barred decides the reward, see execution). Define `vua_rate` = min(`vua_issuer_accreditation.vua_reward_rate`, `GlobalVariables.vua_reward_rate`) when the entry sets a rate, else `GlobalVariables.vua_reward_rate`.
 
 :::warning
 The VPR cannot check that the schema of `vua_issuer_accreditation` is a User Agent schema. The payer derives the entry from the User Agent credential it verified at connection and pays the reward itself, so it has no reason to name another entry; and the User Agent, which checks the exchange transaction before completing the exchange, refuses to proceed unless `vua_issuer_accreditation_id` is its vendor's entry ([[ref: VT spec]]).
@@ -4449,7 +4449,7 @@ After processing all beneficiaries, pay the accumulated reward to the VUA issuer
 
 **Verifiable User Agent Reward:**
 
-If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 (the entry is an [[ref: active accreditation]], checked in the preconditions, so it is not barred):
+If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 AND `vua_issuer_accreditation` is not [[ref: barred]] (neither its participation's deposit nor its corporation's trust deposit carries a slash debt or an exclusion; otherwise the reward is not paid, no deposit is funded, and the exchange goes through):
 
 - `vua_trust_deposit` = `accumulated_vua_reward` × `GlobalVariables.trust_deposit_rate`
 - `vua_fees_to_account` = `accumulated_vua_reward` - `vua_trust_deposit`
