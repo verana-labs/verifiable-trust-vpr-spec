@@ -3428,7 +3428,7 @@ Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by
 2. **Provide requested information**, such as filling out forms, submitting documents, or other forms of disclosure as required by the validation [[ref: VS]].
 3. The [[ref: applicant]] should prove control over the identifier of its `VerifiableService` entry to the validator's [[ref: VS]].
 
-Once the [[ref: validator]] determines that the process is complete, they may terminate the onboarding process and create the `Accreditation` entry accordingly. This `Accreditation`-entry configuration usually includes:
+Once the [[ref: validator]] determines that the process is complete, they conclude the onboarding process by validating the applicant's pending `Accreditation` entry ([[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)). The configuration they set on it usually includes:
 
 - `validation_fees`  
 - `issuance_fees`  
