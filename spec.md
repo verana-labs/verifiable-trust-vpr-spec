@@ -4302,7 +4302,7 @@ Calculate:
 
 if `vua_issuer_accreditation_id` is set:
 
-- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down, or 0 when `vua_issuer_accreditation` is [[ref: barred]] (no reward is paid then, [[MOD-AC-MSG-10-4]](#mod-ac-msg-10-4-record-credential-exchange-execution) step 2)
 
 Required balance check:
 
@@ -4323,7 +4323,7 @@ Calculate:
 
 if `vua_issuer_accreditation_id` is set:
 
-- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down, or 0 when `vua_issuer_accreditation` is [[ref: barred]] (no reward is paid then, [[MOD-AC-MSG-10-4]](#mod-ac-msg-10-4-record-credential-exchange-execution) step 2)
 
 Required balance check:
 
@@ -4345,7 +4345,7 @@ Calculate:
 
 if `vua_issuer_accreditation_id` is set:
 
-- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down, or 0 when `vua_issuer_accreditation` is [[ref: barred]] (no reward is paid then, [[MOD-AC-MSG-10-4]](#mod-ac-msg-10-4-record-credential-exchange-execution) step 2)
 
 Required balance check:
 
