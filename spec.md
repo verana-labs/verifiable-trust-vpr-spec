@@ -5685,7 +5685,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `feegrant_spend_limit` (DenomAmount[]) if specified, MUST be a non-empty list of valid DenomAmounts.
 - `feegrant_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `feegrant_spend_limit` is not set.
 - if `authz_spend_limit_period` or `feegrant_spend_limit_period` is specified, `expiration` MUST also be specified.
-- if `feegrant_spend_limit_period` is specified, `authz_spend_limit_period` MUST also be specified: a fee allowance never cycles under an authorization that expires, so that it cannot outlive it.
+- if `feegrant_spend_limit_period` is specified, `authz_spend_limit` and `authz_spend_limit_period` MUST also be specified (an `authz_spend_limit_period` without `authz_spend_limit` is ignored and the authorization does not cycle): a fee allowance never cycles under an authorization that expires, so that it cannot outlive it.
 
 - `grantee` MUST NOT be the `vs_operator` of any `VerifiableService` entry of the corporation (index of entries by operator account); else abort.
 - `grantee` MUST NOT be `co.policy_address` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), with or without a fee grant, else abort: a corporation needs no authorization to itself, and x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked.
