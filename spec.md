@@ -4239,7 +4239,7 @@ The VPR cannot check that the schema of `vua_issuer_accreditation` is a User Age
 - Load `CredentialSchema` entry `cs` from `schema_id`.
 - Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]].
 
-For trust fees, the funding account of `corporation` ([[FUND-CHECK-1]](#fund-check-1-debit)) MUST cover the totals computed below.
+For trust fees, the funding account of `corporation` ([[FUND-CHECK-1]](#fund-check-1-debit)) MUST cover the totals computed below. Each total is the sum, over the beneficiaries, of the per-beneficiary amounts of [[MOD-AC-MSG-10-4]](#mod-ac-msg-10-4-record-credential-exchange-execution) step 2, each rounded per share, so that the balance checked is the balance transferred; the formulas below state the totals in compact form.
 
 **Step 1: Calculate total beneficiary fees in credential schema pricing asset**
 
