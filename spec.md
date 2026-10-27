@@ -3259,7 +3259,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `validation_fees` (number) (*optional*): Requested validation_fees for this `Accreditation` entry (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Accreditation` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Accreditation` entry (can be modified by validator).
-- `vua_reward_rate` (decimal) (*optional*): if given, MUST be between 0 and `GlobalVariables.vua_reward_rate` inclusive, else abort.
+- `vua_reward_rate` (decimal) (*optional*): if given, `role` MUST be ISSUER and the value MUST be between 0 and `GlobalVariables.vua_reward_rate` inclusive, else abort.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
 
 :::note
