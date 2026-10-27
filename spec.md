@@ -4880,7 +4880,7 @@ Anyone can execute this method.
 
 To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved entries until the root of the `Accreditation` tree (the ecosystem entry), starting from the 2 branches `issuer_accreditation` and `verifier_accreditation`, either branch being reduced to the schema's root entry when the party is referenced by its service entry (no active `Accreditation` entry: OPEN or CREDENTIAL mode, or an accreditation that has ended). As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found entries. In a Credential Issuance (no verifier reference), `issuer_accreditation` is never added to the set. In a Credential Verification (a verifier reference was given), `issuer_accreditation`, if not null, is added to the set unless it is barred; `verifier_accreditation` itself is never added to the set.
 
-Example 1: `verifier_accreditation`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
+Example 1: `verification` is false: it's a credential issuance, schema configured to have Issuer Grantors.
 
 ```plantuml
 
@@ -4902,7 +4902,7 @@ i --> ig
 
 ```
 
-Example 2: `verifier_accreditation`: is not set: it's a credential offer. Schema configured to NOT have Issuer Grantors.
+Example 2: `verification` is false: it's a credential issuance. Schema configured to NOT have Issuer Grantors.
 
 ```plantuml
 
@@ -4921,7 +4921,7 @@ i --> tr
 
 ```
 
-Example 3: `verifier_accreditation` is set, it's a presentation request. Schema configured to have Verifier and Issuer Grantors.
+Example 3: `verification` is true: it's a credential verification. Schema configured to have Verifier and Issuer Grantors.
 
 ```plantuml
 
