@@ -1918,7 +1918,7 @@ Such messages **cannot be delegated** and MUST be executed exclusively through a
 
 Some module messages can be executed **only through a VPR council [[ref: governance proposal]]**.
 
-These messages do not support delegation and are not executable by accounts, whether directly or via group authorization.
+These messages are executable only by the [[ref: council account]], through a proposal of the council group ([GOV-2](#network-governance), [GOV-3](#network-governance)); they are not delegable, and no other account, operator or corporation, can execute them.
 
 #### Fee Grants
 
