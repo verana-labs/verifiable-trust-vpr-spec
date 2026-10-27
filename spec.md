@@ -2264,6 +2264,8 @@ If `vs_operator_authz_msg_types` is provided, set the entry's operator configura
 - `period`: `vs_operator_authz_period`
 - `fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
 
+The method MUST emit an event carrying `co.id`, `co.policy_address`, `vs.id` and `vs.vid`, so that indexers learn the corporation and its identifier without a query (the registration event of [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution)).
+
 #### [MOD-CO-MSG-2] Update Corporation
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
