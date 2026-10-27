@@ -3885,7 +3885,7 @@ A new entry `Accreditation` `perm` MUST be created:
 - `perm.vs_id`: `vs_id`.
 - `perm.created`: `now`
 - `perm.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
-- `perm.effective_until`: `effective_until`
+- `perm.effective_until`: `effective_until`, filed in the expiry queue when not null ([Accreditation](#accreditation))
 - `perm.validation_fees`: `validation_fees`
 - `perm.issuance_fees`: `issuance_fees`
 - `perm.verification_fees`: `verification_fees`
@@ -4713,7 +4713,7 @@ A new entry `Accreditation` `perm` MUST be created:
 - `perm.vs_id`: `vs_id`.
 - `perm.created`: `now`
 - `perm.effective_from`: `effective_from_r` (`effective_from` if provided, else `now`)
-- `perm.effective_until`: `effective_until`
+- `perm.effective_until`: `effective_until`, filed in the expiry queue when not null ([Accreditation](#accreditation))
 - `perm.validation_fees`: `validation_fees` if specified and `role` is ISSUER, else 0.
 - `perm.issuance_fees`: 0
 - `perm.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
@@ -5150,11 +5150,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - if a `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` does not exist, create entry `td`:
   - set `td.corporation_id` to `corporation_id`;
-  - set `td.tu` to 0; set `td.fiat_cost` to 0;
+  - set `td.tu`, `td.fiat_cost`, `td.unrepaid_slash`, `td.unrepaid_fiat` and `td.slash_count` to 0 and `td.excluded` to false;
 - calculate `minted_fiat` = `amount` × `P(now)`, at the ledger precision — the [[ref: main fiat currency]] cost of this mint, in minor units.
 - calculate `minted_tu` = `minted_fiat` / `tu_peg_value(now)`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)) (equivalently `amount` / `price_tu_in_native_denom(now)`).
 - set `td.tu` to `td.tu` + `minted_tu`; set `td.fiat_cost` to `td.fiat_cost` + `minted_fiat`.
-- let `d` be `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, created with `tu`, `fiat_cost`, `unrepaid_slash` and `slash_count` at 0, `excluded` false and an empty `accreditation_ids` if it does not exist; set `d.tu` to `d.tu` + `minted_tu`; set `d.fiat_cost` to `d.fiat_cost` + `minted_fiat`.
+- let `d` be `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, created with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0, `excluded` false and an empty `accreditation_ids` if it does not exist; set `d.tu` to `d.tu` + `minted_tu`; set `d.fiat_cost` to `d.fiat_cost` + `minted_fiat`.
 - transfer `amount` from `source_account` to the [[ref: distribution pool]] account.
 - return `minted_tu` and `minted_fiat` to the calling module.
 
@@ -6773,7 +6773,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration).
 - debit the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account.
-- let `former` be `vs.corporation_id`. For each [ParticipationTrustDeposit](#participationtrustdeposit) `d` whose key starts with `vs.id` (a key-prefix scan): set `TrustDeposit[former].tu` to `TrustDeposit[former].tu` - `d.tu` and `.fiat_cost` to `.fiat_cost` - `d.fiat_cost`; set `TrustDeposit[co.id].tu` (the entry created with 0 if absent) to `TrustDeposit[co.id].tu` + `d.tu` and `.fiat_cost` to `.fiat_cost` + `d.fiat_cost`. The deposits are keyed by the service entry and need no change: the trust units of the service and the record of its slashes follow it; a network debt or exclusion of `former` would stay with `former`, which is why the transfer is refused while one is open.
+- let `former` be `vs.corporation_id`. For each [ParticipationTrustDeposit](#participationtrustdeposit) `d` whose key starts with `vs.id` (a key-prefix scan) and whose `tu` is greater than 0 (`TrustDeposit[former]` then exists): set `TrustDeposit[former].tu` to `TrustDeposit[former].tu` - `d.tu` and `.fiat_cost` to `.fiat_cost` - `d.fiat_cost`; set `TrustDeposit[co.id].tu` (the entry created with 0 if absent) to `TrustDeposit[co.id].tu` + `d.tu` and `.fiat_cost` to `.fiat_cost` + `d.fiat_cost`. The deposits are keyed by the service entry and need no change: the trust units of the service and the record of its slashes follow it; a network debt or exclusion of `former` would stay with `former`, which is why the transfer is refused while one is open.
 - set `vs.corporation_id` = `co.id`, `vs.vs_operator` = `vs_operator`, `vs.transfer_to_corporation_id` = null.
 - if `vs_operator_authz_msg_types` is provided, set the configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
 
