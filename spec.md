@@ -55,7 +55,7 @@ Before exploring this spec, it is highly recommended to **first read** the [Veri
 
 An ecosystem is an approved list of recognized participants, such as ecosystem operators, credential [[ref: issuers]] and [[ref: verifiers]], that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
 
-An ecosystem typically expose APIs that are consumed by services that would like to [[ref: query]] its database, and take decisions based on the returned result:
+An ecosystem typically exposes APIs that are consumed by services that would like to [[ref: query]] its database, and take decisions based on the returned result:
 
 - can [[ref: participant]] #1 issue credential for `schema` ABC of `ecosystem` E1?
 - can [[ref: participant]] #2 request credential presentation of credential issued by `issuer` DEF from `schema` GHI of `ecosystem` E2 in `context` CONTEXT?
@@ -73,7 +73,7 @@ A Verifiable Public Registry (VPR) is a “registry of registries”, a public s
   - corporations are the foundational actors of the VPR: they control `Accreditation` entries and may themselves control [[ref: ecosystems]].
 
 - ecosystem management:  
-  - governance framework publication and versionning
+  - governance framework publication and versioning
   - [[ref: credential schemas]] publication
   - accreditation onboarding
   - custom business models and permission policies
@@ -133,7 +133,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ An `Accreditation` entry whose `effective_from` is not null and lower than or equal to the current timestamp, whose `effective_until` is null or greater than the current timestamp, and whose participation and corporation are not [[ref: barred]]. A revoked or expired entry no longer exists.
 
 [[def: applicant, applicants]]:
-~ A [[ref: account]] that starts a [[ref: onboarding process]].
+~ A [[ref: account]] that starts an [[ref: onboarding process]].
 
 [[def: barred, barred participation, barred corporation]]:
 ~ A participation is **barred** while its [ParticipationTrustDeposit](#participationtrustdeposit) carries a slash debt (`unrepaid_slash` > 0) or is `excluded`; a corporation is barred while its [TrustDeposit](#trustdeposit) carries a slash debt (`unrepaid_slash` > 0) or is `excluded`. A barred participation creates no entry, is not validated, renewed or minted to, and runs no exchange; a barred corporation can do none of these for any of its participations, cannot register or transfer a service entry, and none of its entries is active. A debt is lifted by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), an exclusion of a participation by the ecosystem controller ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), of a corporation by network governance ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)). A debt bars; only an exclusion also withdraws trust from what the party issued or validated before ([[ref: VT spec]]).
@@ -154,7 +154,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The group policy account of the [[ref: council]], `GlobalVariables.council_account`: the authority that executes the messages a [[ref: governance proposal]] carries.
 
 [[def: credential schema, credential schemas]]:
-~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated accreditations and business rules for issuing, verifying or holding a credential linked to this credential schema.
+~ A [[ref: VPR]] resource which represents a verifiable credential definition and the associated accreditations and business rules for issuing, verifying or holding a credential linked to this credential schema.
 
 [[def: credential schema accreditation, credential schema accreditations, CSA]]:
 ~ An `Accreditation` entry, linked to a [[ref: credential schema]], that represents, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], [[ref: verifier grantor]] or [[ref: holder]] of credentials of a [[ref: credential schema]], or its root (the ECOSYSTEM entry of the controlling ecosystem).
@@ -250,7 +250,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A service entry taking part in a [[ref: credential schema]] in a role: the triple (`vs_id`, `schema_id`, `role`) that keys its [ParticipationTrustDeposit](#participationtrustdeposit) and groups its `Accreditation` entries, successive or concurrent; a participation outlives its entries, and the ecosystem's sanctions apply to it.
 
 [[def: query]]:
-~ A read-only action that perform some reading in an [[ref: VPR]] and returns value.
+~ A read-only action that perform some reading in a [[ref: VPR]] and returns value.
 
 [[def: sponsor, sponsors, sponsorship, sponsored corporation]]:
 ~ A [[ref: corporation]] that has agreed, through a `Sponsorship` entry, to pay the on-chain fund movements and, optionally, the [[ref: network fees]] of another corporation (the sponsored corporation) from its own `policy_address`. A sponsorship moves money only: trust units, `Accreditation` entries, slash debts and authorizations stay with the sponsored corporation. See [Sponsored Corporations](#sponsored-corporations).
@@ -259,10 +259,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A thing about which claims are made. Example subjects include human beings, animals, things, and organization, a [[ref: DID]]...
 
 [[def: transaction, transactions]]:
-~ An action that modifies the ledger of an [[ref: VPR]] and which execution requires transaction fees.
+~ An action that modifies the ledger of a [[ref: VPR]] and which execution requires transaction fees.
 
 [[def: transaction fees]]:
-~ The [[ref: network fees]] required to execute a [[ref: transaction]] in an [[ref: VPR]]: its gas limit times the [[ref: network gas price]], in [[ref: native denom]] ([[NET-FEE-2]](#net-fee-2-required-fee)).
+~ The [[ref: network fees]] required to execute a [[ref: transaction]] in a [[ref: VPR]]: its gas limit times the [[ref: network gas price]], in [[ref: native denom]] ([[NET-FEE-2]](#net-fee-2-required-fee)).
 
 [[def: trust deposit, trust deposits]]:
 ~ The [[ref: trust unit]] balance of a [[ref: corporation]], used as its trust guarantee and the basis of its trust score. A trust deposit grows through paid usage: whenever a deposit-bound amount of [[ref: native denom]] is spent by or for a corporation (onboarding processes, credential issuance, presentation,...), trust units are minted to its deposit at the current [[ref: trust unit peg value]]. Trust units in a deposit are non-transferable and non-convertible; a trust deposit can be slashed but never withdrawn.
@@ -324,7 +324,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 *This section is non-normative.*
 
-In an [[ref: VPR]], any [[ref: corporation]] can create an `Ecosystem` entry to represent an [[ref: ecosystem]] it controls. Each `Ecosystem` entry MUST provide, at a minimum:
+In a [[ref: VPR]], any [[ref: corporation]] can create an `Ecosystem` entry to represent an [[ref: ecosystem]] it controls. Each `Ecosystem` entry MUST provide, at a minimum:
 
 - a registered [[ref: verifiable service entry]] for the ecosystem's identifier (a [[ref: DID]] it controls);
 - one or more [[ref: ecosystem governance framework]] document(s);
@@ -367,7 +367,7 @@ object "Ecosystem" as tra #3fbdb6 {
 - A **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` `Accreditation` entries are created. Modes include:
   - `ISSUER_ONBOARDING_PROCESS`: `HOLDER` Accreditations are created for holders through an [[ref: onboarding process]] validated by the [[ref: issuers]].
   - `PERMISSIONLESS`: a holder that wants to obtain credentials from an [[ref: issuer]] does not require an `Accreditation` entry in the VPR.
-- A **Accreditation tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each `Accreditation` entry in the tree can define business rules; see [Business Models](#business-models) below.
+- An **Accreditation tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each `Accreditation` entry in the tree can define business rules; see [Business Models](#business-models) below.
 
 ```plantuml
 
@@ -1524,7 +1524,7 @@ A `GovernanceFrameworkVersion` represents a single version of an [[ref: EGF]], o
 - `ecosystem_id` (uint64) (*conditional*): the id of the [[ref: ecosystem]] that controls this `GovernanceFrameworkVersion` entry; null for a [[ref: CGF]] or [[ref: NGF]] version.
 - `corporation_id` (uint64) (*conditional*): id of the [[ref: corporation]] that controls this `GovernanceFrameworkVersion` entry; null for an [[ref: EGF]] or [[ref: NGF]] version.
 - `created` (timestamp) (*mandatory*): timestamp this GovernanceFrameworkVersion has been created.
-- `version` (int) (*mandatory*): version of this GF. MUST Starts with 1.
+- `version` (int) (*mandatory*): version of this GF. MUST start at 1.
 - `active_since` (timestamp) (*optional*): the datetime from which this version is valid.
 
 > Constraint: at most one of `ecosystem_id` and `corporation_id` MAY be set; both null denotes the [[ref: NGF]].
@@ -3114,7 +3114,7 @@ Anyone CAN execute this method.
 
 Render found entry (if any). In case value is returned by a REST API, content type MUST be set to "application/schema+json".
 
-Schema MUST be rendered cononized, even if it was not created canonized using the [JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785) as defined in RFC 8785.
+Schema MUST be rendered canonicalized, even if it was not created canonicalized using the [JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785) as defined in RFC 8785.
 
 #### [MOD-CS-QRY-4] List Module Parameters
 
