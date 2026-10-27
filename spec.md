@@ -1904,7 +1904,7 @@ For the execution of delegable messages:
 A `corporation` is not required to delegate all message types to the same `operator`.  
 It is entirely up to the `corporation` to decide **which accounts may execute which messages**.
 
-- Authorizations MUST be granted to individual `account`s through corporation-level proposals (e.g., a Cosmos SDK group proposal when the `policy_address` is backed by a group policy).
+- Authorizations are granted to individual `account`s through corporation-level proposals (a Cosmos SDK group proposal, the `policy_address` being a group policy account) or by an operator that holds the `GrantOperatorAuthorization` authorization ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)).
 - Authorizations MAY include an optional `spend_limit` and an optional `expiration` date.
 
 #### Not Delegable Module Messages
