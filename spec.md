@@ -5401,6 +5401,8 @@ Return the list of the existing parameters and their values.
 }
 ```
 
+#### [MOD-TD-QRY-3] Void
+
 #### [MOD-TD-QRY-4] Get Network Gas Price
 
 Anyone CAN run this [[ref: query]]. Clients use it to compute the fee of a transaction ([[NET-FEE-2]](#net-fee-2-required-fee)).
