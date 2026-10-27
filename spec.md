@@ -31,11 +31,11 @@
 
 Decentralized trust ecosystems need shared infrastructure to answer a fundamental question: who is authorized to issue, verify, or govern credentials in a given context? Without a common registry layer, each ecosystem operates in isolation, trust decisions depend on ad hoc configurations, and there is no interoperable way for Verifiable Services and Verifiable User Agents to resolve the legitimacy of a credential or its issuer.
 
-The **Verifiable Public Registry (VPR)** is a decentralized "registry of registries" that provides this foundational infrastructure. It allows ecosystems to create and manage their own ecosystems, define credential schemas with fine-grained permission policies, and assign roles — issuers, verifiers, grantors — through a transparent, on-chain governance model.
+The **Verifiable Public Registry (VPR)** is a decentralized "registry of registries" that provides this foundational infrastructure. It allows corporations to create and manage ecosystems, define credential schemas with fine-grained permission policies, and assign roles — issuers, verifiers, grantors — through a transparent, on-chain governance model.
 
 The VPR exposes a standardized query API that Verifiable Services and Verifiable User Agents use during trust resolution to confirm, in real time, whether a given accreditation is authorized to perform a specific action under a specific credential schema. This is what makes the trust in [Verifiable Trust](https://verana-labs.github.io/verifiable-trust-spec/) actually verifiable.
 
-The VPR is DID-method-agnostic — it stores registrations, not validations — leaving trust decisions and cryptographic verification where they belong: with the relying parties. It supports flexible permission management modes (open, ecosystem-controlled, or grantor-delegated), enabling ecosystems to tailor governance to their specific requirements.
+The VPR is DID-method-agnostic — it stores registrations, not validations — leaving trust decisions and cryptographic verification where they belong: with the relying parties. It supports flexible permission management modes (open, credential-gated, ecosystem-controlled, or grantor-delegated), enabling ecosystems to tailor governance to their specific requirements.
 
 This specification defines the data model, API, and normative requirements for implementing and interacting with a Verifiable Public Registry.
 
@@ -69,8 +69,8 @@ A Verifiable Public Registry (VPR) is a “registry of registries”, a public s
 - [[ref: corporation]] lifecycle and directory:
   - corporation onboarding, with associated [[ref: DID]] and [[ref: corporation governance framework]] publication
   - multi-member governance through an on-chain `policy_address` (a Cosmos SDK group policy account)
-  - a public corporation directory queryable by indexers, [[ref: verifiable services]], and [[ref: verifiable user agents]]
-  - corporations are the foundational actors of the VPR: they control [[ref: participants]] and may themselves control [[ref: ecosystems]].
+  - a public corporation registry, served by indexers to [[ref: verifiable services]] and [[ref: verifiable user agents]]
+  - corporations are the foundational actors of the VPR: they control `Accreditation` entries and may themselves control [[ref: ecosystems]].
 
 - ecosystem management:  
   - governance framework publication and versionning
@@ -326,7 +326,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 In an [[ref: VPR]], any [[ref: corporation]] can create an `Ecosystem` entry to represent an [[ref: ecosystem]] it controls. Each `Ecosystem` entry MUST provide, at a minimum:
 
-- an ecosystem controlled resolvable [[ref: DID]];
+- a registered [[ref: verifiable service entry]] for the ecosystem's identifier (a [[ref: DID]] it controls);
 - one or more [[ref: ecosystem governance framework]] document(s);
 - zero or more [[ref: credential schemas]].
 
@@ -338,7 +338,7 @@ The Verifiable Public Registry (VPR) is agnostic to the specific DID methods use
 scale max 800 width
  
 object "Ecosystem" as tra #3fbdb6 {
-    ecosystem did
+    ecosystem identifier (service entry)
     ecosystem credential schemas
     ecosystem governance framework docs
 }
@@ -426,7 +426,7 @@ Accreditation roles are defined in the table below:
 | **Verifier Grantor**  | Ecosystem operator that creates `VERIFIER` `Accreditation` entries for candidate verifiers.               |
 | **Issuer**            | Can issue credentials of this schema.                            |
 | **Verifier**          | Can request presentation of credentials of this schema.          |
-| **Holder**            | Holds a credential. `HOLDER` `Accreditation` entries carry credential status (active, revoked, ...). |
+| **Holder**            | Holds credentials of this schema. A `HOLDER` `Accreditation` entry is the relationship the issuer validated, which bounds the trust in the credentials issued to that holder. |
 
 Example of a Json Schema credential schema:
 
@@ -479,9 +479,9 @@ Example of a Json Schema credential schema:
 
 To participate in an [[ref: ecosystem]] and assume a role associated with a specific [[ref: credential schema]]:
 
-- if the schema is `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and a registered verifiable service entry for its identifier; a `Accreditation` entry is optional under `OPEN` (an issuer self-creates one to declare fees, either party to bound its participation with a window) (see `presentation_mode` in [CredentialSchema](#credentialschema)).
+- if the schema is `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and a registered verifiable service entry for its identifier; a `Accreditation` entry is optional under `OPEN` (an issuer self-creates one to declare fees, either party to bound its participation with a window) (see [CredentialSchema](#credentialschema)).
 
-- if the schema is not `OPEN` for issuance and/or verification: a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and complete an [[ref: onboarding process]] to obtain its `Accreditation` entry.
+- if the schema requires an onboarding process for the role (an issuance mode other than `OPEN`, a verification mode other than `OPEN` and `CREDENTIAL`): a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and complete an [[ref: onboarding process]] to obtain its `Accreditation` entry; under `CREDENTIAL`, a verifier needs no entry but its service MUST hold a credential of one of the listed schemas.
 
 The [[ref: onboarding process]] involves two parties:
 
@@ -536,7 +536,7 @@ vg --> verifier : creates schema accreditation
 
 *This section is non-normative.*
 
-A [[ref: corporation]] is the VPR-level entity that represents an authority acting in the registry. A `Corporation` carries VPR-specific attributes — the [[ref: verifiable service entry]] of its identifier, a [[ref: corporation governance framework]] (CGF), and lifecycle metadata — and is anchored on-chain by a `policy_address` account that signs on its behalf. The `Corporation` entry has its own `id`, and every other VPR entity points to it through a `corporation_id` foreign key.
+A [[ref: corporation]] is the VPR-level entity that represents an authority acting in the registry. A `Corporation` carries VPR-specific attributes — the [[ref: verifiable service entry]] of its identifier, a [[ref: corporation governance framework]] (CGF), and lifecycle metadata — and is anchored on-chain by a `policy_address` account that signs on its behalf. The `Corporation` entry has its own `id`; the entities it owns point to it through `corporation_id`, or through the [[ref: verifiable service entries]] it owns.
 
 A corporation interacts with the VPR in two complementary ways:
 
@@ -688,7 +688,7 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 - The more a [[ref: corporation]] uses the [[ref: VPR]], the more its [[ref: trust deposit]] grows.
 - **Trust is a subscription**: because the [[ref: trust unit peg value]] declines each [[ref: epoch]] by `tu_decay_rate`, a static deposit loses fiat value over time. The trust score therefore reflects **recent** paid usage: earned, never bought, and gone if not maintained.
 - **network-level penalties**: If a participant violates the [[ref: NGF]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority. The debt is recorded in [[ref: main fiat currency]] at the **mint-time cost basis** of the slashed trust units — what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**, and misbehavior costs the same whether the deposit was funded yesterday or a year ago.
-- **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), the **portion of its trust deposit minted in the context of that ecosystem** can be slashed by the corresponding [[ref: ecosystem governance authority]].
+- **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), the **portion of its trust deposit minted in the context of that ecosystem** can be slashed by the corresponding [[ref: ecosystem governance authority]], or by a validator above it in the `Accreditation` tree ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)).
 - While a slash debt is unrepaid, the slashed participation (ecosystem slash) or every participation of the corporation (network slash) is **barred**: its entries are not active and no new trust units can be minted to it. The debt is recorded on the slashed [ParticipationTrustDeposit](#participationtrustdeposit) or [TrustDeposit](#trustdeposit) entry, at the mint-time cost basis. Repayment is made in [[ref: native denom]] worth that cost basis at current rates, and **restores the slashed trust units** at their decayed current value: the gap between the basis paid and the value restored is the penalty premium, and restoring trust costs **more tokens when the token is cheap**.
 - A slash MAY also **exclude**, by decision of the slashing governance: the participation, or the whole corporation, stays barred after repayment until the exclusion is lifted, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]). A debt alone withdraws nothing from the past.
 - Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size. Nor does staking: a VPR is governed by its [[ref: council]] ([Network Governance](#network-governance)).
@@ -906,7 +906,7 @@ Trust fees are **consistently distributed** across participants:
 - The remaining portion is **transferred directly to the payee's account** — ordinary flow-through revenue, neither burned nor restricted.
 
 :::note
-Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment, or has sent the required `CredentialExchange` transaction whenever [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) requires one (a `presentation_validity_period` greater than 0, or a presentation digest to anchor).  
+Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment, or has sent the required `CredentialExchange` transaction whenever [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) requires one (fees greater than 0, a `presentation_validity_period` greater than 0, a presentation digest to anchor, or the issuance of a credential of an anchored schema).  
 If not, they **must reject** the issuance or verification request.
 
 :::
@@ -1068,7 +1068,7 @@ The [[ref: council]], a group of member corporations ([Network Governance](#netw
 
 While the **network governance framework** defines the global rules for operating the Verifiable Public Registry (e.g., trust deposits, fee distribution, slashing conditions), each **ecosystem** must define its own **EGF** to govern roles, permissions, credential policies, and compliance within its specific domain.
 
-This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, without being constrained by the global rules of the VPR.
+This separation ensures that ecosystems remain autonomous and can tailor governance to their unique needs, within the network-level rules of the [[ref: NGF]], which bind every participant.
 :::
 
 ## Data model
@@ -1485,7 +1485,7 @@ A [[ref: verifiable service entry]] (`VerifiableService`) registers a [[ref: VID
 
 ### Corporation
 
-A `Corporation` is the VPR-level entity representing an authority that acts in the registry. It references the [VerifiableService](#verifiableservice) entry of its identifier, carries a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A Corporation may control [[ref: participants]] in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
+A `Corporation` is the VPR-level entity representing an authority that acts in the registry. It references the [VerifiableService](#verifiableservice) entry of its identifier, carries a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A Corporation may hold `Accreditation` entries in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
 
 `Corporation`:
 
@@ -3816,7 +3816,7 @@ An [[ref: account]] that would like to create a `Accreditation` entry MUST call 
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Accreditation` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Accreditation` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-AC-MSG-7-2-1](#mod-ac-msg-7-2-1-create-root-accreditation-basic-checks)).
-- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running an onboarding process that uses this entry as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean an onboarding process must take place. For enabling onboarding processes, at least one of the two issuer, verifier mode must be different than OPEN.
+- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running an onboarding process that uses this entry as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that validation fees apply only to the roles whose mode requires an onboarding process (an issuance mode other than OPEN, a verification mode other than OPEN and CREDENTIAL, the holder mode ISSUER_ONBOARDING_PROCESS); for the other roles they have no effect.
 - `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the `corporation` of this entry when a credential is issued, in the denom specified in the credential schema. Default to 0.
 - `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the `corporation` of this entry when a credential is verified, in the denom specified in the credential schema. Default to 0.
 
@@ -5507,7 +5507,7 @@ Treasuries are expected to publish sale policies (e.g. TWAP-based) that spread t
 
 #### [DIST-2] Bonding
 
-Bonding is available only while `GlobalVariables.bonding_enabled` is true. It uses staking-style reward accounting (O(1) distribution accumulator, yield follows time-in-bond, exit behind `unbonding_period`), but **bonding MUST NOT alter consensus power or governance power**: it is therefore not a plain delegation to the validators through the standard staking module, whose delegations carry voting power, but a dedicated bonding mechanism reusing the accumulator. The network remains council-run Proof-of-Authority, one member one vote; bonded tokens are reward accounting only. Validators are ordinary holders too: they MAY bond their own tokens and earn the capped yield on top of the node budget, under exactly the same rules and cap as everyone else.
+Bonding is available only while `GlobalVariables.bonding_enabled` is true. It uses staking-style reward accounting (O(1) distribution accumulator, yield follows time-in-bond, exit behind `unbonding_period`), but **bonding MUST NOT alter consensus power or governance power**: it is therefore not a plain delegation to the validators through the standard staking module, whose delegations carry voting power, but a dedicated bonding mechanism reusing the accumulator. The network remains council-run Proof-of-Authority, one seat per member corporation, weighted as the [[ref: NGF]] decides; bonded tokens are reward accounting only. Validators are ordinary holders too: they MAY bond their own tokens and earn the capped yield on top of the node budget, under exactly the same rules and cap as everyone else.
 
 :::todo
 **Open design question**: the bonding mechanism (a dedicated bonding module reusing the distribution accumulator, or staking hooks that leave validator power unchanged) is intentionally left open at this stage and will be specified before `bonding_enabled` can be set to true.
