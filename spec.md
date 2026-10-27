@@ -4201,7 +4201,7 @@ Issuer reference:
 
 Verifier reference (Credential Verification only): `verifier_accreditation` = `perm`.
 
-- if `cs.presentation_validity_period` > 0 and `digest` is absent, abort: the ecosystem requires a dated receipt of every verification of this schema.
+- in a Credential Verification: if `cs.presentation_validity_period` > 0 and `digest` is absent, abort: the ecosystem requires a dated receipt of every verification of this schema.
 
 - in a Credential Issuance: if `cs.credential_anchoring` is not NONE and `digest` is absent, abort (the credential digest is anchored through this exchange); if it is NONE and `digest` is present, abort (no credential digest is anchored for this schema).
 - in a Credential Issuance: if `cs.credential_anchoring` is REVOCABLE_DIGEST, `credential_valid_until` MUST be present and later than `now()`, else abort; otherwise `credential_valid_until` MUST be absent.
