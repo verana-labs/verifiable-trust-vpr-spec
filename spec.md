@@ -374,7 +374,7 @@ object "Ecosystem" as tra #3fbdb6 {
 @startuml
 scale max 800 width
  
-package "Example Credential Scheman Accreditation Tree" as cs {
+package "Example Credential Schema Accreditation Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
         role: ECOSYSTEM (Root)
@@ -505,23 +505,23 @@ package "Pay per validation Fee Structure" as cs {
         did:example:ecosystemA
         Grantor applicant validation cost: 100 VNA
     }
-    object "Issuer Grantor B - Credential Scheman Accreditation" as ig {
+    object "Issuer Grantor B - Credential Schema Accreditation" as ig {
         did:example:igB
         Issuer applicant validation cost: 100 VNA
     }
-    object "Issuer C - Credential Scheman Accreditation" as issuer #7677ed  {
+    object "Issuer C - Credential Schema Accreditation" as issuer #7677ed  {
         did:example:iC
         Holder applicant validation cost: 1 VNA
     }
-    object "Verifier Grantor D -  Credential Scheman Accreditation" as vg {
+    object "Verifier Grantor D -  Credential Schema Accreditation" as vg {
         did:example:vgD
         Verifier applicant validation cost: 20 VNA
     }
-    object "Verifier E - Credential Scheman Accreditation" as verifier #00b0f0 {
+    object "Verifier E - Credential Schema Accreditation" as verifier #00b0f0 {
         did:example:vE
     }
 
-    object "Holder Z - Credential Scheman Accreditation" as holder #FFB073 {
+    object "Holder Z - Credential Schema Accreditation" as holder #FFB073 {
         role: HOLDER
     }
 }
@@ -594,7 +594,7 @@ pA ..> eA : in
 
 ```
 
-The same `Corporation` entry is the single entry point for the corporation's governance (the CGF), authorization delegation (vian `OperatorAuthorization` to one or more `operator` accounts), and trust-deposit accounting (`TrustDeposit`). See the [Corporation Module](#corporation-module) for the methods that manage `Corporation` entries.
+The same `Corporation` entry is the single entry point for the corporation's governance (the CGF), authorization delegation (via `OperatorAuthorization` to one or more `operator` accounts), and trust-deposit accounting (`TrustDeposit`). See the [Corporation Module](#corporation-module) for the methods that manage `Corporation` entries.
 
 A corporation that must not hold [[ref: native denom]] itself (a public entity, for example) MAY be **sponsored** by another corporation: the sponsor's `policy_address` then funds the sponsored corporation's escrows, exchange payments, slash repayments and, optionally, its network fees, while every `Accreditation` entry, trust unit, slash debt and authorization remains the sponsored corporation's own. See [Sponsored Corporations](#sponsored-corporations).
 
@@ -868,7 +868,7 @@ package "Ecosystem #A - Credential Schema #1" as cs {
         did:example:iC
         verification cost: 5 VNA
     }
-    object "Verifier Grantor #D - Credential #1 Scheman Accreditation" as vg {
+    object "Verifier Grantor #D - Credential #1 Schema Accreditation" as vg {
         did:example:vgD
         verification cost: 0.5 VNA
     }
@@ -3156,7 +3156,7 @@ Accreditations are linked to a Credential Schema and representable as a tree.
 @startuml
 scale max 800 width
  
-package "Example Credential Scheman Accreditation Tree" as cs {
+package "Example Credential Schema Accreditation Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
         role: ECOSYSTEM (Root)
@@ -4063,7 +4063,7 @@ In the following `Accreditation` tree, the "Verifier E" `Accreditation` entry ca
 @startuml
 scale max 800 width
  
-package "Example Credential Scheman Accreditation Tree" as cs {
+package "Example Credential Schema Accreditation Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
         role: ECOSYSTEM (Root)
