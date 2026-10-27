@@ -3318,19 +3318,19 @@ if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native d
 
 - the [[ref: funding account]] of `corporation` MUST be able to cover the following trust fees ([[FUND-CHECK-1]](#fund-check-1-debit)).
   - the required `validation_fees_in_denom` = `validator_accreditation.validation_fees` in [[ref: native denom]].
-  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`, rounded down, in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
 
 - the [[ref: funding account]] of `corporation` MUST be able to cover the following trust fees ([[FUND-CHECK-1]](#fund-check-1-debit)).
-  - the required `validation_fees_in_denom` = `validator_accreditation.validation_fees` × (1 - `GlobalVariables.trust_deposit_rate`) in specified (cs.pricing_asset_type, cs.pricing_asset) — the wallet portion of the fee. The deposit-bound portion of the fee is **not** paid in the pricing asset:
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_accreditation.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge, both minted as trust units at validation).
+  - the required `validation_fees_in_denom` = `validator_accreditation.validation_fees` − (`validator_accreditation.validation_fees` × `GlobalVariables.trust_deposit_rate`, rounded down) in specified (cs.pricing_asset_type, cs.pricing_asset) — the portion paid to the validator's account. The deposit-bound portion of the fee is **not** paid in the pricing asset:
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_accreditation.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2, rounded down, in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge, both minted as trust units at validation).
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(FIAT, <fiat_currency>)`:
 
 - the [[ref: funding account]] of `corporation` MUST be able to cover the following trust fees ([[FUND-CHECK-1]](#fund-check-1-debit)).
   - the required `validation_fees_in_denom` = 0 in [[ref: native denom]] (fiat-priced fees are settled off-chain).
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_accreditation.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge). The off-chain settlement SHOULD be for `validation_fees` × (1 - `GlobalVariables.trust_deposit_rate`) so that the net economics match the on-chain pricing cases.
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_accreditation.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2, rounded down, in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge). The off-chain settlement SHOULD be for `validation_fees` × (1 - `GlobalVariables.trust_deposit_rate`) so that the net economics match the on-chain pricing cases.
 
 :::note
 Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation (see [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)); on cancellation the escrow is refunded as-is (see [[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)).
@@ -3517,19 +3517,19 @@ if `(cs.pricing_asset_type, cs.pricing_asset)` is set to `(COIN, [[ref: native d
 
 - the [[ref: funding account]] of `corporation` MUST be able to cover the following trust fees ([[FUND-CHECK-1]](#fund-check-1-debit)).
   - the required `validation_fees_in_denom` = `validator_accreditation.validation_fees` in [[ref: native denom]].
-  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate` in [[ref: native denom]].
+  - the required `validation_trust_deposit_in_native_denom`: `validation_fees_in_denom` * `GlobalVariables.trust_deposit_rate`, rounded down, in [[ref: native denom]].
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to an arbitrary coin `(COIN, [[ref: denom]])`:
 
 - the [[ref: funding account]] of `corporation` MUST be able to cover the following trust fees ([[FUND-CHECK-1]](#fund-check-1-debit)).
-  - the required `validation_fees_in_denom` = `validator_accreditation.validation_fees` × (1 - `GlobalVariables.trust_deposit_rate`) in specified (cs.pricing_asset_type, cs.pricing_asset) — the wallet portion of the fee. The deposit-bound portion of the fee is **not** paid in the pricing asset:
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_accreditation.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge, both minted as trust units at validation).
+  - the required `validation_fees_in_denom` = `validator_accreditation.validation_fees` − (`validator_accreditation.validation_fees` × `GlobalVariables.trust_deposit_rate`, rounded down) in specified (cs.pricing_asset_type, cs.pricing_asset) — the portion paid to the validator's account. The deposit-bound portion of the fee is **not** paid in the pricing asset:
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_accreditation.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2, rounded down, in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge, both minted as trust units at validation).
 
 else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(FIAT, <fiat_currency>)`:
 
 - the [[ref: funding account]] of `corporation` MUST be able to cover the following trust fees ([[FUND-CHECK-1]](#fund-check-1-debit)).
   - the required `validation_fees_in_denom` = 0 in [[ref: native denom]] (fiat-priced fees are settled off-chain).
-  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_accreditation.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2 in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge). The off-chain settlement SHOULD be for `validation_fees` × (1 - `GlobalVariables.trust_deposit_rate`) so that the net economics match the on-chain pricing cases.
+  - the required `validation_trust_deposit_in_native_denom`: getPrice(`cs.pricing_asset_type`, `cs.pricing_asset`, `COIN`, `[[ref: native denom]]`, `validator_accreditation.validation_fees`) * `GlobalVariables.trust_deposit_rate` * 2, rounded down, in [[ref: native denom]] (the validator's deposit-bound portion **plus** the applicant's surcharge). The off-chain settlement SHOULD be for `validation_fees` × (1 - `GlobalVariables.trust_deposit_rate`) so that the net economics match the on-chain pricing cases.
 
 :::note
 Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the renewal onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation; on cancellation the escrow is refunded as-is.
@@ -3708,10 +3708,10 @@ Change value of provided `effective_until` if needed, and abort if needed:
 Fees and Trust Deposits — settle the escrow (mint-at-validation):
 
 - if `(cs.pricing_asset_type, cs.pricing_asset)` is `(COIN, [[ref: native denom]])`:
-  - calculate `validator_deposit_bound` = `applicant_accreditation.op_current_fees` × `GlobalVariables.trust_deposit_rate`, and `applicant_deposit_bound` = `applicant_accreditation.op_current_deposit`;
+  - calculate `validator_deposit_bound` = `applicant_accreditation.op_current_fees` × `GlobalVariables.trust_deposit_rate`, rounded down, and `applicant_deposit_bound` = `applicant_accreditation.op_current_deposit`;
   - transfer `applicant_accreditation.op_current_fees` − `validator_deposit_bound` from the escrow [[ref: account]] to the [[ref: funding account]] of the validator corporation `Corporation[validator_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)).
 - else (pricing in an arbitrary COIN or in FIAT):
-  - calculate `validator_deposit_bound` = `applicant_accreditation.op_current_deposit` / 2 and `applicant_deposit_bound` = `applicant_accreditation.op_current_deposit` / 2 (the applicant escrowed both, see fee checks);
+  - calculate `validator_deposit_bound` = `applicant_accreditation.op_current_deposit` / 2, rounded down, and `applicant_deposit_bound` = `applicant_accreditation.op_current_deposit` − `validator_deposit_bound` (the applicant escrowed both, see fee checks);
   - transfer the full amount `applicant_accreditation.op_current_fees` in the pricing [[ref: denom]] from the escrow [[ref: account]] to the [[ref: funding account]] of the validator corporation `Corporation[validator_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) (for COIN pricing this already equals the fee minus its deposit-bound portion, see fee checks; 0 if FIAT).
 - if `validator_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_accreditation.corporation_id`, `vs_id` = `validator_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `validator_accreditation.role`, `source_account` = escrow account, `amount` = `validator_deposit_bound`).
 - if `applicant_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_accreditation.corporation_id`, `vs_id` = `applicant_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `applicant_accreditation.role`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`).
@@ -3831,9 +3831,9 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - define `effective_from_r`: `effective_from` if present, else the current block timestamp.
 - if `effective_from` is present, it MUST NOT be lower than the current block timestamp.
 - `effective_until`, if not null, MUST be greater than `effective_from_r`.
-- `validation_fees` (number) (*mandatory*): MUST be >= 0.
-- `issuance_fees` (number) (*mandatory*): MUST be >= 0.
-- `verification_fees` (number) (*mandatory*): MUST be >= 0.
+- `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer.
+- `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.
+- `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.
 
 ###### [MOD-AC-MSG-7-2-2] Create Root Accreditation permission checks
 
@@ -4281,13 +4281,13 @@ Pricing is in native token. No conversion needed.
 Calculate:
 
 - `total_fees_in_native_denom` = `total_fees_in_pricing_asset`
-- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
-- `total_payees_fees_to_account` = `total_fees_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
+- `total_payees_fees_to_account` = `total_fees_in_native_denom` − `total_payer_trust_deposit`
 
 if `vua_issuer_accreditation_id` is set:
 
-- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down
 
 Required balance check:
 
@@ -4302,13 +4302,13 @@ Pricing is in an arbitrary on-chain coin (e.g., USDC). Fees to payees are paid i
 Calculate:
 
 - `total_fees_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `total_fees_in_pricing_asset`)
-- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
-- `total_payees_fees_to_account` = `total_fees_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`)
+- `total_payees_fees_to_account` = `total_fees_in_pricing_asset` − (`total_fees_in_pricing_asset` × `GlobalVariables.trust_deposit_rate`, rounded down)
 
 if `vua_issuer_accreditation_id` is set:
 
-- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down
 
 Required balance check:
 
@@ -4324,13 +4324,13 @@ Pricing is in fiat currency (e.g., USD). Fiat fees are settled off-chain; only d
 Calculate:
 
 - `total_fees_in_native_denom` = getPrice(`FIAT`, `<fiat_denom>`, `COIN`, `[[ref: native denom]]`, `total_fees_in_pricing_asset`)
-- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
 - `total_payees_trust_deposit` = `total_payer_trust_deposit`
 - `total_payees_fees_to_account` = 0 (FIAT payments are managed off-chain)
 
 if `vua_issuer_accreditation_id` is set:
 
-- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down
 
 Required balance check:
 
@@ -4387,34 +4387,34 @@ If `perm.[fee_field]` > 0:
    **Case A: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, [[ref: native denom]])`**
    
    - `fee_in_native_denom` = `beneficiary_fee_in_pricing_asset`
-   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
    - `payee_trust_deposit` = `payer_trust_deposit`
-   - `payee_fees_to_account` = `fee_in_native_denom` × (1 - `GlobalVariables.trust_deposit_rate`)
+   - `payee_fees_to_account` = `fee_in_native_denom` − `payee_trust_deposit`
 
   if `vua_issuer_accreditation_id` is set:
-    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`
+    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`, rounded down
 
   
    **Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
    
    - `fee_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
-   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
    - `payee_trust_deposit` = `payer_trust_deposit`
-   - `payee_fees_to_account` = `beneficiary_fee_in_pricing_asset` × (1 - `GlobalVariables.trust_deposit_rate`) *(in `<arbitrary_denom>`)*
+   - `payee_fees_to_account` = `beneficiary_fee_in_pricing_asset` − (`beneficiary_fee_in_pricing_asset` × `GlobalVariables.trust_deposit_rate`, rounded down) *(in `<arbitrary_denom>`)*
 
   if `vua_issuer_accreditation_id` is set:
-    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`
+    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`, rounded down
 
 
    **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
    
    - `fee_in_native_denom` = getPrice(`FIAT`, `<fiat_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
-   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`
+   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
    - `payee_trust_deposit` = `payer_trust_deposit`
    - `payee_fees_to_account` = 0 *(FIAT payments are managed off-chain)*
 
   if `vua_issuer_accreditation_id` is set:
-    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`
+    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`, rounded down
 
 3. Execute transfers and mints for this beneficiary:
 
@@ -4654,8 +4654,8 @@ Load `Accreditation` `validator_accreditation` from `validator_accreditation_id`
 - `effective_until`:
   - if null, `validator_accreditation.effective_until` MUST be NULL
   - else if not null, must be greater than `effective_from_r` AND if `validator_accreditation.effective_until` is not null, MUST be lower or equal to `validator_accreditation.effective_until`
-- `verification_fees` (number) (*optional*): If specified, MUST be >= 0, and MUST be 0 when `role` is VERIFIER.
-- `validation_fees` (number) (*optional*): If specified, MUST be >= 0, and MUST be 0 when `role` is VERIFIER.
+- `verification_fees` (number) (*optional*): If specified, MUST be zero or a positive integer, and MUST be 0 when `role` is VERIFIER.
+- `validation_fees` (number) (*optional*): If specified, MUST be zero or a positive integer, and MUST be 0 when `role` is VERIFIER.
 
 ###### [MOD-AC-MSG-14-2-2] Self Create Accreditation permission checks
 
@@ -5112,6 +5112,7 @@ The module maintains a single global index, the [[ref: trust unit peg value]] `t
 - A governance change of `tu_decay_rate` is **prospective only**: it is applied at step (4) of the next boundary and first affects the decline that follows. The index path already elapsed MUST NOT be recomputed: past mints, scores, and fiat-fixed slash debts are unaffected; only the future decline steepens or flattens.
 - The price of one trust unit in [[ref: native denom]] is derived from the oracle: `price_tu_in_native_denom(t) = tu_peg_value(t) / P(t)`, where `P(t)` is the current price of one base unit of [[ref: native denom]] in minor units of the [[ref: main fiat currency]], derived from the genesis exchange rate entry `xr` of [[XRG]](#xrg-genesis-exchange-rate) (base (FIAT, `main_fiat_currency`), quote (COIN, native denom): `xr.rate` base units of native denom per minor unit of fiat, scaled by `xr.rate_scale`): `P(t)` = 10^`xr.rate_scale` / `xr.rate`, computed at the ledger precision. It is not obtained through [Get Price](#mod-xr-qry-3-get-price), which converts whole amounts in the stored direction and rounds them down to base units (the price of one base unit of native denom would round to 0). If `xr` is disabled or expired, minting and repayment operations MUST abort.
 - **Ledger precision.** `tu_peg_value`, every `tu` and `fiat_cost` balance, and every amount derived from them (minted, slashed, restored) are decimals with exactly 18 fractional digits: the **ledger precision**. Every operation that produces such an amount rounds down to the ledger precision; an amount that rounds to 0 is 0. A fraction of a trust unit is an ordinary balance (at the genesis peg, a deposit-bound amount worth 0.15 units of [[ref: main fiat currency]], 15 minor units of a two-decimal currency, mints 0.15 trust units) and is slashed like any other. Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic: raw balances grow as the index declines (~×1.44/year at the default `tu_decay_rate`). A redenomination MAY be performed at a chain upgrade.
+- **Native denom and pricing-coin amounts.** Amounts in [[ref: native denom]] or in a pricing coin are integers of base units. An amount a method derives by a multiplication, a division or a conversion (a deposit-bound portion, a Verifiable User Agent reward, a half of an escrowed deposit) is rounded down to an integer; when an amount is split into parts, every part but the last is rounded down and the last part takes the remainder, so that the parts sum to the whole: in [[MOD-AC-MSG-3-3]](#mod-ac-msg-3-3-set-accreditation-op-to-validated-execution) the validator's half of the escrowed deposit is rounded down and the applicant's half takes the remainder; in [[MOD-AC-MSG-10-4]](#mod-ac-msg-10-4-record-credential-exchange-execution) the deposit-bound portion of a share is rounded down and the part transferred to the payee takes the remainder.
 
 #### [MOD-TD-MSG-1] Mint Trust Units
 
