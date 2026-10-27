@@ -147,6 +147,12 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: corporation governance framework, CGF]]:
 ~ The governance framework (GF) of a [[ref: corporation]].
 
+[[def: council, Council]]:
+~ The [[ref: governance authority]] of a [[ref: VPR]]: a group of the chain (x/group) whose members are [[ref: corporations]], each represented by its `policy_address`. It decides every network-level act of the VPR, the [[ref: governance proposals]] of this specification and the software upgrades, consensus and module parameters of the chain included; staking confers no governance right ([Network Governance](#network-governance)).
+
+[[def: council account]]:
+~ The group policy account of the [[ref: council]], `GlobalVariables.council_account`: the authority that executes the messages a [[ref: governance proposal]] carries.
+
 [[def: credential schema, credential schemas]]:
 ~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
 
@@ -190,10 +196,13 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A `Accreditation` entry whose `effective_from` is higher than the current timestamp, whose `effective_until` is null or greater than `effective_from`, and whose participation and corporation are not [[ref: barred]].
 
 [[def: governance authority, GA]]:
-~ The governance authority (GA) of a [[ref: VPR]].
+~ The body that governs a [[ref: VPR]] (its [[ref: council]]), an [[ref: ecosystem]] (its controller corporation, the [[ref: EGA]]) or a [[ref: corporation]] (its own group of members): each decides through the group mechanism of the chain, at its level.
 
 [[def: governance framework, GF]]:
 ~ A set of rules that bind the parties of a [[ref: VPR]] ([[ref: NGF]]), of an [[ref: ecosystem]] ([[ref: EGF]]) or of a [[ref: corporation]] ([[ref: CGF]]), anchored on the ledger as versions and documents ([GovernanceFrameworkVersion](#governanceframeworkversion)).
+
+[[def: governance proposal, governance proposals]]:
+~ A proposal of the [[ref: council]] group carrying one or more messages, voted by the member corporations and executed by the [[ref: council account]] when the council's decision policy is met ([Network Governance](#network-governance)).
 
 [[def: grantor, grantors]]:
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] for operating its [[ref: ecosystem]].
@@ -229,7 +238,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The price of one unit of gas, a network parameter expressed in the [[ref: main fiat currency]] (`GlobalVariables.network_gas_price`) and converted into [[ref: native denom]] once per [[ref: epoch]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). It is the same for every validator and every block of an epoch: the VPR has no fee market and no validator-local price.
 
 [[def: network governance framework, NGF]]:
-~ The governance framework (GF) of the [[ref: VPR]] itself: the rules that bind its validators, its governance proposals and its participants network-wide. Anchored on the ledger as the [GovernanceFrameworkVersion](#governanceframeworkversion) entries that have no owner, listed in `GlobalVariables.network_governance_framework_versions`; the version in force is the last listed one whose `active_since` is set ([[NGG]](#ngg-genesis-network-governance-framework)).
+~ The governance framework (GF) of the [[ref: VPR]] itself: the rules that bind its validators, its [[ref: governance proposals]] and its participants network-wide. Anchored on the ledger as the [GovernanceFrameworkVersion](#governanceframeworkversion) entries that have no owner, listed in `GlobalVariables.network_governance_framework_versions`; the version in force is the last listed one whose `active_since` is set ([[NGG]](#ngg-genesis-network-governance-framework)).
 
 [[def: onboarding process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be a [[ref: issuer]], be a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
@@ -682,7 +691,7 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 - **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), the **portion of its trust deposit minted in the context of that ecosystem** can be slashed by the corresponding [[ref: ecosystem governance authority]].
 - While a slash debt is unrepaid, the slashed participation (ecosystem slash) or every participation of the corporation (network slash) is **barred**: its entries are not active and no new trust units can be minted to it. The debt is recorded on the slashed [ParticipationTrustDeposit](#participationtrustdeposit) or [TrustDeposit](#trustdeposit) entry, at the mint-time cost basis. Repayment is made in [[ref: native denom]] worth that cost basis at current rates, and **restores the slashed trust units** at their decayed current value: the gap between the basis paid and the value restored is the penalty premium, and restoring trust costs **more tokens when the token is cheap**.
 - A slash MAY also **exclude**, by decision of the slashing governance: the participation, or the whole corporation, stays barred after repayment until the exclusion is lifted, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]). A debt alone withdraws nothing from the past.
-- Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size.
+- Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size. Nor does staking: a VPR is governed by its [[ref: council]] ([Network Governance](#network-governance)).
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
 
@@ -1054,7 +1063,7 @@ verifiera --> pool:  \t+0.5 VNA
 
 The [[ref: NGF]] defines the governance rules that apply to a [[ref: VPR]]; it is anchored on the ledger like every governance framework ([GovernanceFrameworkVersion](#governanceframeworkversion), [[NGG]](#ngg-genesis-network-governance-framework)).
 
-A designated [[ref: governance authority]] (aka a council) is responsible for **enforcing these rules** and, when necessary, **applying financial sanctions** to participants who violate the rules.
+The [[ref: council]], a group of member corporations ([Network Governance](#network-governance)), is responsible for **enforcing these rules** and, when necessary, **applying financial sanctions** to participants who violate the rules.
 
 :::note
 **Ecosystem Governance Frameworks (EGFs)** operate **independently** from the [[ref: NGF]].
@@ -1413,6 +1422,7 @@ account "1" --- "1" corp : policy_address
 
 corp --o vs: corporation_id
 account --o vs: vs_operator
+account --o gv: council_account
 vs --o corp: vs_id
 vs --o tr: vs_id
 vs --o csp: vs_id
@@ -1781,7 +1791,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 - `operator` (account) (*mandatory*) (key): account authorized to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) on `xr_id`. Together with `xr_id`, forms the composite key.
 - `expiration` (timestamp) (*mandatory*): authorization end-of-life. When `now() >= expiration`, the authorization is dead and [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected.
 - `min_interval` (duration) (*optional*): anti-spam guard. If set, two successive successful [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls under this authorization MUST be separated by at least `min_interval`.
-- `max_deviation_bps` (uint32) (*optional*): circuit breaker, expressed in basis points (1 bps = 0.01%). If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh governance proposal (typically a new [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate) or an updated authorization).
+- `max_deviation_bps` (uint32) (*optional*): circuit breaker, expressed in basis points (1 bps = 0.01%). If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh [[ref: governance proposal]] (typically a new [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate) or an updated authorization).
 
 ### GlobalVariables
 
@@ -1799,23 +1809,23 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 **Trust Deposit and Trust Unit Index:**
 
-- `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05). Adjustable by governance proposal.
+- `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
 - `main_fiat_currency` (string) (*mandatory*): ISO-4217 code of the [[ref: main fiat currency]], defined in the genesis state and **immutable** thereafter (a change would re-denominate every fiat-fixed obligation and budget). Used to denominate the trust unit peg value, distribution budgets, slash debts and the network gas price. The genesis state MUST also contain the exchange rate between this currency and the [[ref: native denom]] ([[XRG]](#xrg-genesis-exchange-rate)).
 - `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in [[ref: main fiat currency]] at genesis (index start): 1.00, so that at genesis one trust unit equals one unit of [[ref: main fiat currency]] and a trust score reads directly as recent fiat-equivalent spend. Immutable: the index only moves through decay.
 - `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default value: 0.001 (0.1% per epoch; with the default 1-day `epoch_length`, an index half-life of ≈ 693 days ≈ 23 months). A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash debts are never recomputed.
 - `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day.
-- `vua_reward_rate` (number) (*mandatory*): default and maximum rate of the reward a payer adds to its trust fees for the Verifiable User Agent of its peer, paid to the vendor that issued the VUA's User Agent credential at the rate declared on its `ISSUER` entry (`Accreditation.vua_reward_rate`, [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)). Default value: 5% (0.05). Adjustable by governance proposal.
+- `vua_reward_rate` (number) (*mandatory*): default and maximum rate of the reward a payer adds to its trust fees for the Verifiable User Agent of its peer, paid to the vendor that issued the VUA's User Agent credential at the rate declared on its `ISSUER` entry (`Accreditation.vua_reward_rate`, [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)). Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
 
 **Distribution:**
 
 - `validator_node_budget` (decimal) (*mandatory*): target payment per active validator node per [[ref: epoch]], in [[ref: main fiat currency]] (sized to cover node operating costs). Docked by uptime, see the [Distribution Module](#distribution-module).
 - `validator_target_uptime` (decimal) (*mandatory*): signed-block ratio at or above which a node receives its full epoch payment. Example value: 0.99.
 - `validator_min_uptime` (decimal) (*mandatory*): signed-block ratio below which the epoch payment is zero. Example value: 0.90.
-- `council_budget` (decimal) (*mandatory*): council treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through governance proposals.
-- `foundation_budget` (decimal) (*mandatory*): foundation treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through governance proposals.
+- `council_budget` (decimal) (*mandatory*): council treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through [[ref: governance proposals]].
+- `foundation_budget` (decimal) (*mandatory*): foundation treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through [[ref: governance proposals]].
 - `vna_holder_max_yield_rate` (decimal) (*mandatory*): yearly cap on the fee-funded yield paid to [[ref: bonded tokens]], expressed as a fraction of the bonded amount. No oracle needed. Converted to a per-epoch cap by linear pro-rata, × `epoch_length` / 365 days ([[DIST-1]](#dist-1-epoch-payout-order)).
 - `unbonding_period` (duration) (*mandatory*): staking exit delay for [[ref: bonded tokens]]. Default value: 28 days.
-- `bonding_enabled` (boolean) (*mandatory*): whether item 4 of [[DIST-1]](#dist-1-epoch-payout-order), the yield to [[ref: bonded tokens]], is active. False at genesis; set to true by governance proposal only once the bonding mechanism of [[DIST-2]](#dist-2-bonding) is specified and implemented and legal counsel has reviewed the yield. While false, bonding is not available and the pool remainder after the budgets is burned in full.
+- `bonding_enabled` (boolean) (*mandatory*): whether item 4 of [[DIST-1]](#dist-1-epoch-payout-order), the yield to [[ref: bonded tokens]], is active. False at genesis; set to true by [[ref: governance proposal]] only once the bonding mechanism of [[DIST-2]](#dist-2-bonding) is specified and implemented and legal counsel has reviewed the yield. While false, bonding is not available and the pool remainder after the budgets is burned in full.
 
 **Native denom:**
 
@@ -1823,7 +1833,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 **Exchange Rate:**
 
-- `twap_window` (duration) (*mandatory*): averaging window of the source price feed for [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate). Adjustable by governance proposal.
+- `twap_window` (duration) (*mandatory*): averaging window of the source price feed for [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate). Adjustable by [[ref: governance proposal]].
 
 **Delegation:**
 
@@ -1837,9 +1847,21 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 **Network fees:**
 
-- `network_gas_price` (decimal) (*mandatory*): price of one unit of gas in [[ref: main fiat currency]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). Converted once per [[ref: epoch]] into the derived state `network_gas_price_native`, which every validator applies to every transaction of the epoch. Adjustable by governance proposal; a change takes effect at the next epoch boundary.
+- `network_gas_price` (decimal) (*mandatory*): price of one unit of gas in [[ref: main fiat currency]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). Converted once per [[ref: epoch]] into the derived state `network_gas_price_native`, which every validator applies to every transaction of the epoch. Adjustable by [[ref: governance proposal]]; a change takes effect at the next epoch boundary.
+- `council_account` (account) (*mandatory*): the group policy account of the [[ref: council]] ([GOV-1](#network-governance)); set at genesis, immutable.
 - `network_governance_framework_versions` (uint64[]) (*mandatory*): the ids of the `GovernanceFrameworkVersion` entries of the [[ref: NGF]], in version order, a few ids ever: the version in force is the last one whose `active_since` is set, a draft in preparation is a last one with `active_since` null ([[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document), [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)). Set at genesis ([[NGG]](#ngg-genesis-network-governance-framework)).
-- `max_gas_per_msg_type` (map<MsgType, number>) (*mandatory*): maximum gas per message type that a transaction may declare when its fee is paid by an account other than its signer ([[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions)). MUST list every VPR message type and the messages of the corporation group policy (proposal submission, vote, execution, withdrawal); a message type absent from the map cannot be fee-granted. Set at genesis from the measured gas profile of each message type with a margin for state-dependent messages, and adjusted by governance proposal.
+- `max_gas_per_msg_type` (map<MsgType, number>) (*mandatory*): maximum gas per message type that a transaction may declare when its fee is paid by an account other than its signer ([[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions)). MUST list every VPR message type and the messages of the corporation group policy (proposal submission, vote, execution, withdrawal); a message type absent from the map cannot be fee-granted. Set at genesis from the measured gas profile of each message type with a margin for state-dependent messages, and adjusted by [[ref: governance proposal]].
+
+## Network Governance
+
+A [[ref: VPR]] is governed by its [[ref: council]], a group of [[ref: corporations]]. This section is normative.
+
+- [GOV-1] **The council is a group of corporations.** The [[ref: council]] is an x/group of the chain whose members are [[ref: corporations]]: each member address MUST be the `policy_address` of a `Corporation` entry, and a membership update that would add any other address MUST be rejected. Its group policy account is the [[ref: council account]], `GlobalVariables.council_account`, set at genesis and immutable: the members and the decision policy change, the account does not.
+- [GOV-2] **Every network-level decision is a council decision.** The [[ref: council account]] is the sole authority of every message this specification reserves to a [[ref: governance proposal]]: the Update Module Parameters message of every module, [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit), [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion), the network path of [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version), [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate), [[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state), [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization), [[MOD-XR-MSG-5]](#mod-xr-msg-5-revoke-exchange-rate-authorization), [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor) and [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship). It is also the authority of everything the chain's own modules reserve to a governance authority: software upgrades, consensus and module parameters, and the rules of the validator set. A VPR MUST NOT submit any of these to a vote weighted by bonded or held tokens: staking secures the chain and confers no governance right, as holding a trust deposit confers none.
+- [GOV-3] **Proposals and votes.** A [[ref: governance proposal]] is a proposal of the council group carrying the messages to execute, submitted by a member corporation. A vote is cast by a member corporation and signed by its `policy_address`: the corporation decides its vote under its own decision policy first, then casts it. The proposal passes when the council's decision policy is met (threshold or percentage, quorum, voting period) and its messages are executed by the [[ref: council account]] in one [[ref: transaction]]; a message that fails aborts the execution.
+- [GOV-4] **Membership and policy.** Adding or removing a member and changing the decision policy are council decisions. The criteria to sit on the council, the terms, the quorum and the majorities are stated by the [[ref: NGF]]; this specification requires only that every member be a corporation. The NGF SHOULD state what becomes of the seat of a corporation that is [[ref: barred]]; the VPR does not remove it by itself.
+- [GOV-5] **Genesis.** The genesis state MUST contain the council group with at least one member corporation (a `Corporation` entry created at genesis) and its decision policy, and `GlobalVariables.council_account` MUST be its policy account ([GCO](#gco-genesis-council)).
+- [GOV-6] **Ecosystems and corporations.** The same mechanism applies one level down: the [[ref: EGA]] of an ecosystem is its controller corporation, which decides through its own group, and a corporation's own acts are decided by its members under its decision policy ([Corporation](#corporation)). Nothing in an ecosystem's governance goes through the council.
 
 ## Module Requirements
 
@@ -1889,7 +1911,7 @@ Such messages **cannot be delegated** and MUST be executed exclusively through a
 
 #### Governance-Signed Module Messages
 
-Some module messages can be executed **only through a VPR council governance proposal**.
+Some module messages can be executed **only through a VPR council [[ref: governance proposal]]**.
 
 These messages do not support delegation and are not executable by accounts, whether directly or via group authorization.
 
@@ -2033,23 +2055,23 @@ As a result, `accountABC` is authorized to:
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
 | Corporation               | Create Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)   | any account |
 |                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + operator |
-|                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters)   | governance proposal |
+|                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters)   | [[ref: governance proposal]] |
 |                                | Set Sponsor                                  | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor)   | corporation (group proposal) |
 |                                | Get Corporation                              | /co/v1/get                       | Query  | [[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)   | N/A |
 |                                | List Corporation Module Parameters           | /co/v1/params                    | Query  | [[MOD-CO-QRY-3]](#mod-co-qry-3-list-module-parameters)   | N/A |
 | Ecosystem                 | Create Ecosystem                 |    N/A (Tx)                    | Msg    | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem)   | corporation + operator |
 |                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)   |corporation + operator |
 |                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem)   |corporation + operator |
-|                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters)   |governance proposal |
+|                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters)   |[[ref: governance proposal]] |
 |                                | Get Ecosystem                      | /ec/v1/get                  | Query  | [[MOD-ES-QRY-1]](#mod-es-qry-1-get-ecosystem)   |N/A |
 |                                | List Ecosystem Module Parameters               | /ec/v1/params                 | Query  | [[MOD-ES-QRY-3]](#mod-es-qry-3-list-module-parameters)   |N/A |
-| Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation + operator, or governance proposal (NGF) |
-|                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + operator, or governance proposal (NGF) |
+| Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation + operator, or [[ref: governance proposal]] (NGF) |
+|                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + operator, or [[ref: governance proposal]] (NGF) |
 |                                | Get Governance Framework Version             | /gf/v1/get                       | Query  | [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version)   | N/A |
 | Credential Schema              | Create Credential Schema              |       N/A (Tx)                   | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema)   |corporation + operator |
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation + operator |
 |                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |corporation + operator |
-|                                | Update CS Module Parameters             |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |governance proposal |
+|                                | Update CS Module Parameters             |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |[[ref: governance proposal]] |
 |                                | List Credential Schemas                 | /cs/v1/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |N/A  |
 |                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |N/A  |
 |                                | Render Json Schema                      | /cs/v1/js/{id}               | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |N/A  |
@@ -2062,7 +2084,7 @@ As a result, `accountABC` is authorized to:
 |                                | Set Accreditation Effective Until                       |         N/A (Tx)            | Msg    | [[MOD-AC-MSG-8]](#mod-ac-msg-8-set-accreditation-effective-until)  |corporation + operator |
 |                                | Revoke Accreditation                       |          N/A (Tx)              | Msg    | [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)  |corporation + operator |
 |                                | Record Credential Exchange     |           N/A (Tx)              | Msg    | [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)  |corporation + vs_operator (VS Operator Authorization) |
-|                                | Update Accreditation Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters) |governance proposal |
+|                                | Update Accreditation Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters) |[[ref: governance proposal]] |
 |                                | Slash Participation Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit) |corporation + operator |
 |                                | Set Participation Exclusion                  |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion) |corporation + operator |
 |                                | Self Create Accreditation (OPEN / CREDENTIAL modes) |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation) |corporation + operator  |
@@ -2072,16 +2094,16 @@ As a result, `accountABC` is authorized to:
 |                                | Find Beneficiaries                      | /pp/v1/beneficiaries       | Query  | [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)  |N/A |
 |                                | List Accreditation Module Parameters     |  /pp/v1/params         | Query    | [[MOD-AC-QRY-6]](#mod-ac-qry-6-list-accreditation-module-parameters)   |N/A |
 | Trust Deposit                  | Mint Trust Units                    |   N/A (Tx)                       | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)   | module call |
-|                                | Update TD Module Parameters             |      N/A (Tx)               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |governance proposal |
-|                                | Slash Trust Deposit             |           N/A (Tx)               | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |governance proposal |
+|                                | Update TD Module Parameters             |      N/A (Tx)               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |[[ref: governance proposal]] |
+|                                | Slash Trust Deposit             |           N/A (Tx)               | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |[[ref: governance proposal]] |
 |                                | Repay Slash          |         N/A (Tx)                    | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)   |corporation + operator |
 |                                | Record Ecosystem Slash          |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)   | module call|
-|                                | Set Corporation Exclusion           |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)   | governance proposal |
+|                                | Set Corporation Exclusion           |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)   | [[ref: governance proposal]] |
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |N/A |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |N/A |
 |                                | Get Network Gas Price                   | /td/v1/gas-price              | Query  | [[MOD-TD-QRY-4]](#mod-td-qry-4-get-network-gas-price)   |N/A  |
 |                                | Get Participation Trust Deposit                 | /td/v1/deposit/get            | Query  | [[MOD-TD-QRY-5]](#mod-td-qry-5-get-participation-trust-deposit)   |N/A  |
-| Distribution                   | Update Module Parameters                | N/A (Tx)                      | Msg    | [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters)   | governance proposal |
+| Distribution                   | Update Module Parameters                | N/A (Tx)                      | Msg    | [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters)   | [[ref: governance proposal]] |
 | Delegation  | Grant Fee Allowance         |   N/A (Tx)  | Msg  | [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)   |module call|
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
 |             | Grant Operator Authorization         |     N/A (Tx)| Msg  | [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)   |corporation (group proposal) OR corporation + operator OR module call|
@@ -2097,21 +2119,21 @@ As a result, `accountABC` is authorized to:
 | Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + operator, or vs-agent of the entry, OR module call|
 |          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation + operator of the owner, of an active ancestor or of the schema's ecosystem (OperatorAuthorization), or vs_operator of the anchoring entry or of an active ancestor |
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
-| Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | governance proposal|
+| Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | [[ref: governance proposal]]|
 |                   | Update Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
-|                   | Set Exchange Rate State           | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)   |governance proposal|
-|                   | Grant Exchange Rate Authorization |     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization)   |governance proposal|
-|                   | Revoke Exchange Rate Authorization|     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-5]](#mod-xr-msg-5-revoke-exchange-rate-authorization)   |governance proposal|
+|                   | Set Exchange Rate State           | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)   |[[ref: governance proposal]]|
+|                   | Grant Exchange Rate Authorization |     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization)   |[[ref: governance proposal]]|
+|                   | Revoke Exchange Rate Authorization|     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-5]](#mod-xr-msg-5-revoke-exchange-rate-authorization)   |[[ref: governance proposal]]|
 |                   | Get Exchange Rate                 | /xr/v1/get                  | Query  | [[MOD-XR-QRY-1]](#mod-xr-qry-1-get-exchange-rate)   |N/A |
 |                   | Get Price               | /xr/v1/price                 | Query  | [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)   |N/A |
-|                   | Update XR Module Parameters       | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters)   | governance proposal |
+|                   | Update XR Module Parameters       | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters)   | [[ref: governance proposal]] |
 |                   | List XR Module Parameters         | /xr/v1/params               | Query  | [[MOD-XR-QRY-4]](#mod-xr-qry-4-list-module-parameters)   |N/A |
 | Verifiable Service        | Register Verifiable Service              | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service)   | corporation + operator |
 |                                | Update Verifiable Service               | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)   | corporation + operator |
 |                                | Rotate Verifiable Identifier            | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)   | corporation + operator |
 |                                | Transfer Verifiable Service             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)   | corporation + operator |
 |                                | Accept Verifiable Service Transfer      | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)   | corporation + operator |
-|                                | Update VS Module Parameters             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters)   | governance proposal |
+|                                | Update VS Module Parameters             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters)   | [[ref: governance proposal]] |
 |                                | Get Verifiable Service                  | /vs/v1/get                       | Query  | [[MOD-VS-QRY-1]](#mod-vs-qry-1-get-verifiable-service)   | N/A |
 |                                | List Verifiable Services                | /vs/v1/list                      | Query  | [[MOD-VS-QRY-2]](#mod-vs-qry-2-list-verifiable-services)   | N/A |
 |                                | List VS Module Parameters               | /vs/v1/params                    | Query  | [[MOD-VS-QRY-3]](#mod-vs-qry-3-list-module-parameters)   | N/A |
@@ -2281,7 +2303,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 Update Module Parameters.
 
-Can only be executed through a governance proposal.
+Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-CO-MSG-3-1] Update Module Parameters parameters
 
@@ -2550,7 +2572,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 Update Module Parameters.
 
-Can only be executed through a governance proposal.
+Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-ES-MSG-4-1] Update Module Parameters parameters
 
@@ -2629,14 +2651,14 @@ The initial `GovernanceFrameworkVersion` and its first `GovernanceFrameworkDocum
 
 #### [MOD-GF-MSG-1] Add Governance Framework Document
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`. For the [[ref: NGF]] (`network` true) it can only be executed through a governance proposal.
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. For the [[ref: NGF]] (`network` true) it can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-GF-MSG-1-1] Add Governance Framework Document parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]] whose governance framework will be modified. If set, the signing `corporation` MUST be the controller of the target `Ecosystem`. If not set, the target subject is the signing `corporation`'s own [[ref: CGF]].
-- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `operator` are absent, and the message is executed through a governance proposal.
+- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `operator` are absent, and the message is executed through a [[ref: governance proposal]].
 - `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the governance framework document.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
@@ -2650,7 +2672,7 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-GF-MSG-1-2-1] Add Governance Framework Document basic checks
 
-if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a governance proposal, else abort; the signer and authorization checks below then do not apply.
+if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a [[ref: governance proposal]], else abort; the signer and authorization checks below then do not apply.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
@@ -2697,14 +2719,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-GF-MSG-2] Increase Active Governance Framework Version
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`. For the [[ref: NGF]] (`network` true) it can only be executed through a governance proposal.
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. For the [[ref: NGF]] (`network` true) it can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-GF-MSG-2-1] Increase Active Governance Framework Version parameters
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]]. If set, the signing `corporation` MUST be its controller. If not set, the target subject is the signing `corporation`'s own [[ref: CGF]].
-- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `operator` are absent, and the message is executed through a governance proposal.
+- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `operator` are absent, and the message is executed through a [[ref: governance proposal]].
 
 ##### [MOD-GF-MSG-2-2] Increase Active Governance Framework Version precondition checks
 
@@ -2712,7 +2734,7 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-GF-MSG-2-2-1] Increase Active Governance Framework Version basic checks
 
-- if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a governance proposal, else abort; the signer and authorization checks below then do not apply.
+- if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a [[ref: governance proposal]], else abort; the signer and authorization checks below then do not apply.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
@@ -2766,7 +2788,7 @@ Return the `GovernanceFrameworkVersion` entry with `id`, including its owning su
 
 ### [NGG] Genesis Network Governance Framework
 
-The genesis state MUST contain one `GovernanceFrameworkVersion` entry with neither `ecosystem_id` nor `corporation_id`, `version` 1 and `active_since` equal to the genesis time, at least one `GovernanceFrameworkDocument` for it, and `GlobalVariables.network_governance_framework_versions` listing its id: the [[ref: NGF]] is in force from the first block, like the [[ref: main fiat currency]], the [[ref: network gas price]] and the genesis exchange rate ([XRG](#xrg-genesis-exchange-rate)). Later versions are prepared with [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and activated with [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version) through governance proposals; the version in force at any block is the last listed version whose `active_since` is not later than the block time.
+The genesis state MUST contain one `GovernanceFrameworkVersion` entry with neither `ecosystem_id` nor `corporation_id`, `version` 1 and `active_since` equal to the genesis time, at least one `GovernanceFrameworkDocument` for it, and `GlobalVariables.network_governance_framework_versions` listing its id: the [[ref: NGF]] is in force from the first block, like the [[ref: main fiat currency]], the [[ref: network gas price]] and the genesis exchange rate ([XRG](#xrg-genesis-exchange-rate)). Later versions are prepared with [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and activated with [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version) through [[ref: governance proposals]]; the version in force at any block is the last listed version whose `active_since` is not later than the block time.
 
 ### Credential Schema Module
 
@@ -2989,7 +3011,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 Update Module Parameters.
 
-Can only be executed through a governance proposal.
+Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-CS-MSG-4-1] Update Module Parameters parameters
 
@@ -4433,7 +4455,7 @@ an exchange event always carries `schema_id` and exactly one of `issuer_accredit
 
 Update Accreditation Module Parameters.
 
-Can only be executed through a governance proposal.
+Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-AC-MSG-11-1] Update Accreditation Module Parameters parameters
 
@@ -5143,7 +5165,7 @@ There is no negative adjustment path: trust units are never un-minted. Refunds o
 
 Update Module Parameters.
 
-Can only be executed through a governance proposal.
+Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-TD-MSG-4-1] Update Module Parameters parameters
 
@@ -5178,7 +5200,7 @@ for each parameter `param` <`key`, `value`> in `parameters`:
 
 This method is used by the network governance authority to **globally slash** the trust deposit of a [[ref: corporation]], under the rules of the [[ref: NGF]].
 
-This method can only be called by a governance proposal. Slashing removes [[ref: trust units]] from the corporation's [[ref: trust deposit]] and records a debt denominated in [[ref: main fiat currency]], equal to their **mint-time cost basis** — what was originally paid for them, not their decayed value: reputation decays, **liabilities do not** (misbehavior against the network costs the same whether the deposit was funded yesterday or a year ago). A slashed corporation MUST repay the debt ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) in order to continue to use the services provided by the VPR: while the debt is unrepaid the corporation is [[ref: barred]], none of its entries is active and no trust units can be minted to its deposit. Network governance MAY also exclude the corporation (`exclude`): it then stays barred after repayment until the exclusion is lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)), and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]).
+This method can only be called by a [[ref: governance proposal]]. Slashing removes [[ref: trust units]] from the corporation's [[ref: trust deposit]] and records a debt denominated in [[ref: main fiat currency]], equal to their **mint-time cost basis** — what was originally paid for them, not their decayed value: reputation decays, **liabilities do not** (misbehavior against the network costs the same whether the deposit was funded yesterday or a year ago). A slashed corporation MUST repay the debt ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) in order to continue to use the services provided by the VPR: while the debt is unrepaid the corporation is [[ref: barred]], none of its entries is active and no trust units can be minted to its deposit. Network governance MAY also exclude the corporation (`exclude`): it then stays barred after repayment until the exclusion is lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)), and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]).
 
 The parts of the trust deposit, the [ParticipationTrustDeposit](#participationtrustdeposit) entries, are not touched: a network slash takes a fraction of what the trust deposit currently holds, after any ecosystem slash, and the corporation repays it in one payment. For ecosystem slash, see [Slash Participation Trust Deposit](#mod-ac-msg-12-slash-participation-trust-deposit).
 
@@ -5302,7 +5324,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-TD-MSG-8] Set Corporation Exclusion
 
-This method can only be called by a governance proposal. It sets or lifts the exclusion of a [[ref: corporation]] (`TrustDeposit.excluded`). With `excluded` true, the network withdraws trust from the corporation without slashing it: the corporation is [[ref: barred]], none of its entries is active, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]); a network slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) sets the same flag while also taking trust units. With `excluded` false, it lifts an exclusion set by a slash or by this method: the network's decision that the corporation may take part again. A slash itself is not undone: the corporation stays barred while its debt is unrepaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), and `slash_count` keeps its value.
+This method can only be called by a [[ref: governance proposal]]. It sets or lifts the exclusion of a [[ref: corporation]] (`TrustDeposit.excluded`). With `excluded` true, the network withdraws trust from the corporation without slashing it: the corporation is [[ref: barred]], none of its entries is active, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]); a network slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) sets the same flag while also taking trust units. With `excluded` false, it lifts an exclusion set by a slash or by this method: the network's decision that the corporation may take part again. A slash itself is not undone: the corporation stays barred while its debt is unrepaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), and `slash_count` keeps its value.
 
 ##### [MOD-TD-MSG-8-1] Set Corporation Exclusion method parameters
 
@@ -5487,7 +5509,7 @@ Bonding is available only while `GlobalVariables.bonding_enabled` is true. It us
 
 Update the Distribution parameters of [[GLO]](#glo-global-variables): `validator_node_budget`, `validator_target_uptime`, `validator_min_uptime`, `council_budget`, `foundation_budget`, `vna_holder_max_yield_rate`, `unbonding_period` and `bonding_enabled`.
 
-Can only be executed through a governance proposal.
+Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-DS-MSG-1-1] Update Module Parameters parameters
 
@@ -5504,7 +5526,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `validator_target_uptime` and `validator_min_uptime`: the resulting values MUST satisfy 0 ≤ `validator_min_uptime` ≤ `validator_target_uptime` ≤ 1, else abort.
 - `vna_holder_max_yield_rate`, if updated, MUST be ≥ 0.
 - `unbonding_period`, if updated, MUST be a duration greater than 0.
-- `bonding_enabled`, if updated, MUST be a boolean. It MUST NOT be set to true before the bonding mechanism of [[DIST-2]](#dist-2-bonding) is specified and the legal review recorded there is completed: this is a condition on the governance proposal, which the protocol cannot verify.
+- `bonding_enabled`, if updated, MUST be a boolean. It MUST NOT be set to true before the bonding mechanism of [[DIST-2]](#dist-2-bonding) is specified and the legal review recorded there is completed: this is a condition on the [[ref: governance proposal]], which the protocol cannot verify.
 
 ###### [MOD-DS-MSG-1-2-2] Update Module Parameters fee checks
 
@@ -6134,7 +6156,7 @@ Exchange rates MAY be defined for multiple fiat currencies and coins (multi-fiat
 
 The **Create Exchange Rate** method allows creating an `ExchangeRate` entry for a given `(base_asset_type, base_asset, quote_asset_type, quote_asset)` pair.
 
-- Only a governance proposal CAN execute this method.
+- Only a [[ref: governance proposal]] CAN execute this method.
 
 ##### [MOD-XR-MSG-1-1] Create Exchange Rate method parameters
 
@@ -6274,7 +6296,7 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 
 - if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
-  - Only a governance proposal can enable or disable an exchange rate.
+  - Only a [[ref: governance proposal]] can enable or disable an exchange rate.
 - `id` MUST refer to an existing `ExchangeRate` entry.
 
 ###### [MOD-XR-MSG-3-2-2] Set Exchange Rate State fee checks
@@ -6292,7 +6314,7 @@ Load `ExchangeRate` `xr`.
 
 The **Grant Exchange Rate Authorization** method creates (or updates) an `ExchangeRateAuthorization` record designating a network-level operator allowed to push fresh rates for a given `ExchangeRate` via [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate).
 
-- Only a governance proposal CAN execute this method.
+- Only a [[ref: governance proposal]] CAN execute this method.
 
 ##### [MOD-XR-MSG-4-1] Grant Exchange Rate Authorization method parameters
 
@@ -6312,7 +6334,7 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 
 - if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
-  - Only a governance proposal can grant an `ExchangeRateAuthorization`.
+  - Only a [[ref: governance proposal]] can grant an `ExchangeRateAuthorization`.
 - `xr_id` MUST refer to an existing `ExchangeRate` entry.
 - `operator` MUST be a valid account.
 - `expiration` MUST be in the future.
@@ -6337,7 +6359,7 @@ Create (or update if it already exists) `ExchangeRateAuthorization` `xrauthz` ke
 
 The **Revoke Exchange Rate Authorization** method deletes an existing `ExchangeRateAuthorization` record, immediately preventing the designated operator from executing further [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls on the target `ExchangeRate`.
 
-- Only a governance proposal CAN execute this method.
+- Only a [[ref: governance proposal]] CAN execute this method.
 
 ##### [MOD-XR-MSG-5-1] Revoke Exchange Rate Authorization method parameters
 
@@ -6354,7 +6376,7 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 
 - if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
-  - Only a governance proposal can revoke an `ExchangeRateAuthorization`.
+  - Only a [[ref: governance proposal]] can revoke an `ExchangeRateAuthorization`.
 - An `ExchangeRateAuthorization` entry MUST exist for (`xr_id`, `operator`).
 
 ###### [MOD-XR-MSG-5-2-2] Revoke Exchange Rate Authorization fee checks
@@ -6475,7 +6497,7 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 
 Update Module Parameters.
 
-Can only be executed through a governance proposal.
+Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-XR-MSG-6-1] Update Module Parameters parameters
 
@@ -6751,7 +6773,7 @@ The method MUST emit an event carrying `vs.id`, `vs.vid`, the previous and the n
 
 Update Module Parameters.
 
-Can only be executed through a governance proposal.
+Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-VS-MSG-7-1] Update Module Parameters parameters
 
@@ -6883,12 +6905,17 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 **Network fees:**
 
 - `network_gas_price` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]] per unit of gas.
+- `council_account` (account) (*mandatory*): the policy account of the genesis council group ([GCO](#gco-genesis-council)).
 - `network_governance_framework_versions` (uint64[]) (*mandatory*): the id of the genesis version ([[NGG]](#ngg-genesis-network-governance-framework)).
 - `max_gas_per_msg_type` (map<MsgType, number>) (*mandatory*): to be set at genesis from the measured gas profile of each message type, with a margin for state-dependent messages (exchanges with many beneficiaries, large schemas, VS operator allowance adjustments, group executions).
 
 ### [XRG] Genesis Exchange Rate
 
 The genesis state MUST contain one `ExchangeRate` entry between the [[ref: native denom]] (COIN) and the [[ref: main fiat currency]] (FIAT), with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch oracle operator for that entry. Without this state no [[ref: trust unit]] can be minted and no slash obligation repaid until governance creates the rate and an operator pushes it. Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the operator pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
+
+### [GCO] Genesis Council
+
+The genesis state MUST contain the [[ref: council]] group, with at least one member corporation created at genesis and a decision policy, and `GlobalVariables.council_account` MUST be its group policy account ([GOV-5](#network-governance)). Without it no network-level decision can be taken: no parameter change, no sanction, no new framework version, no upgrade.
 
 ## References
 
