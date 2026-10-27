@@ -459,6 +459,10 @@ Example of a Json Schema credential schema:
           "type": "string",
           "format": "date"
         },
+        "birthDate": {
+          "type": "string",
+          "format": "date"
+        },
         "countryOfResidence": {
           "type": "string",
           "minLength": 2,
@@ -1801,7 +1805,7 @@ Each group below is owned by the module whose Update Module Parameters message c
 
 **Credential Schema:**
 
-- `credential_schema_schema_max_size` (number) (*mandatory*): maximum size of the `schema` string attribute for a `CredentialSchema`.
+- `credential_schema_schema_max_size` (number) (*mandatory*): maximum size of the `json_schema` string attribute of a `CredentialSchema`.
 - `credential_schema_issuer_grantor_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer grantor validation can be valid for.
 - `credential_schema_verifier_grantor_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an verifier grantor validation can be valid for.
 - `credential_schema_issuer_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer validation can be valid for.
@@ -3432,8 +3436,6 @@ For audit or governance purposes, the [[ref: validator]] should register a diges
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-*This section is non-normative.*
-
 - Requesting a renewal has no effect on `Accreditation` expiration or issued credentials.
 - Renewal is only possible with the same validator.
 - Renewal only applies to entries managed by an [[ref: onboarding process]]: root ([[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation)) and self-created ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) entries cannot renew; use [[MOD-AC-MSG-8]](#mod-ac-msg-8-set-accreditation-effective-until) to adjust their `effective_until`.
@@ -3613,7 +3615,7 @@ else MUST abort.
 
 - `applicant_accreditation.op_state` MUST be equal to PENDING, else abort.
 - `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_accreditation.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_accreditation.validation_fees`, else abort.
-- `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_accreditation.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_accreditation.issuance_fees` or, else abort.
+- `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_accreditation.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_accreditation.issuance_fees`, else abort.
 - `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_accreditation.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_accreditation.verification_fees`, else abort.
 - `op_summary_digest` (bytes, SRI form in the API) (*optional*): MUST be the digest of the summary computed with the `digest_algorithm` of the schema, given in SRI form (for example `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`) and stored as the decoded bytes, 48 for `sha384` and 64 for `sha512`.
 
