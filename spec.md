@@ -1815,7 +1815,7 @@ Amounts in [[ref: main fiat currency]] below are in its minor units ([[ref: main
 - `main_fiat_currency` (string) (*mandatory*): ISO-4217 code of the [[ref: main fiat currency]], defined in the genesis state and **immutable** thereafter (a change would re-denominate every fiat-fixed obligation and budget). Used to denominate the trust unit peg value, distribution budgets, slash debts and the network gas price. The genesis state MUST also contain the exchange rate between this currency and the [[ref: native denom]] ([[XRG]](#xrg-genesis-exchange-rate)).
 - `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in minor units of the [[ref: main fiat currency]] at genesis (index start): 10^e, e being the ISO-4217 exponent of the main fiat currency (100 for a currency with two decimals), so that at genesis one trust unit equals one unit of [[ref: main fiat currency]] and a trust score reads directly as recent fiat-equivalent spend. Immutable: the index only moves through decay.
 - `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default value: 0.001 (0.1% per epoch; with the default 1-day `epoch_length`, an index half-life of ≈ 693 days ≈ 23 months). A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash debts are never recomputed.
-- `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day.
+- `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day. Set at genesis and **immutable**: epochs are numbered from the genesis time ([Trust Unit Index](#trust-unit-index)).
 - `vua_reward_rate` (number) (*mandatory*): default and maximum rate of the reward a payer adds to its trust fees for the Verifiable User Agent of its peer, paid to the vendor that issued the VUA's User Agent credential at the rate declared on its `ISSUER` entry (`Accreditation.vua_reward_rate`, [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)). Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
 
 **Distribution:**
@@ -6879,7 +6879,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `main_fiat_currency` (string) (*mandatory*): to be defined in the genesis state (ISO-4217 code); immutable.
 - `tu_peg_value_genesis` (decimal) (*mandatory*): 10^e, the number of minor units in one unit of the main fiat currency (100 for USD or EUR), so that one trust unit equals one unit of main fiat currency at genesis.
 - `tu_decay_rate` (decimal) (*mandatory*): 0.001 (0.1% per epoch; ≈ 23-month index half-life with a 1-day epoch).
-- `epoch_length` (duration) (*mandatory*): 1 day.
+- `epoch_length` (duration) (*mandatory*): 1 day; immutable.
 - `vua_reward_rate` (number) (*mandatory*): 0.05.
 
 **Distribution:**
