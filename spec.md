@@ -130,7 +130,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A [[ref: verifiable public registry]] account.
 
 [[def: active accreditation, active accreditations]]:
-~ A `Accreditation` entry whose `effective_from` is not null and lower than or equal to the current timestamp, whose `effective_until` is null or greater than the current timestamp, and whose participation and corporation are not [[ref: barred]]. A revoked or expired entry no longer exists.
+~ An `Accreditation` entry whose `effective_from` is not null and lower than or equal to the current timestamp, whose `effective_until` is null or greater than the current timestamp, and whose participation and corporation are not [[ref: barred]]. A revoked or expired entry no longer exists.
 
 [[def: applicant, applicants]]:
 ~ A [[ref: account]] that starts a [[ref: onboarding process]].
@@ -157,7 +157,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ An [[ref: VPR]] resource which represents a verifiable credential definition and the associated permissions and business rules for issuing, verifying or holding a credential linked to this credential schema.
 
 [[def: credential schema accreditation, credential schema accreditations, CSA]]:
-~ A `Accreditation` entry, linked to a [[ref: credential schema]], that represents, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], [[ref: verifier grantor]] or [[ref: holder]] of credentials of a [[ref: credential schema]], or its root (the ECOSYSTEM entry of the controlling ecosystem).
+~ An `Accreditation` entry, linked to a [[ref: credential schema]], that represents, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], [[ref: verifier grantor]] or [[ref: holder]] of credentials of a [[ref: credential schema]], or its root (the ECOSYSTEM entry of the controlling ecosystem).
 
 [[def: decentralized identifier, DID, DIDs]]:
 ~ A decentralized identifier, as specified in [[spec-norm:DID-CORE]].
@@ -193,7 +193,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The account a VPR method debits or credits for a [[ref: corporation]]: the `policy_address` of its active [[ref: sponsor]] when one exists and covers the message, else its own `policy_address`. Resolved at execution time by [[FUND-CHECK]](#fund-check-funding-account-resolution).
 
 [[def: future accreditation, future accreditations]]:
-~ A `Accreditation` entry whose `effective_from` is higher than the current timestamp, whose `effective_until` is null or greater than `effective_from`, and whose participation and corporation are not [[ref: barred]].
+~ An `Accreditation` entry whose `effective_from` is higher than the current timestamp, whose `effective_until` is null or greater than `effective_from`, and whose participation and corporation are not [[ref: barred]].
 
 [[def: governance authority, GA]]:
 ~ The body that governs a [[ref: VPR]] (its [[ref: council]]), an [[ref: ecosystem]] (its controller corporation, the [[ref: EGA]]) or a [[ref: corporation]] (its own group of members): each decides through the group mechanism of the chain, at its level.
@@ -366,7 +366,7 @@ object "Ecosystem" as tra #3fbdb6 {
   - `GRANTOR_ONBOARDING_PROCESS`: `VERIFIER` Accreditations are created by one or several [[ref: verifier grantor]](s) — ecosystem operators responsible for onboarding verifiers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
 - A **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` `Accreditation` entries are created. Modes include:
   - `ISSUER_ONBOARDING_PROCESS`: `HOLDER` Accreditations are created for holders through an [[ref: onboarding process]] validated by the [[ref: issuers]].
-  - `PERMISSIONLESS`: a holder that wants to obtain credentials from an [[ref: issuer]] does not require a `Accreditation` entry in the VPR.
+  - `PERMISSIONLESS`: a holder that wants to obtain credentials from an [[ref: issuer]] does not require an `Accreditation` entry in the VPR.
 - A **Accreditation tree** that defines the roles and relationships involved in managing the schema’s lifecycle. Each `Accreditation` entry in the tree can define business rules; see [Business Models](#business-models) below.
 
 ```plantuml
@@ -374,7 +374,7 @@ object "Ecosystem" as tra #3fbdb6 {
 @startuml
 scale max 800 width
  
-package "Example Credential Schema Accreditation Tree" as cs {
+package "Example Credential Scheman Accreditation Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
         role: ECOSYSTEM (Root)
@@ -489,8 +489,8 @@ To participate in an [[ref: ecosystem]] and assume a role associated with a spec
 
 The [[ref: onboarding process]] involves two parties:
 
-- The [[ref: applicant]] — the [[ref: corporation]] requesting a `Accreditation` entry for a credential schema within the ecosystem.
-- The [[ref: validator]] — a corporation that already holds a `Accreditation` entry for the same credential schema and has been delegated authority to validate applicants and create new `Accreditation` entries.
+- The [[ref: applicant]] — the [[ref: corporation]] requesting an `Accreditation` entry for a credential schema within the ecosystem.
+- The [[ref: validator]] — a corporation that already holds an `Accreditation` entry for the same credential schema and has been delegated authority to validate applicants and create new `Accreditation` entries.
 
 Running an [[ref: onboarding process]] **typically involves the payment of [[ref: trust fees]]**. The [[ref: trust fee]] amount to be paid by the [[ref: applicant]] is defined in the [[ref: validator]]'s `Accreditation` entry:
 
@@ -505,23 +505,23 @@ package "Pay per validation Fee Structure" as cs {
         did:example:ecosystemA
         Grantor applicant validation cost: 100 VNA
     }
-    object "Issuer Grantor B - Credential Schema Accreditation" as ig {
+    object "Issuer Grantor B - Credential Scheman Accreditation" as ig {
         did:example:igB
         Issuer applicant validation cost: 100 VNA
     }
-    object "Issuer C - Credential Schema Accreditation" as issuer #7677ed  {
+    object "Issuer C - Credential Scheman Accreditation" as issuer #7677ed  {
         did:example:iC
         Holder applicant validation cost: 1 VNA
     }
-    object "Verifier Grantor D -  Credential Schema Accreditation" as vg {
+    object "Verifier Grantor D -  Credential Scheman Accreditation" as vg {
         did:example:vgD
         Verifier applicant validation cost: 20 VNA
     }
-    object "Verifier E - Credential Schema Accreditation" as verifier #00b0f0 {
+    object "Verifier E - Credential Scheman Accreditation" as verifier #00b0f0 {
         did:example:vE
     }
 
-    object "Holder Z - Credential Schema Accreditation" as holder #FFB073 {
+    object "Holder Z - Credential Scheman Accreditation" as holder #FFB073 {
         role: HOLDER
     }
 }
@@ -594,7 +594,7 @@ pA ..> eA : in
 
 ```
 
-The same `Corporation` entry is the single entry point for the corporation's governance (the CGF), authorization delegation (via `OperatorAuthorization` to one or more `operator` accounts), and trust-deposit accounting (`TrustDeposit`). See the [Corporation Module](#corporation-module) for the methods that manage `Corporation` entries.
+The same `Corporation` entry is the single entry point for the corporation's governance (the CGF), authorization delegation (vian `OperatorAuthorization` to one or more `operator` accounts), and trust-deposit accounting (`TrustDeposit`). See the [Corporation Module](#corporation-module) for the methods that manage `Corporation` entries.
 
 A corporation that must not hold [[ref: native denom]] itself (a public entity, for example) MAY be **sponsored** by another corporation: the sponsor's `policy_address` then funds the sponsored corporation's escrows, exchange payments, slash repayments and, optionally, its network fees, while every `Accreditation` entry, trust unit, slash debt and authorization remains the sponsored corporation's own. See [Sponsored Corporations](#sponsored-corporations).
 
@@ -868,7 +868,7 @@ package "Ecosystem #A - Credential Schema #1" as cs {
         did:example:iC
         verification cost: 5 VNA
     }
-    object "Verifier Grantor #D - Credential #1 Schema Accreditation" as vg {
+    object "Verifier Grantor #D - Credential #1 Scheman Accreditation" as vg {
         did:example:vgD
         verification cost: 0.5 VNA
     }
@@ -1461,7 +1461,7 @@ Several entities deviate from this convention and document their own key scheme 
 
 ### VID ownership
 
-Every [[ref: VID]] known to the VPR is registered once, as a [VerifiableService](#verifiableservice) entry owned by a single `Corporation` (`VerifiableService.corporation_id`). The entities that bind an identifier, `Corporation` (`vs_id`), `Ecosystem` (`vs_id`) and `Accreditation` (`vs_id`), never store the identifier string: they reference the entry, and MUST reference an entry owned by their own corporation (for a `Corporation`, by itself; an `Ecosystem` or a `Accreditation` stores no corporation of its own: the owner of the entry is its corporation). The **owner `Corporation`** of an identifier is therefore a total function given by the entry, and a `vs_id` reference is checked with a single lookup at every binding message: [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-corporation-basic-checks) / [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks), [[MOD-AC-MSG-1-2-1]](#mod-ac-msg-1-2-1-start-accreditation-op-basic-checks), [[MOD-AC-MSG-7-2-1]](#mod-ac-msg-7-2-1-create-root-accreditation-basic-checks) and [[MOD-AC-MSG-14-2-1]](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks).
+Every [[ref: VID]] known to the VPR is registered once, as a [VerifiableService](#verifiableservice) entry owned by a single `Corporation` (`VerifiableService.corporation_id`). The entities that bind an identifier, `Corporation` (`vs_id`), `Ecosystem` (`vs_id`) and `Accreditation` (`vs_id`), never store the identifier string: they reference the entry, and MUST reference an entry owned by their own corporation (for a `Corporation`, by itself; an `Ecosystem` or an `Accreditation` stores no corporation of its own: the owner of the entry is its corporation). The **owner `Corporation`** of an identifier is therefore a total function given by the entry, and a `vs_id` reference is checked with a single lookup at every binding message: [[MOD-CO-MSG-1-2-1]](#mod-co-msg-1-2-1-create-corporation-basic-checks) / [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks), [[MOD-AC-MSG-1-2-1]](#mod-ac-msg-1-2-1-start-accreditation-op-basic-checks), [[MOD-AC-MSG-7-2-1]](#mod-ac-msg-7-2-1-create-root-accreditation-basic-checks) and [[MOD-AC-MSG-14-2-1]](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks).
 
 Uniqueness is enforced on the identifier string by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier): at any block height, a string is the current `vid` of at most one entry. The VPR stores only the current string. The former strings of an entry, and the transition window during which each of them remains acceptable to trust resolution, are known from the events emitted at registration and rotation; indexers keep that history and apply the continuity rules of the [[ref: VT spec]]. An entry MAY be referenced by several `Ecosystem` and `Accreditation` entries of its owner and by the owner `Corporation` itself: one service, one identifier, many roles.
 
@@ -1598,7 +1598,7 @@ A `GovernanceFrameworkVersion` represents a single version of an [[ref: EGF]], o
 
 **Expiry.** At the end of every block, the accreditation module deletes every entry whose `op_state` is VALIDATED and whose `effective_until` is not null and not later than the block time (implementations keep an expiry queue, bucketed by time, written whenever `effective_until` is set or changed), removes its id from its [ParticipationTrustDeposit](#participationtrustdeposit) and, for a root entry, from `CredentialSchema.root_accreditation_ids`, and emits an event for each. An entry whose `op_state` is PENDING (a renewal in progress) is not swept: it ends at validation, with its new `effective_until`, or at cancellation, which deletes it at once if its window has already ended.
 
-> Note: the agent account that operates a `Accreditation` entry is `VerifiableService[vs_id].vs_operator`, and its authorization settings (message types, spend limits, operation-budget cycle, fee grant) are the entry's own `msg_types`, `period` and `fee_spend_limit`, with its [VsOperatorBudget](#vsoperatorbudget). A `Accreditation` entry carries no operator configuration of its own. See [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
+> Note: the agent account that operates an `Accreditation` entry is `VerifiableService[vs_id].vs_operator`, and its authorization settings (message types, spend limits, operation-budget cycle, fee grant) are the entry's own `msg_types`, `period` and `fee_spend_limit`, with its [VsOperatorBudget](#vsoperatorbudget). An `Accreditation` entry carries no operator configuration of its own. See [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
 ### ParticipationTrustDeposit
 
@@ -1625,7 +1625,7 @@ A `CredentialExchange` is the record of a credential exchange, an issuance or a 
 
 - `exchange_id` (uuid): the exchange identifier, chosen by the agent that opens the exchange and shared with its peer before the transaction.
 - `schema_id` (uint64): the `CredentialSchema` entry of the credential.
-- `issuer_accreditation_id` (uint64) or `issuer_vs_id` (uint64): the `ISSUER` `Accreditation` entry of the issuer of the credential (the payer's own entry in a Credential Issuance; in a Credential Verification, the entry the credential was anchored under or a current entry of the issuer for the schema), or the `VerifiableService` entry of an issuer that holds no active entry for the schema. Exactly one is set.
+- `issuer_accreditation_id` (uint64) or `issuer_vs_id` (uint64): the `ISSUER` `Accreditation` entry of the issuer of the credential (the payer's own entry in a Credential Issuance; in a Credential Verification, the entry the credential was anchored under or an effective entry of the issuer for the schema, validated and its `effective_from` passed), or the `VerifiableService` entry of an issuer that holds no active entry for the schema. Exactly one is set.
 - `verifier_accreditation_id` (uint64) or `verifier_vs_id` (uint64): in a Credential Verification, the `VERIFIER` entry of the verifier, or the `VerifiableService` entry of a verifier acting without an entry (OPEN or CREDENTIAL verifier mode).
 - `vua_issuer_accreditation_id` (uint64): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the VUA's User Agent credential, set by the payer from the credential it verified at connection ([[ref: VT spec]]), when applicable.
 - `digest` (bytes): in a Credential Issuance, the credential digest, also persisted as a [Digest](#digest) entry when the schema's `credential_anchoring` is REVOCABLE_DIGEST; in a Credential Verification, the presentation digest, carried by the event only.
@@ -1983,7 +1983,7 @@ A second authorization grant mode exists for vs-agents. It is used when a corpor
 
 > Note: the set of messages a `vs_operator` is authorized to execute in the context of an entry is declared when the configuration is set ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or replaced ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service), [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)) and stored in `vs.msg_types`. One configuration covers every role the identifier holds: the role-specific checks of each message decide what the operator can do with a given `Accreditation` entry.
 
-Given a `corporation`, an `operator` (the `vs_operator`), a **primary entry** `perm` (a `Accreditation` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) does or as [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) does for a party acting without an entry), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
+Given a `corporation`, an `operator` (the `vs_operator`), a **primary entry** `perm` (an `Accreditation` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) does or as [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) does for a party acting without an entry), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
 
 1. If `perm` is not null, it MUST be an [[ref: active accreditation]]. Abort otherwise.
 2. `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), and `vs.vs_operator` MUST equal `operator`. Abort otherwise.
@@ -1996,7 +1996,7 @@ Given a `corporation`, an `operator` (the `vs_operator`), a **primary entry** `p
    This step never aborts: `budget.expiration` is the end of the current budget cycle, not a validity window (an entry has none; step 1 enforces the window of the primary entry when there is one). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
 6. If an [VsOperatorBudget](#vsoperatorbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
 
-> Note: step 1 is what prevents the use of a `Accreditation` entry that is not, or is no longer, an [[ref: active accreditation]]: an entry that has never been validated has no `effective_from` yet, a revoked or expired entry no longer exists, and a slashed participation fails the definition. The configuration itself is unaffected by the state of any single `Accreditation` entry: the same agent keeps operating the identifier's other entries. A renewal is unaffected too: [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op) sets `op_state` back to PENDING, but the entry stays active until its `effective_until`.
+> Note: step 1 is what prevents the use of an `Accreditation` entry that is not, or is no longer, an [[ref: active accreditation]]: an entry that has never been validated has no `effective_from` yet, a revoked or expired entry no longer exists, and a slashed participation fails the definition. The configuration itself is unaffected by the state of any single `Accreditation` entry: the same agent keeps operating the identifier's other entries. A renewal is unaffected too: [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op) sets `op_state` back to PENDING, but the entry stays active until its `effective_until`.
 
 ##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
 
@@ -2527,7 +2527,7 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` (uint64) (*mandatory*): a `Ecosystem` entry `ecosystem` with id `id` MUST exist and `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
+- `id` (uint64) (*mandatory*): an `Ecosystem` entry `ecosystem` with id `id` MUST exist and `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`, and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
 - `transition` (duration) (*optional*): if provided, MUST be between 0 and `GlobalVariables.vid_rotation_max_transition` (inclusive).
 
@@ -3156,7 +3156,7 @@ Accreditations are linked to a Credential Schema and representable as a tree.
 @startuml
 scale max 800 width
  
-package "Example Credential Schema Accreditation Tree" as cs {
+package "Example Credential Scheman Accreditation Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
         role: ECOSYSTEM (Root)
@@ -3221,7 +3221,7 @@ In all cases, the process is very similar. Example execution of an [[ref: onboar
 2. The [[ref: applicant]] connects to the [[ref: validator]]'s [[ref: VS]] (identified by its [[ref: DID]]) and executes the validation steps required for the [[ref: onboarding process]] to conclude.
 3. If the [[ref: applicant]] qualifies, the [[ref: validator]] runs [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated) to update the Accreditation entry; the [[ref: applicant]] is then granted the new `Accreditation` entries and/or issued a credential.
 
-Once in the `VALIDATED` state, a Accreditation entry remains valid for a specific period (e.g., 365 days), configured in the [[ref: credential schema]].
+Once in the `VALIDATED` state, an Accreditation entry remains valid for a specific period (e.g., 365 days), configured in the [[ref: credential schema]].
 
 :::note
 Even when the Accreditation entry remains in the `VALIDATED` state for the configured period, the resulting `Accreditation` entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the [[ref: applicant]] MUST provide updated information to the [[ref: validator]] before attribute expiration in order to be issued an updated `Accreditation` entry and/or credential.
@@ -3468,7 +3468,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `id` MUST be a valid uint64 and a `Accreditation` entry with the same id MUST exist (an expired or revoked entry no longer does).
+- `id` MUST be a valid uint64 and an `Accreditation` entry with the same id MUST exist (an expired or revoked entry no longer does).
 - the `op_state` of that entry MUST be VALIDATED: a renewal cannot be started while an onboarding process is PENDING (its escrow, and the account that funded it, would otherwise be overwritten).
 
 ###### [MOD-AC-MSG-2-2-2] Renew Accreditation OP role and mode checks
@@ -3817,7 +3817,7 @@ This method is used by controller authorities of Ecosystems. When they create a 
 
 ##### [MOD-AC-MSG-7-1] Create Root Accreditation parameters
 
-An [[ref: account]] that would like to create a `Accreditation` entry MUST call this method by specifying:
+An [[ref: account]] that would like to create an `Accreditation` entry MUST call this method by specifying:
 
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
@@ -4063,7 +4063,7 @@ In the following `Accreditation` tree, the "Verifier E" `Accreditation` entry ca
 @startuml
 scale max 800 width
  
-package "Example Credential Schema Accreditation Tree" as cs {
+package "Example Credential Scheman Accreditation Tree" as cs {
 
     object "Ecosystem A" as tr #3fbdb6 {
         role: ECOSYSTEM (Root)
@@ -4136,7 +4136,7 @@ If the peer wants to issue a credential, the `agent`, the Verifiable User Agent 
 If the peer wants to verify a credential, agent must send to peer:
 
 - an `exchange_id` (uuid) for exchange identification;
-- *mandatory*: a map of compatible found credentials in available wallets for the requested schema_id, with at least one entry (an empty map means that the agent holds no matching credential and the exchange ends without an exchange record): for each matching credential, the reference of its issuer: the id of the `ISSUER` `Accreditation` entry its digest was anchored under while that entry exists, or of a current `ISSUER` entry of the issuer for the schema, else the `vs_id` of the issuer's service entry (for a credential of a schema whose `credential_anchoring` is NONE, an active `ISSUER` entry of the issuer, else its service entry); the VPR refuses the service-entry form while the issuer holds an active entry, so that the issuer's branch is paid. The payer selects from it the issuer reference of the exchange.
+- *mandatory*: a map of compatible found credentials in available wallets for the requested schema_id, with at least one entry (an empty map means that the agent holds no matching credential and the exchange ends without an exchange record): for each matching credential, the reference of its issuer: the id of the `ISSUER` `Accreditation` entry its digest was anchored under while that entry exists, or of an effective `ISSUER` entry of the issuer for the schema (validated, its `effective_from` passed), else the `vs_id` of the issuer's service entry (for a credential of a schema whose `credential_anchoring` is NONE, an active `ISSUER` entry of the issuer, else its service entry); the VPR refuses the service-entry form while the issuer holds an active entry, so that the issuer's branch is paid. The payer selects from it the issuer reference of the exchange.
 - *mandatory*: whether the agent requires a `CredentialExchange` for this verification: it does when the `presentation_validity_period` of the schema, read at that time, is greater than 0, or when the fees it computes with [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) (for the schema, the issuer reference of each credential of the map and the verifier reference named in the request: the verifier's `VERIFIER` entry, which the agent checks belongs to the verifier's service entry, or that service entry when it holds none) are greater than 0 for any credential of the map; when the agent requires one, the payer MUST create it whatever its own reading.
 - *mandatory* when the schema's `presentation_validity_period` is greater than 0 (the agent reads the `CredentialSchema` entry at the time of the verification, the VPR evaluates the value at the block), otherwise *optional* and only if the verifier asked for it in its request: the **presentation digest**, computed by the agent over the presentation it is about to send (the signed presentation as it will be transmitted: canonicalized with [JCS](https://www.rfc-editor.org/rfc/rfc8785) when it is a JSON document, its exact bytes otherwise; hashed with the `digest_algorithm` of the schema). The agent builds and signs the presentation first and sends only its digest at this step; the verifier anchors it through the `digest` parameter of the exchange transaction. When it sends a presentation digest, the agent has selected the credential it will present, and the map of compatible credentials above contains that single credential. Unless the schema's `presentation_validity_period` is greater than 0, anchoring a presentation digest is decided by the verifier: a verifier that did not ask for it MUST NOT expect one, and a verifier that asked for it MUST anchor it, since the agent sends the presentation only after checking the exchange transaction. The presentation MUST be a Verifiable Presentation signed by the holder and bound to the exchange identifier (or to the verifier's nonce), so that its digest differs from the credential's `digestJCS` and from any earlier presentation.
 
@@ -4174,7 +4174,7 @@ An [[ref: account]] that would like to run a `CredentialExchange` MUST send a Ms
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `exchange_id` (uuid) (*mandatory*): the exchange identifier agreed with the peer, in canonical textual form; a correlation key carried by the event ([CredentialExchange](#credentialexchange)), not stored.
 - `schema_id` (uint64) (*mandatory*): the id of the `CredentialSchema` entry of the credential.
-- `issuer_accreditation_id` (uint64) (*conditional*): the id of the `ISSUER` `Accreditation` entry of the issuer of the credential: the payer's own entry in a Credential Issuance, the entry the credential was anchored under, or a current entry of the issuer, in a Credential Verification. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
+- `issuer_accreditation_id` (uint64) (*conditional*): the id of the `ISSUER` `Accreditation` entry of the issuer of the credential: the payer's own entry in a Credential Issuance, the entry the credential was anchored under, or an effective entry of the issuer (validated, its `effective_from` passed), in a Credential Verification. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
 - `issuer_vs_id` (uint64) (*conditional*): the `VerifiableService` entry of the issuer, when the issuer holds no active `ISSUER` entry for the schema: the payer's own entry in a Credential Issuance (the schema's `issuer_onboarding_mode` is OPEN), the issuer's entry in a Credential Verification (an issuer acting under OPEN, or whose accreditation has since ended); the issuer branch of the fees is then the schema's root ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
 - `verifier_accreditation_id` (uint64) (*conditional*): the id of the `VERIFIER` entry of the verifier, in a Credential Verification. At most one of `verifier_accreditation_id` and `verifier_vs_id` MAY be provided; the presence of either makes the operation a Credential Verification.
 - `verifier_vs_id` (uint64) (*conditional*): the payer's own `VerifiableService` entry in a Credential Verification, when the verifier holds no active `VERIFIER` entry for the schema (the schema's `verifier_onboarding_mode` is OPEN or CREDENTIAL).
@@ -4748,7 +4748,7 @@ This method CAN be executed, for a `VerifiableService` entry `vs` identified dir
 - by the `vs_operator` of `vs`, acting on behalf of `Corporation[vs.corporation_id]` under the entry's `msg_types`; or
 - by any `operator` authorized by `Corporation[vs.corporation_id]` for this message type.
 
-and, for a `Accreditation` entry `perm` identified by `id`:
+and, for an `Accreditation` entry `perm` identified by `id`:
 
 - by the `vs_operator` of `VerifiableService[perm.vs_id]`, acting on behalf of `Corporation[perm.corporation_id]`; or
 - by any ancestor validator of `perm` in the `Accreditation` tree (from the direct parent up to the root `Accreditation` entry). For an ancestor validator `v`, the method CAN be executed by the `vs_operator` of `VerifiableService[v.vs_id]`, or by any `operator` authorized by `Corporation[v.corporation_id]` for this message type.
