@@ -432,7 +432,7 @@ Example of a Json Schema credential schema:
 
 ```json
 {
-  "$id": "vpr:verana:mainnet:cs:VPR_CREDENTIAL_SCHEMA_ID", // ignored, will be generated
+  "$id": "vpr:verana:mainnet:cs:VPR_CREDENTIAL_SCHEMA_ID", // ignored: set by the VPR to vpr:verana:<chain id>:cs:<id>
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ExampleCredential",
   "description": "ExampleCredential using JsonSchema",
@@ -2846,7 +2846,7 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `ecosystem_id` MUST represent an existing `Ecosystem` entry `ecosystem` and `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
-- `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]] is ignored and will be replaced during execution by the auto-generated id of this `CredentialSchema`.
+- `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]], whatever was submitted, is set during execution to `vpr:verana:<chain id>:cs:<id>`, the chain id of the VPR and the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
 - `verifier_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
 - `issuer_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
@@ -2888,7 +2888,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
   - `cs.id`: auto-incremented uint64.
   - `cs.ecosystem_id`: id of the `Ecosystem` entry that will be the owner of `cs`.
-  - `cs.json_schema`: `json_schema`, with VPR_CREDENTIAL_SCHEMA_ID string replaced by generated `cs.id`, and then canonicalize it using the [JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785) as defined in RFC 8785. Schema MUST be saved canonized.
+  - `cs.json_schema`: `json_schema`, with its `$id` set to `vpr:verana:<chain id>:cs:<cs.id>` (the chain id of the VPR and the generated `cs.id`, whatever `$id` was submitted), and then canonicalize it using the [JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785) as defined in RFC 8785. Schema MUST be saved canonized.
   - `cs.issuer_grantor_validation_validity_period`: `issuer_grantor_validation_validity_period`
   - `cs.verifier_grantor_validation_validity_period`: `verifier_grantor_validation_validity_period`
   - `cs.issuer_validation_validity_period`: `issuer_validation_validity_period`
