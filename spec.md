@@ -3789,7 +3789,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - set `applicant_accreditation.op_funding_account` to null.
 - if `applicant_accreditation.effective_from` is null (validation never completed): delete the entry, removing its id from deposit(`applicant_accreditation`).`accreditation_ids` ([Accreditation](#accreditation)).
-- else, if the participation is [[ref: barred]] (slashed while the renewal was pending, [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)): delete the entry likewise, as the slash would have done.
 - else: set `applicant_accreditation.op_state` to VALIDATED and `applicant_accreditation.op_last_state_change` to `now`; if `applicant_accreditation.effective_until` is not null and not later than `now`, the entry has expired meanwhile: delete it likewise.
 
 The method MUST emit an event carrying `id` and the outcome.
@@ -4006,7 +4005,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` from `id`. If no entry found, abort.
-- `applicant_accreditation.op_state` MUST be VALIDATED, else abort: an entry under a pending onboarding process, initial or renewal, is cancelled first by its applicant ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)), which refunds its escrow; a validated entry can be revoked whatever its window (current or future) and whether or not its participation is slashed.
+- `applicant_accreditation.effective_from` MUST be set, else abort: an entry under its initial onboarding process, never validated, is cancelled by its applicant ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)), which refunds its escrow and deletes it; a validated entry can be revoked whatever its window (current or future), whether or not its participation is slashed, and whether or not a renewal is pending for it (the escrow of the renewal is then refunded, see execution).
 
 ###### [MOD-AC-MSG-9-2-2] Revoke Accreditation advanced checks
 
@@ -4101,6 +4100,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 
 - Load `Accreditation` entry `applicant_accreditation` from `id`.
+- if `applicant_accreditation.op_state` is PENDING (a renewal in progress): transfer `applicant_accreditation.op_current_fees` (in its denom) and `applicant_accreditation.op_current_deposit` (in [[ref: native denom]]) back from the escrow [[ref: account]] to `applicant_accreditation.op_funding_account`, as [[MOD-AC-MSG-6-3]](#mod-ac-msg-6-3-cancel-accreditation-op-last-request-execution) does: nothing was minted for them.
 - delete `applicant_accreditation`, removing its id from deposit(`applicant_accreditation`).`accreditation_ids` and, for a root entry, from `CredentialSchema[applicant_accreditation.schema_id].root_accreditation_ids` ([Accreditation](#accreditation)).
 
 The method MUST emit an event carrying `id`, `schema_id`, `role`, `vs_id` and `now`: the revocation is recorded by the transaction, the VPR keeps no revoked entry.
@@ -4491,7 +4491,7 @@ This method can only be called by either:
 - a `corporation` ancestor validator of an entry of this participation;
 - the `corporation` controller of the `Ecosystem` object, owner of the corresponding credential schema.
 
-A slash is the ecosystem's sanction on a participation: it removes trust units, which the corporation owes back ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), revokes the participation's validated entries and, when the ecosystem so decides (`exclude`), excludes it until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). The participation is [[ref: barred]] while its debt is unrepaid or its exclusion stands. An ecosystem cannot slash while the corporation carries a network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)): the trust deposit then holds less than its parts say, and the network debt is repaid first.
+A slash is the ecosystem's sanction on a participation: it removes trust units, which the corporation owes back ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), revokes the participation's validated entries (a renewal pending on one of them included) and, when the ecosystem so decides (`exclude`), excludes it until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). The participation is [[ref: barred]] while its debt is unrepaid or its exclusion stands. An ecosystem cannot slash while the corporation carries a network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)): the trust deposit then holds less than its parts say, and the network debt is repaid first.
 
 ##### [MOD-AC-MSG-12-1] Slash Participation Trust Deposit parameters
 
@@ -4560,7 +4560,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `VerifiableService[vs_id].corporation_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`, `exclude`), which records the debt on `d`, increments `d.slash_count` and sets `d.excluded` when `exclude` is true. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), `tu_amount`, `slashed_fiat`, `exclude` and `now`.
 
-- for each entry `p` listed in `d.accreditation_ids` whose `op_state` is VALIDATED: delete it exactly as [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) does (removed from `d.accreditation_ids`, one event each). An entry under a pending onboarding process stays until its applicant cancels it ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request), which deletes it while the participation is [[ref: barred]]); it cannot be validated while the participation is barred.
+- for each entry `p` listed in `d.accreditation_ids` whose `effective_from` is set: delete it exactly as [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) does (the escrow of a pending renewal refunded to `p.op_funding_account`, the id removed from `d.accreditation_ids`, one event each). An entry under its initial onboarding process (`effective_from` null) stays until its applicant cancels it ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)); it cannot be validated while the participation is barred.
 
 
 #### [MOD-AC-MSG-13] Set Participation Exclusion
