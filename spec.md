@@ -5680,6 +5680,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `grantee` MUST NOT be the `vs_operator` of any `VerifiableService` entry of the corporation (index of entries by operator account); else abort.
 - `grantee` MUST NOT be `co.policy_address` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), with or without a fee grant, else abort: a corporation needs no authorization to itself, and x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked.
+- `grantee` MUST NOT be the `policy_address` of a corporation sponsored by `co` (a `Sponsorship` entry keyed (`co.id`, that corporation's `id`) exists, [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)), else abort: its fee allowance and the sponsorship's would share the one (granter, grantee) slot of x/feegrant.
 
 ::: warning
 An **Operator Authorization** CAN be granted ONLY IF no **VS Operator Authorization** exists for the same (`corporation_id`, `operator`) pair, that is, if `operator` is not the `vs_operator` of any `VerifiableService` entry of the corporation. **Operator Authorization** and **VS Operator Authorization** are mutually exclusive for a given grantee.
@@ -5772,6 +5773,7 @@ If any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `corporation_id` and `vs_operator` MUST NOT be null.
 - `vs_operator` MUST NOT be the `policy_address` of `Corporation[corporation_id]`, else abort: the corporation acts for itself through its own account, and x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked ([[MOD-DE-MSG-1-2]](#mod-de-msg-1-2-grant-fee-allowance-basic-checks)).
+- `vs_operator` MUST NOT be the `policy_address` of a corporation sponsored by `Corporation[corporation_id]` (a `Sponsorship` entry keyed (`corporation_id`, that corporation's `id`) exists), else abort: its fee allowance and the sponsorship's would share the one (granter, grantee) slot of x/feegrant.
 - `msg_types` MUST be non-empty and MUST contain only VPR delegable message types.
 - if `fee_spend_limit` is set, every amount MUST be strictly positive (the fee allowance is never unlimited nor zero).
 - if `period` is set, `spend_limit` MUST be set.
@@ -5869,6 +5871,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
 - let `co` be the `Corporation` entry resolved from the signing `corporation` account (the sponsor).
 - `sponsored_corporation_id`: a `Corporation` entry MUST exist with this `id`, and it MUST differ from `co.id`.
+- the `policy_address` of that corporation MUST NOT be the `grantee` of a `FeeGrant` of `co` nor the `vs_operator` of a `VerifiableService` entry of `co`, else abort: the sponsorship allowance and an operator allowance would share the one (granter, grantee) slot of x/feegrant.
 - if a `Sponsorship` entry `s` already exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, the new terms MUST be at least as generous as the current ones, else abort with an error indicating that the sponsorship must be revoked first: `period` MUST be unchanged; `msg_types` MUST be absent or a superset of `s.msg_types` (absent counts as all); `spend_limit` MUST be absent or, for every denom of `s.spend_limit`, at least `s.spend_limit` (an absent `s.spend_limit` cannot be set); `expiration` MUST be null or later than `s.expiration` (a null `s.expiration` cannot be set); `covers_fees` MUST NOT change from true to false; `fee_spend_limit` MUST be absent or at least `s.fee_spend_limit` per denom (an absent `s.fee_spend_limit` cannot be set).
 - `msg_types`, if specified: MUST be a non-empty list of message types among those of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op), [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem) (the list of the [Sponsorship](#sponsorship) entity).
 - `spend_limit`, if specified: MUST be a list of valid DenomAmounts.
