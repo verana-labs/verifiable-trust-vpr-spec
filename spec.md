@@ -5609,7 +5609,7 @@ Create (or update if it already exist) FeeGrant `feegrant`:
 - set `feegrant.msg_types` to `msg_types`
 - set `feegrant.expiration` to `expiration`
 - set `feegrant.spend_limit` to `spend_limit`
-- if `spend_limit` is set, set `feegrant.remaining_spend` to `spend_limit`
+- set `feegrant.remaining_spend` to `spend_limit` if it is set, else null
 - set `feegrant.period` to `period`
 
 Additionally, realize the on-chain allowance (see the [Delegation Module](#delegation-module) note): create (or update if one already exists) the `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee`, as an `AllowedMsgAllowance` over `msg_types` wrapping:
@@ -5658,7 +5658,7 @@ In the same [[ref: transaction]], also revoke the corresponding `x/feegrant` all
 - `operator` (account) (*conditional*): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal: the `corporation` account then signs alone (an implementation whose message carries a single signer field realizes this path by setting `operator` to the `corporation` account itself, which the group policy signs).
 - `grantee` (account) (*mandatory*): the account that receives the authorization from `corporation`.
 - `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the type of messages `grantee` is authorized to execute on behalf of `corporation`.
-- `expiration` (timestamp) (*optional*): when the authorization (and its optional feegrant) expires.
+- `expiration` (timestamp) (*optional*): when the authorization expires, or the end of its first cycle when `authz_spend_limit_period` is set ([OperatorAuthorization](#operatorauthorization)); the fee allowance, when one is granted, receives the same `expiration` with the same meaning ([FeeGrant](#feegrant)).
 - `authz_spend_limit` (DenomAmount[]) (*optional*): maximum spendable
 - `authz_spend_limit_period` (duration) (*optional*): can be combined with `authz_spend_limit`
 - `feegrant_spend_limit` (DenomAmount[]) (*optional*): when present, the corporation also pays the network fees of `grantee` for these message types, through a fee allowance ([FeeGrant](#feegrant)) capped at this amount; absent means no fee allowance.
@@ -5677,6 +5677,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `feegrant_spend_limit` (DenomAmount[]) if specified, MUST be a non-empty list of valid DenomAmounts.
 - `feegrant_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `feegrant_spend_limit` is not set.
 - if `authz_spend_limit_period` or `feegrant_spend_limit_period` is specified, `expiration` MUST also be specified.
+- if `feegrant_spend_limit_period` is specified, `authz_spend_limit_period` MUST also be specified: a fee allowance never cycles under an authorization that expires, so that it cannot outlive it.
 
 - `grantee` MUST NOT be the `vs_operator` of any `VerifiableService` entry of the corporation (index of entries by operator account); else abort.
 - `grantee` MUST NOT be `co.policy_address` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), with or without a fee grant, else abort: a corporation needs no authorization to itself, and x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked.
@@ -5704,8 +5705,8 @@ Then set / overwrite the following fields on `authz`:
 - set `authz.msg_types` to `msg_types`
 - set `authz.expiration` to `expiration`
 - set `authz.spend_limit` to `authz_spend_limit`
-- if `authz_spend_limit` is set, set `authz.remaining_spend` to `authz_spend_limit`
-- set `authz.period` to `authz_spend_limit_period`
+- set `authz.remaining_spend` to `authz_spend_limit` if it is set, else null
+- set `authz.period` to `authz_spend_limit_period` if `authz_spend_limit` is set, else null
 
 if `feegrant_spend_limit` is absent:
 
