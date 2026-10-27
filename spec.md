@@ -5483,7 +5483,7 @@ All deposit-bound [[ref: native denom]] (see [[MOD-TD-MSG-1]](#mod-td-msg-1-mint
 
 #### [DIST-1] Epoch payout order
 
-In the boundary block of each [[ref: epoch]], at step (2) of the boundary sequence defined in [Trust Unit Index](#trust-unit-index), the [[ref: distribution pool]] balance MUST be paid out in the following order. Epochs during which no block was produced are not paid: the pool carries over. Fiat-denominated amounts are converted to [[ref: native denom]] at the current oracle rate ([Get Price](#mod-xr-qry-3-get-price)); if no valid rate is available, the payout MUST be skipped and retried at the next epoch (amounts remain in the pool).
+In the boundary block of each [[ref: epoch]], at step (2) of the boundary sequence defined in [Trust Unit Index](#trust-unit-index), the [[ref: distribution pool]] balance MUST be paid out in the following order. Epochs during which no block was produced are not paid: the pool carries over. Fiat-denominated amounts are converted to [[ref: native denom]] at the current oracle rate ([Get Price](#mod-xr-qry-3-get-price)); if no valid rate is available, the payout of that epoch is skipped: its budgets are not paid later, the pool carries over, and the next boundary pays one epoch's budgets as usual.
 
 1. **Validators** — each active validator node receives `validator_node_budget` (in [[ref: main fiat currency]], oracle-converted), **docked by uptime**. The KPI is the node's signed-block ratio over the elapsed epoch, obtained from consensus signing info (objective, no oracle):
    - ratio ≥ `validator_target_uptime`: full payment;
@@ -5499,7 +5499,7 @@ The [[ref: native denom]] supply is `GlobalVariables.vna_total_supply` at genesi
 
 If the pool balance is insufficient to cover items 1–3 (bootstrap phase), the available balance MUST be distributed in order (validators first) and the shortfall is covered off-protocol by treasuries or vesting grants — **never by token emission**.
 
-Payouts SHOULD stream linearly over the epoch rather than in a single burst; treasuries are expected to publish sale policies (e.g. TWAP-based).
+Treasuries are expected to publish sale policies (e.g. TWAP-based) that spread their sales over time rather than selling each payout at once.
 
 #### [DIST-2] Bonding
 
