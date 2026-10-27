@@ -2335,7 +2335,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-for each parameter `param` <`key`, `value`> in `parameters`:
+for each parameter `param` <`key`, `value`> in `params`:
 
 - update parameter set value = `value` where key = `key`.
 
@@ -2604,7 +2604,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-for each parameter `param` <`key`, `value`> in `parameters`:
+for each parameter `param` <`key`, `value`> in `params`:
 
 - update parameter set value = `value` where key = `key`.
 
@@ -3043,7 +3043,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-for each parameter `param` <`key`, `value`> in `parameters`:
+for each parameter `param` <`key`, `value`> in `params`:
 
 - update parameter set value = `value` where key = `key`.
 
@@ -4489,7 +4489,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-for each parameter `param` <`key`, `value`> in `parameters`:
+for each parameter `param` <`key`, `value`> in `params`:
 
 - update parameter set value = `value` where key = `key`.
 
@@ -5200,7 +5200,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-for each parameter `param` <`key`, `value`> in `parameters`:
+for each parameter `param` <`key`, `value`> in `params`:
 
 - update parameter set value = `value` where key = `key`.
 
@@ -5550,7 +5550,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-for each parameter `param` <`key`, `value`> in `parameters`:
+for each parameter `param` <`key`, `value`> in `params`:
 
 - update parameter set value = `value` where key = `key`.
 
@@ -6537,7 +6537,7 @@ provided transaction fees MUST be sufficient for execution
 
 If all precondition checks passed, [[ref: transaction]] is executed.
 
-for each parameter `param` <`key`, `value`> in `parameters`:
+for each parameter `param` <`key`, `value`> in `params`:
 
 - update parameter set value = `value` where key = `key`.
 
@@ -6812,7 +6812,7 @@ provided transaction fees MUST be sufficient for execution.
 
 ##### [MOD-VS-MSG-7-3] Update Module Parameters execution
 
-for each parameter `param` <`key`, `value`> in `parameters`:
+for each parameter `param` <`key`, `value`> in `params`:
 
 - update parameter set value = `value` where key = `key`.
 
