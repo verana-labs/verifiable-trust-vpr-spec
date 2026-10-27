@@ -4177,7 +4177,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
-- `id` MUST be a valid UUID.
+- `exchange_id` MUST be a valid UUID.
 
 - `schema_id` MUST refer to an existing `CredentialSchema` entry `cs`, else abort.
 - exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided, and at most one of `verifier_accreditation_id` and `verifier_vs_id`; else abort.
