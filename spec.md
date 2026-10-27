@@ -1349,6 +1349,7 @@ entity "GlobalVariables" as gv {
   +ecosystem_creation_deposit: number
   +vid_rotation_max_transition: duration
   +network_gas_price: decimal
+  +max_gas_per_msg_type: map<string, number>
 }
 
 entity "TrustDeposit" as td {
@@ -1436,7 +1437,6 @@ cs --o pdep: schema_id
 pdep o-- cspt: role
 vs --o digest: vs_id
 cs --o digest: schema_id
-gv o-- "0..n" msgtype: max_gas_per_msg_type (number per type)
 
 @enduml
 
@@ -1850,7 +1850,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 - `network_gas_price` (decimal) (*mandatory*): price of one unit of gas in [[ref: main fiat currency]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). Converted once per [[ref: epoch]] into the derived state `network_gas_price_native`, which every validator applies to every transaction of the epoch. Adjustable by [[ref: governance proposal]]; a change takes effect at the next epoch boundary.
 - `council_account` (account) (*mandatory*): the group policy account of the [[ref: council]] ([GOV-1](#network-governance)); set at genesis, immutable.
 - `network_governance_framework_versions` (uint64[]) (*mandatory*): the ids of the `GovernanceFrameworkVersion` entries of the [[ref: NGF]], in version order, a few ids ever: the version in force is the last one whose `active_since` is set, a draft in preparation is a last one with `active_since` null ([[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document), [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)). Set at genesis ([[NGG]](#ngg-genesis-network-governance-framework)).
-- `max_gas_per_msg_type` (map<MsgType, number>) (*mandatory*): maximum gas per message type that a transaction may declare when its fee is paid by an account other than its signer ([[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions)). MUST list every VPR message type and the messages of the corporation group policy (proposal submission, vote, execution, withdrawal); a message type absent from the map cannot be fee-granted. Set at genesis from the measured gas profile of each message type with a margin for state-dependent messages, and adjusted by [[ref: governance proposal]].
+- `max_gas_per_msg_type` (map<string, number>) (*mandatory*): maximum gas per message type, keyed by the protobuf type URL of the message, that a transaction may declare when its fee is paid by an account other than its signer ([[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions)). Keyed by type URL rather than by [MsgType](#msgtype) because it MUST list every VPR message, delegable or not (Create Corporation, Set Sponsor, Grant Sponsorship, Update Exchange Rate and the governance messages included), and the messages of the group module (proposal submission, vote, execution, withdrawal, membership update); a message type absent from the map cannot be fee-granted. Set at genesis from the measured gas profile of each message type with a margin for state-dependent messages, and adjusted by [[ref: governance proposal]].
 
 ## Network Governance
 
@@ -1919,7 +1919,7 @@ These messages do not support delegation and are not executable by accounts, whe
 
 A `corporation` MAY allow its `operator`s to pay **network transaction fees** using the `corporation`’s funds.
 
-Fee grants are **not created directly**.  
+The fee grants of this specification, the `FeeGrant` entries, are **not created directly**.  
 They are created, updated, and revoked **exclusively by Delegation module messages**.  
 When an authorization is created or updated, it MAY optionally include an associated fee grant.
 
@@ -5410,7 +5410,7 @@ Return:
 - `network_gas_price` (decimal): `GlobalVariables.network_gas_price`, in [[ref: main fiat currency]] per unit of gas;
 - `network_gas_price_native` (decimal): the price of one unit of gas in [[ref: native denom]] base units for the current [[ref: epoch]] ([[NET-FEE-1]](#net-fee-1-network-gas-price));
 - `epoch` (number): the current epoch number, and `epoch_ends` (timestamp): the start of the next epoch, after which `network_gas_price_native` may change;
-- `max_gas_per_msg_type` (map<MsgType, number>): `GlobalVariables.max_gas_per_msg_type`.
+- `max_gas_per_msg_type` (map<string, number>): `GlobalVariables.max_gas_per_msg_type`.
 
 #### [MOD-TD-QRY-5] Get Participation Trust Deposit
 
@@ -5457,7 +5457,7 @@ Every [[ref: transaction]] pays [[ref: network fees]] in [[ref: native denom]], 
 
 #### [NET-FEE-3] Gas Cap for Fee-Granted Transactions
 
-When the account paying the fee is not the transaction's signer (an operator fee grant per [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), the VS operator allowance per [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks), or any other allowance granted by a corporation's `policy_address`), the transaction's `gas_limit` MUST NOT exceed the sum, over the messages it carries, of `GlobalVariables.max_gas_per_msg_type[msg_type]`, a message type absent from the map counting as 0. Otherwise the fee draw MUST be refused and the transaction rejected before any deduction. Transactions paid by their own signer are not subject to this cap.
+When the account paying the fee is not the transaction's signer (an operator fee grant per [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), the VS operator allowance per [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks), or any other allowance granted by a corporation's `policy_address`), the transaction's `gas_limit` MUST NOT exceed the sum, over the messages it carries, of `GlobalVariables.max_gas_per_msg_type[type URL of the message]`, a message type absent from the map counting as 0. Otherwise the fee draw MUST be refused and the transaction rejected before any deduction. Transactions paid by their own signer are not subject to this cap.
 
 > Rationale: with a fixed network gas price, the gas limit is the only part of the fee a grantee controls. The cap bounds what any grantee can draw from a corporation's account to `max_gas × network_gas_price_native` per message, whatever caps the corporation set or forgot to set on its own grants, which protects it from a misconfigured front end or a compromised operator key. The per-period budgets of the fee grants bound the volume; this rule bounds the unit.
 
@@ -5552,7 +5552,7 @@ The values in force in a boundary block apply to the payout performed in that bl
 
 Mapping of the auto-renewing `FeeGrant.expiration`: when `period` is set, the cycle boundary maps to the allowance's `period_reset` (the allowance carries NO absolute `x/feegrant` expiration, so it auto-renews until revoked, matching `FeeGrant.expiration`); when `period` is unset, `FeeGrant.expiration` maps to the allowance's absolute expiration. If multiple periods elapse with no activity, the `period_reset` skips ahead per the `x/feegrant` `PeriodicAllowance` rule rather than accumulating each skipped period. Accordingly, `FeeGrant.remaining_spend` MAY be sourced from the underlying allowance's running balance (it tracks the fees the allowance has paid) rather than persisted and decremented as a separate field; the normative requirement is the balance's behaviour (initialize at the limit, decrement per fee payment, reset at the end of each cycle), not its physical storage. It is queryable via the standard `x/feegrant` allowance query. On the `vs_operator` path, per-entry `fee_spend_limit` values are **summands** of the account allowance's per-period limit; there is no separate VPR-side fee ledger ([[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)). Design rule: **cycling that gates fee payment lives in `x/feegrant` (fee-processing side); the VPR side hard-gates operations only.**
 
-Authority and scope: the `x/feegrant` allowance is created and revoked by the VPR Delegation module **on the corporation's behalf** — from within [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance) / [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance), which are module calls invoked only after the corporation has authorized the enclosing operation (e.g. the group proposal that authorizes [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)); no separate `MsgGrantAllowance` is submitted. Corporation-paid fees apply to **operator-signed** delegable transactions, where the signing `operator`/`vs_operator` sets `fee_granter` to the corporation's `policy_address`; operations executed through the corporation's group (`MsgSubmitProposal` → `MsgVote` → `MsgExec`) are paid by the proposer / policy account directly and do not use a fee grant. Because the allowance is an `AllowedMsgAllowance`, **every** message in a fee-granted transaction MUST be in `FeeGrant.msg_types`, or the fee draw is rejected.
+Authority and scope: the `x/feegrant` allowance is created and revoked by the VPR Delegation module **on the corporation's behalf** — from within [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance) / [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance), which are module calls invoked only after the corporation has authorized the enclosing operation (e.g. the group proposal that authorizes [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)); no separate `MsgGrantAllowance` is submitted. Corporation-paid fees apply to **operator-signed** delegable transactions, where the signing `operator`/`vs_operator` sets `fee_granter` to the corporation's `policy_address`; operations executed through the corporation's group (`MsgSubmitProposal` → `MsgVote` → `MsgExec`) are paid by the proposer or by the policy account directly and never through a `FeeGrant` entry; a corporation MAY nonetheless grant plain `x/feegrant` allowances from its `policy_address` to its member accounts through its own group proposals, outside this module, which the sponsored-fees rule below and [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) cover like any other allowance of a `policy_address`. Because the allowance is an `AllowedMsgAllowance`, **every** message in a fee-granted transaction MUST be in `FeeGrant.msg_types`, or the fee draw is rejected.
 
 **Sponsored fees:** when the fee `granter` named by a transaction is the `policy_address` of a `Corporation` `co` whose active sponsor `sp` ([[FUND-CHECK]](#fund-check-funding-account-resolution)) has `covers_fees` true, the fee-deduction step MUST proceed in this order: (1) the corporation's own allowance to the signer MUST accept the draw as above, and the network bounds MUST hold (the fee to deduct is the required fee of [[NET-FEE-2]]; the gas cap of [[NET-FEE-3]] applies, since the payer is not the signer); (2) `sp.policy_address` MUST have a spendable balance of at least that fee, checked **before** anything is consumed, so that a sponsor that cannot pay is not charged against its `fee_spend_limit`; (3) the sponsor's allowance granted by `sp.policy_address` to `co.policy_address` ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)) is consumed; (4) the fee is debited from `sp.policy_address`. If step 2 or 3 fails, the fee is debited from `co.policy_address` as above, and the transaction is rejected if that account cannot pay. Both allowances are consumed on a sponsored payment: the corporation's own caps and message filters stay in force, and the stricter of the two caps wins. A transaction whose handler aborts after the sponsor paid is not refunded, exactly as for a corporation-paid fee: the network bounds and the sponsor's periodic budget bound that exposure. Realization: a VPR-specific fee-deduction decorator replacing the standard one in the ante handler, which resolves `co` from the fee `granter` (the lookup of [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)); a rejected transaction leaves no state change, so neither allowance is consumed on rejection. Nothing else in fee processing changes, and no allowance of the sponsored corporation is rewritten when its sponsor changes. Transactions executed through the corporation's group are covered the same way when the group has granted plain allowances from its `policy_address` to its member accounts.
 
@@ -6911,7 +6911,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `network_gas_price` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]] per unit of gas.
 - `council_account` (account) (*mandatory*): the policy account of the genesis council group ([GCO](#gco-genesis-council)).
 - `network_governance_framework_versions` (uint64[]) (*mandatory*): the id of the genesis version ([[NGG]](#ngg-genesis-network-governance-framework)).
-- `max_gas_per_msg_type` (map<MsgType, number>) (*mandatory*): to be set at genesis from the measured gas profile of each message type, with a margin for state-dependent messages (exchanges with many beneficiaries, large schemas, VS operator allowance adjustments, group executions).
+- `max_gas_per_msg_type` (map<string, number>) (*mandatory*): to be set at genesis from the measured gas profile of each message type, with a margin for state-dependent messages (exchanges with many beneficiaries, large schemas, VS operator allowance adjustments, group executions).
 
 ### [XRG] Genesis Exchange Rate
 
