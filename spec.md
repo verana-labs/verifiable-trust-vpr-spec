@@ -190,7 +190,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The fee a [[ref: transaction]] declares, in [[ref: native denom]]: at least the [[ref: transaction fees]] it requires ([[NET-FEE-2]](#net-fee-2-required-fee)), usually with a margin so that a slightly low gas estimate does not get the transaction rejected. Only the required fee is deducted: the declared excess is never deducted, and gas declared but not used is not refunded.
 
 [[def: funding account, funding accounts]]:
-~ The account a VPR method debits or credits for a [[ref: corporation]]: the `policy_address` of its active [[ref: sponsor]] when one exists and covers the message, else its own `policy_address`. Resolved at execution time by [[FUND-CHECK]](#fund-check-funding-account-resolution).
+~ The account a VPR method debits or credits for a [[ref: corporation]]: for a debit, the `policy_address` of its active [[ref: sponsor]] when one exists, covers the message and can bear the amounts, else its own `policy_address`; for a credit, the active sponsor's `policy_address` when one exists, else its own, except escrow refunds, which return to the recorded funder. Resolved at execution time by [[FUND-CHECK]](#fund-check-funding-account-resolution).
 
 [[def: future accreditation, future accreditations]]:
 ~ An `Accreditation` entry whose `effective_from` is higher than the current timestamp, whose `effective_until` is null or greater than `effective_from`, and whose participation and corporation are not [[ref: barred]].
