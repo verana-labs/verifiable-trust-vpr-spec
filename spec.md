@@ -6233,8 +6233,7 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
   - The pair `(base_asset_type, base_asset, quote_asset_type, quote_asset)` MUST be unique in storage. If an entry already exists, execution MUST abort.
 
 - **Rate validity**
-  - `rate` MUST be a base-10 encoded unsigned integer string.
-  - `rate` MUST be strictly greater than `"0"`.
+  - `rate` MUST be strictly greater than 0.
   - `rate_scale` MUST be within protocol-defined limits (e.g., `rate_scale <= 18`).
 
 - **validity_duration**
@@ -6284,7 +6283,7 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 - if a mandatory parameter is not present, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - `id` MUST refer to an existing `ExchangeRate` entry `xr` with `xr.state` = true.
-- `rate` MUST be strictly greater than `"0"`.
+- `rate` MUST be strictly greater than 0.
 - **Authorization**:
   - An `ExchangeRateAuthorization` `xrauthz` MUST exist where `xrauthz.xr_id` = `id` and `xrauthz.operator` = `operator`.
   - `xrauthz.expiration` MUST be in the future (`now() < xrauthz.expiration`).
