@@ -4520,7 +4520,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST be a valid uint64.
 - Load `Participant` entry `applicant_participant` from `id`. If no entry found, abort.
-- `amount` MUST be lower or equal to `applicant_participant.deposit` else MUST abort.
+- `amount` MUST be lower or equal to `applicant_participant.deposit` - (`applicant_participant.slashed_deposit` - `applicant_participant.repaid_deposit`), else MUST abort: only the part of the deposit that is not already slashed and unrepaid can be slashed.
 
 :::note
 Even if the `Participant` entry has expired or is revoked, it is still possible to slash it.
