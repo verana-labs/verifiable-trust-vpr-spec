@@ -3952,9 +3952,9 @@ Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[re
 
 ###### [MOD-AC-MSG-8-2-4] Set Accreditation Effective Until overlap checks
 
-Adjusting `effective_until` MUST NOT make this entry's effectiveness period overlap the period of a sibling entry of the same applicant (`corporation_id`, `vs_id`) with the same `schema_id`, `role` and `validator_accreditation_id`.
+Adjusting `effective_until` MUST NOT make this entry's effectiveness period overlap the period of a sibling entry of the same applicant (`corporation_id`, `vs_id`) with the same `schema_id`, `role` and `validator_accreditation_id`; for a root ECOSYSTEM entry the rule is that of [[MOD-AC-MSG-7-2-4]](#mod-ac-msg-7-2-4-create-root-accreditation-overlap-checks): no two root entries of the schema MAY be effective at the same time, whatever their `vs_id`.
 
-Let `accreditations[]` be the [[ref: active accreditations]] and [[ref: future accreditations]] listed in deposit(`applicant_accreditation`).`accreditation_ids` where:
+Let `accreditations[]` be the validated entries (`effective_from` set, whether or not their participation or corporation is [[ref: barred]]: a bar suspends an entry, it does not end it) listed in deposit(`applicant_accreditation`).`accreditation_ids`, or in `CredentialSchema[applicant_accreditation.schema_id].root_accreditation_ids` when `applicant_accreditation.role` is ECOSYSTEM, where:
 
 - `p.id` is not equal to `applicant_accreditation.id`,
 - `p.validator_accreditation_id` = `applicant_accreditation.validator_accreditation_id` (both NULL for root ECOSYSTEM entries).
@@ -3964,7 +3964,7 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 - `p.effective_from` is lower than `effective_until` (the new value being set), AND
 - `p.effective_until` is NULL or `p.effective_until` is greater than `applicant_accreditation.effective_from`.
 
-> Note: excluding `applicant_accreditation` itself is required, as the entry being adjusted would otherwise always match. The candidates are the current entries of the same participation, read from its deposit.
+> Note: excluding `applicant_accreditation` itself is required, as the entry being adjusted would otherwise always match. The candidates are the current entries of the same participation, read from its deposit, or the root entries of the schema.
 
 ##### [MOD-AC-MSG-8-3] Set Accreditation Effective Until execution
 
