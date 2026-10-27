@@ -592,7 +592,7 @@ pA ..> eA : in
 
 The same `Corporation` entry is the single entry point for the corporation's governance (the CGF), authorization delegation (via `OperatorAuthorization` to one or more `operator` accounts), and trust-deposit accounting (`TrustDeposit`). See the [Corporation Module](#corporation-module) for the methods that manage `Corporation` entries.
 
-A corporation that must not hold [[ref: native denom]] itself (a public entity, for example) MAY be **sponsored** by another corporation: the sponsor's `policy_address` then funds the sponsored corporation's escrows, exchange payments, slash repayments and, optionally, its network fees, while every `Accreditation` entry, trust unit, slash obligation and authorization remains the sponsored corporation's own. See [Sponsored Corporations](#sponsored-corporations).
+A corporation that must not hold [[ref: native denom]] itself (a public entity, for example) MAY be **sponsored** by another corporation: the sponsor's `policy_address` then funds the sponsored corporation's escrows, exchange payments, slash repayments and, optionally, its network fees, while every `Accreditation` entry, trust unit, slash debt and authorization remains the sponsored corporation's own. See [Sponsored Corporations](#sponsored-corporations).
 
 ### DID Indexing
 
@@ -802,7 +802,7 @@ issuera -r-> escrow: \t+105 VNA
 
 Upon completion of the onboarding process (VALIDATED), **the escrow is settled** as follows:
 
-- the validator receives its validation fees minus their deposit-bound portion (`trust_deposit_rate`) **directly in its wallet**;
+- the validator receives its validation fees minus their deposit-bound portion (`trust_deposit_rate`) **directly in its account**;
 - the deposit-bound amounts — `trust_deposit_rate` of the validation fees for the validator, plus the applicant's surcharge — are converted: [[ref: trust units]] are minted to the validator's and the applicant's trust deposits at the current [[ref: trust unit peg value]], and the corresponding [[ref: native denom]] is routed to the [[ref: distribution pool]].
 
 ```plantuml
@@ -903,7 +903,7 @@ Fee Distribution Model
 Trust fees are **consistently distributed** across participants:
 
 - A portion defined by `trust_deposit_rate` of each payee's share is deposit-bound: it is minted as [[ref: trust units]] to the **payee's trust deposit** and the corresponding [[ref: native denom]] is routed to the [[ref: distribution pool]].
-- The remaining portion is **transferred directly to the payee's wallet** — ordinary flow-through revenue, neither burned nor restricted.
+- The remaining portion is **transferred directly to the payee's account** — ordinary flow-through revenue, neither burned nor restricted.
 
 :::note
 Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment, or has sent the required `CredentialExchange` transaction whenever [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) requires one (a `presentation_validity_period` greater than 0, or a presentation digest to anchor).  
@@ -1552,10 +1552,10 @@ A `GovernanceFrameworkVersion` represents a single version of an [[ref: EGF]], o
 - `issuer_validation_validity_period` (number) (*mandatory*): number of days after which an issuer onboarding process expires and must be renewed.
 - `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier onboarding process expires and must be renewed.
 - `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder onboarding process expires and must be renewed.
-- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how permissions are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credentials of this schema without an onboarding process: an issuer acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)); it MAY self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the `verification_fees` and `validation_fees` it charges; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER permission;
-- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how permissions are managed for verifiers of this `CredentialSchema`. OPEN means any service can verify credentials of this schema without an onboarding process: a verifier acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash; it MAY self-create a `VERIFIER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)); CREDENTIAL means any service whose identifier is the subject of a valid credential of one of the schemas listed in `verifier_credential_schema_ids`, as established by the holder's trust resolution ([[ref: VT spec]]), can verify, under its service entry likewise; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER permission; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER permission;
+- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how accreditations are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credentials of this schema without an onboarding process: an issuer acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)); it MAY self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the `verification_fees` and `validation_fees` it charges; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER entry; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER entry;
+- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how accreditations are managed for verifiers of this `CredentialSchema`. OPEN means any service can verify credentials of this schema without an onboarding process: a verifier acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash; it MAY self-create a `VERIFIER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)); CREDENTIAL means any service whose identifier is the subject of a valid credential of one of the schemas listed in `verifier_credential_schema_ids`, as established by the holder's trust resolution ([[ref: VT spec]]), can verify, under its service entry likewise; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER entry; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER entry;
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): ids of the `CredentialSchema` entries whose holders are authorized verifiers when `verifier_onboarding_mode` is CREDENTIAL; MUST be set, non-empty, iff the mode is CREDENTIAL. Each id MUST refer to a `CredentialSchema` entry whose `subject_kind` is SERVICE and whose `presentation_mode` is PUBLIC, so that a holder can establish the verifier's credential from its DID Document alone, before any exchange. The VPR stores the list and does not evaluate it; the holder does, per the [[ref: VT spec]]. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema); a change applies to the presentations that follow it.
-- `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how permissions are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER permission; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
+- `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how accreditations are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER entry; PERMISSIONLESS means no onboarding is required to take place on the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
 - `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the UserAgent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to PERMISSIONLESS, since a natural person holds no `Accreditation` entry. Immutable.
 - `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service as a Linked Verifiable Presentation in its DID Document, and anyone can read it; reading a published credential is not a Credential Verification: no exchange is recorded and no fees are computed, so the `verification_fees` of a PUBLIC schema's `Accreditation` entries SHOULD be 0, since they can never be collected. ON_REQUEST: the credential is not published; the holder service presents it automatically, without the approval of its controller, to any requesting verifier authorized under the schema's `verifier_onboarding_mode` (under OPEN any peer; under CREDENTIAL a peer whose service holds a credential of one of the schemas listed in `verifier_credential_schema_ids`, which the holder establishes itself; under the two onboarding modes the holder of an active VERIFIER `Accreditation` entry), after having verified the exchange transaction when one is required (see [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)). ON_APPROVAL: as ON_REQUEST, but each presentation requires the approval of the controller of the holder service, given before any payment is made. The VPR stores this declaration; its enforcement is the responsibility of agents, as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Immutable.
 - `credential_format` (CredentialFormat) (*mandatory*): the single format in which credentials of this schema are issued: W3C_JSONLD (W3C Verifiable Credentials in JSON-LD), ANONCREDS, SD_JWT, or MDOC (ISO/IEC 18013-5 mobile documents, `mso_mdoc`). MDOC is only allowed when `subject_kind` is PERSON. A PUBLIC credential is necessarily W3C_JSONLD, since it is published as a Linked Verifiable Presentation; a presented (non-published) service credential MAY use ANONCREDS or SD_JWT when selective disclosure or unlinkability matters, as the UserAgent credential does. An ecosystem that needs the same claims in several formats creates one schema per format. Future versions of this specification MAY add values. Immutable.
@@ -1573,14 +1573,14 @@ A `GovernanceFrameworkVersion` represents a single version of an [[ref: EGF]], o
 - `id` (uint64) (*mandatory*) (key): the id of the accreditation. An entry exists while it is pending, effective or future: it is deleted when it expires (the expiry sweep below), when it is revoked ([[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)) or by an ecosystem slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)), or when a never-validated onboarding process is cancelled ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)); a new entry for the same participation is created afresh and shares its [ParticipationTrustDeposit](#participationtrustdeposit). The VPR keeps no expired or revoked entry; they live in the transaction history that indexers serve.
 - `schema_id` (uint64) (*mandatory*): the id of the related `CredentialSchema` entry.
 - `role` (AccreditationRole) (*mandatory*): ISSUER, VERIFIER, ISSUER_GRANTOR, VERIFIER_GRANTOR, ECOSYSTEM, HOLDER. Set at create time and never rotated thereafter.
-- `vs_id` (uint64) (*mandatory*): id of the [VerifiableService](#verifiableservice) entry of the [[ref: VS]] this permission refers to. The referenced entry MUST be owned by the corporation that creates the entry (see [VID ownership](#vid-ownership)). MAY be shared with other `Accreditation` entries (a single identifier MAY hold several roles, and several entries for one role, under different validators or successive windows); the `Accreditation` identity is its `id`, its participation is (`vs_id`, `schema_id`, `role`). Set at create time and never changed thereafter; the identifier string is read from `VerifiableService[vs_id].vid` and rotated through [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) without touching this entry. The corporation of an entry is not stored: for an entry `p`, `p.corporation_id` denotes `VerifiableService[p.vs_id].corporation_id` throughout this specification (one lookup).
+- `vs_id` (uint64) (*mandatory*): id of the [VerifiableService](#verifiableservice) entry of the [[ref: VS]] this entry refers to. The referenced entry MUST be owned by the corporation that creates the entry (see [VID ownership](#vid-ownership)). MAY be shared with other `Accreditation` entries (a single identifier MAY hold several roles, and several entries for one role, under different validators or successive windows); the `Accreditation` identity is its `id`, its participation is (`vs_id`, `schema_id`, `role`). Set at create time and never changed thereafter; the identifier string is read from `VerifiableService[vs_id].vid` and rotated through [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) without touching this entry. The corporation of an entry is not stored: for an entry `p`, `p.corporation_id` denotes `VerifiableService[p.vs_id].corporation_id` throughout this specification (one lookup).
 - `created` (timestamp) (*mandatory*): timestamp this `Accreditation` has been created.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Accreditation` is effective. It is null if, and only if, the entry was created by [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op) and has not yet been validated by [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated); such an entry is deleted at cancellation ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)). Entries created by [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation) and [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation) always have `effective_from` set at creation time.
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Accreditation` is effective, null if no time limit has been set for this permission.
-- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (`corporation` grantee of this perm) for running an onboarding process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
-- `issuance_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
-- `verification_fees` (number) (*mandatory*): fees requested by grantee `corporation` of this perm when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
-- `validator_accreditation_id` (uint64) (*optional*): permission of the validator assigned to the onboarding process of this permission, ie *parent node* in the `Accreditation` tree.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Accreditation` is effective, null if no time limit has been set for this entry.
+- `validation_fees` (number) (*mandatory*): price to pay by an applicant to a validator (the `corporation` of this entry) for running an onboarding process for a given validation period. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
+- `issuance_fees` (number) (*mandatory*): fees requested by the `corporation` of this entry when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
+- `verification_fees` (number) (*mandatory*): fees requested by the `corporation` of this entry when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
+- `validator_accreditation_id` (uint64) (*optional*): the validator entry assigned to the onboarding process of this entry, i.e. its *parent node* in the `Accreditation` tree.
 - `op_state` (enum) (*mandatory*): one of PENDING, VALIDATED.
 - `op_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Accreditation` expiration timestamp.
 - `op_last_state_change` (timestamp) (*mandatory*)
@@ -1826,7 +1826,7 @@ Each group below is owned by the module whose Update Module Parameters message c
 - `council_budget` (decimal) (*mandatory*): council treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through [[ref: governance proposals]].
 - `foundation_budget` (decimal) (*mandatory*): foundation treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through [[ref: governance proposals]].
 - `vna_holder_max_yield_rate` (decimal) (*mandatory*): yearly cap on the fee-funded yield paid to [[ref: bonded tokens]], expressed as a fraction of the bonded amount. No oracle needed. Converted to a per-epoch cap by linear pro-rata, × `epoch_length` / 365 days ([[DIST-1]](#dist-1-epoch-payout-order)).
-- `unbonding_period` (duration) (*mandatory*): staking exit delay for [[ref: bonded tokens]]. Default value: 28 days.
+- `unbonding_period` (duration) (*mandatory*): exit delay for [[ref: bonded tokens]]. Default value: 28 days.
 - `bonding_enabled` (boolean) (*mandatory*): whether item 4 of [[DIST-1]](#dist-1-epoch-payout-order), the yield to [[ref: bonded tokens]], is active. False at genesis; set to true by [[ref: governance proposal]] only once the bonding mechanism of [[DIST-2]](#dist-2-bonding) is specified and implemented and legal counsel has reviewed the yield. While false, bonding is not available and the pool remainder after the budgets is burned in full.
 
 **Native denom:**
@@ -1978,7 +1978,7 @@ A second authorization grant mode exists for vs-agents. It is used when a corpor
 
 > Note: the set of messages a `vs_operator` is authorized to execute in the context of an entry is declared when the configuration is set ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or replaced ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service), [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)) and stored in `vs.msg_types`. One configuration covers every role the identifier holds: the role-specific checks of each message decide what the operator can do with a given `Accreditation` entry.
 
-Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission** `perm` (a `Accreditation` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) does or as [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) does for a party acting without an entry), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
+Given a `corporation`, an `operator` (the `vs_operator`), a **primary entry** `perm` (a `Accreditation` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) does or as [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) does for a party acting without an entry), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
 
 1. If `perm` is not null, it MUST be an [[ref: active accreditation]]. Abort otherwise.
 2. `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), and `vs.vs_operator` MUST equal `operator`. Abort otherwise.
@@ -1988,7 +1988,7 @@ Given a `corporation`, an `operator` (the `vs_operator`), a **primary permission
    - set `budget.remaining_spend := budget.spend_limit`.
    - set `budget.expiration := now() + vs.period`.
 
-   This step never aborts: `budget.expiration` is the end of the current budget cycle, not a validity window (an entry has none; step 1 enforces the window of the primary permission when there is one). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
+   This step never aborts: `budget.expiration` is the end of the current budget cycle, not a validity window (an entry has none; step 1 enforces the window of the primary entry when there is one). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
 6. If an [VsOperatorBudget](#vsoperatorbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
 
 > Note: step 1 is what prevents the use of a `Accreditation` entry that is not, or is no longer, an [[ref: active accreditation]]: an entry that has never been validated has no `effective_from` yet, a revoked or expired entry no longer exists, and a slashed participation fails the definition. The configuration itself is unaffected by the state of any single `Accreditation` entry: the same agent keeps operating the identifier's other entries. A renewal is unaffected too: [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op) sets `op_state` back to PENDING, but the entry stays active until its `effective_until`.
@@ -2094,10 +2094,10 @@ As a result, `accountABC` is authorized to:
 |                                | Set Participation Exclusion                  |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion) |corporation + operator |
 |                                | Self Create Accreditation (OPEN / CREDENTIAL modes) |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation) |corporation + operator  |
 |                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) |corporation + operator OR corporation + vs_operator |
-|                                | List Accreditations                        | /pp/v1/list                | Query  | [[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)    |N/A |
-|                                | Get an Accreditation                        | /pp/v1/get                 | Query  | [[MOD-AC-QRY-2]](#mod-ac-qry-2-get-accreditation)    |N/A |
-|                                | Find Beneficiaries                      | /pp/v1/beneficiaries       | Query  | [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)  |N/A |
-|                                | List Accreditation Module Parameters     |  /pp/v1/params         | Query    | [[MOD-AC-QRY-6]](#mod-ac-qry-6-list-accreditation-module-parameters)   |N/A |
+|                                | List Accreditations                        | /ac/v1/list                | Query  | [[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)    |N/A |
+|                                | Get an Accreditation                        | /ac/v1/get                 | Query  | [[MOD-AC-QRY-2]](#mod-ac-qry-2-get-accreditation)    |N/A |
+|                                | Find Beneficiaries                      | /ac/v1/beneficiaries       | Query  | [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)  |N/A |
+|                                | List Accreditation Module Parameters     |  /ac/v1/params         | Query    | [[MOD-AC-QRY-6]](#mod-ac-qry-6-list-accreditation-module-parameters)   |N/A |
 | Trust Deposit                  | Mint Trust Units                    |   N/A (Tx)                       | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)   | module call |
 |                                | Update TD Module Parameters             |      N/A (Tx)               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |[[ref: governance proposal]] |
 |                                | Slash Trust Deposit             |           N/A (Tx)               | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |[[ref: governance proposal]] |
@@ -3243,7 +3243,7 @@ An Applicant that would like to start an onboarding process MUST execute this me
 - `vua_reward_rate` (decimal) (*optional*): for an `ISSUER` entry of a User Agent schema, the reward rate the vendor claims ([Accreditation](#accreditation)); absent means the global rate.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Accreditation` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 
-Available compatible perms can be found by using an indexer and presented in a front-end so applicant can choose its validator.
+Available compatible validator entries can be found by using an indexer and presented in a front-end so applicant can choose its validator.
 
 ##### [MOD-AC-MSG-1-2] Start Accreditation OP precondition checks
 
@@ -3257,7 +3257,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `role` (AccreditationRole) (*mandatory*) MUST be a valid AccreditationRole: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
-- `validator_accreditation_id` (uint64) (*mandatory*): see [MOD-AC-MSG-1-2-2](#mod-ac-msg-1-2-2-start-accreditation-op-permission-checks).
+- `validator_accreditation_id` (uint64) (*mandatory*): see [MOD-AC-MSG-1-2-2](#mod-ac-msg-1-2-2-start-accreditation-op-role-and-mode-checks).
 - `validation_fees` (number) (*optional*): Requested validation_fees for this `Accreditation` entry (can be modified by validator).
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Accreditation` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Accreditation` entry (can be modified by validator).
@@ -3268,7 +3268,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. When the schema's `holder_onboarding_mode` is `ISSUER_ONBOARDING_PROCESS`, the onboarding process MUST have reached `VALIDATED` before the credential is issued: the Verifiable Trust specification requires an active `HOLDER` entry at issuance, and trust resolution requires it to stay active. When it is `PERMISSIONLESS`, no `HOLDER` entry exists and the issuer applies its own checks.
 :::
 
-###### [MOD-AC-MSG-1-2-2] Start Accreditation OP permission checks
+###### [MOD-AC-MSG-1-2-2] Start Accreditation OP role and mode checks
 
 - Load `Accreditation` entry `validator_accreditation` from `validator_accreditation_id`. It MUST be a [[ref: active accreditation]] else transaction MUST abort.
 - Load `CredentialSchema` entry `cs` from `validator_accreditation.schema_id`. It MUST exist.
@@ -3356,12 +3356,12 @@ Additionally, if any entry of `d.accreditation_ids` matches the same validator w
 
 > Note: the candidates are the current entries of the participation, listed on its deposit; no index of entries exists. `role` and `vs_id` are those of the key; all entries sharing a `validator_accreditation_id` share its `schema_id` by construction.
 
-###### [MOD-AC-MSG-1-2-5] Start Accreditation OP unrepaid slash checks
+###### [MOD-AC-MSG-1-2-5] Start Accreditation OP barred checks
 
 A [[ref: barred]] corporation MUST NOT start an onboarding process, nor may a corporation start one for a barred participation: a slash debt is repaid first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), an exclusion is lifted by the ecosystem controller ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)) or by network governance ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
 
 - `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
-- the participation MUST NOT have been slashed: `ParticipationTrustDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false; else abort. The exclusion is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); an expired or revoked entry alone does not prevent a new one.
+- the participation MUST NOT be barred: `ParticipationTrustDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false; else abort. The exclusion is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); an expired or revoked entry alone does not prevent a new one.
 
 ##### [MOD-AC-MSG-1-3] Start Accreditation OP execution
 
@@ -3440,7 +3440,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - If validator `Accreditation` is not valid anymore, applicant MUST perform a new onboarding process with another validator.
 - Renewal does not allow changing the `Accreditation.validation_fees`, `Accreditation.issuance_fees`, `Accreditation.verification_fees` or `Accreditation.vua_reward_rate`. To change these values, applicant MUST start a new onboarding process.
 - if the participation is [[ref: barred]] (`unrepaid_slash` > 0 or `excluded` on its deposit), method MUST fail; a revoked entry no longer exists.
-- if `corporation` is [[ref: barred]] (a network debt or exclusion on its trust deposit), method MUST fail (see [MOD-AC-MSG-2-2-4](#mod-ac-msg-2-2-4-renew-accreditation-op-unrepaid-slash-checks)).
+- if `corporation` is [[ref: barred]] (a network debt or exclusion on its trust deposit), method MUST fail (see [MOD-AC-MSG-2-2-4](#mod-ac-msg-2-2-4-renew-accreditation-op-barred-checks)).
 
 ##### [MOD-AC-MSG-2-1] Renew Accreditation OP parameters
 
@@ -3462,7 +3462,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `id` MUST be a valid uint64 and a `Accreditation` entry with the same id MUST exist (an expired or revoked entry no longer does).
 - the `op_state` of that entry MUST be VALIDATED: a renewal cannot be started while an onboarding process is PENDING (its escrow, and the account that funded it, would otherwise be overwritten).
 
-###### [MOD-AC-MSG-2-2-2] Renew Accreditation OP permission checks
+###### [MOD-AC-MSG-2-2-2] Renew Accreditation OP role and mode checks
 
 - Load `Accreditation` entry `applicant_accreditation`. `co.id` MUST equal `applicant_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else MUST abort. `applicant_accreditation` MUST be a [[ref: active accreditation]].
 - Load `Accreditation` entry `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`. It MUST exist (a validator whose entry expired or was revoked cannot renew its applicants), and be a [[ref: active accreditation]], else MUST abort.
@@ -3504,8 +3504,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - else MUST abort.
 
-> Note: these are the same mode/role compatibility checks as [MOD-AC-MSG-1-2-2](#mod-ac-msg-1-2-2-start-accreditation-op-permission-checks), with `role` read from `applicant_accreditation.role`. Because onboarding modes are immutable ([[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)), a self-created entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) can never renew: its mode is OPEN or CREDENTIAL, which always falls through to abort. Root ECOSYSTEM entries are blocked by the `validator_accreditation` existence check above (`validator_accreditation_id` is null).
-- the participation MUST NOT have been slashed, as in [MOD-AC-MSG-1-2-5](#mod-ac-msg-1-2-5-start-accreditation-op-unrepaid-slash-checks).
+> Note: these are the same mode/role compatibility checks as [MOD-AC-MSG-1-2-2](#mod-ac-msg-1-2-2-start-accreditation-op-role-and-mode-checks), with `role` read from `applicant_accreditation.role`. Because onboarding modes are immutable ([[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)), a self-created entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) can never renew: its mode is OPEN or CREDENTIAL, which always falls through to abort. Root ECOSYSTEM entries are blocked by the `validator_accreditation` existence check above (`validator_accreditation_id` is null).
+- the participation MUST NOT be barred, as in [MOD-AC-MSG-1-2-5](#mod-ac-msg-1-2-5-start-accreditation-op-barred-checks).
 
 ###### [MOD-AC-MSG-2-2-3] Renew Accreditation OP fee checks
 
@@ -3540,9 +3540,9 @@ else if `(cs.pricing_asset_type, cs.pricing_asset)` is set to a fiat currency `(
 Deposit-bound amounts MUST always be paid in [[ref: native denom]]. While the renewal onboarding process is PENDING, both the validation fees and the deposit-bound amount are **held in the escrow account**: no [[ref: trust units]] are minted and nothing is routed to the [[ref: distribution pool]] until validation; on cancellation the escrow is refunded as-is.
 :::
 
-###### [MOD-AC-MSG-2-2-4] Renew Accreditation OP unrepaid slash checks
+###### [MOD-AC-MSG-2-2-4] Renew Accreditation OP barred checks
 
-Same as [MOD-AC-MSG-1-2-5](#mod-ac-msg-1-2-5-start-accreditation-op-unrepaid-slash-checks), for the corporation and the participation of the entry being renewed:
+Same as [MOD-AC-MSG-1-2-5](#mod-ac-msg-1-2-5-start-accreditation-op-barred-checks), for the corporation and the participation of the entry being renewed:
 
 - `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
 - deposit(`applicant_accreditation`) MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort.
@@ -3622,14 +3622,14 @@ else MUST abort.
 
 - `issuance_fee_discount` : (number) (*mandatory*):
   - if `applicant_accreditation.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_accreditation.issuance_fee_discount` else MUST abort.
-  - otherwise (first validation), the allowed range depends on `applicant_accreditation.role` (the onboarding mode of `cs` is implied by the existence of the onboarding process, see [[MOD-AC-MSG-1-2-2]](#mod-ac-msg-1-2-2-start-accreditation-op-permission-checks)):
+  - otherwise (first validation), the allowed range depends on `applicant_accreditation.role` (the onboarding mode of `cs` is implied by the existence of the onboarding process, see [[MOD-AC-MSG-1-2-2]](#mod-ac-msg-1-2-2-start-accreditation-op-role-and-mode-checks)):
     - if `applicant_accreditation.role` == ISSUER_GRANTOR: `issuance_fee_discount` MUST be between 0 (no discount) and 1 (100% discount) inclusive, else MUST abort.
     - if `applicant_accreditation.role` == ISSUER: `issuance_fee_discount` MUST be between 0 (no discount) and `max_discount` inclusive, else MUST abort, where `max_discount` is `validator_accreditation.issuance_fee_discount` if `cs.issuer_onboarding_mode` is GRANTOR_ONBOARDING_PROCESS (the validator is a ISSUER_GRANTOR) and 1 if it is ECOSYSTEM_ONBOARDING_PROCESS.
     - for any other role: `issuance_fee_discount` MUST be 0, else MUST abort.
 
 - `verification_fee_discount` : (number) (*mandatory*):
   - if `applicant_accreditation.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_accreditation.verification_fee_discount` else MUST abort.
-  - otherwise (first validation), the allowed range depends on `applicant_accreditation.role` (the onboarding mode of `cs` is implied by the existence of the onboarding process, see [[MOD-AC-MSG-1-2-2]](#mod-ac-msg-1-2-2-start-accreditation-op-permission-checks)):
+  - otherwise (first validation), the allowed range depends on `applicant_accreditation.role` (the onboarding mode of `cs` is implied by the existence of the onboarding process, see [[MOD-AC-MSG-1-2-2]](#mod-ac-msg-1-2-2-start-accreditation-op-role-and-mode-checks)):
     - if `applicant_accreditation.role` == VERIFIER_GRANTOR: `verification_fee_discount` MUST be between 0 (no discount) and 1 (100% discount) inclusive, else MUST abort.
     - if `applicant_accreditation.role` == VERIFIER: `verification_fee_discount` MUST be between 0 (no discount) and `max_discount` inclusive, else MUST abort, where `max_discount` is `validator_accreditation.verification_fee_discount` if `cs.verifier_onboarding_mode` is GRANTOR_ONBOARDING_PROCESS (the validator is a VERIFIER_GRANTOR) and 1 if it is ECOSYSTEM_ONBOARDING_PROCESS.
     - for any other role: `verification_fee_discount` MUST be 0, else MUST abort.
@@ -3650,7 +3650,7 @@ Now, let's verify `effective_until`:
 - else if `applicant_accreditation.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `op_exp` is not null, lower or equal to `op_exp`.
 - else `effective_until` MUST be greater than `applicant_accreditation.effective_until` AND, if `op_exp` is not null, lower or equal to `op_exp`.
 
-###### [MOD-AC-MSG-3-2-2] Set Accreditation OP to Validated validator perms
+###### [MOD-AC-MSG-3-2-2] Set Accreditation OP to Validated validator checks
 
 - load `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`. `validator_accreditation` MUST be a [[ref: active accreditation]].
 - `co.id` MUST equal `validator_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
@@ -3731,7 +3731,7 @@ Update `Accreditation` `applicant_accreditation`:
 - set `applicant_accreditation.op_summary_digest` to `op_summary_digest`.
 - set `applicant_accreditation.op_exp` to `op_exp`.
 - set `applicant_accreditation.effective_until` to `effective_until`, and file the entry in the expiry queue accordingly ([Accreditation](#accreditation)).
-- if `applicant_accreditation.effective_from` IS NULL (first time method is called for this perm, and thus we are not in a renewal):
+- if `applicant_accreditation.effective_from` IS NULL (first time method is called for this entry, and thus we are not in a renewal):
   - set `applicant_accreditation.validation_fees` to `validation_fees`;
   - set `applicant_accreditation.issuance_fees` to `issuance_fees`;
   - set `applicant_accreditation.verification_fees` to `verification_fees`;
@@ -3816,9 +3816,9 @@ An [[ref: account]] that would like to create a `Accreditation` entry MUST call 
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Accreditation` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Accreditation` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-AC-MSG-7-2-1](#mod-ac-msg-7-2-1-create-root-accreditation-basic-checks)).
-- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running an onboarding process that uses this perm as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean an onboarding process must take place. For enabling onboarding processes, at least one of the two issuer, verifier mode must be different than OPEN.
-- `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the grantee of this perm when a credential is issued, in the denom specified in the credential schema. Default to 0.
-- `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the grantee of this perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
+- `validation_fees` (number) (*mandatory*): price to pay by applicant to validator for running an onboarding process that uses this entry as validator, for a given validation period, in the denom specified in the credential schema. Default to 0. Note that setting validation fees for OPEN schemas has no effect and does not mean an onboarding process must take place. For enabling onboarding processes, at least one of the two issuer, verifier mode must be different than OPEN.
+- `issuance_fees` (number) (*mandatory*): price to pay by the issuer of a credential of this schema to the `corporation` of this entry when a credential is issued, in the denom specified in the credential schema. Default to 0.
+- `verification_fees` (number) (*mandatory*): price to pay by the verifier of a credential of this schema to the `corporation` of this entry when a credential is verified, in the denom specified in the credential schema. Default to 0.
 
 ##### [MOD-AC-MSG-7-2] Create Root Accreditation precondition checks
 
@@ -3840,7 +3840,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.
 - `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.
 
-###### [MOD-AC-MSG-7-2-2] Create Root Accreditation permission checks
+###### [MOD-AC-MSG-7-2-2] Create Root Accreditation controller checks
 
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
@@ -3866,7 +3866,7 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 - (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`), AND
 - (`p.effective_until` is NULL or `p.effective_until` is greater than `effective_from_r`).
 
-###### [MOD-AC-MSG-7-2-5] Create Root Accreditation unrepaid slash checks
+###### [MOD-AC-MSG-7-2-5] Create Root Accreditation barred checks
 
 - `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
 - `ParticipationTrustDeposit[(vs_id, schema_id, ECOSYSTEM)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else abort: a [[ref: barred]] participation creates no entry.
@@ -4047,7 +4047,7 @@ In the following `Accreditation` tree, the "Verifier E" `Accreditation` entry ca
 - by "Verifier E", while its `Accreditation` entry exists;
 - by "Verifier Grantor D", if the corresponding `Accreditation` entry is a [[ref: active accreditation]];
 - by "Ecosystem A", if the corresponding root `Accreditation` entry is a [[ref: active accreditation]];
-- by the `Ecosystem` object controller, obtained by resolving perm => credential schema => ecosystem.
+- by the `Ecosystem` object controller, obtained by resolving entry => credential schema => ecosystem.
 
 ```plantuml
 
@@ -4203,7 +4203,7 @@ Primary party (the payer): let `R` be VERIFIER in a Credential Verification, ISS
 Issuer reference:
 
 - in a Credential Issuance, `issuer_accreditation` = `perm`.
-- in a Credential Verification, if `issuer_accreditation_id` is provided: load `issuer_accreditation` from it (abort if not found); `issuer_accreditation.role` MUST be ISSUER and `issuer_accreditation.schema_id` MUST equal `schema_id`, else abort; `issuer_accreditation.effective_from` MUST be non-null and not later than now (the entry has been validated and became effective), else abort. No other state is required of it: the validity of the credential is established by trust resolution at its issuance time, and the unrepaid-slash filter of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
+- in a Credential Verification, if `issuer_accreditation_id` is provided: load `issuer_accreditation` from it (abort if not found); `issuer_accreditation.role` MUST be ISSUER and `issuer_accreditation.schema_id` MUST equal `schema_id`, else abort; `issuer_accreditation.effective_from` MUST be non-null and not later than now (the entry has been validated and became effective), else abort. No other state is required of it: the validity of the credential is established by trust resolution at its issuance time, and the barred filter of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
 - in a Credential Verification, else (`issuer_vs_id` provided): `VerifiableService[issuer_vs_id]` MUST exist, else abort; let `d_i` be `ParticipationTrustDeposit[(issuer_vs_id, schema_id, ISSUER)]` if it exists: `d_i.accreditation_ids` MUST list no [[ref: active accreditation]], else abort (the caller MUST reference it, so that the issuer's branch is paid). `issuer_accreditation` stays null: the issuer branch is the schema's root.
 
 > Note: the `vs_operator` and `corporation_id` checks apply to the primary party only. In a Credential Verification, the issuer reference generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only. An issuer whose entry has since expired or been revoked holds none, and is referenced by its service entry.
@@ -4262,8 +4262,8 @@ Define the following variables:
 |----------|-------------|
 | `total_fees_in_pricing_asset` | Total fees to be distributed to beneficiaries (in pricing asset) |
 | `total_fees_in_native_denom` | Total fees converted to [[ref: native denom]] (if needed) |
-| `total_payer_trust_deposit` | Trust deposit payer must stake for themselves |
-| `total_payees_trust_deposit` | Trust deposit payer must stake on behalf of payees |
+| `total_payer_trust_deposit` | Deposit-bound amount minted to the payer's trust deposit |
+| `total_payees_trust_deposit` | Deposit-bound amounts the payer funds for the payees' trust deposits |
 | `total_payees_fees_to_account` | Fees to be transferred to payees' accounts |
 | `total_vua_reward` | Reward for the Verifiable User Agent (in [[ref: native denom]]) |
 
@@ -4529,7 +4529,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 A participation keeps its deposit after its entries expired or were revoked: it can still be slashed, by the ecosystem controller (Option #2), since no validator chain exists any more.
 :::
 
-###### [MOD-AC-MSG-12-2-2] Slash Participation Trust Deposit validator perms
+###### [MOD-AC-MSG-12-2-2] Slash Participation Trust Deposit authority checks
 
 Either Option #1, or #2 MUST return true, else abort.
 
@@ -4598,7 +4598,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` MUST name an existing `VerifiableService` entry and `schema_id` an existing `CredentialSchema` entry `cs`, else abort. If `d` exists, `d.excluded` MUST differ from `excluded`, else abort (nothing to change); if `d` does not exist, `excluded` MUST be true, else abort.
 
-###### [MOD-AC-MSG-13-2-2] Set Participation Exclusion permission checks
+###### [MOD-AC-MSG-13-2-2] Set Participation Exclusion controller checks
 
 - load `Ecosystem` `ecosystem` from `cs.ecosystem_id`; `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else abort.
 
@@ -4635,7 +4635,7 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Accreditation` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Accreditation` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this Perm is effective, null if it doesn't expire. If not null, MUST be greater than `effective_from_r` (see [MOD-AC-MSG-14-2-1](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks)).
-- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the grantee of this ISSUER perm when a credential is verified, in the denom specified in the credential schema. Default to 0.
+- `verification_fees` (number) (*optional*): price to pay by the verifier of a credential of this schema to the `corporation` of this ISSUER entry when a credential is verified, in the denom specified in the credential schema. Default to 0.
 - `validation_fees` (number) (*optional*): price to pay by the holder of a credential of this schema to the issuer when executing an onboarding process to obtain a credential, in the denom specified in the credential schema. Default to 0.
 
 ##### [MOD-AC-MSG-14-2] Self Create Accreditation precondition checks
@@ -4663,14 +4663,14 @@ Load `Accreditation` `validator_accreditation` from `validator_accreditation_id`
 - `verification_fees` (number) (*optional*): If specified, MUST be zero or a positive integer, and MUST be 0 when `role` is VERIFIER.
 - `validation_fees` (number) (*optional*): If specified, MUST be zero or a positive integer, and MUST be 0 when `role` is VERIFIER.
 
-###### [MOD-AC-MSG-14-2-2] Self Create Accreditation permission checks
+###### [MOD-AC-MSG-14-2-2] Self Create Accreditation mode checks
 
 To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
 
 - The related `CredentialSchema` entry is loaded with `validator_accreditation.schema_id`, and will be named `cs` in this section.
 - if `role` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
 - if `role` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is neither OPEN nor CREDENTIAL, MUST abort.
-- the participation MUST NOT have been slashed: `ParticipationTrustDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false; else abort. The exclusion is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); an expired or revoked entry alone does not prevent a new one.
+- the participation MUST NOT be barred: `ParticipationTrustDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false; else abort. The exclusion is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); an expired or revoked entry alone does not prevent a new one.
 
 ###### [MOD-AC-MSG-14-2-3] Self Create Accreditation fee checks
 
@@ -4691,9 +4691,9 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 
 > Note: the candidates are the current entries of the participation, read from its deposit.
 
-###### [MOD-AC-MSG-14-2-5] Self Create Accreditation unrepaid slash checks
+###### [MOD-AC-MSG-14-2-5] Self Create Accreditation barred checks
 
-Same as [MOD-AC-MSG-1-2-5](#mod-ac-msg-1-2-5-start-accreditation-op-unrepaid-slash-checks):
+Same as [MOD-AC-MSG-1-2-5](#mod-ac-msg-1-2-5-start-accreditation-op-barred-checks):
 
 - `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
 
@@ -4869,7 +4869,7 @@ Obsoleted by [MOD-AC-QRY-1].
 
 Anyone can execute this method.
 
-To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved perms until the root of the `Accreditation` tree (which is the ecosystem perm), starting from the 2 branches `issuer_accreditation` and `verifier_accreditation`, either branch being reduced to the schema's root entry when the party is referenced by its service entry (no active `Accreditation` entry: OPEN or CREDENTIAL mode, or an accreditation that has ended). As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found perms. In a Credential Issuance (no verifier reference), `issuer_accreditation` is never added to the set. In a Credential Verification (a verifier reference was given), `issuer_accreditation`, if not null, is added to the set unless it is barred; `verifier_accreditation` itself is never added to the set.
+To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved entries until the root of the `Accreditation` tree (the ecosystem entry), starting from the 2 branches `issuer_accreditation` and `verifier_accreditation`, either branch being reduced to the schema's root entry when the party is referenced by its service entry (no active `Accreditation` entry: OPEN or CREDENTIAL mode, or an accreditation that has ended). As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found entries. In a Credential Issuance (no verifier reference), `issuer_accreditation` is never added to the set. In a Credential Verification (a verifier reference was given), `issuer_accreditation`, if not null, is added to the set unless it is barred; `verifier_accreditation` itself is never added to the set.
 
 Example 1: `verifier_accreditation`: is not set: it's a credential offer, schema configured to have Issuer Grantors.
 
@@ -4877,13 +4877,13 @@ Example 1: `verifier_accreditation`: is not set: it's a credential offer, schema
 
 @startuml
 scale max 800 width
-object "ECOSYSTEM executor ancestor perm" as tr #3fbdb6 {
+object "ECOSYSTEM executor ancestor entry" as tr #3fbdb6 {
   add me to found_accreditation_set
 }
-object "ISSUER_GRANTOR executor ancestor perm" as ig #3fbdb6 {
+object "ISSUER_GRANTOR executor ancestor entry" as ig #3fbdb6 {
   add me to found_accreditation_set
 }
-object "ISSUER executor perm" as i #7677ed {
+object "ISSUER executor entry" as i #7677ed {
   don't add me to found_accreditation_set
 }
 
@@ -4899,10 +4899,10 @@ Example 2: `verifier_accreditation`: is not set: it's a credential offer. Schema
 
 @startuml
 scale max 800 width
-object "ECOSYSTEM executor ancestor perm" as tr #3fbdb6 {
+object "ECOSYSTEM executor ancestor entry" as tr #3fbdb6 {
   add me to found_accreditation_set
 }
-object "ISSUER executor perm" as i #7677ed {
+object "ISSUER executor entry" as i #7677ed {
   don't add me to found_accreditation_set
 }
 
@@ -4918,20 +4918,20 @@ Example 3: `verifier_accreditation` is set, it's a presentation request. Schema 
 
 @startuml
 scale max 800 width
-object "ECOSYSTEM beneficiary ancestor perm" as tr #3fbdb6 {
+object "ECOSYSTEM beneficiary ancestor entry" as tr #3fbdb6 {
   add me to found_accreditation_set
 }
-object "ISSUER_GRANTOR beneficiary ancestor perm" as ig #3fbdb6 {
+object "ISSUER_GRANTOR beneficiary ancestor entry" as ig #3fbdb6 {
   add me to found_accreditation_set
 }
-object "ISSUER beneficiary perm" as i #3fbdb6 {
+object "ISSUER beneficiary entry" as i #3fbdb6 {
   add me to found_accreditation_set
 }
 
-object "VERIFIER_GRANTOR executor ancestor perm" as vg #3fbdb6 {
+object "VERIFIER_GRANTOR executor ancestor entry" as vg #3fbdb6 {
   add me to found_accreditation_set
 }
-object "VERIFIER executor perm" as v #7677ed {
+object "VERIFIER executor entry" as v #7677ed {
   don't add me to found_accreditation_set
 }
 
@@ -4956,7 +4956,7 @@ v --> vg
 ##### [MOD-AC-QRY-4-2] Find Beneficiaries checks
 
 - `schema_id` MUST refer to an existing `CredentialSchema` entry; if `issuer_accreditation_id` (resp. `verifier_accreditation_id`) is specified, the entry's `schema_id` MUST equal `schema_id`; the reference forms MUST be as stated above.
-- if `issuer_accreditation_id` is specified, load `issuer_accreditation` from `issuer_accreditation_id`; the `Accreditation` entry MUST exist. Its state does not matter: a future entry (validated, window not yet open) still identifies the branch to pay (see the unrepaid-slash rule below); the exchange method applies its own, stricter, check.
+- if `issuer_accreditation_id` is specified, load `issuer_accreditation` from `issuer_accreditation_id`; the `Accreditation` entry MUST exist. Its state does not matter: a future entry (validated, window not yet open) still identifies the branch to pay (see the barred rule below); the exchange method applies its own, stricter, check.
 - if `verifier_accreditation_id` is specified, load `verifier_accreditation` from `verifier_accreditation_id`, Accreditation MUST exist and MUST be a [[ref: active accreditation]].
 
 ##### [MOD-AC-QRY-4-3] Find Beneficiaries execution
@@ -6079,7 +6079,7 @@ This method revokes a digest. It can be executed on behalf of:
 - the `corporation` of an **ancestor** of a current `ISSUER` entry of the issuer's participation (an entry listed in `ParticipationTrustDeposit[(d.vs_id, d.schema_id, ISSUER)].accreditation_ids`, and a validator in its branch up to the root ECOSYSTEM entry), while that ancestor is an [[ref: active accreditation]]: by any of its operators under an OperatorAuthorization, or by the vs-agent of that ancestor entry under a VS Operator Authorization whose entry's `msg_types` include `RevokeDigest`;
 - the `corporation` controlling the `Ecosystem` of `d.schema_id`, by any of its operators under an OperatorAuthorization, whatever the state of the tree (as for [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)).
 
-Revoking a digest is the on-chain revocation mechanism for an individual credential whose issuance was anchored through its issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); revoking the holder's `HOLDER` `Accreditation` entry ([[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)) withdraws trust from every credential of that relationship instead. The authority structure mirrors [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation): the issuer, its grantors and the ecosystem can revoke, and the ecosystem governance framework bounds the use of the ancestor path. Trust resolution of a credential whose `digestJCS` has a `Digest` entry with a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp, whoever set it. Revocation is irreversible.
+Revoking a digest is the on-chain revocation mechanism for an individual credential whose issuance was anchored through its issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); revoking the holder's `HOLDER` `Accreditation` entry ([[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)) withdraws trust from every credential of that relationship instead. The authority structure mirrors [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation): the issuer, its grantors and the ecosystem can revoke, and the ecosystem governance framework bounds the use of the ancestor path. Trust resolution of a credential whose credential digest has a `Digest` entry with a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp, whoever set it. Revocation is irreversible.
 
 Since any corporation may store any digest and the first to store it owns it, the Verifiable Trust specification requires the issuer of a credential of a schema whose `credential_anchoring` is not NONE to anchor its digest through the issuance transaction before delivering the credential, so that no other corporation can anchor it first and hold the right to revoke it.
 
