@@ -68,7 +68,7 @@ A Verifiable Public Registry (VPR) is a “registry of registries”, a public s
 
 - [[ref: corporation]] lifecycle and directory:
   - corporation onboarding, with associated [[ref: DID]] and [[ref: corporation governance framework]] publication
-  - multi-member governance through an on-chain `policy_address` (e.g., a Cosmos SDK group policy account)
+  - multi-member governance through an on-chain `policy_address` (a Cosmos SDK group policy account)
   - a public corporation directory queryable by indexers, [[ref: verifiable services]], and [[ref: verifiable user agents]]
   - corporations are the foundational actors of the VPR: they control [[ref: participants]] and may themselves control [[ref: ecosystems]].
 
@@ -1490,14 +1490,14 @@ A `Corporation` is the VPR-level entity representing an authority that acts in t
 `Corporation`:
 
 - `id` (uint64) (*mandatory*) (key): the id of the Corporation.
-- `policy_address` (account) (*mandatory*): the on-chain account that signs on behalf of this Corporation. MUST be **globally unique** across all `Corporation` entries (1:1): at any block height, no two `Corporation` entries MAY share the same `policy_address`. (Can be, for example, a Cosmos SDK `group_policy_address`; see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation).)
+- `policy_address` (account) (*mandatory*): the on-chain account that signs on behalf of this Corporation. MUST be **globally unique** across all `Corporation` entries (1:1): at any block height, no two `Corporation` entries MAY share the same `policy_address`. (The group policy account of the corporation's [[ref: group]], created by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) or at genesis.)
 - `vs_id` (uint64) (*mandatory*): id of the [VerifiableService](#verifiableservice) entry of the Corporation's own identifier. The referenced entry MUST be owned by this Corporation (`VerifiableService.corporation_id` = `id`), which makes it unique across `Corporation` entries, since only the owner may reference an entry. Set at creation by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), which registers the entry in the same transaction, and changed by [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation). The identifier string itself is `VerifiableService.vid`; it is rotated through [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) (see [VID ownership](#vid-ownership)).
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `active_version` (int) (*mandatory*): active [[ref: CGF]] version.
 - `sponsor_corporation_id` (uint64) (*optional*): id of the [[ref: corporation]] elected as [[ref: sponsor]] by this Corporation ([[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor)); null when the Corporation funds itself. The sponsorship is **active** only while a `Sponsorship` entry exists for (`sponsor_corporation_id`, `id`) and is not expired (see [[FUND-CHECK]](#fund-check-funding-account-resolution)).
 
-> Note: every other VPR entity that points to a Corporation does so through `corporation_id` (uint64), the FK referencing `Corporation.id`. The `policy_address` is the on-chain identity that signs Msgs on behalf of the Corporation; how that account is provisioned (single key, multisig, Cosmos SDK group policy, …) is an implementation concern out of scope for the data model.
+> Note: every other VPR entity that points to a Corporation does so through `corporation_id` (uint64), the FK referencing `Corporation.id`. The `policy_address` is the on-chain identity that signs Msgs on behalf of the Corporation: the policy account of its [[ref: group]], whose members decide under its decision policy ([GOV-6](#network-governance)); it is never a single key or a multisig.
 
 ### Ecosystem
 
@@ -1881,7 +1881,7 @@ Delegable messages are defined as messages that can be executed by an `operator`
 Such messages conceptually involve **two roles**:
 
 - `corporation` (account):  
-  The `policy_address` of the `Corporation` that owns the created or manipulated resource. This account signs the Msg as the corporation; on-chain it MAY be backed by any signing primitive (single key, multisig, Cosmos SDK group policy, …).  
+  The `policy_address` of the `Corporation` that owns the created or manipulated resource. This account signs the Msg as the corporation; on-chain it is the policy account of the corporation's [[ref: group]], which executes the Msg when a proposal passes.  
   The corporation is represented in the Msg through an authorization granted to an `operator` account.
 
 - `operator` (account):  
@@ -2155,7 +2155,7 @@ This module manages [[ref: corporation]] entries — the VPR-level entity that r
 
 #### [MOD-CO-MSG-1] Create Corporation
 
-Any [[ref: account]] CAN execute this method to atomically create a new on-chain `policy_address` account (in this implementation, a Cosmos SDK [[ref: group]] policy account) register a `Corporation` VPR entry bound to it, and register the Corporation's own identifier as a [VerifiableService](#verifiableservice) entry owned by the new Corporation, in a single [[ref: transaction]]. This eliminates any window between policy-address creation and VPR registration, ensuring [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) can never observe an unregistered `policy_address`.
+Any [[ref: account]] CAN execute this method to atomically create a new on-chain `policy_address` account (a Cosmos SDK [[ref: group]] policy account) register a `Corporation` VPR entry bound to it, and register the Corporation's own identifier as a [VerifiableService](#verifiableservice) entry owned by the new Corporation, in a single [[ref: transaction]]. This eliminates any window between policy-address creation and VPR registration, ensuring [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) can never observe an unregistered `policy_address`.
 
 There is no special "admin" role required to create a corporation: the signer is just the [[ref: account]] that submits the transaction, and that account holds no ongoing privileges over the resulting Corporation, group, or group policy.
 
