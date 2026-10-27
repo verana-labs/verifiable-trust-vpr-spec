@@ -2312,6 +2312,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `co.vs_id`: `vs_id`
 
+The method MUST emit an event carrying `co.id`, the former and the new `vs_id`, so that indexers learn the corporation's identifier without a query; the former entry stays the corporation's, and nothing a credential or an accreditation references changes.
+
 #### [MOD-CO-MSG-3] Update Module Parameters
 
 Update Module Parameters.
@@ -2512,6 +2514,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry that becomes the ecosystem's identifier. To rotate the identifier string itself, use [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier).
+- `transition` (duration) (*optional*): length of the transition window during which the former identifier remains acceptable to trust resolution for the schema credentials (VTJSCs) the ecosystem issued under it, as after a rotation ([[ref: VT spec]]). Defaults to `GlobalVariables.vid_rotation_max_transition`; 0 ends the former identifier at once. Carried by the event; the VPR does not store it.
 
 ##### [MOD-ES-MSG-2-2] Update Ecosystem precondition checks
 
@@ -2526,6 +2529,7 @@ If any of these precondition checks fail, method MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): a `Ecosystem` entry `ecosystem` with id `id` MUST exist and `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`, and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
+- `transition` (duration) (*optional*): if provided, MUST be between 0 and `GlobalVariables.vid_rotation_max_transition` (inclusive).
 
 ###### [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks
 
@@ -2540,6 +2544,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - load `Ecosystem` entry `ecosystem` from `id` and set:
 
 - `ecosystem.vs_id`: `vs_id`
+
+The method MUST emit an event carrying `ecosystem.id`, the former `vs_id`, the new `vs_id` and `transition_until` = `now` + (`transition` if provided, else `GlobalVariables.vid_rotation_max_transition`): trust resolution treats the former entry's identifier as rotated for the ecosystem's schema credentials until `transition_until`, during which the ecosystem re-issues them under the new identifier ([[ref: VT spec]]); a change to the same `vs_id` is a no-op and emits nothing.
 
 #### [MOD-ES-MSG-3] Archive Ecosystem
 
