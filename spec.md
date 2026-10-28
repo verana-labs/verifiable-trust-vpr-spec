@@ -3485,6 +3485,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `role` (AccreditationRole) (*mandatory*) MUST be a valid AccreditationRole: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
 - `validator_accreditation_id` (uint64) (*mandatory*): see [MOD-AC-MSG-1-2-2](#mod-ac-msg-1-2-2-start-accreditation-op-role-and-mode-checks).
 - `validation_fees` (number) (*optional*): Requested validation_fees for this `Accreditation` entry (can be modified by validator).
@@ -3686,6 +3687,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `id` MUST be a valid uint64 and an `Accreditation` entry with the same id MUST exist (an expired or revoked entry no longer does).
 - the `op_state` of that entry MUST be VALIDATED: a renewal cannot be started while an onboarding process is PENDING (its escrow, and the account that funded it, would otherwise be overwritten).
 
@@ -3837,6 +3839,8 @@ OR (executed by the vs-agent of the validator's entry, `VerifiableService[valida
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `validator_accreditation`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `validator_accreditation`) tuple.
 else MUST abort.
+
+[[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and the ecosystem of the schema of `applicant_accreditation`.
 
 - `applicant_accreditation.op_state` MUST be equal to PENDING, else abort.
 - `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_accreditation.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_accreditation.validation_fees`, else abort.
@@ -3995,6 +3999,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` with this id. It MUST exist.
 - `co.id` MUST equal `applicant_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account).
@@ -4058,6 +4063,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
 - define `effective_from_r`: `effective_from` if present, else the current block timestamp.
@@ -4159,6 +4165,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` from `id`. If no entry found, abort.
 - `applicant_accreditation.effective_from` MUST be set (a validated entry; its window may be current or future, and the entries of a barred participation or corporation may still be adjusted).
@@ -4239,6 +4246,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` from `id`. If no entry found, abort.
 - `applicant_accreditation.effective_from` MUST be set, else abort: an entry under its initial onboarding process, never validated, is cancelled by its applicant ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)), which refunds its escrow and deletes it; a validated entry can be revoked whatever its window (current or future), whether or not its participation is slashed, and whether or not a renewal is pending for it (the escrow of the renewal is then refunded, see execution).
@@ -4426,6 +4434,7 @@ Primary party (the payer): let `R` be VERIFIER in a Credential Verification, ISS
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`, `vs`) tuple (`perm` MAY be null).
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for the same tuple.
+[[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and `cs.ecosystem_id`: a party that has not accepted the [[ref: EGF]] in force records no exchange, so an issuer anchors nothing and a verifier obtains no receipt.
 
 Issuer reference:
 
@@ -4878,6 +4887,7 @@ Load `Accreditation` `validator_accreditation` from `validator_accreditation_id`
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
+- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `role` (AccreditationRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
 - `validator_accreditation_id` (uint64) (*mandatory*): `validator_accreditation` MUST be an ECOSYSTEM [[ref: active accreditation]] or [[ref: future accreditation]].
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
