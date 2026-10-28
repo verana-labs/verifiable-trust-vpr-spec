@@ -1987,7 +1987,7 @@ Network fees are covered through the standard fee-grant machinery: the grantee k
 
 #### [AUTHZ-CHECK] Common Authorization and Fee Grant Checks
 
-For any **delegable message** executed by an `operator` on behalf of a `corporation`, the checks of the authorization mode in use MUST hold: [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) then [[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) for an operator acting under an [OperatorAuthorization](#operatorauthorization), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) then [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) for a vs-agent where the method names that path (the two modes are exclusive for a given account, [[MOD-DE-MSG-3-2]](#mod-de-msg-3-2-grant-operator-authorization-basic-checks)); if any fails, the [[ref: transaction]] MUST abort. The authorization checks ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) — existence, message-type membership, cycle reset, corporation registration, and the operation `spend_limit`) are **preconditions** verified by the VPR method before any method-specific checks. The fee-grant checks ([[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) and the fee-payment part of [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)) are instead realized at **transaction-fee-processing time** (see the note below), not as VPR preconditions.
+For any **delegable message** executed by an `operator` on behalf of a `corporation`, the checks of the authorization mode in use MUST hold: [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) then [[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) for an operator acting under an [OperatorAuthorization](#operatorauthorization), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) then [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) for a vs-agent where the method names that path (the two modes are exclusive for a given account, [[MOD-DE-MSG-3-2]](#mod-de-msg-3-2-grant-operator-authorization-basic-checks)); if any fails, the [[ref: transaction]] MUST abort. The [[ref: governance framework acceptance]] checks follow: [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) for the corporation on every message, [[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator) for an operator acting under an `OperatorAuthorization` ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) step 4). The authorization checks ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) — existence, message-type membership, cycle reset, corporation registration, and the operation `spend_limit`) are **preconditions** verified by the VPR method before any method-specific checks. The fee-grant checks ([[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) and the fee-payment part of [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)) are instead realized at **transaction-fee-processing time** (see the note below), not as VPR preconditions.
 
 > Note: the grantee elects corporation-paid fees by setting the transaction's fee `granter` to the corporation's `policy_address`; the corporation's `x/feegrant` allowance then performs the fee-grant checks ([[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), and the fee-payment part of [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks)) during fee processing — see the [Delegation Module](#delegation-module) note. The VPR method does not re-check or deduct those fees.
 
@@ -2000,6 +2000,7 @@ For any **delegable message** executed by an `operator` on behalf of a `corporat
      - set `oauthz.expiration := now() + oauthz.period`.
    - else, `oauthz.expiration` MUST be strictly greater than `now()`. Abort otherwise.
 3. If `oauthz.spend_limit` is set, `oauthz.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `oauthz.remaining_spend` (per matching `denom` entry).
+4. [[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator) MUST pass for `oauthz` and `co`: the operator has accepted the corporation's [[ref: CGF]] version in force, or a former one within the grace period of the activation.
 
 ##### [AUTHZ-CHECK-2] Fee Grant checks
 
@@ -2053,6 +2054,36 @@ A `Corporation` entry `co` MUST exist whose `co.policy_address` equals the signi
 > Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), whose explicit purpose is to register a new `Corporation` and bind a `policy_address` to it. Uniqueness holds there by construction: the group policy account is created by the method itself, so no `Corporation` entry can reference it yet.
 
 This check applies to every delegable message that invokes [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks). As a result, all Create-* methods (and every other delegable Msg) implicitly require the signing `corporation` account to be the `policy_address` of a registered `Corporation`.
+
+#### [GF-CHECK] Governance Framework Acceptance Checks
+
+A party acts under a [[ref: governance framework]] only after recording its [[ref: governance framework acceptance]] of the version in force ([[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version), [[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)). When a new version is activated, the activation opens a grace period ([[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)) during which the parties that accepted a former version keep acting; after it, a party that has not accepted the new version is blocked until it does. Let `now` be the block time. Each check is one key lookup: the deadline is stored on the subject of the framework (`GlobalVariables`, `Ecosystem`, `Corporation`) by the activation that set it; a deadline in the past has no effect, and a second activation during a grace replaces the deadline by the new version's.
+
+##### [GF-CHECK-1] Network governance framework acceptance
+
+Applies to every message signed by a `corporation` account, delegable or not, except [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), which records the acceptance, and [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews it; it is evaluated after [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) on the resolved `Corporation` entry `co`. Let `ngf` be the version in force of the [[ref: NGF]] (the last entry of `GlobalVariables.network_governance_framework_versions` whose `active_since` is set).
+
+1. The check passes when `co.accepted_ngf_version` = `ngf.version`.
+2. Else it passes when `GlobalVariables.ngf_acceptance_deadline` is not null and `now` < `GlobalVariables.ngf_acceptance_deadline` (the grace period of the version in force).
+3. Else the [[ref: transaction]] MUST abort with an error naming the version to accept.
+
+##### [GF-CHECK-2] Corporation governance framework acceptance by an operator
+
+Applies to an operator acting under an [OperatorAuthorization](#operatorauthorization) `oauthz` ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks)). It does not apply to a corporation acting for itself through its group policy (the author of its [[ref: CGF]] accepts nothing), nor to a `vs_operator` ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)), the software of the corporation or of its integrator, whose obligations are contractual: a CGF activation never stops a running service.
+
+1. The check passes when `oauthz.accepted_cgf_version` = `co.active_version`.
+2. Else it passes when `oauthz.accepted_cgf_version` is not null, `co.acceptance_deadline` is not null and `now` < `co.acceptance_deadline`.
+3. Else the [[ref: transaction]] MUST abort with an error naming the version to accept. A newly authorized operator therefore accepts the version in force before its first use of the authorization, grace period or not ([[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)).
+
+##### [GF-CHECK-3] Ecosystem governance framework acceptance
+
+Applies to every message of the [Accreditation Module](#accreditation-module) that acts under a `CredentialSchema` entry `cs`, as applicant, validator, grantor, issuer, verifier or holder, for the ecosystem `e` = `Ecosystem[cs.ecosystem_id]` and the signing corporation `co`, except when `co.id` = `e.corporation_id` (the controller of the ecosystem is the author of its [[ref: EGF]]), and except the sanction messages of the ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit), [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). Let `acc` be `EcosystemAcceptance[(e.id, co.id)]`.
+
+1. The check passes when `acc` exists and `acc.version` = `e.active_version`.
+2. Else it passes when `acc` exists, `e.acceptance_deadline` is not null and `now` < `e.acceptance_deadline`.
+3. Else the [[ref: transaction]] MUST abort with an error naming the version to accept. A party that has never accepted the EGF of an ecosystem, including an issuer or a verifier acting with no entry under an `OPEN` or `CREDENTIAL` schema, accepts the version in force before its first act in the ecosystem ([[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version)).
+
+> Note: an act that reaches no transaction (a credential issued, or a presentation requested, under a schema whose exchange requires no record) is not checked by the VPR; the counterparty enforces the acceptance through the acceptance history that indexers serve from the events of [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) ([[ref: VT spec]]).
 
 #### [FUND-CHECK] Funding Account Resolution
 
