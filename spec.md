@@ -2146,7 +2146,12 @@ As a result, `accountABC` is authorized to:
 |                                | List Ecosystem Module Parameters               | /ec/v1/params                 | Query  | [[MOD-ES-QRY-3]](#mod-es-qry-3-list-module-parameters)   |N/A |
 | Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation + operator, or [[ref: governance proposal]] (NGF) |
 |                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + operator, or [[ref: governance proposal]] (NGF) |
+|                                | Accept Governance Framework Version          | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version)   | corporation + operator |
+|                                | Accept Corporation Governance Framework      | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)   | operator |
+|                                | Update Governance Framework Module Parameters | N/A (Tx)                        | Msg    | [[MOD-GF-MSG-5]](#mod-gf-msg-5-update-module-parameters)   | [[ref: governance proposal]] |
 |                                | Get Governance Framework Version             | /gf/v1/get                       | Query  | [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version)   | N/A |
+|                                | Get Ecosystem Acceptance                     | /gf/v1/acceptance                | Query  | [[MOD-GF-QRY-2]](#mod-gf-qry-2-get-ecosystem-acceptance)   | N/A |
+|                                | List Governance Framework Module Parameters  | /gf/v1/params                    | Query  | [[MOD-GF-QRY-3]](#mod-gf-qry-3-list-module-parameters)   | N/A |
 | Credential Schema              | Create Credential Schema              |       N/A (Tx)                   | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema)   |corporation + operator |
 |                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation + operator |
 |                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |corporation + operator |
@@ -2820,6 +2825,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`. 
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]]. If set, the signing `corporation` MUST be its controller. If not set, the target subject is the signing `corporation`'s own [[ref: CGF]].
 - `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `operator` are absent, and the message is executed through a [[ref: governance proposal]].
+- `acceptance_grace` (duration) (*mandatory*): the grace period, from the activation, during which the parties bound by the framework that accepted a former version keep acting under it ([[GF-CHECK]](#gf-check-governance-framework-acceptance-checks)): the corporations of the network for the [[ref: NGF]], the corporations acting in the ecosystem for an [[ref: EGF]], the operators of the corporation for a [[ref: CGF]]. MUST be at least `GlobalVariables.gf_acceptance_grace_min`; no maximum.
 
 ##### [MOD-GF-MSG-2-2] Increase Active Governance Framework Version precondition checks
 
@@ -2838,6 +2844,7 @@ If any of these precondition checks fail, method MUST abort.
   - if `ecosystem_id` is not set: the `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account. The entry MUST exist.
 - Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` (matching `gfv.ecosystem_id` or `gfv.corporation_id` as appropriate) whose `gfv.version` is equal to `subject.active_version` + 1. If none is found, transaction MUST abort. For the network, `gfv` is the entry of `GlobalVariables.network_governance_framework_versions` with the highest `version`; its `active_since` MUST be null, else abort.
 - Find a `GovernanceFrameworkDocument` `gfd` for `gfd.gfv_id` = `gfv.id` and `gfd.language` = `subject.language`. If no document is found (and thus no document exists for the default language of this version for this subject), transaction MUST abort. For the network, at least one document MUST exist for `gfv`, whatever its language.
+- `acceptance_grace` MUST be at least `GlobalVariables.gf_acceptance_grace_min`, else abort.
 
 ###### [MOD-GF-MSG-2-2-2] Increase Active Governance Framework Version fee checks
 
@@ -2850,11 +2857,91 @@ If all precondition checks passed, method is executed.
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
 - Load `subject` (`Ecosystem` or `Corporation` as identified above).
-- For the network (`network` true): `gfv` is the entry of `GlobalVariables.network_governance_framework_versions` with the highest `version`; set `gfv.active_since` to the current timestamp, persist, and skip the steps below.
+- For the network (`network` true): `gfv` is the entry of `GlobalVariables.network_governance_framework_versions` with the highest `version`; set `gfv.active_since` to the current timestamp and `GlobalVariables.ngf_acceptance_deadline` to the current timestamp + `acceptance_grace`, persist, and skip the steps below.
 - Find a `GovernanceFrameworkVersion` entry `gfv` owned by `subject` whose `gfv.version` is equal to `subject.active_version` + 1.
 - Update `subject.active_version` to `subject.active_version` + 1.
 - Set `gfv.active_since` to current timestamp.
+- Set `subject.acceptance_deadline` to the current timestamp + `acceptance_grace`: the corporations acting in the ecosystem, or the operators of the corporation, that accepted a former version keep acting until then ([[GF-CHECK]](#gf-check-governance-framework-acceptance-checks)).
 - Persist changes.
+
+The method MUST emit an event carrying the subject (`ecosystem_id`, `corporation_id` or the network), `gfv.version`, `gfv.active_since` and the acceptance deadline, so that indexers list the parties that have not yet accepted the version in force.
+
+#### [MOD-GF-MSG-3] Accept Governance Framework Version
+
+Any authorized `operator` CAN execute this method on behalf of a `corporation`. It records the [[ref: governance framework acceptance]] by the signing corporation of the version in force of the [[ref: NGF]], or of the [[ref: EGF]] of an ecosystem ([[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance), [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance)). A corporation never accepts a [[ref: CGF]]: its own binds it as its author, and those of other corporations bind their operators ([[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)). Only the version in force can be accepted: a draft is still editable.
+
+##### [MOD-GF-MSG-3-1] Accept Governance Framework Version parameters
+
+- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
+- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `ecosystem_id` (uint64) (*conditional*): id of the [[ref: ecosystem]] whose [[ref: EGF]] is accepted. MUST be absent when `network` is true, present otherwise.
+- `network` (boolean) (*optional*): if true, the [[ref: NGF]] is accepted.
+- `version` (int) (*mandatory*): the version accepted. MUST be the version in force.
+
+##### [MOD-GF-MSG-3-2] Accept Governance Framework Version precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-GF-MSG-3-2-1] Accept Governance Framework Version basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `corporation` (account): (Signer) signature must be verified.
+- `operator` (account): (Signer) signature must be verified.
+- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type; [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) is not applied when `network` is true (this message is the one that satisfies it).
+- exactly one of `ecosystem_id` and `network` MUST be given, else abort.
+- if `network` is true: let `ngf` be the version in force of the [[ref: NGF]] (the last entry of `GlobalVariables.network_governance_framework_versions` whose `active_since` is set); `version` MUST equal `ngf.version`, else abort.
+- else: an `Ecosystem` entry `e` with id `ecosystem_id` MUST exist, else abort; `e.corporation_id` MUST NOT equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), else abort: the controller of an ecosystem accepts nothing; `version` MUST equal `e.active_version`, else abort.
+
+###### [MOD-GF-MSG-3-2-2] Accept Governance Framework Version fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-GF-MSG-3-3] Accept Governance Framework Version execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- if `network` is true: set `co.accepted_ngf_version` to `version` and persist.
+- else: load `EcosystemAcceptance` entry `acc` with key (`e.id`, `co.id`); if none exists, create it with `acc.ecosystem_id` = `e.id` and `acc.corporation_id` = `co.id`; set `acc.version` to `version` and `acc.accepted` to the current timestamp; persist.
+
+The method MUST emit an event carrying `co.id`, `ecosystem_id` or the network, `version` and the current timestamp: the history of acceptances is not state, indexers serve it from these events, and the counterparties of acts that reach no transaction read it there ([[ref: VT spec]]).
+
+#### [MOD-GF-MSG-4] Accept Corporation Governance Framework
+
+The `operator` of an [OperatorAuthorization](#operatorauthorization) CAN execute this method. It records the [[ref: governance framework acceptance]] by the operator of the version in force of the [[ref: CGF]] of the corporation that authorized it ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator)). The message is signed by the operator alone, outside [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks): it is the act that makes the authorization usable, so it cannot require it. The operator pays the [[ref: network fees]], or the corporation does through a [FeeGrant](#feegrant) whose `msg_types` include `AcceptCorporationGovernanceFramework` ([MsgType](#msgtype) 34); the message is not delegable and cannot be sponsored.
+
+##### [MOD-GF-MSG-4-1] Accept Corporation Governance Framework parameters
+
+- `operator` (account): (Signer) the account that holds the authorization.
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] whose [[ref: CGF]] is accepted.
+- `version` (int) (*mandatory*): the version accepted. MUST be the version in force.
+
+##### [MOD-GF-MSG-4-2] Accept Corporation Governance Framework precondition checks
+
+If any of these precondition checks fail, method MUST abort.
+
+###### [MOD-GF-MSG-4-2-1] Accept Corporation Governance Framework basic checks
+
+- if a mandatory parameter is not present, method MUST abort.
+- `operator` (account): (Signer) signature must be verified.
+- a `Corporation` entry `co` with id `corporation_id` MUST exist, else abort.
+- an `OperatorAuthorization` entry `oauthz` with key (`co.id`, `operator`) MUST exist, else abort: the corporation grants first ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)), the operator accepts, then uses the authorization. The expiration and the budget of `oauthz` are not checked here.
+- `version` MUST equal `co.active_version`, else abort.
+
+###### [MOD-GF-MSG-4-2-2] Accept Corporation Governance Framework fee checks
+
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
+
+##### [MOD-GF-MSG-4-3] Accept Corporation Governance Framework execution
+
+If all precondition checks passed, method is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+- set `oauthz.accepted_cgf_version` to `version` and persist.
+
+The method MUST emit an event carrying `co.id`, `operator`, `version` and the current timestamp.
 
 #### [MOD-GF-QRY-1] Get Governance Framework Version
 
@@ -2875,9 +2962,66 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id`, `corporation_id`, or neither for a version of the [[ref: NGF]]) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
 
-#### [MOD-GF-QRY-2] Void
+#### [MOD-GF-QRY-2] Get Ecosystem Acceptance
 
-> Note: listing is an indexer function; the chain keeps no index for it ([Indexes](#identifier-conventions)).
+Anyone CAN execute this method.
+
+##### [MOD-GF-QRY-2-1] Get Ecosystem Acceptance query parameters
+
+- `ecosystem_id` (uint64) (*mandatory*): the id of the [[ref: ecosystem]].
+- `corporation_id` (uint64) (*mandatory*): the id of the [[ref: corporation]].
+
+##### [MOD-GF-QRY-2-2] Get Ecosystem Acceptance query checks
+
+If any of these checks fail, [[ref: query]] MUST fail.
+
+- `ecosystem_id` and `corporation_id` MUST be valid uint64.
+
+##### [MOD-GF-QRY-2-3] Get Ecosystem Acceptance execution
+
+Return the `EcosystemAcceptance` entry with key (`ecosystem_id`, `corporation_id`), or not found. The acceptance of the [[ref: NGF]] by a corporation is read on its `Corporation` entry ([[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)), the acceptance of a [[ref: CGF]] by an operator on its `OperatorAuthorization` entry.
+
+> Note: listing, and the history of acceptances, are indexer functions; the chain keeps no index for them ([Indexes](#identifier-conventions)).
+
+#### [MOD-GF-MSG-5] Update Module Parameters
+
+Update Module Parameters.
+
+Can only be executed through a [[ref: governance proposal]].
+
+##### [MOD-GF-MSG-5-1] Update Module Parameters parameters
+
+- `params` (KeySet<String, String>): the parameters to update and their values.
+
+##### [MOD-GF-MSG-5-2] Update Module Parameters precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+###### [MOD-GF-MSG-5-2-1] Update Module Parameters basic checks
+
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+
+###### [MOD-GF-MSG-5-2-2] Update Module Parameters fee checks
+
+provided transaction fees MUST be sufficient for execution
+
+##### [MOD-GF-MSG-5-3] Update Module Parameters execution
+
+If all precondition checks passed, [[ref: transaction]] is executed.
+
+Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
+
+for each parameter `param` <`key`, `value`> in `params`:
+
+- update parameter set value = `value` where key = `key`.
+
+#### [MOD-GF-QRY-3] List Module Parameters
+
+Anyone CAN run this [[ref: query]].
+
+##### [MOD-GF-QRY-3-1] List Module Parameters execution of the query
+
+Return the list of the existing parameters and their values (the Governance Framework group of [GlobalVariables](#globalvariables)).
 
 ### [NGG] Genesis Network Governance Framework
 
