@@ -73,7 +73,7 @@ A Verifiable Public Registry (VPR) is a “registry of registries”, a public s
   - corporations are the foundational actors of the VPR: they control `Accreditation` entries and may themselves control [[ref: ecosystems]].
 
 - ecosystem management:  
-  - governance framework publication and versioning
+  - governance framework publication, versioning and acceptance
   - [[ref: credential schemas]] publication
   - accreditation onboarding
   - custom business models and permission policies
@@ -145,7 +145,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A legal/organizational entity that controls Accreditations in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` is a VPR-level entity with VPR-specific attributes (identifier, governance framework, lifecycle) anchored on-chain by a `policy_address` account that signs on its behalf.
 
 [[def: corporation governance framework, CGF]]:
-~ The governance framework (GF) of a [[ref: corporation]].
+~ The governance framework (GF) of a [[ref: corporation]]. It binds the corporation as its author and the operators the corporation authorizes, each of which records its [[ref: governance framework acceptance]] of the version in force before using its authorization ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator)).
 
 [[def: council, Council]]:
 ~ The [[ref: governance authority]] of a [[ref: VPR]]: a group of the chain (x/group) whose members are [[ref: corporations]], each represented by its `policy_address`. It decides every network-level act of the VPR, the [[ref: governance proposals]] of this specification and the software upgrades, consensus and module parameters of the chain included; staking confers no governance right ([Network Governance](#network-governance)).
@@ -178,7 +178,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The governance authority (GA) of an [[ref: ecosystem]].
 
 [[def: ecosystem governance framework, EGF]]:
-~ The governance framework (GF) of an ecosystem.
+~ The governance framework (GF) of an ecosystem. A corporation records its [[ref: governance framework acceptance]] of the EGF before its first act in the ecosystem and of each later version within the grace period of its activation ([[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance)); the controller of the ecosystem, its author, accepts nothing.
 
 [[def: entity, entities]]:
 ~ An [[ref: account]] controller.
@@ -200,6 +200,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: governance framework, GF]]:
 ~ A set of rules that bind the parties of a [[ref: VPR]] ([[ref: NGF]]), of an [[ref: ecosystem]] ([[ref: EGF]]) or of a [[ref: corporation]] ([[ref: CGF]]), anchored on the ledger as versions and documents ([GovernanceFrameworkVersion](#governanceframeworkversion)).
+
+[[def: governance framework acceptance, governance framework acceptances]]:
+~ The recorded act by which a party bound by a [[ref: governance framework]] accepts the version in force: a corporation accepts the [[ref: NGF]] when it is created ([[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) and the [[ref: EGF]] of an ecosystem before its first act in it ([[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version)); an operator accepts the [[ref: CGF]] of the corporation that authorized it before its first use of the authorization ([[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)). Every activation of a new version opens a grace period after which a party that has not accepted the new version is blocked ([[GF-CHECK]](#gf-check-governance-framework-acceptance-checks)).
 
 [[def: governance proposal, governance proposals]]:
 ~ A proposal of the [[ref: council]] group carrying one or more messages, voted by the member corporations and executed by the [[ref: council account]] when the council's decision policy is met ([Network Governance](#network-governance)).
@@ -238,7 +241,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The price of one unit of gas, a network parameter expressed in the [[ref: main fiat currency]] (`GlobalVariables.network_gas_price`) and converted into [[ref: native denom]] once per [[ref: epoch]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). It is the same for every validator and every block of an epoch: the VPR has no fee market and no validator-local price.
 
 [[def: network governance framework, NGF]]:
-~ The governance framework (GF) of the [[ref: VPR]] itself: the rules that bind its validators, its [[ref: governance proposals]] and its participants network-wide. Anchored on the ledger as the [GovernanceFrameworkVersion](#governanceframeworkversion) entries that have no owner, listed in `GlobalVariables.network_governance_framework_versions`; the version in force is the last listed one whose `active_since` is set ([[NGG]](#ngg-genesis-network-governance-framework)).
+~ The governance framework (GF) of the [[ref: VPR]] itself: the rules that bind its validators, its [[ref: governance proposals]] and its participants network-wide. Anchored on the ledger as the [GovernanceFrameworkVersion](#governanceframeworkversion) entries that have no owner, listed in `GlobalVariables.network_governance_framework_versions`; the version in force is the last listed one whose `active_since` is set ([[NGG]](#ngg-genesis-network-governance-framework)). Every corporation records its [[ref: governance framework acceptance]] of the NGF at its creation and of each later version within the grace period of its activation ([[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance)).
 
 [[def: onboarding process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be an [[ref: issuer grantor]], a [[ref: verifier grantor]], an [[ref: issuer]], a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
@@ -1092,6 +1095,7 @@ entity "Ecosystem" as tr {
   +created: timestamp
   +archived: boolean
   +active_version: int
+  acceptance_deadline: timestamp
   +language: string
 }
 
@@ -1099,7 +1103,16 @@ entity "Corporation" as corp {
   *id: uint64
   +created: timestamp
   +active_version: int
+  +accepted_ngf_version: int
+  acceptance_deadline: timestamp
   +language: string
+}
+
+entity "EcosystemAcceptance" as eacc {
+  *ecosystem_id: uint64
+  *corporation_id: uint64
+  +version: int
+  +accepted: timestamp
 }
 
 entity "GovernanceFrameworkVersion" as gfv {
@@ -1216,6 +1229,7 @@ enum "MsgType" as msgtype {
 entity "OperatorAuthorization" as oauthz {
    expiration: timestamp
    period: duration
+   accepted_cgf_version: int
 }
 
 entity "VsOperatorBudget" as obudget {
@@ -1419,6 +1433,8 @@ tr "1" --- "0..n" gfv: versions (ecosystem_id)
 corp "1" --- "0..n" gfv: versions (corporation_id)
 gv "1" --- "0..n" gfv: network_governance_framework_versions
 gfv "1" --- "1..n" gfd: documents
+tr "1" --- "0..n" eacc: ecosystem_id
+corp "1" --- "0..n" eacc: corporation_id
 
 account "1" --- "1" corp : policy_address
 
@@ -1457,7 +1473,7 @@ Clients MAY rely on `id` ordering as a deterministic cursor for keyset paginatio
 
 Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `OperatorAuthorization` (composite PK on `(corporation_id, operator)`), `ParticipationTrustDeposit` (composite PK on `(vs_id, schema_id, role)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsOperatorBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
-**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_operator` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these three indexes, nothing else. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: a [CredentialExchange](#credentialexchange) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `OperatorAuthorization` by (`corporation_id`, `operator`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
+**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_operator` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these three indexes, nothing else. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: a [CredentialExchange](#credentialexchange) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `OperatorAuthorization` by (`corporation_id`, `operator`), `EcosystemAcceptance` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
 
 ### VID ownership
 
@@ -1499,6 +1515,8 @@ A `Corporation` is the VPR-level entity representing an authority that acts in t
 - `created` (timestamp) (*mandatory*): timestamp this Corporation has been created.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `active_version` (int) (*mandatory*): active [[ref: CGF]] version.
+- `accepted_ngf_version` (int) (*mandatory*): the version of the [[ref: NGF]] this Corporation accepted: the version in force at its creation ([[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)), then every version it accepted through [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true. Read by [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance).
+- `acceptance_deadline` (timestamp) (*optional*): end of the grace period opened by the last activation of a [[ref: CGF]] version ([[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)), during which the operators of this Corporation that accepted a former version keep using their authorization ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator)); null until the first activation after creation.
 - `sponsor_corporation_id` (uint64) (*optional*): id of the [[ref: corporation]] elected as [[ref: sponsor]] by this Corporation ([[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor)); null when the Corporation funds itself. The sponsorship is **active** only while a `Sponsorship` entry exists for (`sponsor_corporation_id`, `id`) and is not expired (see [[FUND-CHECK]](#fund-check-funding-account-resolution)).
 
 > Note: every other VPR entity that points to a Corporation does so through `corporation_id` (uint64), the FK referencing `Corporation.id`. The `policy_address` is the on-chain identity that signs Msgs on behalf of the Corporation: the policy account of its [[ref: group]], whose members decide under its decision policy ([GOV-6](#network-governance)); it is never a single key or a multisig.
@@ -1513,6 +1531,7 @@ A `Corporation` is the VPR-level entity representing an authority that acts in t
 - `archived` (boolean) (*mandatory*): whether this Ecosystem is archived. Initialized to `false` at creation by [[MOD-ES-MSG-1-3]](#mod-es-msg-1-3-create-ecosystem-execution) and toggled by [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem). MUST never be null. Archiving is informational: it hides the entry from listings filtered by `only_active`, and no message refuses an archived ecosystem.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
 - `active_version` (int): (*mandatory*) active governance framework version.
+- `acceptance_deadline` (timestamp) (*optional*): end of the grace period opened by the last activation of an [[ref: EGF]] version ([[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)), during which the corporations that accepted a former version keep acting in the ecosystem ([[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance)); null until the first activation after creation.
 
 ### GovernanceFrameworkVersion
 
@@ -1539,6 +1558,17 @@ A `GovernanceFrameworkVersion` represents a single version of an [[ref: EGF]], o
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this governance framework document.
 - `url` (string) (*mandatory*): URL where the document is published.
 - `digest_sri` (string) (*mandatory*): digest_sri of the document.
+
+### EcosystemAcceptance
+
+An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of the [[ref: EGF]] of an ecosystem by a corporation: the last version it accepted. One entry per (ecosystem, corporation) pair, written by [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) and read by [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) on every act of the corporation in the ecosystem; the history of acceptances is the event stream of the message, served by indexers. The controller of the ecosystem has no entry.
+
+`EcosystemAcceptance`:
+
+- `ecosystem_id` (uint64) (*mandatory*) (key): the id of the [[ref: ecosystem]]. With `corporation_id`, forms the composite key.
+- `corporation_id` (uint64) (*mandatory*) (key): the id of the accepting [[ref: corporation]].
+- `version` (int) (*mandatory*): the last [[ref: EGF]] version accepted.
+- `accepted` (timestamp) (*mandatory*): block time of the last acceptance.
 
 ### CredentialSchema
 
@@ -1670,7 +1700,7 @@ A `Digest` entry records the digest, its anchoring context (the [VerifiableServi
 
 ### MsgType
 
-`MsgType` enumerates the delegable messages of the VPR: the messages a `corporation` executes through an `operator` under an [OperatorAuthorization](#operatorauthorization) or, in the context of a [VerifiableService](#verifiableservice) entry, through its `vs_operator` under the entry's `msg_types`; the same values scope a [FeeGrant](#feegrant). Every `msg_types` list of the data model and of the message parameters is a list of `MsgType` values, never of message names or protobuf type URLs: a configured entry exists per registered service, and a type URL costs about fifty bytes per value where an enumeration value costs one.
+`MsgType` enumerates the delegable messages of the VPR: the messages a `corporation` executes through an `operator` under an [OperatorAuthorization](#operatorauthorization) or, in the context of a [VerifiableService](#verifiableservice) entry, through its `vs_operator` under the entry's `msg_types`; the same values scope a [FeeGrant](#feegrant), which is why `AcceptCorporationGovernanceFramework`, signed by an operator alone, has a value: a corporation may pay the fee of its operator's acceptance, but no authorization or entry configuration may list it. Every `msg_types` list of the data model and of the message parameters is a list of `MsgType` values, never of message names or protobuf type URLs: a configured entry exists per registered service, and a type URL costs about fifty bytes per value where an enumeration value costs one.
 
 Values and their numbers, which are stable and only ever appended to (0 is reserved for an unspecified value):
 
@@ -1708,6 +1738,8 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 | 30 | `AcceptVerifiableServiceTransfer` | [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer) |
 | 31 | `SetParticipationExclusion` | [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion) |
 | 32 | `RevokeSponsorship` | [[MOD-DE-MSG-11]](#mod-de-msg-11-revoke-sponsorship) |
+| 33 | `AcceptGovernanceFrameworkVersion` | [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) |
+| 34 | `AcceptCorporationGovernanceFramework` | [[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework), in a [FeeGrant](#feegrant) only |
 
 > Note: the realization of fee allowances through `x/feegrant` ([Delegation Module](#delegation-module)) requires protobuf type URLs. The implementation maps each `MsgType` value to the type URL of its message when it creates or updates an allowance, and maps the type URL of an incoming message to its `MsgType` value when it checks an authorization ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Which values a list may contain is stated by each message: every value except `RecordCredentialExchange` in an [OperatorAuthorization](#operatorauthorization) ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)), the values listed by [VerifiableService](#verifiableservice) in an entry's `msg_types`.
 
@@ -1721,6 +1753,7 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `expiration` (timestamp) (*optional*): authorization window boundary. If `period` is unset, this is the absolute end-of-life: when `now() >= expiration`, the authorization is dead. If `period` is set, this is the end of the current cycle: when `now() >= expiration`, `remaining_spend` is reset to `spend_limit` and `expiration` is advanced to `now() + period` (the authorization auto-renews until the corporation revokes it).
 - `period` (duration) (*optional*): reset period for `spend_limit`. If set, `expiration` MUST also be set.
+- `accepted_cgf_version` (int) (*optional*): the last version of the granting corporation's [[ref: CGF]] the operator accepted ([[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)); null at grant, until the operator accepts. Read by [[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator): the authorization is usable only while this equals the corporation's `active_version`, or during the grace period of a later activation.
 
 ### FeeGrant
 
@@ -1802,7 +1835,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 Amounts in [[ref: main fiat currency]] below are in its minor units ([[ref: main fiat currency]]).
 
-Each group below is owned by the module whose Update Module Parameters message changes it: Credential Schema by [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters); Trust Deposit and Trust Unit Index, Native denom and Network fees by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters); Distribution by [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters); Exchange Rate by [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters); Delegation and Verifiable Service by [[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters). The Network governance group is set at genesis and maintained by the Governance Framework module; no Update Module Parameters message changes it. The immutable parameters, `main_fiat_currency`, `tu_peg_value_genesis`, `epoch_length`, `vna_total_supply` and `council_account`, are refused by every Update Module Parameters message. The Corporation, Ecosystem and Accreditation modules own no parameter group: their Update Module Parameters messages ([[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters), [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters), [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters)) abort on any key and their List Module Parameters queries return an empty set, until a parameter is assigned to them.
+Each group below is owned by the module whose Update Module Parameters message changes it: Credential Schema by [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters); Trust Deposit and Trust Unit Index, Native denom and Network fees by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters); Distribution by [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters); Exchange Rate by [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters); Delegation and Verifiable Service by [[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters). The Network governance group is set at genesis and maintained by the Governance Framework module; no Update Module Parameters message changes it. The Governance Framework group is changed by [[MOD-GF-MSG-5]](#mod-gf-msg-5-update-module-parameters). The immutable parameters, `main_fiat_currency`, `tu_peg_value_genesis`, `epoch_length`, `vna_total_supply` and `council_account`, are refused by every Update Module Parameters message. The Corporation, Ecosystem and Accreditation modules own no parameter group: their Update Module Parameters messages ([[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters), [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters), [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters)) abort on any key and their List Module Parameters queries return an empty set, until a parameter is assigned to them.
 
 **Credential Schema:**
 
@@ -1861,6 +1894,11 @@ Each group below is owned by the module whose Update Module Parameters message c
 
 - `council_account` (account) (*mandatory*): the group policy account of the [[ref: council]] ([GOV-1](#network-governance)); set at genesis, immutable.
 - `network_governance_framework_versions` (uint64[]) (*mandatory*): the ids of the `GovernanceFrameworkVersion` entries of the [[ref: NGF]], in version order, a few ids ever: the version in force is the last one whose `active_since` is set, a draft in preparation is a last one with `active_since` null ([[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document), [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)). Set at genesis ([[NGG]](#ngg-genesis-network-governance-framework)).
+- `ngf_acceptance_deadline` (timestamp) (*optional*): end of the grace period opened by the last activation of an [[ref: NGF]] version ([[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version) through a [[ref: governance proposal]]), during which the corporations that accepted a former version keep acting ([[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance)); null at genesis.
+
+**Governance Framework:**
+
+- `gf_acceptance_grace_min` (duration) (*mandatory*): the minimum grace period an activation of a governance framework version MUST give to the parties bound by it, whatever the framework ([[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)); no maximum.
 
 ## Network Governance
 
@@ -6937,6 +6975,11 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 
 - `council_account` (account) (*mandatory*): the policy account of the genesis council group ([GCO](#gco-genesis-council)).
 - `network_governance_framework_versions` (uint64[]) (*mandatory*): the id of the genesis version ([[NGG]](#ngg-genesis-network-governance-framework)).
+- `ngf_acceptance_deadline` (timestamp) (*optional*): null.
+
+**Governance Framework:**
+
+- `gf_acceptance_grace_min` (duration) (*mandatory*): 30 days (2,592,000 seconds); to be confirmed in the governance framework.
 
 ### [XRG] Genesis Exchange Rate
 
