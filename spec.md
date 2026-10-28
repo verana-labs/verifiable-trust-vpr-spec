@@ -2249,6 +2249,7 @@ An [[ref: account]] that would like to create a new [[ref: corporation]] MUST ca
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this Corporation.
 - `doc_url` (string) (*mandatory*): URL where the v1 [[ref: CGF]] document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the v1 [[ref: CGF]] document.
+- `ngf_version` (int) (*mandatory*): the version of the [[ref: NGF]] the new Corporation accepts: creating the Corporation is its [[ref: governance framework acceptance]] of the network's rules, stated explicitly. MUST be the version in force.
 
 Provided document MUST be of the same language as the primary `language` of the Corporation.
 
@@ -2277,6 +2278,7 @@ If any of these precondition checks fail, method MUST abort.
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL.
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`.
+- `ngf_version` (int) (*mandatory*): MUST equal the `version` of the [[ref: NGF]] entry in force (the last entry of `GlobalVariables.network_governance_framework_versions` whose `active_since` is set), else abort: a corporation is created under the rules in force, a grace period notwithstanding.
 
 ###### [MOD-CO-MSG-1-2-2] Create Corporation fee checks
 
@@ -2298,6 +2300,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `co.created`: current timestamp
 - `co.language`: `language`
 - `co.active_version`: 1
+- `co.accepted_ngf_version`: `ngf_version`
+- `co.acceptance_deadline`: null
 
 - create and persist a new `GovernanceFrameworkVersion` entry `gfv`:
 
@@ -2338,7 +2342,7 @@ If `vs_operator_authz_msg_types` is provided, set the entry's operator configura
 - `period`: `vs_operator_authz_period`
 - `fee_spend_limit`: `vs_operator_authz_fee_spend_limit`
 
-The method MUST emit an event carrying `co.id`, `co.policy_address`, `vs.id` and `vs.vid`, so that indexers learn the corporation and its identifier without a query (the registration event of [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution)).
+The method MUST emit an event carrying `co.id`, `co.policy_address`, `co.accepted_ngf_version`, `vs.id` and `vs.vid`, so that indexers learn the corporation, its acceptance of the [[ref: NGF]] and its identifier without a query (the registration event of [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution)).
 
 #### [MOD-CO-MSG-2] Update Corporation
 
@@ -2552,6 +2556,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `ecosystem.archived`: false
 - `ecosystem.language`: `language`
 - `ecosystem.active_version`: 1
+- `ecosystem.acceptance_deadline`: null
 
 - create and persist a new `GovernanceFrameworkVersion` entry `gfv`:
 
@@ -2876,7 +2881,7 @@ Return the `GovernanceFrameworkVersion` entry with `id`, including its owning su
 
 ### [NGG] Genesis Network Governance Framework
 
-The genesis state MUST contain one `GovernanceFrameworkVersion` entry with neither `ecosystem_id` nor `corporation_id`, `version` 1 and `active_since` equal to the genesis time, at least one `GovernanceFrameworkDocument` for it, and `GlobalVariables.network_governance_framework_versions` listing its id: the [[ref: NGF]] is in force from the first block, like the [[ref: main fiat currency]], the [[ref: network gas price]] and the genesis exchange rate ([XRG](#xrg-genesis-exchange-rate)). Later versions are prepared with [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and activated with [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version) through [[ref: governance proposals]]; the version in force at any block is the last listed version whose `active_since` is not later than the block time.
+The genesis state MUST contain one `GovernanceFrameworkVersion` entry with neither `ecosystem_id` nor `corporation_id`, `version` 1 and `active_since` equal to the genesis time, at least one `GovernanceFrameworkDocument` for it, `GlobalVariables.network_governance_framework_versions` listing its id and `GlobalVariables.ngf_acceptance_deadline` null; every `Corporation` entry created at genesis has `accepted_ngf_version` 1: the [[ref: NGF]] is in force from the first block, like the [[ref: main fiat currency]], the [[ref: network gas price]] and the genesis exchange rate ([XRG](#xrg-genesis-exchange-rate)). Later versions are prepared with [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document) and activated with [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version) through [[ref: governance proposals]]; the version in force at any block is the last listed version whose `active_since` is not later than the block time.
 
 ### Credential Schema Module
 
@@ -5774,7 +5779,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 Look up an existing `OperatorAuthorization` `authz` whose `authz.corporation_id` equals `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account) AND `authz.operator` equals `grantee`.
 
-If no such entry exists, create it; otherwise reuse it.
+If no such entry exists, create it with `authz.accepted_cgf_version` null; otherwise reuse it, keeping `authz.accepted_cgf_version`: a re-grant to an operator that accepted the [[ref: CGF]] version in force needs no new acceptance, and the authorization stays unusable until the operator accepts ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator)).
 
 Then set / overwrite the following fields on `authz`:
 
