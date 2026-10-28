@@ -41,7 +41,7 @@ This specification defines the data model, API, and normative requirements for i
 
 ## About this Document
 
-In order to fully understand the concepts developed in this document, you should have some basic knowledge of [[ref:DID]], [[ref:DIDComm]], [[ref:VS]], [[ref:ecosystem]], ledger-based applications, and more generally, all terms present in the [Terminology](#terminology) section.
+In order to fully understand the concepts developed in this document, you should have some basic knowledge of [[ref:DID]], trusted channels such as [[ref:DIDComm]] ([[ref: VT spec]]), [[ref:VS]], [[ref:ecosystem]], ledger-based applications, and more generally, all terms present in the [Terminology](#terminology) section.
 
 :::note
 Before exploring this spec, it is highly recommended to **first read** the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/).
@@ -751,8 +751,8 @@ participant "Verifiable Public Registry" as VPR #3fbdb6
 ApplicantAccount --> VPR: start onboarding process with Validator
 VPR <-- VPR: create applicant Accreditation entry\n(op_state = PENDING)
 ApplicantAccount <-- VPR: applicant Accreditation entry created
-ApplicantBrowser --> ValidatorVS: connect to the validator VS, VerifiableService[validator_accreditation.vs_id].vid,\nby creating a DIDComm connection
-ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
+ApplicantBrowser --> ValidatorVS: connect to the validator VS, VerifiableService[validator_accreditation.vs_id].vid,\nby establishing a trusted channel (DIDComm)
+ApplicantBrowser <-- ValidatorVS: trusted channel established.
 ApplicantBrowser --> ValidatorVS: I want to proceed with applicant_accreditation.id=...
 ValidatorVS --> ValidatorVS: load applicant Accreditation with this id\nand verify validator_accreditation_id refers to me
 ApplicantBrowser <-- ValidatorVS: request proof of control of the vs_operator account\nof VerifiableService[applicant_accreditation.vs_id] (blind sign)
@@ -3639,7 +3639,7 @@ The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`
 
 This action must be initiated by the [[ref: applicant]].
 
-During an onboarding process, if the associated `validator_accreditation` refers to a resolvable identifier (`VerifiableService[validator_accreditation.vs_id].vid`), the [[ref: applicant]] should establish a secure connection with the validator's [[ref: VS]] (Verifiable Service) using a secure communication protocol such as [[ref: DIDComm]].
+During an onboarding process, if the associated `validator_accreditation` refers to a resolvable identifier (`VerifiableService[validator_accreditation.vs_id].vid`), the [[ref: applicant]] should establish a trusted channel with the validator's [[ref: VS]] (Verifiable Service), using a trusted channel protocol of the [[ref: VT spec]] such as [[ref: DIDComm]].
 
 Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by the [[ref: validator]] to complete one or more of the following tasks:
 
@@ -5306,8 +5306,8 @@ participant "Verifiable Public Registry" as VPR #3fbdb6
 ApplicantAccount --> VPR: Start Accreditation OP
 VPR <-- VPR: create `Accreditation` entry.
 ApplicantAccount <-- VPR: `Accreditation` entry created (PENDING)\nunder the chosen ISSUER_GRANTOR validator entry.
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in VerifiableService[validator_accreditation.vs_id].vid\nby creating a DIDComm connection
-ApplicantBrowser <-- ValidatorVS: DIDComm connection established.
+ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in VerifiableService[validator_accreditation.vs_id].vid\nby establishing a trusted channel (DIDComm)
+ApplicantBrowser <-- ValidatorVS: trusted channel established.
 ApplicantBrowser --> ValidatorVS: I want to proceed with accreditation.id=...
 ValidatorVS --> ValidatorVS: load perm with id=...\nand verify the associated accreditation.validator_accreditation_id is referring to me
 ApplicantBrowser <-- ValidatorVS: request proof of control of the vs_operator account\nof the applicant's service entry (blind sign)
