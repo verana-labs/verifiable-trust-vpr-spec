@@ -1220,8 +1220,6 @@ enum "MsgType" as msgtype {
   RegisterVerifiableService
   UpdateVerifiableService
   RotateVerifiableIdentifier
-  TransferVerifiableService
-  AcceptVerifiableServiceTransfer
   SetParticipationExclusion
   RevokeSponsorship
 }
@@ -1241,7 +1239,6 @@ entity "VerifiableService" as vs {
   +vid: string
   period: duration
   +created: timestamp
-  transfer_to_corporation_id: uint64
 }
 
 entity "DenomAmount" as da {
@@ -1492,13 +1489,12 @@ A [[ref: verifiable service entry]] (`VerifiableService`) registers a [[ref: VID
 `VerifiableService`:
 
 - `id` (uint64) (*mandatory*) (key): the id of this entry.
-- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns the identifier. Changed only by an accepted transfer ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
+- `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns the identifier. Set at registration and never changed.
 - `vid` (string) (*mandatory*): the current identifier string. MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters. Globally unique among current `vid` values (see [VID ownership](#vid-ownership)). Changed only by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier), which emits the former value; the VPR does not keep former values.
 - `vs_operator` (account) (*optional*): the agent account that operates the service identified by `vid`, authorized to execute the entry's `msg_types` in the context of this entry and of every `Accreditation` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)); null when none is set. One account MAY operate many entries of the same corporation; an entry has at most one operator.
-- `msg_types` ([MsgType](#msgtype)[]) (*optional*): the delegable message types `vs_operator` is authorized to execute on behalf of the owner corporation in the context of this entry and of every `Accreditation` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Permitted values: `RecordCredentialExchange`, `SetAccreditationOPtoValidated`, `StoreDigest`, `RevokeDigest`, `TriggerResolver`. Empty when the operator is authorized for nothing. With `period` and `fee_spend_limit`, this is the operator configuration of the entry: set with the operator by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) and [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer), changed only when the corporation changes it. The role-specific checks of each message decide what the operator can actually do with a given `Accreditation` entry. What an operation changes, the running budget, is kept apart in [VsOperatorBudget](#vsoperatorbudget), so that consuming it never rewrites the entry.
+- `msg_types` ([MsgType](#msgtype)[]) (*optional*): the delegable message types `vs_operator` is authorized to execute on behalf of the owner corporation in the context of this entry and of every `Accreditation` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Permitted values: `RecordCredentialExchange`, `SetAccreditationOPtoValidated`, `StoreDigest`, `RevokeDigest`, `TriggerResolver`. Empty when the operator is authorized for nothing. With `period` and `fee_spend_limit`, this is the operator configuration of the entry: set with the operator by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service), changed only when the corporation changes it. The role-specific checks of each message decide what the operator can actually do with a given `Accreditation` entry. What an operation changes, the running budget, is kept apart in [VsOperatorBudget](#vsoperatorbudget), so that consuming it never rewrites the entry.
 - `period` (duration) (*optional*): length of the operation-budget cycle of the entry's [VsOperatorBudget](#vsoperatorbudget). Requires a budget. Does not apply to fees: the fee budget cycles on the network-wide `GlobalVariables.vs_operator_fee_period`.
 - `fee_spend_limit` (DenomAmount[]) (*optional*): the entry's **contribution** to the transaction fee allowance the corporation grants to `vs_operator`: added to the per-period limit of that allowance, per `GlobalVariables.vs_operator_fee_period`, when the configuration is set and subtracted when it is cleared or replaced ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)). The allowance is per account: it pays the fees of every transaction `vs_operator` signs with the corporation as granter, whichever entry the messages concern. Empty when the corporation does not pay the agent's transaction fees; when set, every amount is strictly positive, the entry contributes to the allowance, and [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) accepts corporation-paid fees for messages executed in the context of this entry.
-- `transfer_to_corporation_id` (uint64) (*optional*): id of the corporation to which the owner offers this entry ([[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)); null when no transfer is pending. While it is set, no `Corporation`, `Ecosystem` or `Accreditation` entry can bind the entry, and its operator configuration and identifier cannot be changed.
 - `created` (timestamp) (*mandatory*): registration timestamp.
 
 > Note: `vs_operator` is an attribute of the identifier, not of a role: the agent that controls the identifier performs every operation the identifier performs. The authorization configuration of that agent (message types, spend limits, fee grant) is carried by the entry itself (`msg_types`, `period`, `fee_spend_limit`) and its [VsOperatorBudget](#vsoperatorbudget); the transaction fee allowance of the account is the sum of the contributions of the entries it operates ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)).
@@ -1734,12 +1730,10 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 | 26 | `RegisterVerifiableService` | [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) |
 | 27 | `UpdateVerifiableService` | [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) |
 | 28 | `RotateVerifiableIdentifier` | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) |
-| 29 | `TransferVerifiableService` | [[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service) |
-| 30 | `AcceptVerifiableServiceTransfer` | [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer) |
-| 31 | `SetParticipationExclusion` | [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion) |
-| 32 | `RevokeSponsorship` | [[MOD-DE-MSG-11]](#mod-de-msg-11-revoke-sponsorship) |
-| 33 | `AcceptGovernanceFrameworkVersion` | [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) |
-| 34 | `AcceptCorporationGovernanceFramework` | [[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework), in a [FeeGrant](#feegrant) only |
+| 29 | `SetParticipationExclusion` | [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion) |
+| 30 | `RevokeSponsorship` | [[MOD-DE-MSG-11]](#mod-de-msg-11-revoke-sponsorship) |
+| 31 | `AcceptGovernanceFrameworkVersion` | [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) |
+| 32 | `AcceptCorporationGovernanceFramework` | [[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework), in a [FeeGrant](#feegrant) only |
 
 > Note: the realization of fee allowances through `x/feegrant` ([Delegation Module](#delegation-module)) requires protobuf type URLs. The implementation maps each `MsgType` value to the type URL of its message when it creates or updates an allowance, and maps the type URL of an incoming message to its `MsgType` value when it checks an authorization ([[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks)). Which values a list may contain is stated by each message: every value except `RecordCredentialExchange` in an [OperatorAuthorization](#operatorauthorization) ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)), the values listed by [VerifiableService](#verifiableservice) in an entry's `msg_types`.
 
@@ -1775,7 +1769,7 @@ A `Sponsorship` records the agreement of a [[ref: sponsor]] corporation to fund 
 
 - `sponsor_corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] that pays; with `sponsored_corporation_id`, forms the composite key. Its `policy_address` is the [[ref: funding account]] of the sponsored corporation while the sponsorship is active.
 - `sponsored_corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] whose fund movements are paid; with `sponsor_corporation_id`, forms the composite key. MUST differ from `sponsor_corporation_id`.
-- `msg_types` ([MsgType](#msgtype)[]) (*optional*): the paying message types covered by this sponsorship, among those of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op), [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem). Absent means all of them.
+- `msg_types` ([MsgType](#msgtype)[]) (*optional*): the paying message types covered by this sponsorship, among those of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op), [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem). Absent means all of them.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount the sponsor pays, per cycle, for the operation fund movements of the sponsored corporation (escrows, exchange payments, Verifiable User Agent rewards, slash repayments, registration and ecosystem creation fees). Network fees are not counted here (see `covers_fees`).
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit`. Decremented per matching `denom` by each debit paid by the sponsor ([[FUND-CHECK-1]](#fund-check-1-debit)). Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `expiration` (timestamp) (*optional*): window boundary, with the same semantics as `OperatorAuthorization.expiration`: absolute end of the sponsorship when `period` is unset; end of the current cycle when `period` is set (`remaining_spend` is reset and `expiration` advanced by `period`; the sponsorship auto-renews until revoked).
@@ -1881,7 +1875,7 @@ Each group below is owned by the module whose Update Module Parameters message c
 
 **Verifiable Service:**
 
-- `vs_registration_deposit` (number) (*mandatory*): non-refundable amount, in [[ref: main fiat currency]] and paid in [[ref: native denom]] at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) to the [[ref: distribution pool]], once per `VerifiableService` entry at registration ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) and at an accepted transfer ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)). A state fee against registration spam, not a proof of control; never refunded.
+- `vs_registration_deposit` (number) (*mandatory*): non-refundable amount, in [[ref: main fiat currency]] and paid in [[ref: native denom]] at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) to the [[ref: distribution pool]], once per `VerifiableService` entry at registration ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)). A state fee against registration spam, not a proof of control; never refunded.
 - `ecosystem_creation_deposit` (number) (*mandatory*): non-refundable amount, in [[ref: main fiat currency]] and paid in [[ref: native denom]] at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) to the [[ref: distribution pool]], once per `Ecosystem` entry at creation ([[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem)). Same nature as `vs_registration_deposit`.
 - `vid_rotation_max_transition` (duration) (*mandatory*): maximum, and default, transition window of an identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)).
 
@@ -2215,8 +2209,6 @@ As a result, `accountABC` is authorized to:
 | Verifiable Service        | Register Verifiable Service              | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service)   | corporation + operator |
 |                                | Update Verifiable Service               | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)   | corporation + operator |
 |                                | Rotate Verifiable Identifier            | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)   | corporation + operator |
-|                                | Transfer Verifiable Service             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-4]](#mod-vs-msg-4-transfer-verifiable-service)   | corporation + operator |
-|                                | Accept Verifiable Service Transfer      | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)   | corporation + operator |
 |                                | Update VS Module Parameters             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters)   | [[ref: governance proposal]] |
 |                                | Get Verifiable Service                  | /vs/v1/get                       | Query  | [[MOD-VS-QRY-1]](#mod-vs-qry-1-get-verifiable-service)   | N/A |
 |                                | List Verifiable Services                | /vs/v1/list                      | Query  | [[MOD-VS-QRY-2]](#mod-vs-qry-2-list-verifiable-services)   | N/A |
@@ -2334,7 +2326,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `vs.corporation_id`: `co.id`
 - `vs.vid`: `vid`
 - `vs.vs_operator`: `vs_operator`
-- `vs.transfer_to_corporation_id`: null
 - `vs.created`: current timestamp
 
 If `vs_operator_authz_msg_types` is provided, set the entry's operator configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with:
@@ -2373,7 +2364,7 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - A `Corporation` entry `co` whose `co.policy_address` equals the signing `corporation` account MUST exist; if none exists, method MUST abort.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`, and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else method MUST abort ([VID ownership](#vid-ownership)).
 - Setting the value `co.vs_id` already holds is a no-op that succeeds. No other `Corporation` entry can reference the entry, since only its owner may.
 
 ###### [MOD-CO-MSG-2-2-2] Update Corporation fee checks
@@ -2532,7 +2523,7 @@ If any of these precondition checks fail, method MUST abort.
 - `corporation` (account): (Signer) signature must be verified.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)); else method MUST abort ([VID ownership](#vid-ownership)).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL .
 - `doc_digest_sri` (string) (*mandatory*): MUST be a valid digest_sri as specified in [integrity of related resources spec](https://www.w3.org/TR/vc-data-model-2.0/#integrity-of-related-resources). Example: `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`.
@@ -2607,7 +2598,7 @@ If any of these precondition checks fail, method MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` (uint64) (*mandatory*): an `Ecosystem` entry `ecosystem` with id `id` MUST exist and `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`, and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else method MUST abort ([VID ownership](#vid-ownership)).
 - `transition` (duration) (*optional*): if provided, MUST be between 0 and `GlobalVariables.vid_rotation_max_transition` (inclusive).
 
 ###### [MOD-ES-MSG-2-2-2] Update Ecosystem fee checks
@@ -3492,7 +3483,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `issuance_fees` (number) (*optional*): Requested issuance_fees for this `Accreditation` entry (can be modified by validator).
 - `verification_fees` (number) (*optional*): Requested verification_fees for this `Accreditation` entry (can be modified by validator).
 - `vua_reward_rate` (decimal) (*optional*): if given, `role` MUST be ISSUER and the value MUST be between 0 and `GlobalVariables.vua_reward_rate` inclusive, else abort.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort ([VID ownership](#vid-ownership)).
 
 :::note
 A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. When the schema's `holder_onboarding_mode` is `ISSUER_ONBOARDING_PROCESS`, the onboarding process MUST have reached `VALIDATED` before the credential is issued: the Verifiable Trust specification requires an active `HOLDER` entry at issuance, and trust resolution requires it to stay in force (its window open, neither its participation nor its corporation excluded; a slash debt withdraws nothing). When it is `PERMISSIONLESS`, no `HOLDER` entry exists and the issuer applies its own checks.
@@ -4066,7 +4057,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort ([VID ownership](#vid-ownership)).
 - define `effective_from_r`: `effective_from` if present, else the current block timestamp.
 - if `effective_from` is present, it MUST NOT be lower than the current block timestamp.
 - `effective_until`, if not null, MUST be greater than `effective_from_r`.
@@ -4891,7 +4882,7 @@ Load `Accreditation` `validator_accreditation` from `validator_accreditation_id`
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `role` (AccreditationRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
 - `validator_accreditation_id` (uint64) (*mandatory*): `validator_accreditation` MUST be an ECOSYSTEM [[ref: active accreditation]] or [[ref: future accreditation]].
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), and `vs.transfer_to_corporation_id` MUST be null (no transfer pending); else method MUST abort ([VID ownership](#vid-ownership)).
+- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account); else method MUST abort ([VID ownership](#vid-ownership)).
 - define `effective_from_r`: `effective_from` if present, else the current block timestamp.
 - if `effective_from` is present, it MUST NOT be lower than the current block timestamp.
 - `effective_from_r` MUST be greater or equal to `validator_accreditation.effective_from` AND, if `validator_accreditation.effective_until` is not null, MUST be lower than `validator_accreditation.effective_until`. Note that when `effective_from` is absent and `validator_accreditation` is a [[ref: future accreditation]], this check aborts: the caller MUST pass an explicit `effective_from` greater or equal to `validator_accreditation.effective_from`.
@@ -6109,7 +6100,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `sponsored_corporation_id`: a `Corporation` entry MUST exist with this `id`, and it MUST differ from `co.id`.
 - the `policy_address` of that corporation MUST NOT be the `grantee` of a `FeeGrant` of `co` nor the `vs_operator` of a `VerifiableService` entry of `co`, else abort: the sponsorship allowance and an operator allowance would share the one (granter, grantee) slot of x/feegrant.
 - if a `Sponsorship` entry `s` already exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, the new terms MUST be at least as generous as the current ones, else abort with an error indicating that the sponsorship must be revoked first: `period` MUST be unchanged; `msg_types` MUST be absent or a superset of `s.msg_types` (absent counts as all); `spend_limit` MUST be absent or, for every denom of `s.spend_limit`, at least `s.spend_limit` (an absent `s.spend_limit` cannot be set); `expiration` MUST be null or later than `s.expiration` (a null `s.expiration` cannot be set); `covers_fees` MUST NOT change from true to false; when `s.covers_fees` is true, `fee_spend_limit` MUST be absent or at least `s.fee_spend_limit` per denom (an absent `s.fee_spend_limit` cannot be set); when it is false, any `fee_spend_limit` is accepted with `covers_fees` true.
-- `msg_types`, if specified: MUST be a non-empty list of message types among those of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op), [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem) (the list of the [Sponsorship](#sponsorship) entity).
+- `msg_types`, if specified: MUST be a non-empty list of message types among those of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op), [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem) (the list of the [Sponsorship](#sponsorship) entity).
 - `spend_limit`, if specified: MUST be a list of valid DenomAmounts.
 - `period`, if specified: MUST be a valid duration, and `spend_limit` and `expiration` MUST also be specified.
 - `expiration`, if specified: MUST be in the future.
@@ -6311,7 +6302,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 This method revokes a digest. It can be executed on behalf of:
 
-- the `corporation` that owns the `Digest` entry (the corporation of the anchoring `VerifiableService` entry `d.vs_id`): by any of its operators under an OperatorAuthorization, or by the vs-agent of the anchoring `VerifiableService` entry `d.vs_id` under a VS Operator Authorization whose entry's `msg_types` include `RevokeDigest` (giving no `accreditation_id`), whether or not the issuer still holds an `ISSUER` entry: revoking a credential is always open to the corporation that owns the anchoring entry, the issuer unless it transferred the service entry ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer));
+- the `corporation` that owns the `Digest` entry (the corporation of the anchoring `VerifiableService` entry `d.vs_id`): by any of its operators under an OperatorAuthorization, or by the vs-agent of the anchoring `VerifiableService` entry `d.vs_id` under a VS Operator Authorization whose entry's `msg_types` include `RevokeDigest` (giving no `accreditation_id`), whether or not the issuer still holds an `ISSUER` entry: revoking a credential is always open to the corporation that owns the anchoring entry, the issuer;
 - the `corporation` of an **ancestor** of a current `ISSUER` entry of the issuer's participation (an entry listed in `ParticipationTrustDeposit[(d.vs_id, d.schema_id, ISSUER)].accreditation_ids`, and a validator in its branch up to the root ECOSYSTEM entry), while that ancestor is an [[ref: active accreditation]]: by any of its operators under an OperatorAuthorization, or by the vs-agent of that ancestor entry under a VS Operator Authorization whose entry's `msg_types` include `RevokeDigest`;
 - the `corporation` controlling the `Ecosystem` of `d.schema_id`, by any of its operators under an OperatorAuthorization, whatever the state of the tree (as for [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)).
 
@@ -6838,7 +6829,6 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - `vs.corporation_id`: `co.id`
 - `vs.vid`: `vid`
 - `vs.vs_operator`: `vs_operator`
-- `vs.transfer_to_corporation_id`: null
 - `vs.created`: current timestamp
 
 If `vs_operator_authz_msg_types` is provided, set the entry's operator configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) Set VS Operator Authorization with:
@@ -6878,7 +6868,6 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- `vs.transfer_to_corporation_id` MUST be null (no transfer pending), else abort.
 - the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks), including the policy-address and mutual-exclusion checks on `vs_operator` when it is provided.
 
 ###### [MOD-VS-MSG-2-2-2] Update Verifiable Service fee checks
@@ -6919,7 +6908,6 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- `vs.transfer_to_corporation_id` MUST be null, else abort.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters, and MUST differ from `vs.vid`.
 - `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else abort ([VID ownership](#vid-ownership)).
 - `transition` (duration) (*optional*): if provided, MUST be between 0 and `GlobalVariables.vid_rotation_max_transition` (inclusive).
@@ -6941,82 +6929,9 @@ The method MUST emit an event carrying `vs.id`, `former`, `vid` and `transition_
 
 > Note: the VPR does not re-validate anything at rotation. The ecosystems that accredited the service validated an organization, not a string; an [[ref: ecosystem governance authority]] whose framework binds accreditation to a particular identifier (a method, a domain) learns the rotation from the event and keeps its usual remedy, revocation of the `Accreditation` entry. Credentials that carry the former string, as issuer or as subject, are re-issued by their issuers during the transition window, and the former DID Document SHOULD stay resolvable until then so that proofs made with its keys still verify.
 
-#### [MOD-VS-MSG-4] Transfer Verifiable Service
+#### [MOD-VS-MSG-4] Void
 
-Any authorized `operator` CAN execute this method on behalf of a `corporation`. It offers an entry to another corporation, or withdraws a pending offer. Ownership changes only when the receiving corporation accepts ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)).
-
-##### [MOD-VS-MSG-4-1] Transfer Verifiable Service parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to transfer.
-- `to_corporation_id` (uint64) (*optional*): id of the receiving corporation; null withdraws a pending offer.
-
-##### [MOD-VS-MSG-4-2] Transfer Verifiable Service precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-VS-MSG-4-2-1] Transfer Verifiable Service basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
-- if `to_corporation_id` is provided (an offer): `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipationTrustDeposit](#participationtrustdeposit) whose key starts with `vs.id` (a key-prefix scan) MAY list an entry or carry a slash debt (`unrepaid_slash` > 0: the owner repays first), and neither the owner corporation nor the receiving one MAY be [[ref: barred]]; else abort. The deposits themselves, their trust units, their slash count and their exclusion, are keyed by the entry and follow it ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)) (entries belong to their corporation and do not move: the owner first revokes them or lets them expire, or keeps the service). `Digest` entries anchored under `vs` are not references: they follow the entry, and their owner becomes the receiving corporation when the transfer is accepted ([[MOD-VS-MSG-5]](#mod-vs-msg-5-accept-verifiable-service-transfer)); a Service credential of the service issued by another entry of its former controller ends with the transfer and the new owner issues one, while a self-issued one follows the entry ([[ref: VT spec]]).
-- `to_corporation_id` (uint64) (*optional*): if provided, a `Corporation` entry with this id MUST exist and MUST differ from `co.id`.
-- if `to_corporation_id` is null (a withdrawal): `vs.transfer_to_corporation_id` MUST be set, else abort; no other condition applies, so that an offer can always be withdrawn.
-
-###### [MOD-VS-MSG-4-2-2] Transfer Verifiable Service fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]].
-
-##### [MOD-VS-MSG-4-3] Transfer Verifiable Service execution
-
-- set `vs.transfer_to_corporation_id` = `to_corporation_id`.
-
-#### [MOD-VS-MSG-5] Accept Verifiable Service Transfer
-
-Any authorized `operator` CAN execute this method on behalf of a `corporation`, the receiving corporation of a pending offer.
-
-##### [MOD-VS-MSG-5-1] Accept Verifiable Service Transfer parameters
-
-- `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
-- `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `vs_id` (uint64) (*mandatory*): id of the offered `VerifiableService` entry.
-- `vs_operator` (account) (*optional*) and the VS Operator Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: the agent and configuration of the entry under its new owner; presence of `vs_operator_authz_msg_types` triggers the whole group, budget included, and implies that `vs_operator` is provided.
-
-##### [MOD-VS-MSG-5-2] Accept Verifiable Service Transfer precondition checks
-
-If any of these precondition checks fail, [[ref: transaction]] MUST abort.
-
-###### [MOD-VS-MSG-5-2-1] Accept Verifiable Service Transfer basic checks
-
-- if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified.
-- `operator` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.transfer_to_corporation_id` MUST equal `co.id`; else abort.
-- `vs` MUST NOT be referenced: `Corporation[vs.corporation_id].vs_id` MUST differ from `vs.id`, no `Ecosystem` entry MAY reference it (ecosystems are few; this check scans them) and no [ParticipationTrustDeposit](#participationtrustdeposit) whose key starts with `vs.id` (a key-prefix scan) MAY list an entry or carry a slash debt (`unrepaid_slash` > 0: the owner repays first), and neither the owner corporation nor the receiving one MAY be [[ref: barred]]; else abort. The deposits themselves, their trust units, their slash count and their exclusion, are keyed by the entry and follow it ([[MOD-VS-MSG-5-3]](#mod-vs-msg-5-3-accept-verifiable-service-transfer-execution)).
-- the VS Operator Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks), the entry `vs` itself being disregarded by the one-corporation rule on `vs_operator` (it is about to change owner, so its current agent MAY be kept).
-
-###### [MOD-VS-MSG-5-2-2] Accept Verifiable Service Transfer fee checks
-
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)): the receiving corporation pays its own registration deposit; the previous owner's payment is not refunded.
-
-##### [MOD-VS-MSG-5-3] Accept Verifiable Service Transfer execution
-
-If all precondition checks passed, method is executed.
-
-Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
-
-- call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-operator-authorization) Revoke VS Operator Authorization with `vs_id` (no-op if the entry has no operator configuration).
-- debit the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account.
-- let `former` be `vs.corporation_id`. For each [ParticipationTrustDeposit](#participationtrustdeposit) `d` whose key starts with `vs.id` (a key-prefix scan) and whose `tu` is greater than 0 (`TrustDeposit[former]` then exists): set `TrustDeposit[former].tu` to `TrustDeposit[former].tu` - `d.tu` and `.fiat_cost` to `.fiat_cost` - `d.fiat_cost`; set `TrustDeposit[co.id].tu` (the entry created with 0 if absent) to `TrustDeposit[co.id].tu` + `d.tu` and `.fiat_cost` to `.fiat_cost` + `d.fiat_cost`. The deposits are keyed by the service entry and need no change: the trust units of the service and the record of its slashes follow it; a network debt or exclusion of `former` would stay with `former`, which is why the transfer is refused while one is open.
-- set `vs.corporation_id` = `co.id`, `vs.vs_operator` = `vs_operator`, `vs.transfer_to_corporation_id` = null.
-- if `vs_operator_authz_msg_types` is provided, set the configuration by calling [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution).
-
-The method MUST emit an event carrying `vs.id`, `vs.vid`, the previous and the new `corporation_id`.
+#### [MOD-VS-MSG-5] Void
 
 #### [MOD-VS-MSG-6] Void
 
