@@ -3643,9 +3643,10 @@ During an onboarding process, if the associated `validator_accreditation` refers
 
 Upon connecting to the [[ref: VS]], the [[ref: applicant]] should be required by the [[ref: validator]] to complete one or more of the following tasks:
 
-1. **Prove control** over the `vs_operator` [[ref: account]] of the applicant's `VerifiableService` entry (e.g., via blind signature or cryptographic challenge).
+1. **Prove control** over the identifier of its `VerifiableService` entry: the trusted channel is bound to that identifier, which the validator checks against the entry, and no other proof is required.
 2. **Provide requested information**, such as filling out forms, submitting documents, or other forms of disclosure as required by the validation [[ref: VS]].
-3. The [[ref: applicant]] should prove control over the identifier of its `VerifiableService` entry to the validator's [[ref: VS]].
+
+The messages of this exchange are those of the onboarding process of the [[ref: VT spec]].
 
 Once the [[ref: validator]] determines that the process is complete, they conclude the onboarding process by validating the applicant's pending `Accreditation` entry ([[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)). The configuration they set on it usually includes:
 
