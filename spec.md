@@ -5821,6 +5821,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `period` (duration): if specified MUST be a valid period.
 - `grantee` MUST NOT be the `policy_address` of `Corporation[grantor_corporation_id]`, else abort: x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked. Every caller inherits this check.
+- if no `FeeGrant` entry exists for (`grantor_corporation_id`, `grantee`) and an `x/feegrant` allowance granted by the corporation's `policy_address` to `grantee` exists, abort: the slot is held by an allowance this module did not create (one the corporation granted directly, or a sponsorship's), and the module never overwrites it. Every caller inherits this check.
 - if `period` is specified, `expiration` MUST also be specified.
 
 ##### [MOD-DE-MSG-1-3] Grant Fee Allowance fee checks
@@ -5841,7 +5842,7 @@ Create (or update if it already exist) FeeGrant `feegrant`:
 - set `feegrant.remaining_spend` to `spend_limit` if it is set, else null
 - set `feegrant.period` to `period`
 
-Additionally, realize the on-chain allowance (see the [Delegation Module](#delegation-module) note): create (or update if one already exists) the `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee`, as an `AllowedMsgAllowance` over `msg_types` wrapping:
+Additionally, realize the on-chain allowance (see the [Delegation Module](#delegation-module) note): create the `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee`, or update it when a `FeeGrant` entry existed before this call (the allowance is then the module's own), as an `AllowedMsgAllowance` over `msg_types` wrapping:
 
 - a `PeriodicAllowance` (`period`; per-period limit `period_spend_limit = spend_limit`; initial `period_can_spend = spend_limit`; first `period_reset = expiration`; no absolute expiration, so it auto-renews until revoked) when both `spend_limit` and `period` are set; or
 - a `BasicAllowance` (`spend_limit` when set, otherwise unlimited; `expiration` when set) otherwise.
@@ -5874,7 +5875,7 @@ MUST abort if one of these conditions fails:
 
 If FeeGrant entry for this (`grantor_corporation_id`, `grantee`) exist, delete it, else do nothing.
 
-In the same [[ref: transaction]], also revoke the corresponding `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee`, if one exists (see the [Delegation Module](#delegation-module) note).
+In the same [[ref: transaction]], when a `FeeGrant` entry was deleted, also revoke the corresponding `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee` (see the [Delegation Module](#delegation-module) note). When no `FeeGrant` entry existed, no allowance is touched: an allowance with no `FeeGrant` entry is not this module's (one the corporation granted directly, or a sponsorship's).
 
 #### [MOD-DE-MSG-3] Grant Operator Authorization
 
@@ -6099,7 +6100,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `corporation` (account): (Signer) signature must be verified; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
 - let `co` be the `Corporation` entry resolved from the signing `corporation` account (the sponsor).
 - `sponsored_corporation_id`: a `Corporation` entry MUST exist with this `id`, and it MUST differ from `co.id`.
-- the `policy_address` of that corporation MUST NOT be the `grantee` of a `FeeGrant` of `co` nor the `vs_operator` of a `VerifiableService` entry of `co`, else abort: the sponsorship allowance and an operator allowance would share the one (granter, grantee) slot of x/feegrant.
+- the `policy_address` of that corporation MUST NOT be the `grantee` of a `FeeGrant` of `co`, nor the `vs_operator` of a `VerifiableService` entry of `co`, nor the grantee of any `x/feegrant` allowance granted by `co.policy_address`, else abort: the sponsorship allowance and another allowance would share the one (granter, grantee) slot of x/feegrant.
 - if a `Sponsorship` entry `s` already exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, the new terms MUST be at least as generous as the current ones, else abort with an error indicating that the sponsorship must be revoked first: `period` MUST be unchanged; `msg_types` MUST be absent or a superset of `s.msg_types` (absent counts as all); `spend_limit` MUST be absent or, for every denom of `s.spend_limit`, at least `s.spend_limit` (an absent `s.spend_limit` cannot be set); `expiration` MUST be null or later than `s.expiration` (a null `s.expiration` cannot be set); `covers_fees` MUST NOT change from true to false; when `s.covers_fees` is true, `fee_spend_limit` MUST be absent or at least `s.fee_spend_limit` per denom (an absent `s.fee_spend_limit` cannot be set); when it is false, any `fee_spend_limit` is accepted with `covers_fees` true.
 - `msg_types`, if specified: MUST be a non-empty list of message types among those of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op), [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem) (the list of the [Sponsorship](#sponsorship) entity).
 - `spend_limit`, if specified: MUST be a list of valid DenomAmounts.
