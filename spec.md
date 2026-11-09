@@ -1819,7 +1819,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 - `operator` (account) (*mandatory*) (key): account authorized to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) on `xr_id`. Together with `xr_id`, forms the composite key.
 - `expiration` (timestamp) (*mandatory*): authorization end-of-life. When `now() >= expiration`, the authorization is dead and [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected.
 - `min_interval` (duration) (*optional*): anti-spam guard. If set, two successive successful [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls on the `ExchangeRate` entry, whoever pushed the previous value, MUST be separated by at least `min_interval` (measured on `xr.updated`).
-- `max_deviation_bps` (uint32) (*optional*): circuit breaker, expressed in basis points (1 bps = 0.01%). If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh [[ref: governance proposal]] (an updated authorization with a wider `max_deviation_bps`, [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization)).
+- `max_deviation_bps` (uint32) (*conditional*): circuit breaker, expressed in basis points (1 bps = 0.01%). MUST be set on every authorization of the [[XRG]](#xrg-genesis-exchange-rate) entry, the rate every fee and every mint depends on; optional on the others. If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh [[ref: governance proposal]] (an updated authorization with a wider `max_deviation_bps`, [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization)).
 
 ### GlobalVariables
 
@@ -5681,6 +5681,7 @@ Every [[ref: transaction]] pays [[ref: network fees]] in [[ref: native denom]], 
 - The module maintains the derived state `network_gas_price_native`, the price of one unit of gas in [[ref: native denom]] base units for the current [[ref: epoch]], computed as `network_gas_price × rate / 10^rate_scale` from the `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]) required by [[XRG]](#xrg-genesis-exchange-rate). Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic: the price of one unit of gas is a small fraction of one base unit.
 - At genesis, `network_gas_price_native` MUST be computed from the genesis values of `network_gas_price` and of that `ExchangeRate` entry. The genesis state MUST therefore define `GlobalVariables.main_fiat_currency`, `GlobalVariables.network_gas_price` and the exchange rate between the main fiat currency and the native denom: without them no transaction fee can be computed and no transaction can be executed.
 - In the boundary block of each epoch, as step (5) of the boundary sequence defined in [Trust Unit Index](#trust-unit-index), `network_gas_price_native` MUST be recomputed for the next epoch. If no valid (non-expired) exchange rate is available at that moment, the last stored rate MUST be used even if expired: unlike minting and repayment, fee computation never aborts for lack of a rate, so that the chain, and the exchange-rate update transaction itself, keep working.
+- The recomputed `network_gas_price_native` MUST NOT exceed twice, nor fall below half of, the value of the ending epoch: a larger move is clamped to that bound and reaches its target over successive boundaries. The clamp is a second guard behind the oracle's `max_deviation_bps`: a wrong push (a unit mistake, for instance) can at worst double the price of gas for one epoch, which keeps the corrective push and the council's votes affordable. It does not apply to the first computation at genesis.
 - Within an epoch `network_gas_price_native` MUST NOT change. A governance change of `network_gas_price` takes effect at the next boundary.
 - The current values are returned by [[MOD-TD-QRY-4]](#mod-td-qry-4-get-network-gas-price).
 
@@ -6564,7 +6565,7 @@ The **Grant Exchange Rate Authorization** method creates (or updates) an `Exchan
 - `operator` (account) (*mandatory*): the account receiving the authorization.
 - `expiration` (timestamp) (*mandatory*): authorization end-of-life.
 - `min_interval` (duration) (*optional*): minimum time between two successive [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls on the entry (measured on `xr.updated`).
-- `max_deviation_bps` (uint32) (*optional*): maximum relative change per update, in basis points.
+- `max_deviation_bps` (uint32) (*conditional*): maximum relative change per update, in basis points; mandatory when `xr_id` is the [[XRG]](#xrg-genesis-exchange-rate) entry.
 
 ##### [MOD-XR-MSG-4-2] Grant Exchange Rate Authorization precondition checks
 
@@ -6581,7 +6582,7 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 - `operator` MUST be a valid account.
 - `expiration` MUST be in the future.
 - `min_interval`, if specified, MUST be a valid, strictly positive duration.
-- `max_deviation_bps`, if specified, MUST be strictly greater than `0` and less than or equal to `10000`.
+- `max_deviation_bps`, if specified, MUST be strictly greater than `0` and less than or equal to `10000`; it MUST be specified when `xr_id` is the [[XRG]](#xrg-genesis-exchange-rate) entry.
 
 ###### [MOD-XR-MSG-4-2-2] Grant Exchange Rate Authorization fee checks
 
@@ -7085,7 +7086,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 
 ### [XRG] Genesis Exchange Rate
 
-The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]), its `rate` being the number of base units of native denom per minor unit of the main fiat currency, scaled by `rate_scale`, with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch oracle operator for that entry. Without this entry no transaction fee can be computed and no transaction can be executed ([[NET-FEE-1]](#net-fee-1-network-gas-price)); while the entry is disabled or its rate expired, no [[ref: trust unit]] can be minted and no slash debt repaid until governance enables it ([[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)) and an operator pushes a rate ([[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)). Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the operator pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
+The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]), its `rate` being the number of base units of native denom per minor unit of the main fiat currency, scaled by `rate_scale`, with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch oracle operator for that entry, with `max_deviation_bps` set. Without this entry no transaction fee can be computed and no transaction can be executed ([[NET-FEE-1]](#net-fee-1-network-gas-price)); while the entry is disabled or its rate expired, no [[ref: trust unit]] can be minted and no slash debt repaid until governance enables it ([[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)) and an operator pushes a rate ([[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)). Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the operator pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
 
 ### [GCO] Genesis Council
 
