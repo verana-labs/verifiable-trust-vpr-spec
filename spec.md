@@ -4736,7 +4736,7 @@ A slash is the ecosystem's sanction on a participation: it removes trust units, 
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation to slash, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]`.
 - `percent` (decimal) (*mandatory*): the fraction of the [[ref: trust units]] currently held by this participation (`d.tu`) to slash, greater than 0 and at most 1. The ecosystem governance framework defines the fractions of its sanction schedule; a corporation holding several participations in the ecosystem is slashed participation by participation, one message each, which lets the ecosystem target the ones that breached.
-- `exclude` (boolean) (*mandatory*): the ecosystem's decision to exclude the participation in addition to the debt: true withdraws trust from everything the participation issued or validated before the slash ([[ref: VT spec]]) and bars it until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); false bars it until the debt is repaid only. A later slash with false does not clear an earlier exclusion.
+- `exclude` (boolean) (*mandatory*): the ecosystem's decision to exclude the participation in addition to the debt: true withdraws trust from everything the participation issued or validated before the slash ([[ref: VT spec]]) and bars it until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); false bars it until the debt is repaid only. A later slash with false does not clear an earlier exclusion. Only the ecosystem controller (Option #2 of the authority checks) MAY set it to true: exclusion is the ecosystem's decision ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), and a validator ancestor, one grantor among several, slashes with `exclude` false.
 
 ##### [MOD-AC-MSG-12-2] Slash Participation Trust Deposit precondition checks
 
@@ -4759,7 +4759,7 @@ A participation keeps its deposit after its entries expired or were revoked: it 
 
 ###### [MOD-AC-MSG-12-2-2] Slash Participation Trust Deposit authority checks
 
-Either Option #1, or #2 MUST return true, else abort.
+Either Option #1, or #2 MUST return true, else abort. If `exclude` is true, Option #2 MUST return true, else abort.
 
 *Option #1*: executed by a validator ancestor
 
