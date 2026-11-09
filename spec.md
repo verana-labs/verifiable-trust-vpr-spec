@@ -1351,6 +1351,7 @@ entity "GlobalVariables" as gv {
   +validator_min_uptime: decimal
   +council_budget: decimal
   +foundation_budget: decimal
+  +foundation_account: account
   +vna_holder_max_yield_rate: decimal
   +unbonding_period: duration
   +bonding_enabled: boolean
@@ -1855,6 +1856,7 @@ Each group below is owned by the module whose Update Module Parameters message c
 - `validator_min_uptime` (decimal) (*mandatory*): signed-block ratio below which the epoch payment is zero. Example value: 0.90.
 - `council_budget` (decimal) (*mandatory*): council treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through [[ref: governance proposals]].
 - `foundation_budget` (decimal) (*mandatory*): foundation treasury budget per [[ref: epoch]], in [[ref: main fiat currency]]. Set and reviewed by the council through [[ref: governance proposals]].
+- `foundation_account` (account) (*mandatory*): the account the foundation treasury budget is paid to ([[DIST-1]](#dist-1-epoch-payout-order)). Set at genesis, changed by [[ref: governance proposal]] ([[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters)).
 - `vna_holder_max_yield_rate` (decimal) (*mandatory*): yearly cap on the fee-funded yield paid to [[ref: bonded tokens]], expressed as a fraction of the bonded amount. No oracle needed. Converted to a per-epoch cap by linear pro-rata, × `epoch_length` / 365 days ([[DIST-1]](#dist-1-epoch-payout-order)).
 - `unbonding_period` (duration) (*mandatory*): exit delay for [[ref: bonded tokens]]. Default value: 28 days.
 - `bonding_enabled` (boolean) (*mandatory*): whether item 4 of [[DIST-1]](#dist-1-epoch-payout-order), the yield to [[ref: bonded tokens]], is active. False at genesis; set to true by [[ref: governance proposal]] only once the bonding mechanism of [[DIST-2]](#dist-2-bonding) is specified and implemented and legal counsel has reviewed the yield. While false, bonding is not available and the pool remainder after the budgets is burned in full.
@@ -5336,7 +5338,7 @@ Trust deposits generate **no yield**: the fee-funded yield of the [[ref: VPR]] a
 The module maintains a single global index, the [[ref: trust unit peg value]] `tu_peg_value(t)`, expressed in [[ref: main fiat currency]] per trust unit:
 
 - The index, the pending `tu_decay_rate`, the epoch origin and the last closed epoch are genesis state ([[TUG]](#tug-genesis-trust-unit-index)). At the first genesis of the chain `tu_peg_value` is `GlobalVariables.tu_peg_value_genesis`, no decay change is pending, the epoch origin `epoch_origin` is the genesis time and no epoch is closed; a genesis produced by exporting a running chain (a restart after a halt, an upgrade by export and import) carries the exported values, so that neither the index nor the epoch grid moves.
-- Epochs are counted from the epoch origin: epoch `n` covers the block timestamps from `epoch_origin + n × epoch_length` (inclusive) to `epoch_origin + (n+1) × epoch_length` (exclusive). The **boundary block** of epoch `n` is the first block whose timestamp falls in epoch `n+1` or later. In that block, after its transactions have executed, the following MUST be performed for epoch `n`, in this order: (1) compute each validator's signed-block ratio over epoch `n`; (2) pay out the [[ref: distribution pool]] per [[DIST-1]](#dist-1-epoch-payout-order), or skip the payout and carry the pool forward when no valid exchange rate is available; (3) update the index: `tu_peg_value = tu_peg_value × (1 - GlobalVariables.tu_decay_rate)`; (4) apply any change of `tu_decay_rate` enacted during epoch `n` (the pending value stored by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)), so that it first affects the decline performed at the boundary of epoch `n+1`; (5) recompute `network_gas_price_native` for epoch `n+1` per [[NET-FEE-1]](#net-fee-1-network-gas-price). The transactions of the boundary block therefore mint at the peg value of epoch `n` and pay fees at the gas price of epoch `n`.
+- Epochs are counted from the epoch origin: epoch `n` covers the block timestamps from `epoch_origin + n × epoch_length` (inclusive) to `epoch_origin + (n+1) × epoch_length` (exclusive). The **boundary block** of epoch `n` is the first block whose timestamp falls in epoch `n+1` or later. In that block, after its transactions have executed, the following MUST be performed for epoch `n`, in this order: (1) compute each validator's signed-block ratio over epoch `n` from the commit signatures the module counted during the epoch ([[DIST-1]](#dist-1-epoch-payout-order)); (2) pay out the [[ref: distribution pool]] per [[DIST-1]](#dist-1-epoch-payout-order), or skip the payout and carry the pool forward when no valid exchange rate is available; (3) update the index: `tu_peg_value = tu_peg_value × (1 - GlobalVariables.tu_decay_rate)`; (4) apply any change of `tu_decay_rate` enacted during epoch `n` (the pending value stored by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)), so that it first affects the decline performed at the boundary of epoch `n+1`; (5) recompute `network_gas_price_native` for epoch `n+1` per [[NET-FEE-1]](#net-fee-1-network-gas-price). The transactions of the boundary block therefore mint at the peg value of epoch `n` and pay fees at the gas price of epoch `n`.
 - The module keeps the number of the **last closed epoch** in state (none at the first genesis; an exported genesis carries it). In every block, after its transactions have executed, while the epoch following the last closed epoch has ended (its end timestamp is at or before the block timestamp), the module processes the boundary of that epoch with the five steps above and advances the last closed epoch. A block normally processes one boundary. A block produced after the chain missed `k` boundaries processes them **in sequence**, each with the five steps: decay follows wall-clock time, and a `tu_decay_rate` change enacted before the halt is applied at step (4) of the first missed boundary and governs the declines that follow.
 - The index never pauses: a stale exchange rate skips the payout (step 2), never the decline (step 3). An epoch during which no block was produced has no signed blocks: its payout is skipped and the pool carries over, since the budgets compensate validators for running the network.
 - `tu_decay_rate` MUST satisfy 0 ≤ `tu_decay_rate` < 1, at genesis and on every update. The index half-life in epochs is ln 2 / −ln(1 − `tu_decay_rate`); the default 0.001 with a one-day epoch gives about 693 days.
@@ -5719,13 +5721,13 @@ All deposit-bound [[ref: native denom]] (see [[MOD-TD-MSG-1]](#mod-td-msg-1-mint
 
 In the boundary block of each [[ref: epoch]], at step (2) of the boundary sequence defined in [Trust Unit Index](#trust-unit-index), the [[ref: distribution pool]] balance MUST be paid out in the following order. Epochs during which no block was produced are not paid: the pool carries over. Fiat-denominated amounts are converted to [[ref: native denom]] at the current oracle rate ([Get Price](#mod-xr-qry-3-get-price)); if no valid rate is available, the payout of that epoch is skipped: its budgets are not paid later, the pool carries over, and the next boundary pays one epoch's budgets as usual.
 
-1. **Validators** — each active validator node receives `validator_node_budget` (in [[ref: main fiat currency]], oracle-converted), **docked by uptime**. The KPI is the node's signed-block ratio over the elapsed epoch, obtained from consensus signing info (objective, no oracle):
+1. **Validators** — each active validator node receives `validator_node_budget` (in [[ref: main fiat currency]], oracle-converted), **docked by uptime**. The KPI is the node's signed-block ratio over the elapsed epoch, objective and oracle-free: the number of blocks of the epoch whose last commit carries the validator's signature, counted by the module block by block (not read from the sliding window of x/slashing), divided by the number of blocks of the epoch during which the validator was in the active set. A validator that joined or left the set during the epoch is measured over the blocks it was in the set for, and its budget is pro-rated to that share of the epoch; one that was in the set for no block receives nothing. The payment goes to the validator's operator account.
    - ratio ≥ `validator_target_uptime`: full payment;
    - `validator_min_uptime` ≤ ratio < `validator_target_uptime`: linear pro-ration between zero and full payment;
    - ratio < `validator_min_uptime`: zero.
    Docked amounts remain in the pool (they join the burn residual). Persistent under-performance escalates to the council's governance processes (term review) — separate from payment docking.
-2. **Council treasury** — `council_budget` (oracle-converted).
-3. **Foundation treasury** — `foundation_budget` (oracle-converted).
+2. **Council treasury** — `council_budget` (oracle-converted), paid to `GlobalVariables.council_account`.
+3. **Foundation treasury** — `foundation_budget` (oracle-converted), paid to `GlobalVariables.foundation_account`.
 4. **Bonded token holders** — a **capped, fee-funded, pro-rata** yield: it accrues only to [[ref: native denom]] bonded through the bonding mechanism of [[DIST-2]](#dist-2-bonding) (subject to `unbonding_period`), pro-rata to each holder's time-weighted bonded amount over the closed epoch (as tracked by a stake-seconds accumulator, so that bonding just before the boundary earns nothing), and hard-capped: a holder's cap for the epoch is its time-weighted bonded amount × `vna_holder_max_yield_rate` × `epoch_length` / 365 days (linear pro-rata of the yearly rate, no compounding, no oracle needed). Per epoch, the payout equals min(pool remainder after budgets, sum of per-holder caps), distributed pro-rata to those amounts; the excess joins the residual. This item applies only while `GlobalVariables.bonding_enabled` is true; otherwise it is skipped and the remainder is burned.
 5. **Residual → burned.** Whatever remains after 1–4 MUST be burned. Burn is not a parameter: it is the automatic pool residual.
 
@@ -5749,7 +5751,7 @@ Bonding is available only while `GlobalVariables.bonding_enabled` is true. It us
 
 #### [MOD-DS-MSG-1] Update Module Parameters
 
-Update the Distribution parameters of [[GLO]](#glo-global-variables): `validator_node_budget`, `validator_target_uptime`, `validator_min_uptime`, `council_budget`, `foundation_budget`, `vna_holder_max_yield_rate`, `unbonding_period` and `bonding_enabled`.
+Update the Distribution parameters of [[GLO]](#glo-global-variables): `validator_node_budget`, `validator_target_uptime`, `validator_min_uptime`, `council_budget`, `foundation_budget`, `foundation_account`, `vna_holder_max_yield_rate`, `unbonding_period` and `bonding_enabled`.
 
 Can only be executed through a [[ref: governance proposal]].
 
@@ -5766,6 +5768,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Distribution parameters listed above, else abort.
 - `validator_node_budget`, `council_budget` and `foundation_budget`, if updated, MUST be ≥ 0, in [[ref: main fiat currency]].
 - `validator_target_uptime` and `validator_min_uptime`: the resulting values MUST satisfy 0 ≤ `validator_min_uptime` ≤ `validator_target_uptime` ≤ 1, else abort.
+- `foundation_account`, if updated, MUST be a valid account.
 - `vna_holder_max_yield_rate`, if updated, MUST be ≥ 0.
 - `unbonding_period`, if updated, MUST be a duration greater than 0.
 - `bonding_enabled`, if updated, MUST be a boolean. It MUST NOT be set to true before the bonding mechanism of [[DIST-2]](#dist-2-bonding) is specified and the legal review recorded there is completed: this is a condition on the [[ref: governance proposal]], which the protocol cannot verify.
@@ -7048,6 +7051,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `validator_min_uptime` (decimal) (*mandatory*): 0.90.
 - `council_budget` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]].
 - `foundation_budget` (decimal) (*mandatory*): to be defined in the governance framework, in [[ref: main fiat currency]].
+- `foundation_account` (account) (*mandatory*): to be defined in the genesis state.
 - `vna_holder_max_yield_rate` (decimal) (*mandatory*): to be defined in the governance framework.
 - `unbonding_period` (duration) (*mandatory*): 28 days.
 - `bonding_enabled` (boolean) (*mandatory*): false.
