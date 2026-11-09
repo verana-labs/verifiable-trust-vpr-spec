@@ -2900,7 +2900,7 @@ The method MUST emit an event carrying `co.id`, `ecosystem_id` or the network, `
 
 #### [MOD-GF-MSG-4] Accept Corporation Governance Framework
 
-The `operator` of an [OperatorAuthorization](#operatorauthorization) CAN execute this method. It records the [[ref: governance framework acceptance]] by the operator of the version in force of the [[ref: CGF]] of the corporation that authorized it ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator)). The message is signed by the operator alone, outside [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks): it is the act that makes the authorization usable, so it cannot require it. The operator pays the [[ref: network fees]], or the corporation does through a [FeeGrant](#feegrant) whose `msg_types` include `AcceptCorporationGovernanceFramework` ([MsgType](#msgtype) 34); the message is not delegable and cannot be sponsored.
+The `operator` of an [OperatorAuthorization](#operatorauthorization) CAN execute this method. It records the [[ref: governance framework acceptance]] by the operator of the version in force of the [[ref: CGF]] of the corporation that authorized it ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator)). The message is signed by the operator alone, outside [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks): it is the act that makes the authorization usable, so it cannot require it. The operator pays the [[ref: network fees]], or the corporation does through a [FeeGrant](#feegrant) whose `msg_types` include `AcceptCorporationGovernanceFramework` ([MsgType](#msgtype) 31), which [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization) adds to the allowance of every operator it grants a fee limit; the message is not delegable and cannot be sponsored.
 
 ##### [MOD-GF-MSG-4-1] Accept Corporation Governance Framework parameters
 
@@ -5816,7 +5816,7 @@ This method can only be called directly by the following methods:
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): MUST be a list of **VPR delegable messages only**.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, plus `AcceptCorporationGovernanceFramework`, the one non-delegable value a fee allowance may cover ([[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework), added by [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-operator-authorization)).
 - `expiration` (timestamp): if specified, MUST be in the future
 - `spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `period` (duration): if specified MUST be a valid period.
@@ -5944,7 +5944,7 @@ if `feegrant_spend_limit` is absent:
 
 else:
 
-- grant Fee Allowance (`co.id`, `grantee`, `msg_types`, `expiration`, `feegrant_spend_limit`, `feegrant_spend_limit_period`).
+- grant Fee Allowance (`co.id`, `grantee`, `msg_types` plus `AcceptCorporationGovernanceFramework`, `expiration`, `feegrant_spend_limit`, `feegrant_spend_limit_period`): the allowance also pays the operator's acceptance of the corporation's [[ref: CGF]] ([[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)), without which the authorization cannot be used.
 
 #### [MOD-DE-MSG-4] Revoke Operator Authorization
 
