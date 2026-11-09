@@ -4763,7 +4763,7 @@ Either Option #1, or #2 MUST return true, else abort.
 
 *Option #1*: executed by a validator ancestor
 
-for each entry `applicant_accreditation` listed in `d.accreditation_ids` whose `validator_accreditation_id` is defined:
+for each entry `applicant_accreditation` listed in `d.accreditation_ids` whose `effective_from` is set and whose `validator_accreditation_id` is defined (a pending entry gives the validator it chose no authority over the participation):
 
 - set `validator_accreditation` = `applicant_accreditation`
 - while `validator_accreditation.validator_accreditation_id` is defined, 
@@ -6330,7 +6330,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - a `Digest` entry `d` with `d.digest` = `digest` MUST exist, else abort.
 - `d.expires` MUST be null or later than `now()`, else abort (the credential it anchored has expired and the entry is about to be swept).
 - [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass: `co` is the `Corporation` entry whose `policy_address` is the signing `corporation` account.
-- define `authority_set`: the empty set if `d.schema_id` is null or no `ParticipationTrustDeposit[(d.vs_id, d.schema_id, ISSUER)]` exists; else the entries listed in its `accreditation_ids` and every ancestor reached from them by following `validator_accreditation_id` until null or a missing entry, keeping only the entries that are [[ref: active accreditations]] (a slashed participation confers no authority; an expired or revoked entry no longer exists).
+- define `authority_set`: the empty set if `d.schema_id` is null or no `ParticipationTrustDeposit[(d.vs_id, d.schema_id, ISSUER)]` exists; else the entries listed in its `accreditation_ids` whose `effective_from` is set (a pending entry confers nothing on the validator it chose) and every ancestor reached from them by following `validator_accreditation_id` until null or a missing entry, keeping only the entries that are [[ref: active accreditations]] (a slashed participation confers no authority; an expired or revoked entry no longer exists).
 - Authorization:
 
 either (executed by an operator under an OperatorAuthorization; `accreditation_id` absent):
