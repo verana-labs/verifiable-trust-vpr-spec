@@ -2993,6 +2993,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 ###### [MOD-GF-MSG-5-2-1] Update Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+- `gf_acceptance_grace_min`, if updated, MUST be a duration > 0, else abort.
 
 ###### [MOD-GF-MSG-5-2-2] Update Module Parameters fee checks
 
@@ -3254,6 +3255,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 ###### [MOD-CS-MSG-4-2-1] Update Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+- `credential_schema_schema_max_size` and every `credential_schema_*_max_days` value, if updated, MUST be > 0, else abort.
 
 ###### [MOD-CS-MSG-4-2-2] Update Module Parameters fee checks
 
@@ -5341,7 +5343,7 @@ The module maintains a single global index, the [[ref: trust unit peg value]] `t
 - Epochs are counted from the epoch origin: epoch `n` covers the block timestamps from `epoch_origin + n × epoch_length` (inclusive) to `epoch_origin + (n+1) × epoch_length` (exclusive). The **boundary block** of epoch `n` is the first block whose timestamp falls in epoch `n+1` or later. In that block, after its transactions have executed, the following MUST be performed for epoch `n`, in this order: (1) compute each validator's signed-block ratio over epoch `n` from the commit signatures the module counted during the epoch ([[DIST-1]](#dist-1-epoch-payout-order)); (2) pay out the [[ref: distribution pool]] per [[DIST-1]](#dist-1-epoch-payout-order), or skip the payout and carry the pool forward when no valid exchange rate is available; (3) update the index: `tu_peg_value = tu_peg_value × (1 - GlobalVariables.tu_decay_rate)`; (4) apply any change of `tu_decay_rate` enacted during epoch `n` (the pending value stored by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)), so that it first affects the decline performed at the boundary of epoch `n+1`; (5) recompute `network_gas_price_native` for epoch `n+1` per [[NET-FEE-1]](#net-fee-1-network-gas-price). The transactions of the boundary block therefore mint at the peg value of epoch `n` and pay fees at the gas price of epoch `n`.
 - The module keeps the number of the **last closed epoch** in state (none at the first genesis; an exported genesis carries it). In every block, after its transactions have executed, while the epoch following the last closed epoch has ended (its end timestamp is at or before the block timestamp), the module processes the boundary of that epoch with the five steps above and advances the last closed epoch. A block normally processes one boundary. A block produced after the chain missed `k` boundaries processes them **in sequence**, each with the five steps: decay follows wall-clock time, and a `tu_decay_rate` change enacted before the halt is applied at step (4) of the first missed boundary and governs the declines that follow.
 - The index never pauses: a stale exchange rate skips the payout (step 2), never the decline (step 3). An epoch during which no block was produced has no signed blocks: its payout is skipped and the pool carries over, since the budgets compensate validators for running the network.
-- `tu_decay_rate` MUST satisfy 0 ≤ `tu_decay_rate` < 1, at genesis and on every update. The index half-life in epochs is ln 2 / −ln(1 − `tu_decay_rate`); the default 0.001 with a one-day epoch gives about 693 days.
+- `tu_decay_rate` MUST satisfy 0 ≤ `tu_decay_rate` ≤ 0.01, at genesis and on every update ([[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)). The index half-life in epochs is ln 2 / −ln(1 − `tu_decay_rate`); the default 0.001 with a one-day epoch gives about 693 days.
 - A governance change of `tu_decay_rate` is **prospective only**: it is applied at step (4) of the next boundary and first affects the decline that follows. The index path already elapsed MUST NOT be recomputed: past mints, scores, and fiat-fixed slash debts are unaffected; only the future decline steepens or flattens.
 - The price of one trust unit in [[ref: native denom]] is derived from the oracle: `price_tu_in_native_denom(t) = tu_peg_value(t) / P(t)`, where `P(t)` is the current price of one base unit of [[ref: native denom]] in minor units of the [[ref: main fiat currency]], derived from the genesis exchange rate entry `xr` of [[XRG]](#xrg-genesis-exchange-rate) (base (FIAT, `main_fiat_currency`), quote (COIN, native denom): `xr.rate` base units of native denom per minor unit of fiat, scaled by `xr.rate_scale`): `P(t)` = 10^`xr.rate_scale` / `xr.rate`, computed at the ledger precision. It is not obtained through [Get Price](#mod-xr-qry-3-get-price), which converts whole amounts in the stored direction and rounds them down to base units (the price of one base unit of native denom would round to 0). If `xr` is disabled or expired, minting and repayment operations MUST abort.
 - **Ledger precision.** `tu_peg_value`, every `tu` and `fiat_cost` balance, and every amount derived from them (minted, slashed, restored) are decimals with exactly 18 fractional digits: the **ledger precision**. Every operation that produces such an amount rounds down to the ledger precision; an amount that rounds to 0 is 0. A fraction of a trust unit is an ordinary balance (at the genesis peg, a deposit-bound amount worth 0.15 units of [[ref: main fiat currency]], 15 minor units of a two-decimal currency, mints 0.15 trust units) and is slashed like any other. Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic: raw balances grow as the index declines (~×1.44/year at the default `tu_decay_rate`). A redenomination MAY be performed at a chain upgrade.
@@ -5418,7 +5420,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
 - `tu_peg_value_genesis`, `main_fiat_currency`, `epoch_length` and `vna_total_supply` MUST NOT be updatable ([GlobalVariables](#globalvariables)): the index only moves through decay, and the other three would re-denominate or re-index everything.
 - `network_gas_price` and `max_gas_per_msg_type`, if updated, take effect as stated by [[NET-FEE-1]](#net-fee-1-network-gas-price) and [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions).
-- `tu_decay_rate`, if updated, MUST satisfy 0 ≤ value < 1, else abort.
+- ranges, else abort: `trust_deposit_rate` and `vua_reward_rate` in [0, 1]; `tu_decay_rate` in [0, 0.01] (at 0.01 per epoch the index half-life is about 69 epochs; above it the index would round to 0 at the ledger precision within a few hundred epochs, and every mint would then divide by zero); `network_gas_price` > 0; every value of `max_gas_per_msg_type` > 0.
 - an update of `tu_decay_rate` MUST be applied prospectively, at step (4) of the next epoch boundary (see [Trust Unit Index](#trust-unit-index)).
 
 ###### [MOD-TD-MSG-4-2-2] Update Module Parameters fee checks
@@ -6957,6 +6959,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 ###### [MOD-VS-MSG-7-2-1] Update Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
+- `vs_registration_deposit` and `ecosystem_creation_deposit`, if updated, MUST be ≥ 0, and `vid_rotation_max_transition` MUST be a duration > 0, else abort.
 
 ###### [MOD-VS-MSG-7-2-2] Update Module Parameters fee checks
 
