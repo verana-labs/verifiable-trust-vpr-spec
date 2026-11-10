@@ -1109,6 +1109,7 @@ entity "Corporation" as corp {
   +accepted_ngf_version: int
   acceptance_deadline: timestamp
   +language: string
+  sponsor_corporation_id: uint64
 }
 
 entity "EcosystemAcceptance" as eacc {
@@ -1148,6 +1149,7 @@ entity "CredentialSchema" as cs {
   presentation_validity_period: duration
   +pricing_asset: string
   +digest_algorithm: string
+  root_accreditation_ids: uint64[]
 }
 
 
@@ -1224,6 +1226,8 @@ enum "MsgType" as msgtype {
   UpdateVerifiableService
   SetParticipationExclusion
   RevokeSponsorship
+  AcceptGovernanceFrameworkVersion
+  AcceptCorporationGovernanceFramework
 }
 
 entity "OperatorAuthorization" as oauthz {
@@ -1365,6 +1369,8 @@ entity "GlobalVariables" as gv {
   +ecosystem_creation_deposit: number
   +vid_rotation_max_transition: duration
   +network_gas_price: decimal
+  ngf_acceptance_deadline: timestamp
+  +gf_acceptance_grace_min: duration
   +max_gas_per_msg_type: map<string, number>
 }
 
