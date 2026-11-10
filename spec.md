@@ -753,7 +753,7 @@ actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
 participant "Verifiable Public Registry" as VPR #3fbdb6
 
 ApplicantAccount --> VPR: start onboarding process with Validator
-VPR <-- VPR: create applicant Accreditation entry\n(op_state = PENDING)
+VPR <-- VPR: create applicant Accreditation entry\n(onboarding_state = PENDING)
 ApplicantAccount <-- VPR: applicant Accreditation entry created
 ApplicantBrowser --> ValidatorVS: connect to the validator VS, VerifiableService[validator_accreditation.vs_id].vid,\nby establishing a trusted channel (DIDComm)
 ApplicantBrowser <-- ValidatorVS: trusted channel established.
@@ -771,7 +771,7 @@ ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by fil
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
 note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
 ApplicantBrowser <-- ValidatorVS: You are a legitimate candidate. I'll now finalize your `ISSUER` `Accreditation` entry.
-ValidatorAccount --> VPR #3fbdb6: set applicant_accreditation.op_state to VALIDATED\n(finalize the `ISSUER` `Accreditation` entry)
+ValidatorAccount --> VPR #3fbdb6: set applicant_accreditation.onboarding_state to VALIDATED\n(finalize the `ISSUER` `Accreditation` entry)
 VPR --> ValidatorAccount: Receive trust fees.
 ApplicantBrowser <-- ValidatorVS: notify `ISSUER` `Accreditation` entry validated for your service entry.\nIt can now issue credentials of this schema.
 ```
@@ -1293,11 +1293,11 @@ entity "Accreditation" as csp {
   +validation_fees: number
   +issuance_fees: number
   +verification_fees: number
-  op_exp: timestamp
-  +op_last_state_change: timestamp
-  +op_current_fees: number
-  +op_current_deposit: number
-  op_summary_digest: bytes
+  onboarding_exp: timestamp
+  +onboarding_last_state_change: timestamp
+  +onboarding_fees: number
+  +onboarding_deposit: number
+  onboarding_summary_digest: bytes
   +issuance_fee_discount: number
   +verification_fee_discount: number
   vua_reward_rate: decimal
@@ -1446,9 +1446,9 @@ account --o gv: council_account
 vs --o corp: vs_id
 vs --o tr: vs_id
 vs --o csp: vs_id
-account --o csp: op_funding_account
+account --o csp: onboarding_funding_account
 
-valstate --o csp: op_state
+valstate --o csp: onboarding_state
 corp --o td: corporation_id
 pdep o-- "0..n" csp: accreditation_ids
 vs --o pdep: vs_id
@@ -1615,18 +1615,18 @@ An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of
 - `issuance_fees` (number) (*mandatory*): fees requested by the `corporation` of this entry when a credential is issued. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `verification_fees` (number) (*mandatory*): fees requested by the `corporation` of this entry when a credential is verified. Must be an integer. Default to 0. Considered unit depends on `pricing_asset_type` and `pricing_asset` configuration of related schema.
 - `validator_accreditation_id` (uint64) (*optional*): the validator entry assigned to the onboarding process of this entry, i.e. its *parent node* in the `Accreditation` tree.
-- `op_state` (enum) (*mandatory*): one of PENDING, VALIDATED.
-- `op_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Accreditation` expiration timestamp.
-- `op_last_state_change` (timestamp) (*mandatory*)
-- `op_current_fees` (number) (*mandatory*): current action escrowed fees, settled to the [[ref: validator]] upon onboarding process completion (net of their deposit-bound portion under native-denom pricing, [[MOD-AC-MSG-3-3]](#mod-ac-msg-3-3-set-accreditation-op-to-validated-execution)), in [[ref: denom]].
-- `op_current_deposit` (number) (*mandatory*): current action deposit-bound amount, in [[ref: native denom]], **held in the escrow account** while the onboarding process is PENDING. No trust units are minted and nothing is routed to the [[ref: distribution pool]] while PENDING: upon completion (VALIDATED), this amount is converted to trust units (minted to the applicant's [ParticipationTrustDeposit](#participationtrustdeposit) entry under native-denom pricing, where the validator's deposit-bound portion comes out of `op_current_fees`; split between the applicant's and the validator's entries under the other pricing cases, [[MOD-AC-MSG-3-3]](#mod-ac-msg-3-3-set-accreditation-op-to-validated-execution)) and the [[ref: native denom]] is routed to the [[ref: distribution pool]]; upon cancellation, it is refunded as-is from escrow.
-- `op_funding_account` (account) (*optional*): the account that funded the escrowed `op_current_fees` and `op_current_deposit` of the current onboarding process (the [[ref: funding account]] selected by [[FUND-CHECK-1]](#fund-check-1-debit) at [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op) or [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op)); the escrow is refunded to this account by [[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request). Null while nothing is escrowed.
-- `op_summary_digest` (bytes) (*optional*): an optional digest, set by the [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]]; computed with the `digest_algorithm` of the schema, given in SRI form at the API and stored as the decoded 48 or 64 bytes.
+- `onboarding_state` (enum) (*mandatory*): one of PENDING, VALIDATED.
+- `onboarding_exp` (timestamp) (*optional*): validation expiration timestamp. This expiration timestamp is for the onboarding process itself, not for the issued credential or `Accreditation` expiration timestamp.
+- `onboarding_last_state_change` (timestamp) (*mandatory*)
+- `onboarding_fees` (number) (*mandatory*): current action escrowed fees, settled to the [[ref: validator]] upon onboarding process completion (net of their deposit-bound portion under native-denom pricing, [[MOD-AC-MSG-3-3]](#mod-ac-msg-3-3-set-accreditation-op-to-validated-execution)), in [[ref: denom]].
+- `onboarding_deposit` (number) (*mandatory*): current action deposit-bound amount, in [[ref: native denom]], **held in the escrow account** while the onboarding process is PENDING. No trust units are minted and nothing is routed to the [[ref: distribution pool]] while PENDING: upon completion (VALIDATED), this amount is converted to trust units (minted to the applicant's [ParticipationTrustDeposit](#participationtrustdeposit) entry under native-denom pricing, where the validator's deposit-bound portion comes out of `onboarding_fees`; split between the applicant's and the validator's entries under the other pricing cases, [[MOD-AC-MSG-3-3]](#mod-ac-msg-3-3-set-accreditation-op-to-validated-execution)) and the [[ref: native denom]] is routed to the [[ref: distribution pool]]; upon cancellation, it is refunded as-is from escrow.
+- `onboarding_funding_account` (account) (*optional*): the account that funded the escrowed `onboarding_fees` and `onboarding_deposit` of the current onboarding process (the [[ref: funding account]] selected by [[FUND-CHECK-1]](#fund-check-1-debit) at [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op) or [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op)); the escrow is refunded to this account by [[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request). Null while nothing is escrowed.
+- `onboarding_summary_digest` (bytes) (*optional*): an optional digest, set by the [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]]; computed with the `digest_algorithm` of the schema, given in SRI form at the API and stored as the decoded 48 or 64 bytes.
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `vua_reward_rate` (decimal) (*optional*): on an `ISSUER` entry of a User Agent schema, the rate of the reward the vendor claims on the trust fees of the exchanges its Verifiable User Agents take part in ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), between 0 and `GlobalVariables.vua_reward_rate`; null means the global rate. Declared by the applicant at [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-accreditation-op) like its fees, fixed for the life of the entry (a renewal keeps it); ignored on any entry that is never referenced as `vua_issuer_accreditation_id`.
 
-**Expiry.** At the end of every block, the accreditation module deletes every entry whose `op_state` is VALIDATED and whose `effective_until` is not null and not later than the block time (implementations keep an expiry queue, bucketed by time, written whenever `effective_until` is set or changed), removes its id from its [ParticipationTrustDeposit](#participationtrustdeposit) and, for a root entry, from `CredentialSchema.root_accreditation_ids`, and emits an event for each. An entry whose `op_state` is PENDING (a renewal in progress) is not swept: it ends at validation, with its new `effective_until`, or at cancellation, which deletes it at once if its window has already ended.
+**Expiry.** At the end of every block, the accreditation module deletes every entry whose `onboarding_state` is VALIDATED and whose `effective_until` is not null and not later than the block time (implementations keep an expiry queue, bucketed by time, written whenever `effective_until` is set or changed), removes its id from its [ParticipationTrustDeposit](#participationtrustdeposit) and, for a root entry, from `CredentialSchema.root_accreditation_ids`, and emits an event for each. An entry whose `onboarding_state` is PENDING (a renewal in progress) is not swept: it ends at validation, with its new `effective_until`, or at cancellation, which deletes it at once if its window has already ended.
 
 > Note: the agent account that operates an `Accreditation` entry is `VerifiableService[vs_id].vs_operator`, and its authorization settings (message types, spend limits, operation-budget cycle, fee grant) are the entry's own `msg_types`, `period` and `fee_spend_limit`, with its [VsOperatorBudget](#vsoperatorbudget). An `Accreditation` entry carries no operator configuration of its own. See [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-operator-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks).
 
@@ -2032,7 +2032,7 @@ Given a `corporation`, an `operator` (the `vs_operator`), a **primary entry** `p
    This step never aborts: `budget.expiration` is the end of the current budget cycle, not a validity window (an entry has none; step 1 enforces the window of the primary entry when there is one). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
 6. If an [VsOperatorBudget](#vsoperatorbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
 
-> Note: step 1 is what prevents the use of an `Accreditation` entry that is not, or is no longer, an [[ref: active accreditation]]: an entry that has never been validated has no `effective_from` yet, a revoked or expired entry no longer exists, and a slashed participation fails the definition. The configuration itself is unaffected by the state of any single `Accreditation` entry: the same agent keeps operating the identifier's other entries. A renewal is unaffected too: [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op) sets `op_state` back to PENDING, but the entry stays active until its `effective_until`.
+> Note: step 1 is what prevents the use of an `Accreditation` entry that is not, or is no longer, an [[ref: active accreditation]]: an entry that has never been validated has no `effective_from` yet, a revoked or expired entry no longer exists, and a slashed participation fails the definition. The configuration itself is unaffected by the state of any single `Accreditation` entry: the same agent keeps operating the identifier's other entries. A renewal is unaffected too: [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-accreditation-op) sets `onboarding_state` back to PENDING, but the entry stays active until its `effective_until`.
 
 ##### [AUTHZ-CHECK-4] VS Operator Fee Grant checks
 
@@ -2093,13 +2093,13 @@ A method that debits funds **from** a corporation `co` resolves its funding acco
 1. the active sponsor's `policy_address` `sp.policy_address`, if `co` has an active sponsor `s`, `msg_type` is in `s.msg_types` (or `s.msg_types` is absent), and, for every denom of `totals`, `s.remaining_spend` (when `s.spend_limit` is set) covers the total for that denom and `sp.policy_address` has an available balance of at least that total. A denom absent from `s.spend_limit` is not covered. After the debits, if `s.spend_limit` is set, `s.remaining_spend` MUST be decremented by each total for its denom, exactly once, by the calling method;
 2. the corporation's own `co.policy_address`, if it has an available balance of at least the total for every denom of `totals`.
 
-The account selected in step 1 or 2 is the **funding account** of the message: every transfer and every [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) call of the method names it as source, and the called methods only transfer, they never resolve or decrement. When the debit funds an escrow, the method records the selected account (see `Accreditation.op_funding_account`), so that one escrow always has one funder.
+The account selected in step 1 or 2 is the **funding account** of the message: every transfer and every [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) call of the method names it as source, and the called methods only transfer, they never resolve or decrement. When the debit funds an escrow, the method records the selected account (see `Accreditation.onboarding_funding_account`), so that one escrow always has one funder.
 
 > Note: step 2 is the pre-sponsorship behaviour. A sponsorship is strictly additive: it never lets an operator spend more than its own authorization allows, and a corporation that keeps its `policy_address` empty is simply blocked, with an explicit error, whenever its sponsor cannot pay. Implementations SHOULD emit an event when step 1 fails for a corporation that has an active sponsor, so that the sponsor can be alerted. A precondition of the form "the funding account of `corporation` MUST cover …" means that this resolution succeeds for the message's totals.
 
 ##### [FUND-CHECK-2] Credit
 
-When a method MUST credit an amount **to** a corporation `co` (fees received as a validator or as a beneficiary, Verifiable User Agent rewards), the amount MUST be transferred to `sp.policy_address` if `co` has an active sponsor `sp`, else to `co.policy_address`. Escrow refunds are the exception: they return to the recorded `Accreditation.op_funding_account`, whoever the sponsor is at refund time.
+When a method MUST credit an amount **to** a corporation `co` (fees received as a validator or as a beneficiary, Verifiable User Agent rewards), the amount MUST be transferred to `sp.policy_address` if `co` has an active sponsor `sp`, else to `co.policy_address`. Escrow refunds are the exception: they return to the recorded `Accreditation.onboarding_funding_account`, whoever the sponsor is at refund time.
 
 > Note: the credit rule keeps a sponsored corporation free of [[ref: native denom]] and of other on-chain assets under any schema pricing; the sponsor and the sponsored corporation settle such receipts off-chain under their agreement. Trust units are never affected by this rule: they are minted to the corporation that performed the trust operation.
 
@@ -2451,7 +2451,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - set `co.sponsor_corporation_id` to `sponsor_corporation_id` (null clears the sponsor).
 
-> Note: this is the only state the sponsored corporation writes about its sponsor. Changing or clearing the sponsor takes effect at the next fund movement ([[FUND-CHECK]](#fund-check-funding-account-resolution)) and at the next fee deduction; no `Accreditation`, authorization, fee grant or allowance of `co` is rewritten. An onboarding process whose escrow was funded by a previous sponsor keeps that sponsor as refund target (`Accreditation.op_funding_account`).
+> Note: this is the only state the sponsored corporation writes about its sponsor. Changing or clearing the sponsor takes effect at the next fund movement ([[FUND-CHECK]](#fund-check-funding-account-resolution)) and at the next fee deduction; no `Accreditation`, authorization, fee grant or allowance of `co` is rewritten. An onboarding process whose escrow was funded by a previous sponsor keeps that sponsor as refund target (`Accreditation.onboarding_funding_account`).
 
 #### [MOD-CO-QRY-1] Get Corporation
 
@@ -3576,11 +3576,11 @@ An applicant `corporation` MUST NOT have two onboarding processes running at the
 Let `d` be `ParticipationTrustDeposit[(vs_id, validator_accreditation.schema_id, role)]`, if it exists, and `accreditations[]` the entries listed in `d.accreditation_ids` where:
 
 - `p.validator_accreditation_id` = `validator_accreditation_id`,
-- `p.op_state` = PENDING.
+- `p.onboarding_state` = PENDING.
 
 if size of `accreditations[]` > 0, an onboarding process is already running in this context, so [[ref: transaction]] MUST abort.
 
-Additionally, if any entry of `d.accreditation_ids` matches the same validator with `op_state` = VALIDATED and `effective_until` = NULL, [[ref: transaction]] MUST abort: that entry never expires, so a successor entry could never pass [MOD-AC-MSG-3-2-4](#mod-ac-msg-3-2-4-set-accreditation-op-to-validated-overlap-checks); the validator's corporation MUST first set an `effective_until` on that entry ([Set Accreditation Effective Until](#mod-ac-msg-8-set-accreditation-effective-until)), or `corporation` MUST revoke it ([Revoke Accreditation](#mod-ac-msg-9-revoke-accreditation)).
+Additionally, if any entry of `d.accreditation_ids` matches the same validator with `onboarding_state` = VALIDATED and `effective_until` = NULL, [[ref: transaction]] MUST abort: that entry never expires, so a successor entry could never pass [MOD-AC-MSG-3-2-4](#mod-ac-msg-3-2-4-set-accreditation-op-to-validated-overlap-checks); the validator's corporation MUST first set an `effective_until` on that entry ([Set Accreditation Effective Until](#mod-ac-msg-8-set-accreditation-effective-until)), or `corporation` MUST revoke it ([Revoke Accreditation](#mod-ac-msg-9-revoke-accreditation)).
 
 > Note: the candidates are the current entries of the participation, listed on its deposit; no index of entries exists. `role` and `vs_id` are those of the key; all entries sharing a `validator_accreditation_id` share its `schema_id` by construction.
 
@@ -3600,7 +3600,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Accreditation` entry `validator_accreditation` of the selected validator.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
-- debit `validation_fees_in_denom` + `validation_trust_deposit_in_native_denom` from `corporation` per [[FUND-CHECK-1]](#fund-check-1-debit) and send it to the validation escrow [[ref: account]], if greater than 0; the selected funding account is recorded in `applicant_accreditation.op_funding_account` below (null if nothing was escrowed). No [[ref: trust units]] are minted at this stage (mint-at-validation, see [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)).
+- debit `validation_fees_in_denom` + `validation_trust_deposit_in_native_denom` from `corporation` per [[FUND-CHECK-1]](#fund-check-1-debit) and send it to the validation escrow [[ref: account]], if greater than 0; the selected funding account is recorded in `applicant_accreditation.onboarding_funding_account` below (null if nothing was escrowed). No [[ref: trust units]] are minted at this stage (mint-at-validation, see [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)).
 
 - define `now`: current timestamp.
 
@@ -3616,12 +3616,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_accreditation.verification_fees`: `verification_fees`.
   - `applicant_accreditation.vua_reward_rate`: `vua_reward_rate` if given, else null.
   - `applicant_accreditation.validator_accreditation_id`: `validator_accreditation_id`.
-  - `applicant_accreditation.op_last_state_change`: `now`
-  - `applicant_accreditation.op_state`: PENDING.
-  - `applicant_accreditation.op_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_accreditation.op_current_deposit` (number): `validation_trust_deposit_in_native_denom` (held in escrow).
-  - `applicant_accreditation.op_funding_account`: the funding account selected above, or null if nothing was escrowed.
-  - `applicant_accreditation.op_summary_digest`: null.
+  - `applicant_accreditation.onboarding_last_state_change`: `now`
+  - `applicant_accreditation.onboarding_state`: PENDING.
+  - `applicant_accreditation.onboarding_fees` (number): `validation_fees_in_denom`.
+  - `applicant_accreditation.onboarding_deposit` (number): `validation_trust_deposit_in_native_denom` (held in escrow).
+  - `applicant_accreditation.onboarding_funding_account`: the funding account selected above, or null if nothing was escrowed.
+  - `applicant_accreditation.onboarding_summary_digest`: null.
   - `applicant_accreditation.issuance_fee_discount`: 0 (overwritten at first validation by [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)).
   - `applicant_accreditation.verification_fee_discount`: 0 (overwritten at first validation by [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)).
 
@@ -3655,7 +3655,7 @@ Once the [[ref: validator]] determines that the process is complete, they conclu
 
 The [[ref: validator]] may compile a summary file of the onboarding process, documenting exchanged data, proofs, and decisions, and share it with the [[ref: applicant]] via the [[ref: VS]] connection or another secure channel.
 
-For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_accreditation.op_summary_digest`.
+For audit or governance purposes, the [[ref: validator]] should register a digest (e.g., hash or SRI) of this summary in `applicant_accreditation.onboarding_summary_digest`.
 
 #### [MOD-AC-MSG-2] Renew Accreditation OP
 
@@ -3688,7 +3688,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `id` MUST be a valid uint64 and an `Accreditation` entry with the same id MUST exist (an expired or revoked entry no longer does).
-- the `op_state` of that entry MUST be VALIDATED: a renewal cannot be started while an onboarding process is PENDING (its escrow, and the account that funded it, would otherwise be overwritten).
+- the `onboarding_state` of that entry MUST be VALIDATED: a renewal cannot be started while an onboarding process is PENDING (its escrow, and the account that funded it, would otherwise be overwritten).
 
 ###### [MOD-AC-MSG-2-2-2] Renew Accreditation OP role and mode checks
 
@@ -3785,17 +3785,17 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Accreditation` entry `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
-- debit `validation_fees_in_denom` + `validation_trust_deposit_in_native_denom` from `corporation` per [[FUND-CHECK-1]](#fund-check-1-debit) and send it to the validation escrow [[ref: account]], if greater than 0; the selected funding account is recorded in `applicant_accreditation.op_funding_account` below (null if nothing was escrowed). No [[ref: trust units]] are minted at this stage (mint-at-validation, see [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)).
+- debit `validation_fees_in_denom` + `validation_trust_deposit_in_native_denom` from `corporation` per [[FUND-CHECK-1]](#fund-check-1-debit) and send it to the validation escrow [[ref: account]], if greater than 0; the selected funding account is recorded in `applicant_accreditation.onboarding_funding_account` below (null if nothing was escrowed). No [[ref: trust units]] are minted at this stage (mint-at-validation, see [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated)).
 
 - define `now`: current timestamp.
 
 - update `Accreditation` entry:
 
-  - `applicant_accreditation.op_state`: PENDING.
-  - `applicant_accreditation.op_last_state_change`: current timestamp.
-  - `applicant_accreditation.op_current_fees` (number): `validation_fees_in_denom`.
-  - `applicant_accreditation.op_current_deposit` (number): `validation_trust_deposit_in_native_denom` (held in escrow; the participation's deposit is only incremented at validation time).
-  - `applicant_accreditation.op_funding_account`: the funding account selected above, or null if nothing was escrowed.
+  - `applicant_accreditation.onboarding_state`: PENDING.
+  - `applicant_accreditation.onboarding_last_state_change`: current timestamp.
+  - `applicant_accreditation.onboarding_fees` (number): `validation_fees_in_denom`.
+  - `applicant_accreditation.onboarding_deposit` (number): `validation_trust_deposit_in_native_denom` (held in escrow; the participation's deposit is only incremented at validation time).
+  - `applicant_accreditation.onboarding_funding_account`: the funding account selected above, or null if nothing was escrowed.
 
 #### [MOD-AC-MSG-3] Set Accreditation OP to Validated
 
@@ -3812,7 +3812,7 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `validation_fees` (number) (*mandatory*): Agreed validation_fees for this `Accreditation` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this `Accreditation` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `verification_fees` (number) (*mandatory*): Agreed verification_fees for this `Accreditation` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
-- `op_summary_digest` (bytes, SRI form in the API) (*optional*): an optional digest, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
+- `onboarding_summary_digest` (bytes, SRI form in the API) (*optional*): an optional digest, set by [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]].
 - `issuance_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): use 0 for no discount. Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 
@@ -3841,11 +3841,11 @@ else MUST abort.
 
 [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and the ecosystem of the schema of `applicant_accreditation`.
 
-- `applicant_accreditation.op_state` MUST be equal to PENDING, else abort.
+- `applicant_accreditation.onboarding_state` MUST be equal to PENDING, else abort.
 - `validation_fees` (number) (*mandatory*): MUST be zero or a positive integer. If `applicant_accreditation.effective_from` is not null (we are in renewal) `validation_fees` MUST be equal to `applicant_accreditation.validation_fees`, else abort.
 - `issuance_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_accreditation.effective_from` is not null (we are in renewal) `issuance_fees` MUST be equal to `applicant_accreditation.issuance_fees`, else abort.
 - `verification_fees` (number) (*mandatory*): MUST be zero or a positive integer.  If `applicant_accreditation.effective_from` is not null (we are in renewal) `verification_fees` MUST be equal to `applicant_accreditation.verification_fees`, else abort.
-- `op_summary_digest` (bytes, SRI form in the API) (*optional*): MUST be the digest of the summary computed with the `digest_algorithm` of the schema, given in SRI form (for example `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`) and stored as the decoded bytes, 48 for `sha384` and 64 for `sha512`.
+- `onboarding_summary_digest` (bytes, SRI form in the API) (*optional*): MUST be the digest of the summary computed with the `digest_algorithm` of the schema, given in SRI form (for example `sha384-GOp0dicJ4ufacOQxQfQojCyGoC7RJClOzqb23pJubmG2z3cqD/73j1+3kYNSrxUP`) and stored as the decoded bytes, 48 for `sha384` and 64 for `sha512`.
 
 - Load `CredentialSchema` `cs` from `applicant_accreditation.schema_id`.
 - Load `Accreditation` `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`.
@@ -3866,19 +3866,19 @@ else MUST abort.
 
 A HOLDER applicant, and any applicant whose `cs.issuer_onboarding_mode` (resp. `cs.verifier_onboarding_mode`) is OPEN, carries no issuance (resp. verification) discount: the mandatory parameter MUST be 0; a value of 0 MUST be accepted, and the method MUST NOT abort because of the schema's onboarding mode.
 
-Calculation of `op_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
+Calculation of `onboarding_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
 
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_accreditation.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_accreditation.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_accreditation.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_accreditation.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_accreditation.role` is HOLDER).
 
-- if `validity_period` is null or 0 (never expire): `op_exp` = NULL.
-- else if `applicant_accreditation.op_exp` is null, `op_exp` =  timestamp of now() plus `validity_period`.
-- else `op_exp` =  `applicant_accreditation.op_exp` plus `validity_period`
+- if `validity_period` is null or 0 (never expire): `onboarding_exp` = NULL.
+- else if `applicant_accreditation.onboarding_exp` is null, `onboarding_exp` =  timestamp of now() plus `validity_period`.
+- else `onboarding_exp` =  `applicant_accreditation.onboarding_exp` plus `validity_period`
 
 Now, let's verify `effective_until`:
 
 - if `effective_until` is NULL, no issue.
-- else if `applicant_accreditation.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `op_exp` is not null, lower or equal to `op_exp`.
-- else `effective_until` MUST be greater than `applicant_accreditation.effective_until` AND, if `op_exp` is not null, lower or equal to `op_exp`.
+- else if `applicant_accreditation.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `onboarding_exp` is not null, lower or equal to `onboarding_exp`.
+- else `effective_until` MUST be greater than `applicant_accreditation.effective_until` AND, if `onboarding_exp` is not null, lower or equal to `onboarding_exp`.
 
 ###### [MOD-AC-MSG-3-2-2] Set Accreditation OP to Validated validator checks
 
@@ -3918,48 +3918,48 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Accreditation` entry `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`.
 - define `now` timestamp of now().
 
-Calculate `op_exp`:
+Calculate `onboarding_exp`:
 
 - Load `CredentialSchema` `cs` from `applicant_accreditation.schema_id`.
 - let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_accreditation.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_accreditation.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_accreditation.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_accreditation.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_accreditation.role` is HOLDER).
 
-- if `validity_period` is null or 0 (never expire): `op_exp` = NULL.
-- else if `applicant_accreditation.op_exp` is null, `op_exp` =  timestamp of now() plus `validity_period`.
-- else `op_exp` =  `applicant_accreditation.op_exp` plus `validity_period`.
+- if `validity_period` is null or 0 (never expire): `onboarding_exp` = NULL.
+- else if `applicant_accreditation.onboarding_exp` is null, `onboarding_exp` =  timestamp of now() plus `validity_period`.
+- else `onboarding_exp` =  `applicant_accreditation.onboarding_exp` plus `validity_period`.
 
 Change value of provided `effective_until` if needed, and abort if needed:
 
 - if provided  `effective_until` is NULL:
-  - change value of provided `effective_until` to `op_exp`.
+  - change value of provided `effective_until` to `onboarding_exp`.
 
 - else if `applicant_accreditation.effective_until` is NULL:
   - verify that provided `effective_until` is greater than `now` else MUST abort
-  - if `op_exp` is not null, verify that provided `effective_until` is lower or equal to `op_exp` else MUST abort
+  - if `onboarding_exp` is not null, verify that provided `effective_until` is lower or equal to `onboarding_exp` else MUST abort
 
 - else:
   - `effective_until` MUST be greater than `applicant_accreditation.effective_until` else MUST abort
-  - if `op_exp` is not null, verify that provided `effective_until` is lower or equal to `op_exp` else MUST abort.
+  - if `onboarding_exp` is not null, verify that provided `effective_until` is lower or equal to `onboarding_exp` else MUST abort.
 
 Fees and Trust Deposits — settle the escrow (mint-at-validation):
 
 - if `(cs.pricing_asset_type, cs.pricing_asset)` is `(COIN, [[ref: native denom]])`:
-  - calculate `validator_deposit_bound` = `applicant_accreditation.op_current_fees` × `GlobalVariables.trust_deposit_rate`, rounded down, and `applicant_deposit_bound` = `applicant_accreditation.op_current_deposit`;
-  - transfer `applicant_accreditation.op_current_fees` − `validator_deposit_bound` from the escrow [[ref: account]] to the [[ref: funding account]] of the validator corporation `Corporation[validator_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)).
+  - calculate `validator_deposit_bound` = `applicant_accreditation.onboarding_fees` × `GlobalVariables.trust_deposit_rate`, rounded down, and `applicant_deposit_bound` = `applicant_accreditation.onboarding_deposit`;
+  - transfer `applicant_accreditation.onboarding_fees` − `validator_deposit_bound` from the escrow [[ref: account]] to the [[ref: funding account]] of the validator corporation `Corporation[validator_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)).
 - else (pricing in an arbitrary COIN or in FIAT):
-  - calculate `validator_deposit_bound` = `applicant_accreditation.op_current_deposit` / 2, rounded down, and `applicant_deposit_bound` = `applicant_accreditation.op_current_deposit` − `validator_deposit_bound` (the applicant escrowed both, see fee checks);
-  - transfer the full amount `applicant_accreditation.op_current_fees` in the pricing [[ref: denom]] from the escrow [[ref: account]] to the [[ref: funding account]] of the validator corporation `Corporation[validator_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) (for COIN pricing this already equals the fee minus its deposit-bound portion, see fee checks; 0 if FIAT).
+  - calculate `validator_deposit_bound` = `applicant_accreditation.onboarding_deposit` / 2, rounded down, and `applicant_deposit_bound` = `applicant_accreditation.onboarding_deposit` − `validator_deposit_bound` (the applicant escrowed both, see fee checks);
+  - transfer the full amount `applicant_accreditation.onboarding_fees` in the pricing [[ref: denom]] from the escrow [[ref: account]] to the [[ref: funding account]] of the validator corporation `Corporation[validator_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) (for COIN pricing this already equals the fee minus its deposit-bound portion, see fee checks; 0 if FIAT).
 - if `validator_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_accreditation.corporation_id`, `vs_id` = `validator_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `validator_accreditation.role`, `source_account` = escrow account, `amount` = `validator_deposit_bound`).
 - if `applicant_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_accreditation.corporation_id`, `vs_id` = `applicant_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `applicant_accreditation.role`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`).
 
 Update `Accreditation` `applicant_accreditation`:
 
-- set `applicant_accreditation.op_state` to VALIDATED.
-- set `applicant_accreditation.op_last_state_change` to `now`.
-- set `applicant_accreditation.op_current_fees` to 0;
-- set `applicant_accreditation.op_current_deposit` to 0;
-- set `applicant_accreditation.op_funding_account` to null;
-- set `applicant_accreditation.op_summary_digest` to `op_summary_digest`.
-- set `applicant_accreditation.op_exp` to `op_exp`.
+- set `applicant_accreditation.onboarding_state` to VALIDATED.
+- set `applicant_accreditation.onboarding_last_state_change` to `now`.
+- set `applicant_accreditation.onboarding_fees` to 0;
+- set `applicant_accreditation.onboarding_deposit` to 0;
+- set `applicant_accreditation.onboarding_funding_account` to null;
+- set `applicant_accreditation.onboarding_summary_digest` to `onboarding_summary_digest`.
+- set `applicant_accreditation.onboarding_exp` to `onboarding_exp`.
 - set `applicant_accreditation.effective_until` to `effective_until`, and file the entry in the expiry queue accordingly ([Accreditation](#accreditation)).
 - if `applicant_accreditation.effective_from` IS NULL (first time method is called for this entry, and thus we are not in a renewal):
   - set `applicant_accreditation.validation_fees` to `validation_fees`;
@@ -3979,7 +3979,7 @@ Update `Accreditation` `applicant_accreditation`:
 
 Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
-At any time, [[ref: applicant]] of an onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and the escrowed [[ref: trust fees]] and deposit-bound amount are refunded. If `effective_from` is set (a renewal), `op_state` is set back to VALIDATED; else the entry, never validated, is deleted.
+At any time, [[ref: applicant]] of an onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and the escrowed [[ref: trust fees]] and deposit-bound amount are refunded. If `effective_from` is set (a renewal), `onboarding_state` is set back to VALIDATED; else the entry, never validated, is deleted.
 
 ##### [MOD-AC-MSG-6-1] Cancel Accreditation OP Last Request parameters
 
@@ -4002,7 +4002,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` with this id. It MUST exist.
 - `co.id` MUST equal `applicant_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
-- `applicant_accreditation.op_state` MUST be PENDING.
+- `applicant_accreditation.onboarding_state` MUST be PENDING.
 
 ###### [MOD-AC-MSG-6-2-2] Cancel Accreditation OP Last Request fee checks
 
@@ -4017,17 +4017,17 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Accreditation` entry `applicant_accreditation` with `id`. It MUST exist.
 - define `now`: current timestamp.
 
-- if `applicant_accreditation.op_current_fees` > 0:
-  - transfer `applicant_accreditation.op_current_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to `applicant_accreditation.op_funding_account`, the account that funded the escrow ([[FUND-CHECK-2]](#fund-check-2-credit)).
-  - set `applicant_accreditation.op_current_fees` to 0;
+- if `applicant_accreditation.onboarding_fees` > 0:
+  - transfer `applicant_accreditation.onboarding_fees` in proper [[ref: denom]] back from escrow [[ref: account]] to `applicant_accreditation.onboarding_funding_account`, the account that funded the escrow ([[FUND-CHECK-2]](#fund-check-2-credit)).
+  - set `applicant_accreditation.onboarding_fees` to 0;
 
-- if `applicant_accreditation.op_current_deposit` > 0:
-  - transfer `applicant_accreditation.op_current_deposit` in [[ref: native denom]] back from the escrow [[ref: account]] to `applicant_accreditation.op_funding_account` ([[FUND-CHECK-2]](#fund-check-2-credit)). No trust deposit adjustment is needed: nothing was minted while PENDING (mint-at-validation).
-  - set `applicant_accreditation.op_current_deposit` to 0.
+- if `applicant_accreditation.onboarding_deposit` > 0:
+  - transfer `applicant_accreditation.onboarding_deposit` in [[ref: native denom]] back from the escrow [[ref: account]] to `applicant_accreditation.onboarding_funding_account` ([[FUND-CHECK-2]](#fund-check-2-credit)). No trust deposit adjustment is needed: nothing was minted while PENDING (mint-at-validation).
+  - set `applicant_accreditation.onboarding_deposit` to 0.
 
-- set `applicant_accreditation.op_funding_account` to null.
+- set `applicant_accreditation.onboarding_funding_account` to null.
 - if `applicant_accreditation.effective_from` is null (validation never completed): delete the entry, removing its id from deposit(`applicant_accreditation`).`accreditation_ids` ([Accreditation](#accreditation)).
-- else: set `applicant_accreditation.op_state` to VALIDATED and `applicant_accreditation.op_last_state_change` to `now`; if `applicant_accreditation.effective_until` is not null and not later than `now`, the entry has expired meanwhile: delete it likewise.
+- else: set `applicant_accreditation.onboarding_state` to VALIDATED and `applicant_accreditation.onboarding_last_state_change` to `now`; if `applicant_accreditation.effective_until` is not null and not later than `now`, the entry has expired meanwhile: delete it likewise.
 
 The method MUST emit an event carrying `id` and the outcome.
 
@@ -4123,10 +4123,10 @@ A new entry `Accreditation` `perm` MUST be created:
 - `perm.validation_fees`: `validation_fees`
 - `perm.issuance_fees`: `issuance_fees`
 - `perm.verification_fees`: `verification_fees`
-- `perm.op_state`: VALIDATED
-- `perm.op_last_state_change`: `now`
-- `perm.op_current_fees`: 0
-- `perm.op_current_deposit`: 0
+- `perm.onboarding_state`: VALIDATED
+- `perm.onboarding_last_state_change`: `now`
+- `perm.onboarding_fees`: 0
+- `perm.onboarding_deposit`: 0
 - `perm.issuance_fee_discount`: 0
 - `perm.verification_fee_discount`: 0
 
@@ -4134,7 +4134,7 @@ Then append `perm.id` to `cs.root_accreditation_ids`, and register it in `Partic
 
 The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_accreditation_id` (null for a root entry) and `vs_id`, so that indexers build the `Accreditation` tree of the schema without a query.
 
-> Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` value, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated) negotiates them for OP-managed entries only.
+> Note: an entry created by this method never runs an [[ref: onboarding process]]: `onboarding_state` is `VALIDATED` from creation, never takes the `PENDING` value, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated) negotiates them for OP-managed entries only.
 
 #### [MOD-AC-MSG-8] Set Accreditation Effective Until
 
@@ -4184,7 +4184,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 3. OP-managed `Accreditation` entries: every other entry with a `validator_accreditation_id`
 
-- if `applicant_accreditation.op_exp` is not null, `effective_until` MUST be lower or equal to it, else MUST abort.
+- if `applicant_accreditation.onboarding_exp` is not null, `effective_until` MUST be lower or equal to it, else MUST abort.
 - load `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`. `validator_accreditation` MUST be a [[ref: active accreditation]]. `co.id` MUST equal `validator_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
 
 ###### [MOD-AC-MSG-8-2-3] Set Accreditation Effective Until fee checks
@@ -4343,7 +4343,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 
 - Load `Accreditation` entry `applicant_accreditation` from `id`.
-- if `applicant_accreditation.op_state` is PENDING (a renewal in progress): transfer `applicant_accreditation.op_current_fees` (in its denom) and `applicant_accreditation.op_current_deposit` (in [[ref: native denom]]) back from the escrow [[ref: account]] to `applicant_accreditation.op_funding_account`, as [[MOD-AC-MSG-6-3]](#mod-ac-msg-6-3-cancel-accreditation-op-last-request-execution) does: nothing was minted for them.
+- if `applicant_accreditation.onboarding_state` is PENDING (a renewal in progress): transfer `applicant_accreditation.onboarding_fees` (in its denom) and `applicant_accreditation.onboarding_deposit` (in [[ref: native denom]]) back from the escrow [[ref: account]] to `applicant_accreditation.onboarding_funding_account`, as [[MOD-AC-MSG-6-3]](#mod-ac-msg-6-3-cancel-accreditation-op-last-request-execution) does: nothing was minted for them.
 - delete `applicant_accreditation`, removing its id from deposit(`applicant_accreditation`).`accreditation_ids` and, for a root entry, from `CredentialSchema[applicant_accreditation.schema_id].root_accreditation_ids` ([Accreditation](#accreditation)).
 
 The method MUST emit an event carrying `id`, `schema_id`, `role`, `vs_id` and `now`: the revocation is recorded by the transaction, the VPR keeps no revoked entry.
@@ -4804,7 +4804,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `VerifiableService[vs_id].corporation_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`, `exclude`), which records the debt on `d`, increments `d.slash_count` and sets `d.excluded` when `exclude` is true. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), `tu_amount`, `slashed_fiat`, `exclude` and `now`.
 
-- for each entry `p` listed in `d.accreditation_ids` whose `effective_from` is set: delete it exactly as [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) does (the escrow of a pending renewal refunded to `p.op_funding_account`, the id removed from `d.accreditation_ids`, one event each). An entry under its initial onboarding process (`effective_from` null) stays until its applicant cancels it ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)); it cannot be validated while the participation is barred.
+- for each entry `p` listed in `d.accreditation_ids` whose `effective_from` is set: delete it exactly as [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) does (the escrow of a pending renewal refunded to `p.onboarding_funding_account`, the id removed from `d.accreditation_ids`, one event each). An entry under its initial onboarding process (`effective_from` null) stays until its applicant cancels it ([[MOD-AC-MSG-6]](#mod-ac-msg-6-cancel-accreditation-op-last-request)); it cannot be validated while the participation is barred.
 
 
 #### [MOD-AC-MSG-13] Set Participation Exclusion
@@ -4955,10 +4955,10 @@ A new entry `Accreditation` `perm` MUST be created:
 - `perm.validation_fees`: `validation_fees` if specified and `role` is ISSUER, else 0.
 - `perm.issuance_fees`: 0
 - `perm.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
-- `perm.op_state`: VALIDATED
-- `perm.op_last_state_change`: `now`
-- `perm.op_current_fees`: 0
-- `perm.op_current_deposit`: 0
+- `perm.onboarding_state`: VALIDATED
+- `perm.onboarding_last_state_change`: `now`
+- `perm.onboarding_fees`: 0
+- `perm.onboarding_deposit`: 0
 - `perm.issuance_fee_discount`: 0
 - `perm.verification_fee_discount`: 0
 
@@ -4966,7 +4966,7 @@ Then register `perm.id` in `ParticipationTrustDeposit[(vs_id, cs.id, role)].accr
 
 The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_accreditation_id` and `vs_id`, so that indexers build the `Accreditation` tree of the schema without a query.
 
-> Note: an entry created by this method never runs an [[ref: onboarding process]]: `op_state` is `VALIDATED` from creation, never takes the `PENDING` value, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated) negotiates them for OP-managed entries only.
+> Note: an entry created by this method never runs an [[ref: onboarding process]]: `onboarding_state` is `VALIDATED` from creation, never takes the `PENDING` value, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-AC-MSG-3]](#mod-ac-msg-3-set-accreditation-op-to-validated) negotiates them for OP-managed entries only.
 
 #### [MOD-AC-MSG-15] Trigger Resolver
 
@@ -6167,7 +6167,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - let `sponsored` be the `Corporation` entry of `sponsored_corporation_id`: revoke the on-chain `x/feegrant` allowance granted by `co.policy_address` to `sponsored.policy_address`, if one exists.
 - if `sponsored.sponsor_corporation_id` = `co.id`: set `sponsored.sponsor_corporation_id` to null.
 
-> Note: revocation is immediate: the next fund movement of the sponsored corporation falls back to its own `policy_address` ([[FUND-CHECK-1]](#fund-check-1-debit)) and its next fee deduction to its own `FeeGrant`. Escrows already funded by the sponsor keep it as refund target (`Accreditation.op_funding_account`). Open slash debts of the sponsored corporation are its own and remain open. Revocation is the only way to reduce the terms of a sponsorship: after it, a new grant needs a new election by the sponsored corporation.
+> Note: revocation is immediate: the next fund movement of the sponsored corporation falls back to its own `policy_address` ([[FUND-CHECK-1]](#fund-check-1-debit)) and its next fee deduction to its own `FeeGrant`. Escrows already funded by the sponsor keep it as refund target (`Accreditation.onboarding_funding_account`). Open slash debts of the sponsored corporation are its own and remain open. Revocation is the only way to reduce the terms of a sponsorship: after it, a new grant needs a new election by the sponsored corporation.
 
 #### [MOD-DE-QRY-1] List Operator Authorizations
 
