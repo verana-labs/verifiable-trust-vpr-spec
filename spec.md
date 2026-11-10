@@ -759,17 +759,11 @@ participant "Verifiable Public Registry" as VPR #3fbdb6
 ApplicantAccount --> VPR: start onboarding process with Validator
 VPR <-- VPR: create applicant Accreditation entry\n(onboarding_state = PENDING)
 ApplicantAccount <-- VPR: applicant Accreditation entry created
-ApplicantBrowser --> ValidatorVS: connect to the validator VS, VerifiableService[validator_accreditation.vs_id].vid,\nby establishing a trusted channel (DIDComm)
-ApplicantBrowser <-- ValidatorVS: trusted channel established.
-ApplicantBrowser --> ValidatorVS: I want to proceed with applicant_accreditation.id=...
-ValidatorVS --> ValidatorVS: load applicant Accreditation with this id\nand verify validator_accreditation_id refers to me
-ApplicantBrowser <-- ValidatorVS: request proof of control of the vs_operator account\nof VerifiableService[applicant_accreditation.vs_id] (blind sign)
-ApplicantBrowser --> ValidatorVS: send blind sign proof of the vs_operator account
-ApplicantBrowser <-- ValidatorVS: proof accepted, you operate the applicant's service entry, I trust you.
-ValidatorVS --> ValidatorVS: resolve VerifiableService[applicant_accreditation.vs_id].vid and get its keys
-ApplicantBrowser <-- ValidatorVS: request proof of control of that identifier (blind sign)
-ApplicantBrowser --> ValidatorVS: send blind sign proofs
-ApplicantBrowser <-- ValidatorVS: proof accepted, you control the identifier, I trust you.
+ApplicantVS --> ValidatorVS: connect to the validator VS, VerifiableService[validator_accreditation.vs_id].vid,\nby establishing a trusted channel bound to the applicant's identifier
+ApplicantVS <-- ValidatorVS: trusted channel established.
+ApplicantVS --> ValidatorVS: I want to proceed with applicant_accreditation.id=...
+ValidatorVS --> ValidatorVS: load applicant Accreditation with this id, verify validator_accreditation_id refers to me\nand that VerifiableService[applicant_accreditation.vs_id].vid is the identifier the channel authenticated
+ApplicantVS <-- ValidatorVS: you control the applicant's identifier, I trust you.
 note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
 ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
@@ -5309,17 +5303,11 @@ participant "Verifiable Public Registry" as VPR #3fbdb6
 ApplicantAccount --> VPR: Start Onboarding
 VPR <-- VPR: create `Accreditation` entry.
 ApplicantAccount <-- VPR: `Accreditation` entry created (PENDING)\nunder the chosen ISSUER_GRANTOR validator entry.
-ApplicantBrowser --> ValidatorVS: connect to validator VS DID found in VerifiableService[validator_accreditation.vs_id].vid\nby establishing a trusted channel (DIDComm)
-ApplicantBrowser <-- ValidatorVS: trusted channel established.
-ApplicantBrowser --> ValidatorVS: I want to proceed with accreditation.id=...
-ValidatorVS --> ValidatorVS: load perm with id=...\nand verify the associated accreditation.validator_accreditation_id is referring to me
-ApplicantBrowser <-- ValidatorVS: request proof of control of the vs_operator account\nof the applicant's service entry (blind sign)
-ApplicantBrowser --> ValidatorVS: send blind sign proof of the vs_operator account
-ApplicantBrowser <-- ValidatorVS: proof accepted, you operate the applicant's service entry, I trust you.
-ValidatorVS --> ValidatorVS: resolve the identifier of the applicant's service entry and get its keys
-ApplicantBrowser <-- ValidatorVS: request proof of control of that identifier (blind sign)
-ApplicantBrowser --> ValidatorVS: send blind sign proofs
-ApplicantBrowser <-- ValidatorVS: proof accepted, you control the identifier, I trust you.
+ApplicantVS --> ValidatorVS: connect to validator VS DID found in VerifiableService[validator_accreditation.vs_id].vid\nby establishing a trusted channel bound to the applicant's identifier
+ApplicantVS <-- ValidatorVS: trusted channel established.
+ApplicantVS --> ValidatorVS: I want to proceed with accreditation.id=...
+ValidatorVS --> ValidatorVS: load the entry with id=..., verify its validator_accreditation_id refers to me\nand that the identifier of the applicant's service entry is the one the channel authenticated
+ApplicantVS <-- ValidatorVS: you control the applicant's identifier, I trust you.
 note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
 ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
 ApplicantBrowser --> ValidatorVS: perform requested tasks...
