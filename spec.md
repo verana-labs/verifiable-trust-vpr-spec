@@ -2459,7 +2459,7 @@ Anyone CAN execute this method.
 
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] to fetch.
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
-- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, selected as [[MOD-GF-QRY-1-3]](#mod-gf-qry-1-3-get-governance-framework-version-execution) does.
 
 ##### [MOD-CO-QRY-1-2] Get Corporation query checks
 
@@ -2698,7 +2698,7 @@ Anyone CAN execute this method.
 
 - `id` (uint64) (*mandatory*): id of the [[ref: ecosystem]].
 - `active_gf_only` (boolean) (*optional*): if true, include only current governance framework data. If false or null, returns everything.
-- `preferred_language` (string) (*optional*): if set, return only one document per version, in `preferred_language` when the version has one, else in the version's primary `language`. If not set, return all documents of all languages.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, selected as [[MOD-GF-QRY-1-3]](#mod-gf-qry-1-3-get-governance-framework-version-execution) does. If not set, return all documents of all languages.
 
 ##### [MOD-ES-QRY-1-2] Get Ecosystem checks
 
@@ -2944,7 +2944,7 @@ Anyone CAN execute this method.
 ##### [MOD-GF-QRY-1-1] Get Governance Framework Version query parameters
 
 - `id` (uint64) (*mandatory*): the id of the `GovernanceFrameworkVersion`.
-- `preferred_language` (string) (*optional*): if set, return only one document per version, preferring `preferred_language`. If not set, return all documents of all languages.
+- `preferred_language` (string) (*optional*): if set, return only one document per version, selected as [[MOD-GF-QRY-1-3]](#mod-gf-qry-1-3-get-governance-framework-version-execution) does. If not set, return all documents of all languages.
 
 ##### [MOD-GF-QRY-1-2] Get Governance Framework Version query checks
 
@@ -2954,7 +2954,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 ##### [MOD-GF-QRY-1-3] Get Governance Framework Version execution
 
-Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id`, `corporation_id`, or neither for a version of the [[ref: NGF]]) and its nested `GovernanceFrameworkDocument` entries (filtered by `preferred_language` if set).
+Return the `GovernanceFrameworkVersion` entry with `id`, including its owning subject reference (`ecosystem_id`, `corporation_id`, or neither for a version of the [[ref: NGF]]) and its nested `GovernanceFrameworkDocument` entries. When `preferred_language` is set, one document per version is returned: the one in `preferred_language` when the version has one, else the one in the `language` of the owning subject (`Ecosystem.language`, `Corporation.language`), else, for a version of the [[ref: NGF]] or when neither exists, the earliest by `created`.
 
 #### [MOD-GF-QRY-2] Get Ecosystem Acceptance
 
