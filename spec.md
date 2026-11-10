@@ -5959,7 +5959,7 @@ else:
 
 - `corporation` (account) (*mandatory*): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
 - `operator` (account) (*conditional*): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal ([[MOD-DE-MSG-3-1]](#mod-de-msg-3-1-grant-operator-authorization-method-parameters)).
-- `grantee` (account) (*mandatory*): the account that will be revoked its authorization`.
+- `grantee` (account) (*mandatory*): the account whose authorization is revoked.
 
 ##### [MOD-DE-MSG-4-2] Revoke Operator Authorization basic checks
 
@@ -6255,7 +6255,7 @@ The Digests module keeps the [Digest](#digest) entries: the credential digests o
 #### [MOD-DI-MSG-1] Store Digest
 
 - Any authorized `operator` CAN execute this method on behalf of a `corporation`, in the context of one of the corporation's [VerifiableService](#verifiableservice) entries: a corporation operator under an OperatorAuthorization, or the vs-agent of that entry under a VS Operator Authorization whose entry's `msg_types` include `StoreDigest`.
-- This method can be called directly by [Record Credential Exchange](#mod-ac-msg-10-record-credential-exchange) module with no checks.
+- This method can be called directly by [Record Credential Exchange](#mod-ac-msg-10-record-credential-exchange) ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), with no checks.
 
 The agent of an issuer does not call this method itself: it anchors the digest of a credential it issues through the issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), `digest` parameter), which it runs even when no fees are due, so that the anchoring entry of the digest is recorded; the entry is written only under a schema whose `credential_anchoring` is REVOCABLE_DIGEST. Called directly, this method anchors a digest for the owner's other needs (a dated proof of the existence of a document, a retention record): such a digest has no anchoring context of a credential.
 
