@@ -299,7 +299,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A `VerifiableService` entry: the registration of a [[ref: VID]] in a [[ref: VPR]], owned by a single [[ref: corporation]], that every other entity binding that identifier (`Corporation`, `Ecosystem`, `Accreditation`) references by `vs_id`. See [VerifiableService](#verifiableservice).
 
 [[def: Verifiable Trust Specification, Verifiable Trust Spec, VT Specs, VT Spec]]:
-~ see [VT Spec](https://github.com/verana-labs/verifiable-trust-spec).
+~ The specification that defines Verifiable Services, Verifiable User Agents and trust resolution over a VPR. See [Verifiable Trust Specification](https://verana-labs.github.io/verifiable-trust-spec/).
 
 [[def: verifiable user agent, verifiable user agents, VUA, VUAs]]:
 ~ A user agent that accesses [[ref: verifiable services]] and enforces the trust rules of the [[ref: VT spec]], such as a wallet. See [[ref: VT spec]].
