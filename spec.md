@@ -186,6 +186,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: epoch, epochs]]:
 ~ The fixed period (`epoch_length`) at whose boundary the trust unit index moves, the [[ref: distribution pool]] is paid out and the [[ref: network gas price]] is converted. See [Trust Unit Index](#trust-unit-index).
 
+[[def: escrow account, validation escrow account]]:
+
+~ The module account of the Accreditation module that holds the `onboarding_fees` and `onboarding_deposit` of PENDING `Accreditation` entries until the onboarding process is validated, withdrawn or revoked.
+
 [[def: estimated transaction fees]]:
 ~ The fee a [[ref: transaction]] declares, at least the [[ref: network fee]] it requires. See [[NET-FEE-2]](#net-fee-2-required-fee).
 
