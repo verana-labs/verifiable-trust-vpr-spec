@@ -4616,7 +4616,7 @@ Determine the operation type and applicable discount:
 
 **For each beneficiary `Accreditation` `perm` in `found_accreditation_set`:**
 
-If `perm.[fee_field]` > 0:
+Set `vua_reward_portion` = 0 for this beneficiary. If `perm.[fee_field]` > 0:
 
 1. Calculate the discounted fee for this beneficiary:
    - `beneficiary_fee_in_pricing_asset` = `perm.[fee_field]` × (1 - `discount`)
@@ -4675,7 +4675,7 @@ After processing all beneficiaries, pay the accumulated reward to the VUA issuer
 
 If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 AND `vua_issuer_accreditation` is not [[ref: barred]] (neither its participation's deposit nor its corporation's trust deposit carries a slash debt or an exclusion; otherwise the reward is not paid, no deposit is funded, and the exchange goes through):
 
-- `vua_trust_deposit` = `accumulated_vua_reward` × `GlobalVariables.trust_deposit_rate`
+- `vua_trust_deposit` = `accumulated_vua_reward` × `GlobalVariables.trust_deposit_rate`, rounded down
 - `vua_fees_to_account` = `accumulated_vua_reward` - `vua_trust_deposit`
 - Transfer `vua_fees_to_account` to the [[ref: funding account]] of `Corporation[vua_issuer_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) in [[ref: native denom]].
 - if `vua_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `vua_issuer_accreditation.corporation_id`, `vs_id` = `vua_issuer_accreditation.vs_id`, `schema_id` = `vua_issuer_accreditation.schema_id`, `role` = `vua_issuer_accreditation.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `vua_trust_deposit`).
