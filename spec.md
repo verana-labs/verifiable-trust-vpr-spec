@@ -184,7 +184,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ An [[ref: account]] controller.
 
 [[def: epoch, epochs]]:
-~ A fixed-length period (`epoch_length`, e.g. 1 day) at whose boundary the [[ref: trust unit peg value]] index is updated, the [[ref: distribution pool]] is paid out and the [[ref: network gas price]] is converted into [[ref: native denom]] for the next epoch.
+~ The fixed period (`epoch_length`) at whose boundary the trust unit index moves, the [[ref: distribution pool]] is paid out and the [[ref: network gas price]] is converted. See [Trust Unit Index](#trust-unit-index).
 
 [[def: estimated transaction fees]]:
 ~ The fee a [[ref: transaction]] declares, in [[ref: native denom]]: at least the [[ref: transaction fees]] it requires ([[NET-FEE-2]](#net-fee-2-required-fee)), usually with a margin so that a slightly low gas estimate does not get the transaction rejected. Only the required fee is deducted: the declared excess is never deducted, and gas declared but not used is not refunded.
@@ -229,7 +229,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A presentation of a [[ref: verifiable credential]] as specified in [LINKED-VP](https://identity.foundation/linked-vp/).
 
 [[def: main fiat currency]]:
-~ The ISO-4217 fiat currency, defined in the genesis state and immutable thereafter, used to denominate the [[ref: trust unit peg value]], distribution budgets, slash debts and the [[ref: network gas price]]. Fee pricing MAY use other fiat currencies (multi-fiat), but protocol-level accounting uses the main fiat currency. Every fiat amount the VPR stores, compares or converts, in this currency or in a pricing fiat currency, is expressed in the ISO-4217 **minor unit** of that currency (cents for USD or EUR); the examples of this specification read them in major units.
+~ The ISO-4217 currency, fixed at genesis, in which the VPR denominates its fiat-fixed values; fiat amounts are stored in its minor unit. See [GlobalVariables](#globalvariables).
 
 [[def: native denom]]:
 ~ Native token of a [[ref: VPR]], example: uvna.
@@ -268,7 +268,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The [[ref: network fees]] required to execute a [[ref: transaction]] in a [[ref: VPR]]: its gas limit times the [[ref: network gas price]], in [[ref: native denom]] ([[NET-FEE-2]](#net-fee-2-required-fee)).
 
 [[def: trust deposit, trust deposits]]:
-~ The [[ref: trust unit]] balance of a [[ref: corporation]], used as its trust guarantee and the basis of its trust score. A trust deposit grows through paid usage: whenever a deposit-bound amount of [[ref: native denom]] is spent by or for a corporation (onboarding processes, credential issuance, presentation,...), trust units are minted to its deposit at the current [[ref: trust unit peg value]]. Trust units in a deposit are non-transferable and non-convertible; a trust deposit can be slashed but never withdrawn.
+~ The [[ref: trust unit]] balance of a [[ref: corporation]], its trust guarantee and the basis of its trust score; it can be slashed but never withdrawn. See [TrustDeposit](#trustdeposit).
 
 [[def: trust fee, trust fees]]:
 ~ Fees paid by a [[ref: participant]] that are distributed to other [[ref: participants]].
@@ -277,7 +277,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A non-transferable, non-convertible accounting unit, the only balance a [[ref: trust deposit]] holds. Trust units are minted when a deposit-bound amount of [[ref: native denom]] is spent, at the current [[ref: trust unit peg value]], and are used only to compute trust scores.
 
 [[def: trust unit peg value, tu_peg_value]]:
-~ The value of one [[ref: trust unit]] expressed in the [[ref: main fiat currency]]. Set at genesis and declining **deterministically** each [[ref: epoch]] by `tu_decay_rate` (a protocol schedule, **not** oracle-fed). Because trust units are minted at the current peg value, a static trust deposit balance loses fiat value at exactly `tu_decay_rate`: maintaining a trust score requires ongoing paid activity ("trust decay").
+~ The value of one [[ref: trust unit]] in the [[ref: main fiat currency]], a protocol index that declines every [[ref: epoch]]. See [Trust Unit Index](#trust-unit-index).
 
 [[def: validator]]:
 ~ A role an [[ref: entity]] performs by participating in onboarding processes with [[ref: applicants]] in order to register them as [[ref: issuer grantor]], [[ref: verifier grantor]], [[ref: issuer]] or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them.
