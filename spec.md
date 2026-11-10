@@ -225,6 +225,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: json schema, json schemas, Json Schema, Json Schemas]]
 ~ a Json Schema, as specified in [https://json-schema.org/specification](https://json-schema.org/specification).
 
+[[def: Json Schema]]:
+
+~ A schema for JSON documents, as defined by [JSON Schema](https://json-schema.org/); the `json_schema` of a [[ref: credential schema]] is one.
+
 [[def: linked-vp]]:
 ~ A presentation of a [[ref: verifiable credential]] as specified in [LINKED-VP](https://identity.foundation/linked-vp/).
 
@@ -289,7 +293,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A digital identifier bound to cryptographic key material, so that another party can verify control of the identifier and resolve it to keys and, when in public use, to endpoint addresses. Defined by the [Trust Spanning Protocol (TSP) Specification](https://trustoverip.github.io/tswg-tsp-specification/). A [[ref: DID]] is a VID.
 
 [[def: verifiable public registry, VPR, VPRs]]:
-~ A public, decentralized, ledger-based network that stores [[ref: ecosystems]], their [[ref: credential schemas]] and the [[ref: accreditations]] of their participants, and that charges and rewards participants for their use of it. This specification defines a VPR.
+~ A public, decentralized, ledger-based network that stores [[ref: ecosystems]], their [[ref: credential schemas]] and the [[ref: credential schema accreditations]] of their participants, and that charges and rewards participants for their use of it. This specification defines a VPR.
 
 [[def: verifiable service, verifiable services, VS, VSs]]:
 ~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
