@@ -3033,11 +3033,11 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` (uint64) (*mandatory*): id of the ecosystem.
 - `json_schema` (string) (*mandatory*): the [[ref: Json Schema]] of the credential.
-- `issuer_grantor_accreditation_validity_period` (*mandatory*), default to 0 (days).
-- `verifier_grantor_accreditation_validity_period` (*mandatory*), default to 0 (days).
-- `issuer_accreditation_validity_period` (*mandatory*), default to 0 (days).
-- `verifier_accreditation_validity_period` (*mandatory*), default to 0 (days).
-- `holder_accreditation_validity_period` (*mandatory*), default to 0 (days).
+- `issuer_grantor_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
+- `verifier_grantor_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
+- `issuer_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
+- `verifier_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
+- `holder_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
 - `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*).
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*).
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): MUST be provided, non-empty, iff `verifier_onboarding_mode` is CREDENTIAL.
@@ -3141,11 +3141,11 @@ An [[ref: account]] that would like to update a [[ref: credential schema]] MUST 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` id of the credential schema (*mandatory*);
-- `issuer_grantor_accreditation_validity_period` (*mandatory*), default to 0 (days).
-- `verifier_grantor_accreditation_validity_period` (*mandatory*), default to 0 (days).
-- `issuer_accreditation_validity_period` (*mandatory*), default to 0 (days).
-- `verifier_accreditation_validity_period` (*mandatory*), default to 0 (days).
-- `holder_accreditation_validity_period` (*mandatory*), default to 0 (days).
+- `issuer_grantor_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
+- `verifier_grantor_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
+- `issuer_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
+- `verifier_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
+- `holder_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
 - `presentation_validity_period` (duration) (*optional*): seconds; if absent, the attribute is unchanged.
 - `verifier_credential_schema_ids` (uint64[]) (*optional*): the new list, replacing the current one; only when `cs.verifier_onboarding_mode` is CREDENTIAL; if absent, the attribute is unchanged.
 
