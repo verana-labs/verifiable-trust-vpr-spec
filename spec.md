@@ -3956,7 +3956,7 @@ Update `Accreditation` `applicant_accreditation`:
 - set `applicant_accreditation.onboarding_fees` to 0;
 - set `applicant_accreditation.onboarding_deposit` to 0;
 - set `applicant_accreditation.onboarding_funding_account` to null;
-- set `applicant_accreditation.onboarding_summary_digest` to `onboarding_summary_digest`.
+- set `applicant_accreditation.onboarding_summary_digest` to `onboarding_summary_digest` when provided; otherwise keep its current value.
 - set `applicant_accreditation.onboarding_exp` to `onboarding_exp`.
 - set `applicant_accreditation.effective_until` to `effective_until`, and file the entry in the expiry queue accordingly ([Accreditation](#accreditation)).
 - if `applicant_accreditation.effective_from` IS NULL (first time method is called for this entry, and thus we are not in a renewal):
