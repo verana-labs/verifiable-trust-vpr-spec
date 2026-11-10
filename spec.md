@@ -1871,7 +1871,7 @@ Each group below is owned by the module whose Update Module Parameters message c
 
 **Delegation:**
 
-- `vs_operator_fee_period` (duration) (*mandatory*): network-wide cycle length of the VS-operator fee allowance (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)): each entry's `fee_spend_limit` is a budget contribution per `vs_operator_fee_period`. Default value: 1 day.
+- `vs_operator_fee_period` (duration) (*mandatory*): network-wide cycle length of the VS-operator fee allowance (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)): each entry's `fee_spend_limit` is a budget contribution per `vs_operator_fee_period`. Default value: 1 day. Adjustable by [[ref: governance proposal]] ([[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters)); a change applies to the allowances granted or adjusted afterwards.
 
 **Verifiable Service:**
 
@@ -6959,6 +6959,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
 - `vs_registration_deposit` and `ecosystem_creation_deposit`, if updated, MUST be ≥ 0, and `vid_rotation_max_transition` MUST be a duration > 0, else abort.
+- `vs_operator_fee_period` (Delegation group), if updated, MUST be a duration > 0, else abort. The new value applies to the allowances granted or adjusted afterwards ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)): an entry's allowance keeps its period until the entry's next configuration change, so two periods coexist meanwhile, each a cap on its own allowance.
 
 ###### [MOD-VS-MSG-7-2-2] Update Module Parameters fee checks
 
