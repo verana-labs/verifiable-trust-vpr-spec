@@ -222,10 +222,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: issuer grantor, issuer grantors]]:
 ~ An ecosystem operator role an [[ref: entity]] is granted by an [[ref: ecosystem]] for a given [[ref: credential schema]] for adding or revoking issuers.
 
-[[def: json schema, json schemas, Json Schema, Json Schemas]]
-~ a Json Schema, as specified in [https://json-schema.org/specification](https://json-schema.org/specification).
-
-[[def: Json Schema]]:
+[[def: Json Schema, json schema, json schemas, Json Schemas]]:
 
 ~ A schema for JSON documents, as defined by [JSON Schema](https://json-schema.org/); the `json_schema` of a [[ref: credential schema]] is one.
 
