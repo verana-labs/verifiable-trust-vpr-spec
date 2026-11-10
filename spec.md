@@ -6666,7 +6666,7 @@ an ExchangeRate entry with `base_asset_type`, `base_asset`, `quote_asset_type`, 
 
 ##### [MOD-XR-QRY-1-3] Get Exchange Rate execution of the query
 
-If found, returns ExchangeRate entry, else return not found.
+If found, returns the ExchangeRate entry, unless `state` is given and differs from `xr.state`, or `expires` is given and `xr.expires` is not strictly greater than it: then, and when no entry is found, return not found.
 
 #### [MOD-XR-QRY-2] Void
 
