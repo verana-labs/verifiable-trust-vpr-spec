@@ -6454,7 +6454,7 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 
 - **Rate validity**
   - `rate` MUST be strictly greater than 0.
-  - `rate_scale` MUST be within protocol-defined limits (e.g., `rate_scale <= 18`).
+  - `rate_scale` MUST be at most 18 (the ledger precision).
 
 - **validity_duration**
   - `validity_duration` MUST be greater or equal to `1 minute`.
