@@ -145,10 +145,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A legal/organizational entity that controls Accreditations in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` is a VPR-level entity with VPR-specific attributes (identifier, governance framework, lifecycle) anchored on-chain by a `policy_address` account that signs on its behalf.
 
 [[def: corporation governance framework, CGF]]:
-~ The governance framework (GF) of a [[ref: corporation]]. It binds the corporation as its author and the operators the corporation authorizes, each of which records its [[ref: governance framework acceptance]] of the version in force before using its authorization ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator)).
+~ The [[ref: governance framework]] of a [[ref: corporation]], which binds it as its author and the operators it authorizes. See [[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-an-operator).
 
 [[def: council, Council]]:
-~ The [[ref: governance authority]] of a [[ref: VPR]]: a group of the chain (x/group) whose members are [[ref: corporations]], each represented by its `policy_address`. It decides every network-level act of the VPR, the [[ref: governance proposals]] of this specification and the software upgrades, consensus and module parameters of the chain included; staking confers no governance right ([Network Governance](#network-governance)).
+~ The [[ref: governance authority]] of a [[ref: VPR]]: a group of the chain whose members are [[ref: corporations]]. See [Network Governance](#network-governance).
 
 [[def: council account]]:
 ~ The group policy account of the [[ref: council]], `GlobalVariables.council_account`: the authority that executes the messages a [[ref: governance proposal]] carries.
@@ -178,7 +178,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The governance authority (GA) of an [[ref: ecosystem]].
 
 [[def: ecosystem governance framework, EGF]]:
-~ The governance framework (GF) of an ecosystem. A corporation records its [[ref: governance framework acceptance]] of the EGF before its first act in the ecosystem and of each later version within the grace period of its activation ([[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance)); the controller of the ecosystem, its author, accepts nothing.
+~ The [[ref: governance framework]] of an [[ref: ecosystem]], which binds the corporations acting in it. See [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance).
 
 [[def: entity, entities]]:
 ~ An [[ref: account]] controller.
@@ -256,7 +256,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A read-only action that perform some reading in a [[ref: VPR]] and returns value.
 
 [[def: sponsor, sponsors, sponsorship, sponsored corporation]]:
-~ A [[ref: corporation]] that has agreed, through a `Sponsorship` entry, to pay the on-chain fund movements and, optionally, the [[ref: network fees]] of another corporation (the sponsored corporation) from its own `policy_address`. A sponsorship moves money only: trust units, `Accreditation` entries, slash debts and authorizations stay with the sponsored corporation. See [Sponsored Corporations](#sponsored-corporations).
+~ A [[ref: corporation]] that pays the fund movements and, optionally, the [[ref: network fees]] of another corporation, the sponsored corporation, under a `Sponsorship` entry. See [Sponsored Corporations](#sponsored-corporations).
 
 [[def: subject, subjects]]:
 ~ A thing about which claims are made. Example subjects include human beings, animals, things, and organization, a [[ref: DID]]...
