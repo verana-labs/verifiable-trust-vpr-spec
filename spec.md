@@ -1339,12 +1339,12 @@ entity "GlobalVariables" as gv {
   +credential_schema_verifier_accreditation_validity_period_max_days: number
   +credential_schema_holder_accreditation_validity_period_max_days: number
   +credential_schema_presentation_validity_period_max_days: number
-  +trust_deposit_rate:number
+  +trust_deposit_rate: decimal
   +main_fiat_currency: string
   +tu_peg_value_genesis: decimal
   +tu_decay_rate: decimal
   +epoch_length: duration
-  +vua_reward_rate:number
+  +vua_reward_rate: decimal
   +validator_node_budget: decimal
   +validator_target_uptime: decimal
   +validator_min_uptime: decimal
@@ -1836,17 +1836,17 @@ Each group below is owned by the module whose Update Module Parameters message c
 - `credential_schema_verifier_grantor_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days a verifier grantor `Accreditation` entry can be valid for.
 - `credential_schema_issuer_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer `Accreditation` entry can be valid for.
 - `credential_schema_verifier_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days a verifier `Accreditation` entry can be valid for.
-- `credential_schema_holder_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer grantor `Accreditation` entry can be valid for.
+- `credential_schema_holder_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days a holder `Accreditation` entry can be valid for.
 - `credential_schema_presentation_validity_period_max_days` (number) (*mandatory*): maximum number of days a `CredentialSchema.presentation_validity_period` can span ([[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema), [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)); a change applies to the schemas created or updated after it.
 
 **Trust Deposit and Trust Unit Index:**
 
-- `trust_deposit_rate`(number) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
+- `trust_deposit_rate` (decimal) (*mandatory*): Rate used for dynamically calculating trust deposits from trust fees. Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
 - `main_fiat_currency` (string) (*mandatory*): ISO-4217 code of the [[ref: main fiat currency]], defined in the genesis state and **immutable** thereafter (a change would re-denominate every fiat-fixed obligation and budget). Used to denominate the trust unit peg value, distribution budgets, slash debts and the network gas price. The genesis state MUST also contain the exchange rate between this currency and the [[ref: native denom]] ([[XRG]](#xrg-genesis-exchange-rate)).
 - `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in minor units of the [[ref: main fiat currency]] at genesis (index start): 10^e, e being the ISO-4217 exponent of the main fiat currency (100 for a currency with two decimals), so that at genesis one trust unit equals one unit of [[ref: main fiat currency]] and a trust score reads directly as recent fiat-equivalent spend. Immutable: the index only moves through decay.
 - `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default value: 0.001 (0.1% per epoch; with the default 1-day `epoch_length`, an index half-life of ≈ 693 days ≈ 23 months). A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash debts are never recomputed.
 - `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day. Set at genesis and **immutable**: epochs are counted from `epoch_origin` ([[TUG]](#tug-genesis-trust-unit-index)), which is the genesis time at the first genesis only ([Trust Unit Index](#trust-unit-index)).
-- `vua_reward_rate` (number) (*mandatory*): default and maximum rate of the reward a payer adds to its trust fees for the Verifiable User Agent of its peer, paid to the vendor that issued the VUA's User Agent credential at the rate declared on its `ISSUER` entry (`Accreditation.vua_reward_rate`, [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)). Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
+- `vua_reward_rate` (decimal) (*mandatory*): default and maximum rate of the reward a payer adds to its trust fees for the Verifiable User Agent of its peer, paid to the vendor that issued the VUA's User Agent credential at the rate declared on its `ISSUER` entry (`Accreditation.vua_reward_rate`, [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)). Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
 
 **Distribution:**
 
@@ -1876,7 +1876,7 @@ Each group below is owned by the module whose Update Module Parameters message c
 
 - `vs_registration_deposit` (number) (*mandatory*): non-refundable amount, in [[ref: main fiat currency]] and paid in [[ref: native denom]] at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) to the [[ref: distribution pool]], once per `VerifiableService` entry at registration ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)). A state fee against registration spam, not a proof of control; never refunded.
 - `ecosystem_creation_deposit` (number) (*mandatory*): non-refundable amount, in [[ref: main fiat currency]] and paid in [[ref: native denom]] at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)) to the [[ref: distribution pool]], once per `Ecosystem` entry at creation ([[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem)). Same nature as `vs_registration_deposit`.
-- `vid_rotation_max_transition` (duration) (*mandatory*): maximum, and default, transition window of an identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)).
+- `vid_rotation_max_transition` (duration) (*mandatory*): maximum, and default, transition window of an identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)) and of an ecosystem's move to another service entry ([[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)).
 
 **Network fees:**
 
