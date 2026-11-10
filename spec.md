@@ -4953,6 +4953,7 @@ A new entry `Accreditation` `perm` MUST be created:
 - `perm.validation_fees`: `validation_fees` if specified and `role` is ISSUER, else 0.
 - `perm.issuance_fees`: 0
 - `perm.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
+- `perm.vua_reward_rate`: null (the global rate applies, [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)).
 - `perm.onboarding_state`: VALIDATED
 - `perm.onboarding_last_state_change`: `now`
 - `perm.onboarding_fees`: 0
