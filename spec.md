@@ -3598,7 +3598,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Accreditation` entry `validator_accreditation` of the selected validator.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
-- debit `validation_fees_in_denom` + `validation_trust_deposit_in_native_denom` from `corporation` per [[FUND-CHECK-1]](#fund-check-1-debit) and send it to the validation escrow [[ref: account]], if greater than 0; the selected funding account is recorded in `applicant_accreditation.onboarding_funding_account` below (null if nothing was escrowed). No [[ref: trust units]] are minted at this stage (mint-at-validation, see [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)).
+- debit `validation_fees_in_denom` + `validation_trust_deposit_in_native_denom` from `corporation` per [[FUND-CHECK-1]](#fund-check-1-debit) and send it to the [[ref: escrow account]], if greater than 0; the selected funding account is recorded in `applicant_accreditation.onboarding_funding_account` below (null if nothing was escrowed). No [[ref: trust units]] are minted at this stage (mint-at-validation, see [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)).
 
 - define `now`: current timestamp.
 
@@ -3783,7 +3783,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - Load `Accreditation` entry `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`.
 
 - calculate `validation_fees_in_denom` and `validation_trust_deposit_in_native_denom` as explained above in fee checks.
-- debit `validation_fees_in_denom` + `validation_trust_deposit_in_native_denom` from `corporation` per [[FUND-CHECK-1]](#fund-check-1-debit) and send it to the validation escrow [[ref: account]], if greater than 0; the selected funding account is recorded in `applicant_accreditation.onboarding_funding_account` below (null if nothing was escrowed). No [[ref: trust units]] are minted at this stage (mint-at-validation, see [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)).
+- debit `validation_fees_in_denom` + `validation_trust_deposit_in_native_denom` from `corporation` per [[FUND-CHECK-1]](#fund-check-1-debit) and send it to the [[ref: escrow account]], if greater than 0; the selected funding account is recorded in `applicant_accreditation.onboarding_funding_account` below (null if nothing was escrowed). No [[ref: trust units]] are minted at this stage (mint-at-validation, see [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)).
 
 - define `now`: current timestamp.
 
