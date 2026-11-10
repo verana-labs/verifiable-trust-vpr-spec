@@ -2623,7 +2623,7 @@ Any authorized `operator` CAN execute this method on behalf of a `corporation`.
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*) id of the ecosystem (*mandatory*);
+- `id` (uint64) (*mandatory*): id of the ecosystem.
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
 
 ##### [MOD-ES-MSG-3-2] Archive Ecosystem precondition checks
@@ -3031,8 +3031,8 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `ecosystem_id` id of the ecosystem (*mandatory*);
-- `json_schema` the [[ref: Json Schema]] of the credential (*mandatory*).
+- `ecosystem_id` (uint64) (*mandatory*): id of the ecosystem.
+- `json_schema` (string) (*mandatory*): the [[ref: Json Schema]] of the credential.
 - `issuer_grantor_accreditation_validity_period` (*mandatory*), default to 0 (days).
 - `verifier_grantor_accreditation_validity_period` (*mandatory*), default to 0 (days).
 - `issuer_accreditation_validity_period` (*mandatory*), default to 0 (days).
@@ -3202,7 +3202,7 @@ An [[ref: account]] that would like to archive or unarchive a [[ref: credential 
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
-- `id` (uint64) (*mandatory*) id of the credential schema (*mandatory*);
+- `id` (uint64) (*mandatory*): id of the credential schema.
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
 
 ##### [MOD-CS-MSG-3-2] Archive Credential Schema precondition checks
