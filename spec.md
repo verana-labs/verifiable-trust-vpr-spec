@@ -357,7 +357,11 @@ object "Ecosystem" as tra #3fbdb6 {
 [[ref: Credential schemas]] are created and managed by the [[ref: corporation]] controlling each [[ref: ecosystem]]. Each [[ref: Credential schema]] includes, at a minimum:
 
 - A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
-- A **SubjectKind** (`SERVICE` or `PERSON`), a **PresentationMode** (for service credentials: `PUBLIC`, `ON_REQUEST` or `ON_APPROVAL`) a single **CredentialFormat** (`W3C_JSONLD`, `ANONCREDS`, `SD_JWT` or, for persons, `MDOC`) and a **CredentialAnchoring** (`NO_DIGEST`, `DIGEST` or `REVOCABLE_DIGEST`) that declare what credentials of this schema are for and how agents handle them; see [CredentialSchema](#credentialschema).
+- A **declaration** of what credentials of this schema are for and how agents handle them (see [CredentialSchema](#credentialschema)):
+  - a **SubjectKind**: `SERVICE` or `PERSON`;
+  - a **PresentationMode**, for service credentials: `PUBLIC`, `ON_REQUEST` or `ON_APPROVAL`;
+  - a single **CredentialFormat**: `W3C_JSONLD`, `ANONCREDS`, `SD_JWT` or, for persons, `MDOC`;
+  - a **CredentialAnchoring**: `NO_DIGEST`, `DIGEST` or `REVOCABLE_DIGEST`.
 - An **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` `Accreditation` entries are created. Modes include:
   - `OPEN`: `ISSUER` Accreditations can be self-created by any [[ref: corporation]].
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Accreditations are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
