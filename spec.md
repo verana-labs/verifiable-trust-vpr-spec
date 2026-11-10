@@ -3606,9 +3606,9 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_accreditation.role`: `role`.
   - `applicant_accreditation.vs_id`: `vs_id`.
   - `applicant_accreditation.created`: `now`
-  - `applicant_accreditation.validation_fees`: `validation_fees`.
-  - `applicant_accreditation.issuance_fees`: `issuance_fees`.
-  - `applicant_accreditation.verification_fees`: `verification_fees`.
+  - `applicant_accreditation.validation_fees`: `validation_fees` if given, else 0.
+  - `applicant_accreditation.issuance_fees`: `issuance_fees` if given, else 0.
+  - `applicant_accreditation.verification_fees`: `verification_fees` if given, else 0.
   - `applicant_accreditation.vua_reward_rate`: `vua_reward_rate` if given, else null.
   - `applicant_accreditation.validator_accreditation_id`: `validator_accreditation_id`.
   - `applicant_accreditation.onboarding_last_state_change`: `now`
