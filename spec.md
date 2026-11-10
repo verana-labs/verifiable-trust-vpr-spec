@@ -899,7 +899,7 @@ Key Points for "Pay-Per" Business Models
 
 - For a given credential schema, the **ecosystem** and its participants may define **pay-per-issuance** (or **pay-per-verification**) [[ref: trust fees]] on their respective `Accreditation` entries.
 
-- In such cases, an `ISSUER` (or `VERIFIER`) `Accreditation` **must pay**:
+- In such cases, an issuer (or verifier), with or without an `Accreditation` entry, **must pay**:
   - the corresponding **issuance** (or **verification**) trust fees for each involved `Accreditation` entry along the `Accreditation` tree;
   - an additional amount equal to the `trust_deposit_rate` of the calculated trust fees, which is deposit-bound: minted as [[ref: trust units]] to the **payer's [[ref: trust deposit]]**;
   - (optional) an amount equal to the `vua_reward_rate` of the calculated trust fees, used to **reward the Verifiable User Agent** of the peer: paid to the vendor that issued its User Agent credential, at the rate that vendor declares on its `ISSUER` entry, at most `GlobalVariables.vua_reward_rate`.
