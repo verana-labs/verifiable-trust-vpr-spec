@@ -244,7 +244,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The [[ref: governance framework]] of the [[ref: VPR]] itself, which binds its validators, its [[ref: governance proposals]] and its participants network-wide. See [[NGG]](#ngg-genesis-network-governance-framework).
 
 [[def: onboarding process]]:
-~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be an [[ref: issuer grantor]], a [[ref: verifier grantor]], an [[ref: issuer]], a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
+~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be an [[ref: issuer grantor]], a [[ref: verifier grantor]], an [[ref: issuer]], a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]]. A successful onboarding process creates or renews the [[ref: applicant]]'s `Accreditation` entry.
 
 [[def: participant, participants]]:
 ~ An entity that is recognized by one or several ecosystem(s) in a [[ref: VPR]].
