@@ -7098,7 +7098,7 @@ The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_f
 
 ### [GCO] Genesis Council
 
-The genesis state MUST contain the [[ref: council]] group, with at least three member corporations created at genesis and a decision policy, and `GlobalVariables.council_account` MUST be its group policy account and the admin of both the group and the policy ([GOV-5](#network-governance)). Without it no network-level decision can be taken: no parameter change, no sanction, no new framework version, no upgrade.
+The genesis state MUST contain the [[ref: council]] group, with at least three member corporations created at genesis and a decision policy, and `GlobalVariables.council_account` MUST be its group policy account and the admin of both the group and the policy ([GOV-1](#network-governance), [GOV-5](#network-governance)). Each genesis corporation MUST be complete: its own group and group policy (the policy account being its `policy_address`), one `VerifiableService` entry it owns, referenced by its `vs_id`, one `GovernanceFrameworkVersion` of its [[ref: CGF]] with `version` 1, `active_since` the genesis time and at least one document, and `accepted_ngf_version` 1 ([[NGG]](#ngg-genesis-network-governance-framework)). Without it no network-level decision can be taken: no parameter change, no sanction, no new framework version, no upgrade.
 
 ## References
 
