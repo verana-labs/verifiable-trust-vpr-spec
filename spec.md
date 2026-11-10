@@ -3423,7 +3423,6 @@ An [[ref: onboarding process]] is run by [[ref: applicants]] that want to:
 - be a [[ref: verifier]] of a specific [[ref: credential schema]];
 - be an [[ref: issuer grantor]] of a specific [[ref: credential schema]];
 - be a [[ref: verifier grantor]] of a specific [[ref: credential schema]];
-- get issued a credential of a specific [[ref: credential schema]];
 - obtain a `HOLDER` Accreditation entry from an [[ref: issuer]] of a specific [[ref: credential schema]] and be issued a verifiable credential of that schema (the `HOLDER` entry is the relationship the issuer validated, and bounds the credential's trust).
 
 In all cases, the process is very similar. Example execution of an [[ref: onboarding process]]:
