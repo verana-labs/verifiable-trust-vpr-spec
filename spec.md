@@ -3830,8 +3830,8 @@ either (executed by any operator of corporation):
 [[AUTHZ-CHECK-1]](#authz-check-1-operator-authorization-checks) MUST pass for this (`corporation`, `operator`) tuple and `ValidateOnboarding` message.
 [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `operator`) tuple and `ValidateOnboarding` message.
 OR (executed by the vs-agent of the validator's entry, `VerifiableService[validator_accreditation.vs_id].vs_operator`):
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `validator_accreditation`) tuple.
-[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `validator_accreditation`) tuple.
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm` = `validator_accreditation`, `vs` = `VerifiableService[validator_accreditation.vs_id]`) tuple.
+[[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for the same tuple.
 else MUST abort.
 
 [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and the ecosystem of the schema of `applicant_accreditation`.
