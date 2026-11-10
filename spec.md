@@ -1140,11 +1140,11 @@ entity "CredentialSchema" as cs {
   +created: timestamp
   +archived: boolean
   +json_schema: string
-  +issuer_grantor_validation_validity_period: number
-  +verifier_grantor_validation_validity_period: number
-  +issuer_validation_validity_period: number
-  +verifier_validation_validity_period: number
-  +holder_validation_validity_period: number
+  +issuer_grantor_accreditation_validity_period: number
+  +verifier_grantor_accreditation_validity_period: number
+  +issuer_accreditation_validity_period: number
+  +verifier_accreditation_validity_period: number
+  +holder_accreditation_validity_period: number
   verifier_credential_schema_ids: uint64[]
   presentation_validity_period: duration
   +pricing_asset: string
@@ -1338,11 +1338,11 @@ enum "AccreditationRole" as cspt {
 
 entity "GlobalVariables" as gv {
   +credential_schema_schema_max_size: number
-  +credential_schema_issuer_grantor_validation_validity_period_max_days: number
-  +credential_schema_verifier_grantor_validation_validity_period_max_days: number
-  +credential_schema_issuer_validation_validity_period_max_days: number
-  +credential_schema_verifier_validation_validity_period_max_days: number
-  +credential_schema_holder_validation_validity_period_max_days: number
+  +credential_schema_issuer_grantor_accreditation_validity_period_max_days: number
+  +credential_schema_verifier_grantor_accreditation_validity_period_max_days: number
+  +credential_schema_issuer_accreditation_validity_period_max_days: number
+  +credential_schema_verifier_accreditation_validity_period_max_days: number
+  +credential_schema_holder_accreditation_validity_period_max_days: number
   +credential_schema_presentation_validity_period_max_days: number
   +trust_deposit_rate:number
   +main_fiat_currency: string
@@ -1581,11 +1581,11 @@ An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of
 - `created` (timestamp) (*mandatory*): timestamp this CredentialSchema has been created.
 - `archived` (boolean) (*mandatory*): whether this CredentialSchema is archived. Initialized to `false` at creation by [[MOD-CS-MSG-1-3]](#mod-cs-msg-1-3-create-credential-schema-execution) and toggled by [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema). MUST never be null. Archiving is informational: it hides the entry from listings filtered by `only_active`, and the only message that refuses an archived schema is the one naming it in `verifier_credential_schema_ids` ([[MOD-CS-MSG-1-2-1]](#mod-cs-msg-1-2-1-create-credential-schema-basic-checks)); a schema archived afterwards stays in the lists that name it.
 - `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
-- `issuer_grantor_validation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor onboarding process expires and must be renewed.
-- `verifier_grantor_validation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor onboarding process expires and must be renewed.
-- `issuer_validation_validity_period` (number) (*mandatory*): number of days after which an issuer onboarding process expires and must be renewed.
-- `verifier_validation_validity_period` (number) (*mandatory*): number of days after which a verifier onboarding process expires and must be renewed.
-- `holder_validation_validity_period` (number) (*mandatory*): number of days after which an holder onboarding process expires and must be renewed.
+- `issuer_grantor_accreditation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor `Accreditation` entry expires and must be renewed.
+- `verifier_grantor_accreditation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor `Accreditation` entry expires and must be renewed.
+- `issuer_accreditation_validity_period` (number) (*mandatory*): number of days after which an issuer `Accreditation` entry expires and must be renewed.
+- `verifier_accreditation_validity_period` (number) (*mandatory*): number of days after which a verifier `Accreditation` entry expires and must be renewed.
+- `holder_accreditation_validity_period` (number) (*mandatory*): number of days after which a holder `Accreditation` entry expires and must be renewed.
 - `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how accreditations are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credentials of this schema without an onboarding process: an issuer acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)); it MAY self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the `verification_fees` and `validation_fees` it charges; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER entry; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER entry;
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how accreditations are managed for verifiers of this `CredentialSchema`. OPEN means any service can verify credentials of this schema without an onboarding process: a verifier acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash; it MAY self-create a `VERIFIER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)); CREDENTIAL means any service whose identifier is the subject of a valid credential of one of the schemas listed in `verifier_credential_schema_ids`, as established by the holder's trust resolution ([[ref: VT spec]]), can verify, under its service entry likewise; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER entry; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER entry;
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): ids of the `CredentialSchema` entries whose holders are authorized verifiers when `verifier_onboarding_mode` is CREDENTIAL; MUST be set, non-empty, iff the mode is CREDENTIAL. Each id MUST refer to a `CredentialSchema` entry whose `subject_kind` is SERVICE and whose `presentation_mode` is PUBLIC, so that a holder can establish the verifier's credential from its DID Document alone, before any exchange. The VPR stores the list and does not evaluate it; the holder does, per the [[ref: VT spec]]. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema); a change applies to the presentations that follow it.
@@ -1837,11 +1837,11 @@ Each group below is owned by the module whose Update Module Parameters message c
 **Credential Schema:**
 
 - `credential_schema_schema_max_size` (number) (*mandatory*): maximum size of the `json_schema` string attribute of a `CredentialSchema`.
-- `credential_schema_issuer_grantor_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer grantor validation can be valid for.
-- `credential_schema_verifier_grantor_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an verifier grantor validation can be valid for.
-- `credential_schema_issuer_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer validation can be valid for.
-- `credential_schema_verifier_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an verifier validation can be valid for.
-- `credential_schema_holder_validation_validity_period_max_days` (number) (*mandatory*): maximum number of days an [[ref: holder]] validation can be valid for.
+- `credential_schema_issuer_grantor_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer grantor `Accreditation` entry can be valid for.
+- `credential_schema_verifier_grantor_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days a verifier grantor `Accreditation` entry can be valid for.
+- `credential_schema_issuer_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer `Accreditation` entry can be valid for.
+- `credential_schema_verifier_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days a verifier `Accreditation` entry can be valid for.
+- `credential_schema_holder_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days an issuer grantor `Accreditation` entry can be valid for.
 - `credential_schema_presentation_validity_period_max_days` (number) (*mandatory*): maximum number of days a `CredentialSchema.presentation_validity_period` can span ([[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema), [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)); a change applies to the schemas created or updated after it.
 
 **Trust Deposit and Trust Unit Index:**
@@ -3038,11 +3038,11 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` id of the ecosystem (*mandatory*);
 - `json_schema` the [[ref: Json Schema]] of the credential (*mandatory*).
-- `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
-- `verifier_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
-- `issuer_validation_validity_period` (*mandatory*), default to 0 (days).
-- `verifier_validation_validity_period` (*mandatory*), default to 0 (days).
-- `holder_validation_validity_period` (*mandatory*), default to 0 (days).
+- `issuer_grantor_accreditation_validity_period` (*mandatory*), default to 0 (days).
+- `verifier_grantor_accreditation_validity_period` (*mandatory*), default to 0 (days).
+- `issuer_accreditation_validity_period` (*mandatory*), default to 0 (days).
+- `verifier_accreditation_validity_period` (*mandatory*), default to 0 (days).
+- `holder_accreditation_validity_period` (*mandatory*), default to 0 (days).
 - `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*).
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*).
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): MUST be provided, non-empty, iff `verifier_onboarding_mode` is CREDENTIAL.
@@ -3069,11 +3069,11 @@ If any of these precondition checks fail, method MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `ecosystem_id` MUST represent an existing `Ecosystem` entry `ecosystem` and `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
 - `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]], whatever was submitted, is set during execution to `vpr:verana:<chain id>:cs:<id>`, the chain id of the VPR and the auto-generated id of this `CredentialSchema`.
-- `issuer_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
-- `verifier_grantor_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
-- `issuer_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
-- `verifier_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_validation_validity_period_max_days` days.
-- `holder_validation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
+- `issuer_grantor_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_accreditation_validity_period_max_days` days.
+- `verifier_grantor_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_accreditation_validity_period_max_days` days.
+- `issuer_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_accreditation_validity_period_max_days` days.
+- `verifier_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_accreditation_validity_period_max_days` days.
+- `holder_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_holder_accreditation_validity_period_max_days` days.
 - `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*). MUST be a valid IssuerOnboardingMode.
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*). MUST be a valid VerifierOnboardingMode.
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): if `verifier_onboarding_mode` is CREDENTIAL, MUST be present and non-empty, and each id MUST refer to an existing, non-archived `CredentialSchema` entry whose `subject_kind` is SERVICE and whose `presentation_mode` is PUBLIC; if the mode is not CREDENTIAL, MUST be absent; else abort.
@@ -3111,11 +3111,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.id`: auto-incremented uint64.
   - `cs.ecosystem_id`: id of the `Ecosystem` entry that will be the owner of `cs`.
   - `cs.json_schema`: `json_schema`, with its `$id` set to `vpr:verana:<chain id>:cs:<cs.id>` (the chain id of the VPR and the generated `cs.id`, whatever `$id` was submitted), and then canonicalize it using the [JSON Canonicalization Scheme (JCS)](https://www.rfc-editor.org/rfc/rfc8785) as defined in RFC 8785. Schema MUST be saved canonized.
-  - `cs.issuer_grantor_validation_validity_period`: `issuer_grantor_validation_validity_period`
-  - `cs.verifier_grantor_validation_validity_period`: `verifier_grantor_validation_validity_period`
-  - `cs.issuer_validation_validity_period`: `issuer_validation_validity_period`
-  - `cs.verifier_validation_validity_period`: `verifier_validation_validity_period`
-  - `cs.holder_validation_validity_period`: `holder_validation_validity_period`
+  - `cs.issuer_grantor_accreditation_validity_period`: `issuer_grantor_accreditation_validity_period`
+  - `cs.verifier_grantor_accreditation_validity_period`: `verifier_grantor_accreditation_validity_period`
+  - `cs.issuer_accreditation_validity_period`: `issuer_accreditation_validity_period`
+  - `cs.verifier_accreditation_validity_period`: `verifier_accreditation_validity_period`
+  - `cs.holder_accreditation_validity_period`: `holder_accreditation_validity_period`
   - `cs.issuer_onboarding_mode`: `issuer_onboarding_mode`
   - `cs.verifier_onboarding_mode`: `verifier_onboarding_mode`
   - `cs.verifier_credential_schema_ids`: `verifier_credential_schema_ids` (null unless the mode is CREDENTIAL)
@@ -3146,11 +3146,11 @@ An [[ref: account]] that would like to update a [[ref: credential schema]] MUST 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` id of the credential schema (*mandatory*);
-- `issuer_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
-- `verifier_grantor_validation_validity_period` (*mandatory*), default to 0 (days).
-- `issuer_validation_validity_period` (*mandatory*), default to 0 (days).
-- `verifier_validation_validity_period` (*mandatory*), default to 0 (days).
-- `holder_validation_validity_period` (*mandatory*), default to 0 (days).
+- `issuer_grantor_accreditation_validity_period` (*mandatory*), default to 0 (days).
+- `verifier_grantor_accreditation_validity_period` (*mandatory*), default to 0 (days).
+- `issuer_accreditation_validity_period` (*mandatory*), default to 0 (days).
+- `verifier_accreditation_validity_period` (*mandatory*), default to 0 (days).
+- `holder_accreditation_validity_period` (*mandatory*), default to 0 (days).
 - `presentation_validity_period` (duration) (*optional*): seconds; if absent, the attribute is unchanged.
 - `verifier_credential_schema_ids` (uint64[]) (*optional*): the new list, replacing the current one; only when `cs.verifier_onboarding_mode` is CREDENTIAL; if absent, the attribute is unchanged.
 
@@ -3169,11 +3169,11 @@ If any of these precondition checks fail, method MUST abort.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
 - load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), else MUST abort.
-- `issuer_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_validation_validity_period_max_days` days.
-- `verifier_grantor_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_validation_validity_period_max_days` days.
-- `issuer_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_validation_validity_period_max_days` days.
-- `verifier_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_validation_validity_period_max_days` days.
-- `holder_validation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_holder_validation_validity_period_max_days` days.
+- `issuer_grantor_accreditation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_accreditation_validity_period_max_days` days.
+- `verifier_grantor_accreditation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_accreditation_validity_period_max_days` days.
+- `issuer_accreditation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_accreditation_validity_period_max_days` days.
+- `verifier_accreditation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_accreditation_validity_period_max_days` days.
+- `holder_accreditation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_holder_accreditation_validity_period_max_days` days.
 - `presentation_validity_period`, if present, MUST be between 0 and `GlobalVariables.credential_schema_presentation_validity_period_max_days` × 86,400 seconds; if `cs.presentation_mode` is PUBLIC, it MUST be 0, else MUST abort.
 - `verifier_credential_schema_ids`, if present, MUST be non-empty, `cs.verifier_onboarding_mode` MUST be CREDENTIAL, and each id MUST satisfy the checks of [[MOD-CS-MSG-1-2-1]](#mod-cs-msg-1-2-1-create-credential-schema-basic-checks); else MUST abort.
 
@@ -3189,11 +3189,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - update `CredentialSchema` entry `cs` with `cs.id` equal to `id`:
 
-  - `cs.issuer_grantor_validation_validity_period`: `issuer_grantor_validation_validity_period`
-  - `cs.verifier_grantor_validation_validity_period`: `verifier_grantor_validation_validity_period`
-  - `cs.issuer_validation_validity_period`: `issuer_validation_validity_period`
-  - `cs.verifier_validation_validity_period`: `verifier_validation_validity_period`
-  - `cs.holder_validation_validity_period`: `holder_validation_validity_period`
+  - `cs.issuer_grantor_accreditation_validity_period`: `issuer_grantor_accreditation_validity_period`
+  - `cs.verifier_grantor_accreditation_validity_period`: `verifier_grantor_accreditation_validity_period`
+  - `cs.issuer_accreditation_validity_period`: `issuer_accreditation_validity_period`
+  - `cs.verifier_accreditation_validity_period`: `verifier_accreditation_validity_period`
+  - `cs.holder_accreditation_validity_period`: `holder_accreditation_validity_period`
   - `cs.presentation_validity_period`: `presentation_validity_period` if present, else unchanged
   - `cs.verifier_credential_schema_ids`: `verifier_credential_schema_ids` if present, else unchanged
 
@@ -3868,7 +3868,7 @@ A HOLDER applicant, and any applicant whose `cs.issuer_onboarding_mode` (resp. `
 
 Calculation of `onboarding_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
 
-- let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_accreditation.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_accreditation.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_accreditation.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_accreditation.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_accreditation.role` is HOLDER).
+- let's define `validity_period` = `cs.issuer_grantor_accreditation_validity_period` (if `applicant_accreditation.role` is ISSUER_GRANTOR), `cs.verifier_grantor_accreditation_validity_period` (if `applicant_accreditation.role` is VERIFIER_GRANTOR), `cs.issuer_accreditation_validity_period` (if `applicant_accreditation.role` is ISSUER), `cs.verifier_accreditation_validity_period` (if `applicant_accreditation.role` is VERIFIER), or `cs.holder_accreditation_validity_period` (if `applicant_accreditation.role` is HOLDER).
 
 - if `validity_period` is null or 0 (never expire): `onboarding_exp` = NULL.
 - else if `applicant_accreditation.onboarding_exp` is null, `onboarding_exp` =  timestamp of now() plus `validity_period`.
@@ -3921,7 +3921,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 Calculate `onboarding_exp`:
 
 - Load `CredentialSchema` `cs` from `applicant_accreditation.schema_id`.
-- let's define `validity_period` = `cs.issuer_grantor_validation_validity_period` (if `applicant_accreditation.role` is ISSUER_GRANTOR), `cs.verifier_grantor_validation_validity_period` (if `applicant_accreditation.role` is VERIFIER_GRANTOR), `cs.issuer_validation_validity_period` (if `applicant_accreditation.role` is ISSUER), `cs.verifier_validation_validity_period` (if `applicant_accreditation.role` is VERIFIER), or `cs.holder_validation_validity_period` (if `applicant_accreditation.role` is HOLDER).
+- let's define `validity_period` = `cs.issuer_grantor_accreditation_validity_period` (if `applicant_accreditation.role` is ISSUER_GRANTOR), `cs.verifier_grantor_accreditation_validity_period` (if `applicant_accreditation.role` is VERIFIER_GRANTOR), `cs.issuer_accreditation_validity_period` (if `applicant_accreditation.role` is ISSUER), `cs.verifier_accreditation_validity_period` (if `applicant_accreditation.role` is VERIFIER), or `cs.holder_accreditation_validity_period` (if `applicant_accreditation.role` is HOLDER).
 
 - if `validity_period` is null or 0 (never expire): `onboarding_exp` = NULL.
 - else if `applicant_accreditation.onboarding_exp` is null, `onboarding_exp` =  timestamp of now() plus `validity_period`.
@@ -7035,11 +7035,11 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 **Credential Schema:**
 
 - `credential_schema_schema_max_size` (number) (*mandatory*): 8192.
-- `credential_schema_issuer_grantor_validation_validity_period_max_days` (number) (*mandatory*): 3650.
-- `credential_schema_verifier_grantor_validation_validity_period_max_days` (number) (*mandatory*): 3650.
-- `credential_schema_issuer_validation_validity_period_max_days` (number) (*mandatory*): 3650.
-- `credential_schema_verifier_validation_validity_period_max_days` (number) (*mandatory*): 3650.
-- `credential_schema_holder_validation_validity_period_max_days` (number) (*mandatory*): 3650.
+- `credential_schema_issuer_grantor_accreditation_validity_period_max_days` (number) (*mandatory*): 3650.
+- `credential_schema_verifier_grantor_accreditation_validity_period_max_days` (number) (*mandatory*): 3650.
+- `credential_schema_issuer_accreditation_validity_period_max_days` (number) (*mandatory*): 3650.
+- `credential_schema_verifier_accreditation_validity_period_max_days` (number) (*mandatory*): 3650.
+- `credential_schema_holder_accreditation_validity_period_max_days` (number) (*mandatory*): 3650.
 - `credential_schema_presentation_validity_period_max_days` (number) (*mandatory*): 3650.
 
 **Trust Deposit and Trust Unit Index:**
