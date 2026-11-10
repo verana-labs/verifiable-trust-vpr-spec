@@ -749,7 +749,7 @@ Onboarding process is started by the applicant.
 ```plantuml
 scale max 800 width
 actor "Applicant\n(issuer candidate)\nAccount" as ApplicantAccount 
-actor "Applicant\n(issuer candidate)\nVUA" as ApplicantBrowser 
+actor "Applicant\n(issuer candidate)\nVUA" as ApplicantVS 
 
 actor "Validator\n(issuer grantor)\nVS" as ValidatorVS
 actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
@@ -764,14 +764,14 @@ ApplicantVS <-- ValidatorVS: trusted channel established.
 ApplicantVS --> ValidatorVS: I want to proceed with applicant_accreditation.id=...
 ValidatorVS --> ValidatorVS: load applicant Accreditation with this id, verify validator_accreditation_id refers to me\nand that VerifiableService[applicant_accreditation.vs_id].vid is the identifier the channel authenticated
 ApplicantVS <-- ValidatorVS: you control the applicant's identifier, I trust you.
-note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
-ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
-ApplicantBrowser --> ValidatorVS: perform requested tasks...
-note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorVS: You are a legitimate candidate. I'll now finalize your `ISSUER` `Accreditation` entry.
+note over ApplicantVS, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
+ApplicantVS <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
+ApplicantVS --> ValidatorVS: perform requested tasks...
+note over ApplicantVS, ValidatorVS #EEEEEE: tasks completed
+ApplicantVS <-- ValidatorVS: You are a legitimate candidate. I'll now finalize your `ISSUER` `Accreditation` entry.
 ValidatorAccount --> VPR #3fbdb6: set applicant_accreditation.onboarding_state to VALIDATED\n(finalize the `ISSUER` `Accreditation` entry)
 VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify `ISSUER` `Accreditation` entry validated for your service entry.\nIt can now issue credentials of this schema.
+ApplicantVS <-- ValidatorVS: notify `ISSUER` `Accreditation` entry validated for your service entry.\nIt can now issue credentials of this schema.
 ```
 
 The **total amount** paid by the applicant consists of:
@@ -5293,7 +5293,7 @@ autonumber stop
 ```plantuml
 scale max 800 width
 actor "Applicant\n(issuer candidate)\nAccount" as ApplicantAccount 
-actor "Applicant\n(issuer candidate)\nVS Browser" as ApplicantBrowser 
+actor "Applicant\n(issuer candidate)\nVS Browser" as ApplicantVS 
 
 actor "Validator\n(issuer grantor)\nVS" as ValidatorVS
 actor "Validator\n(issuer grantor)\nAccount" as ValidatorAccount
@@ -5308,14 +5308,14 @@ ApplicantVS <-- ValidatorVS: trusted channel established.
 ApplicantVS --> ValidatorVS: I want to proceed with accreditation.id=...
 ValidatorVS --> ValidatorVS: load the entry with id=..., verify its validator_accreditation_id refers to me\nand that the identifier of the applicant's service entry is the one the channel authenticated
 ApplicantVS <-- ValidatorVS: you control the applicant's identifier, I trust you.
-note over ApplicantBrowser, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
-ApplicantBrowser <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
-ApplicantBrowser --> ValidatorVS: perform requested tasks...
-note over ApplicantBrowser, ValidatorVS #EEEEEE: tasks completed
-ApplicantBrowser <-- ValidatorVS: You are a legitimate issuer. I'll now validate your ISSUER `Accreditation` entry.
+note over ApplicantVS, ValidatorVS #EEEEEE: (*optional*) repeat the following until tasks completed
+ApplicantVS <-- ValidatorVS: Are you a legitimate issuer?\nProve it, by filling forms, sending documents...
+ApplicantVS --> ValidatorVS: perform requested tasks...
+note over ApplicantVS, ValidatorVS #EEEEEE: tasks completed
+ApplicantVS <-- ValidatorVS: You are a legitimate issuer. I'll now validate your ISSUER `Accreditation` entry.
 ValidatorAccount --> VPR #3fbdb6: Validate Onboarding.
 VPR --> ValidatorAccount: Receive trust fees.
-ApplicantBrowser <-- ValidatorVS: notify `Accreditation` entry validated for your service entry.\nIt can now issue credentials of this schema.
+ApplicantVS <-- ValidatorVS: notify `Accreditation` entry validated for your service entry.\nIt can now issue credentials of this schema.
 ```
 
 ### Trust Deposit Module
