@@ -156,7 +156,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: credential schema, credential schemas]]:
 ~ A [[ref: VPR]] resource which represents a verifiable credential definition and the associated accreditations and business rules for issuing, verifying or holding a credential linked to this credential schema.
 
-[[def: credential schema accreditation, credential schema accreditations, CSA]]:
+[[def: credential schema accreditation, credential schema accreditations]]:
 ~ An `Accreditation` entry, linked to a [[ref: credential schema]], that represents, in a given [[ref: ecosystem]], a grant for being [[ref: issuer]], [[ref: verifier]], [[ref: issuer grantor]], [[ref: verifier grantor]] or [[ref: holder]] of credentials of a [[ref: credential schema]], or its root (the ECOSYSTEM entry of the controlling ecosystem).
 
 [[def: decentralized identifier, DID, DIDs]]:
@@ -195,7 +195,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: future accreditation, future accreditations]]:
 ~ An `Accreditation` entry whose `effective_from` is higher than the current timestamp, whose `effective_until` is null or greater than `effective_from`, and whose participation and corporation are not [[ref: barred]].
 
-[[def: governance authority, GA]]:
+[[def: governance authority]]:
 ~ The body that governs a [[ref: VPR]] (its [[ref: council]]), an [[ref: ecosystem]] (its controller corporation, the [[ref: EGA]]) or a [[ref: corporation]] (its own group of members): each decides through the group mechanism of the chain, at its level.
 
 [[def: governance framework, GF]]:
