@@ -214,7 +214,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A Cosmos SDK `x/group` on-chain membership group with an associated decision policy. Each [[ref: corporation]] is realized as a group whose group policy account is the corporation's `policy_address` (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)).
 
 [[def: holder, holders]]:
-~ A role an [[ref: entity]] performs by holding one or more [[ref: verifiable credentials]] of a [[ref: credential schema]] and presenting them to [[ref: verifiers]].
+~ A role an [[ref: entity]] performs by holding one or more [[ref: verifiable credentials]] of a [[ref: credential schema]], of which it is usually the [[ref: subject]], and presenting them to [[ref: verifiers]].
 
 [[def: issuer, issuers]]:
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or an [[ref: issuer grantor]] for issuing credentials of a given [[ref: credential schema]] to [[ref: holders]].
