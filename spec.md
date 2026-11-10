@@ -202,7 +202,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A set of rules that bind the parties of a [[ref: VPR]] ([[ref: NGF]]), of an [[ref: ecosystem]] ([[ref: EGF]]) or of a [[ref: corporation]] ([[ref: CGF]]), anchored on the ledger as versions and documents ([GovernanceFrameworkVersion](#governanceframeworkversion)).
 
 [[def: governance framework acceptance, governance framework acceptances]]:
-~ The recorded act by which a party bound by a [[ref: governance framework]] accepts the version in force: a corporation accepts the [[ref: NGF]] when it is created ([[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) and the [[ref: EGF]] of an ecosystem before its first act in it ([[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version)); an operator accepts the [[ref: CGF]] of the corporation that authorized it before its first use of the authorization ([[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)). Every activation of a new version opens a grace period after which a party that has not accepted the new version is blocked ([[GF-CHECK]](#gf-check-governance-framework-acceptance-checks)).
+~ The recorded act by which a party bound by a [[ref: governance framework]] accepts a version of it. Required before the party acts under that framework. See [[GF-CHECK]](#gf-check-governance-framework-acceptance-checks).
 
 [[def: governance proposal, governance proposals]]:
 ~ A proposal of the [[ref: council]] group carrying one or more messages, voted by the member corporations and executed by the [[ref: council account]] when the council's decision policy is met ([Network Governance](#network-governance)).
