@@ -133,7 +133,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ An `Accreditation` entry whose `effective_from` is not null and lower than or equal to the current timestamp, whose `effective_until` is null or greater than the current timestamp, and whose participation and corporation are not [[ref: barred]]. A revoked or expired entry no longer exists.
 
 [[def: applicant, applicants]]:
-~ A [[ref: account]] that starts an [[ref: onboarding process]].
+~ A [[ref: corporation]] that starts an [[ref: onboarding process]] to obtain an `Accreditation` entry.
 
 [[def: barred, barred participation, barred corporation]]:
 ~ The state of a [[ref: participation]] or a [[ref: corporation]] whose trust deposit carries a slash debt or is excluded. A barred party cannot act under the schema (participation) or in the VPR (corporation). See [ParticipationTrustDeposit](#participationtrustdeposit) and [TrustDeposit](#trustdeposit).
@@ -169,7 +169,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ Token that has been configured and is recognized in a [[ref: VPR]], example: uvna, USDC.  
 
 [[def: distribution pool]]:
-~ The module account that collects every deposit-bound amount, repayment, registration fee and [[ref: network fee]], and is paid out at each [[ref: epoch]] boundary. See [[DIST-1]](#dist-1-epoch-payout-order).
+~ The module account that collects every deposit-bound amount, repayment, registration and creation fee and [[ref: network fee]], and is paid out at each [[ref: epoch]] boundary. See [[DIST-1]](#dist-1-epoch-payout-order).
 
 [[def: ecosystem, ecosystems]]:
 ~ An `Ecosystem` entry: a trust domain controlled by a [[ref: corporation]], that publishes [[ref: credential schemas]] and an [[ref: EGF]], and decides who issues and verifies credentials of those schemas. See [Ecosystem](#ecosystem).
@@ -293,7 +293,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A public, decentralized, ledger-based network that stores [[ref: ecosystems]], their [[ref: credential schemas]] and the [[ref: credential schema accreditations]] of their participants, and that charges and rewards participants for their use of it. This specification defines a VPR.
 
 [[def: verifiable service, verifiable services, VS, VSs]]:
-~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
+~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that conforms to the [[ref: VT spec]] and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
 
 [[def: verifiable service entry, verifiable service entries]]:
 ~ A `VerifiableService` entry: the registration of a [[ref: VID]] in a [[ref: VPR]], owned by a single [[ref: corporation]], that every other entity binding that identifier (`Corporation`, `Ecosystem`, `Accreditation`) references by `vs_id`. See [VerifiableService](#verifiableservice).
