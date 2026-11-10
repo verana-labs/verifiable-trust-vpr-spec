@@ -139,7 +139,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The state of a [[ref: participation]] or a [[ref: corporation]] whose trust deposit carries a slash debt or is excluded. A barred party cannot act under the schema (participation) or in the VPR (corporation). See [ParticipationTrustDeposit](#participationtrustdeposit) and [TrustDeposit](#trustdeposit).
 
 [[def: bonded tokens, bonded native denom]]:
-~ [[ref: native denom]] bonded through the bonding mechanism of [[DIST-2]](#dist-2-bonding) (subject to `unbonding_period`) in order to accrue the capped, fee-funded, pro-rata yield from the [[ref: distribution pool]]. Bonding confers **no consensus power and no governance power**: it is reward accounting only.
+~ [[ref: native denom]] bonded to earn the capped yield of the [[ref: distribution pool]]; bonding confers no consensus power and no governance power. See [[DIST-2]](#dist-2-bonding).
 
 [[def: corporation, corporations]]:
 ~ A legal/organizational entity that controls Accreditations in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` is a VPR-level entity with VPR-specific attributes (identifier, governance framework, lifecycle) anchored on-chain by a `policy_address` account that signs on its behalf.
@@ -169,7 +169,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ Token that has been configured and is recognized in a [[ref: VPR]], example: uvna, USDC.  
 
 [[def: distribution pool]]:
-~ The module account that collects all deposit-bound [[ref: native denom]] amounts, slash repayments, registration and creation fees and [[ref: network fees]]. At epoch end it is paid out in a fixed order (validator budgets, council budget, foundation budget, capped yield to bonded native denom holders) and the **residual is burned**.
+~ The module account that collects every deposit-bound amount, repayment, registration fee and [[ref: network fee]], and is paid out at each [[ref: epoch]] boundary. See [[DIST-1]](#dist-1-epoch-payout-order).
 
 [[def: ecosystem, ecosystems]]:
 ~ An `Ecosystem` entry: a trust domain controlled by a [[ref: corporation]], that publishes [[ref: credential schemas]] and an [[ref: EGF]], and decides who issues and verifies credentials of those schemas. See [Ecosystem](#ecosystem).
@@ -187,7 +187,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The fixed period (`epoch_length`) at whose boundary the trust unit index moves, the [[ref: distribution pool]] is paid out and the [[ref: network gas price]] is converted. See [Trust Unit Index](#trust-unit-index).
 
 [[def: estimated transaction fees]]:
-~ The fee a [[ref: transaction]] declares, in [[ref: native denom]]: at least the [[ref: transaction fees]] it requires ([[NET-FEE-2]](#net-fee-2-required-fee)), usually with a margin so that a slightly low gas estimate does not get the transaction rejected. Only the required fee is deducted: the declared excess is never deducted, and gas declared but not used is not refunded.
+~ The fee a [[ref: transaction]] declares, at least the [[ref: network fee]] it requires. See [[NET-FEE-2]](#net-fee-2-required-fee).
 
 [[def: funding account, funding accounts]]:
 ~ The account a VPR method debits or credits on behalf of a [[ref: corporation]]: its own `policy_address` or that of its active [[ref: sponsor]]. Resolved by [[FUND-CHECK]](#fund-check-funding-account-resolution).
@@ -235,10 +235,10 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ Native token of a [[ref: VPR]], example: uvna.
 
 [[def: network fee, network fees]]:
-~ Fees paid in [[ref: native denom]] for the execution of a [[ref: transaction]]: the transaction's gas limit times the [[ref: network gas price]] ([[NET-FEE-2]](#net-fee-2-required-fee)), deducted before execution and routed to the [[ref: distribution pool]].
+~ The fee a [[ref: transaction]] pays in [[ref: native denom]] for its execution, its gas limit times the [[ref: network gas price]]. See [[NET-FEE-2]](#net-fee-2-required-fee).
 
 [[def: network gas price]]:
-~ The price of one unit of gas, a network parameter expressed in the [[ref: main fiat currency]] (`GlobalVariables.network_gas_price`) and converted into [[ref: native denom]] once per [[ref: epoch]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). It is the same for every validator and every block of an epoch: the VPR has no fee market and no validator-local price.
+~ The price of one unit of gas, a network parameter in the [[ref: main fiat currency]], the same for every validator and every block of an [[ref: epoch]]. See [[NET-FEE-1]](#net-fee-1-network-gas-price).
 
 [[def: network governance framework, NGF]]:
 ~ The [[ref: governance framework]] of the [[ref: VPR]] itself, which binds its validators, its [[ref: governance proposals]] and its participants network-wide. See [[NGG]](#ngg-genesis-network-governance-framework).
