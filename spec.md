@@ -289,7 +289,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A digital identifier bound to cryptographic key material, so that another party can verify control of the identifier and resolve it to keys and, when in public use, to endpoint addresses. Defined by the [Trust Spanning Protocol (TSP) Specification](https://trustoverip.github.io/tswg-tsp-specification/). A [[ref: DID]] is a VID.
 
 [[def: verifiable public registry, VPR, VPRs]]:
-~ a public, normally decentralized, ledger-based network, which provides: ecosystem features, that can be used by all its [[ref: participants]]: create ecosystems, for each ecosystem, define its credential schemas, who can issue, verify credential of a specific credential schema,... and a tokenized business model for charging/rewarding [[ref: participants]].
+~ A public, decentralized, ledger-based network that stores [[ref: ecosystems]], their [[ref: credential schemas]] and the [[ref: accreditations]] of their participants, and that charges and rewards participants for their use of it. This specification defines a VPR.
 
 [[def: verifiable service, verifiable services, VS, VSs]]:
 ~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that is conforming to this spec and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
