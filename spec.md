@@ -5843,7 +5843,7 @@ Create (or update if it already exist) FeeGrant `feegrant`:
 - set `feegrant.expiration` to `expiration`
 - set `feegrant.spend_limit` to `spend_limit`
 - set `feegrant.remaining_spend` to `spend_limit` if it is set, else null
-- set `feegrant.period` to `period`
+- set `feegrant.period` to `period` if `spend_limit` is set, else null
 
 Additionally, realize the on-chain allowance (see the [Delegation Module](#delegation-module) note): create the `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee`, or update it when a `FeeGrant` entry existed before this call (the allowance is then the module's own), as an `AllowedMsgAllowance` over `msg_types` wrapping:
 
