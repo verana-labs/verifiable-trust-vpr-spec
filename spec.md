@@ -2382,7 +2382,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - `co.vs_id`: `vs_id`
 
-The method MUST emit an event carrying `co.id`, the former and the new `vs_id`, so that indexers learn the corporation's identifier without a query; the former entry stays the corporation's, and nothing a credential or an accreditation references changes.
+The method MUST emit an event carrying `co.id`, the former and the new `vs_id`, so that indexers learn the corporation's identifier without a query (a change to the same `vs_id` is a no-op and emits nothing); the former entry stays the corporation's, and nothing a credential or an accreditation references changes.
 
 #### [MOD-CO-MSG-3] Update Module Parameters
 
