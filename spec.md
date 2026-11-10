@@ -3806,7 +3806,7 @@ An [[ref: account]] that would like to set a validation entry to VALIDATED MUST 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uint64) (*mandatory*): id of the onboarding process;
-- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Accreditation` is effective, null if no time limit should been set for this `Accreditation` entry or if we want it to be aligned with the onboarding process expiration timestamp calculated by this method.
+- `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Accreditation` is effective, null if no time limit should be set for this `Accreditation` entry or if we want it to be aligned with the onboarding process expiration timestamp calculated by this method.
 - `validation_fees` (number) (*mandatory*): Agreed validation_fees for this `Accreditation` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `issuance_fees` (number) (*mandatory*): Agreed issuance_fees for this `Accreditation` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
 - `verification_fees` (number) (*mandatory*): Agreed verification_fees for this `Accreditation` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
@@ -3875,7 +3875,7 @@ Calculation of `onboarding_exp`, the onboarding process expiration timestamp, re
 Now, let's verify `effective_until`:
 
 - if `effective_until` is NULL, no issue.
-- else if `applicant_accreditation.effective_until` is NULL, `effective_until` MUST be greater than current current timestamp AND, if `onboarding_exp` is not null, lower or equal to `onboarding_exp`.
+- else if `applicant_accreditation.effective_until` is NULL, `effective_until` MUST be greater than the current timestamp AND, if `onboarding_exp` is not null, lower or equal to `onboarding_exp`.
 - else `effective_until` MUST be greater than `applicant_accreditation.effective_until` AND, if `onboarding_exp` is not null, lower or equal to `onboarding_exp`.
 
 ###### [MOD-AC-MSG-3-2-2] Validate Onboarding validator checks
