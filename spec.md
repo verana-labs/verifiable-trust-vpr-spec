@@ -3000,7 +3000,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-GF-MSG-5-2-1] Update Module Parameters basic checks
 
-- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Governance Framework parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `gf_acceptance_grace_min`, if updated, MUST be a duration > 0, else abort.
 
 ###### [MOD-GF-MSG-5-2-2] Update Module Parameters fee checks
@@ -3262,7 +3262,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-CS-MSG-4-2-1] Update Module Parameters basic checks
 
-- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Credential Schema parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `credential_schema_schema_max_size` and every `credential_schema_*_max_days` value, if updated, MUST be > 0, else abort.
 
 ###### [MOD-CS-MSG-4-2-2] Update Module Parameters fee checks
@@ -5419,8 +5419,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-TD-MSG-4-2-1] Update Module Parameters basic checks
 
-- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
-- `tu_peg_value_genesis`, `main_fiat_currency`, `epoch_length` and `vna_total_supply` MUST NOT be updatable ([GlobalVariables](#globalvariables)): the index only moves through decay, and the other three would re-denominate or re-index everything.
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Trust Deposit and Trust Unit Index, Native denom and Network fees parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
+- `tu_peg_value_genesis`, `main_fiat_currency`, `epoch_length` and `vna_total_supply`, immutable, MUST be refused ([GlobalVariables](#globalvariables)): the index only moves through decay, and the other three would re-denominate or re-index everything.
 - `network_gas_price` and `max_gas_per_msg_type`, if updated, take effect as stated by [[NET-FEE-1]](#net-fee-1-network-gas-price) and [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions).
 - ranges, else abort: `trust_deposit_rate` and `vua_reward_rate` in [0, 1]; `tu_decay_rate` in [0, 0.01] (at 0.01 per epoch the index half-life is about 69 epochs; above it the index would round to 0 at the ledger precision within a few hundred epochs, and every mint would then divide by zero); `network_gas_price` > 0; every value of `max_gas_per_msg_type` > 0.
 - an update of `tu_decay_rate` MUST be applied prospectively, at step (4) of the next epoch boundary (see [Trust Unit Index](#trust-unit-index)).
@@ -6762,7 +6762,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-XR-MSG-6-2-1] Update Module Parameters basic checks
 
-- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Exchange Rate parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `twap_window` MUST be a strictly positive duration.
 
 ###### [MOD-XR-MSG-6-2-2] Update Module Parameters fee checks
@@ -6962,7 +6962,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-VS-MSG-7-2-1] Update Module Parameters basic checks
 
-- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Delegation and Verifiable Service parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `vs_registration_deposit` and `ecosystem_creation_deposit`, if updated, MUST be ≥ 0, and `vid_rotation_max_transition` MUST be a duration > 0, else abort.
 - `vs_operator_fee_period` (Delegation group), if updated, MUST be a duration > 0, else abort. The new value applies to the allowances granted or adjusted afterwards ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)): an entry's allowance keeps its period until the entry's next configuration change, so two periods coexist meanwhile, each a cap on its own allowance.
 
