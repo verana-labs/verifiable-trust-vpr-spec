@@ -5698,6 +5698,8 @@ Every [[ref: transaction]] pays [[ref: network fees]] in [[ref: native denom]], 
 
 When the account paying the fee is not the transaction's signer (an operator fee grant per [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), the VS operator allowance per [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks), or any other allowance granted by a corporation's `policy_address`), the transaction's `gas_limit` MUST NOT exceed the sum, over the messages it carries, of `GlobalVariables.max_gas_per_msg_type[type URL of the message]`, a message type absent from the map counting as 0. Otherwise the fee draw MUST be refused and the transaction rejected before any deduction. Transactions paid by their own signer are not subject to this cap.
 
+A change of `max_gas_per_msg_type` by [[ref: governance proposal]] applies to the transactions admitted after the proposal executes. The sponsorship allowance of [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship) keeps the key set of the map as it was when the allowance was granted: a message type added later is sponsored only after a re-grant.
+
 > Rationale: with a fixed network gas price, the gas limit is the only part of the fee a grantee controls. The cap bounds what any grantee can draw from a corporation's account to `max_gas × network_gas_price_native` per message, whatever caps the corporation set or forgot to set on its own grants, which protects it from a misconfigured front end or a compromised operator key. The per-period budgets of the fee grants bound the volume; this rule bounds the unit.
 
 #### Client guidance
