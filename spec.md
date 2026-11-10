@@ -4129,7 +4129,7 @@ Then append `perm.id` to `cs.root_accreditation_ids`, and register it in `Partic
 
 The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_accreditation_id` (null for a root entry) and `vs_id`, so that indexers build the `Accreditation` tree of the schema without a query.
 
-> Note: an entry created by this method never runs an [[ref: onboarding process]]: `onboarding_state` is `VALIDATED` from creation, never takes the `PENDING` value, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding) negotiates them for OP-managed entries only.
+> Note: an entry created by this method never runs an [[ref: onboarding process]]: `onboarding_state` is `VALIDATED` from creation, never takes the `PENDING` value, and the `onboarding_fees` and `onboarding_deposit` escrow fields stay at 0. The fee discounts are 0: [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding) negotiates them for the entries that run an onboarding process only.
 
 #### [MOD-AC-MSG-8] Set Accreditation Effective Until
 
@@ -4177,7 +4177,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 - let `validator_accreditation` be the active root entry of the schema or, when none is active, its future root entry (the entry of `cs.root_accreditation_ids` that is an [[ref: active accreditation]] or, failing that, a [[ref: future accreditation]], as [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation) accepts, where `cs` is `CredentialSchema[applicant_accreditation.schema_id]`; the entry's `validator_accreditation_id` may name a root since replaced). It MUST exist. `co.id` MUST equal `applicant_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account). If `validator_accreditation.effective_until` is not null, `effective_until` MUST be lower or equal to it, else abort (the bound of [[MOD-AC-MSG-14-2-1]](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks), under the root in force).
 
-3. OP-managed `Accreditation` entries: every other entry with a `validator_accreditation_id`
+3. `Accreditation` entries that ran an onboarding process: every other entry with a `validator_accreditation_id`
 
 - if `applicant_accreditation.onboarding_exp` is not null, `effective_until` MUST be lower or equal to it, else MUST abort.
 - load `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`. `validator_accreditation` MUST be a [[ref: active accreditation]]. `co.id` MUST equal `validator_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
@@ -4961,7 +4961,7 @@ Then register `perm.id` in `ParticipationTrustDeposit[(vs_id, cs.id, role)].accr
 
 The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_accreditation_id` and `vs_id`, so that indexers build the `Accreditation` tree of the schema without a query.
 
-> Note: an entry created by this method never runs an [[ref: onboarding process]]: `onboarding_state` is `VALIDATED` from creation, never takes the `PENDING` value, and the `op_*` escrow fields stay at 0. The fee discounts are 0: [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding) negotiates them for OP-managed entries only.
+> Note: an entry created by this method never runs an [[ref: onboarding process]]: `onboarding_state` is `VALIDATED` from creation, never takes the `PENDING` value, and the `onboarding_fees` and `onboarding_deposit` escrow fields stay at 0. The fee discounts are 0: [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding) negotiates them for the entries that run an onboarding process only.
 
 #### [MOD-AC-MSG-15] Trigger Resolver
 
