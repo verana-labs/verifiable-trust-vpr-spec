@@ -6709,7 +6709,7 @@ Where:
 - `price_uvna` is expressed in **micro-denominated VNA units (`uvna`)**.
 - Rounding MUST always be performed **downwards**.
 
-If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail, except for an `amount` of 0, which converts to 0 in any asset, and for identical base and quote assets, which need no `ExchangeRate` entry.
+If the corresponding `ExchangeRate` entry is expired, disabled or missing, the conversion MUST fail, except for an `amount` of 0, which converts to 0 in any asset, and for identical base and quote assets, which need no `ExchangeRate` entry.
 
 ##### [MOD-XR-QRY-3-1] Get Price parameters
 
@@ -6721,7 +6721,7 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 
 ##### [MOD-XR-QRY-3-2] Get Price query checks
 
-If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned — unless `amount` is 0 or the base and quote assets are identical (see execution).
+If the corresponding `ExchangeRate` entry is expired, disabled or missing, the conversion MUST fail and an error is returned — unless `amount` is 0 or the base and quote assets are identical (see execution).
 
 ##### [MOD-XR-QRY-3-3] Get Price execution of the query
 
