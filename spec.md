@@ -2079,7 +2079,7 @@ Applies to an operator acting under an [OperatorAuthorization](#operatorauthoriz
 
 ##### [GF-CHECK-3] Ecosystem governance framework acceptance
 
-Applies to every message of the [Accreditation Module](#accreditation-module) that acts under a `CredentialSchema` entry `cs`, as applicant, validator, grantor, issuer, verifier or holder, for the ecosystem `e` = `Ecosystem[cs.ecosystem_id]` and the message's corporation `co`, except when `co.id` = `e.corporation_id` (the controller of the ecosystem is the author of its [[ref: EGF]]), and except the sanction messages of the ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit), [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). Let `acc` be `EcosystemAcceptance[(e.id, co.id)]`.
+Applies to every message of the [Accreditation Module](#accreditation-module) that acts under a `CredentialSchema` entry `cs`, as applicant, validator, grantor, issuer, verifier or holder, for the ecosystem `e` = `Ecosystem[cs.ecosystem_id]` and the message's corporation `co`, except when `co.id` = `e.corporation_id` (the controller of the ecosystem is the author of its [[ref: EGF]]), and except the sanction messages of the ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit), [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)) and the two exits a party keeps whatever it has accepted: [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request), which recovers its escrow, and [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) when the corporation revokes its own entry (Option #3), which lets it leave the ecosystem. Let `acc` be `EcosystemAcceptance[(e.id, co.id)]`.
 
 1. The check passes when `acc` exists and `acc.version` = `e.active_version`.
 2. Else it passes when `acc` exists, `e.acceptance_deadline` is not null and `now` < `e.acceptance_deadline`.
@@ -4002,7 +4002,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `operator`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
+- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) is not applied: an applicant withdraws its request, and recovers its escrow, whatever the state of its acceptance of the ecosystem's framework.
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` with this id. It MUST exist.
 - `co.id` MUST equal `applicant_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
@@ -4249,7 +4249,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `operator`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
 - `operator` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `operator`) pair and this message type.
-- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
+- [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads), unless `co` owns the entry (Option #3 of the advanced checks): a corporation revokes its own entry, and so leaves the ecosystem, whatever the state of its acceptance.
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` from `id`. If no entry found, abort.
 - `applicant_accreditation.effective_from` MUST be set, else abort: an entry under its initial onboarding process, never validated, is cancelled by its applicant ([[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request)), which refunds its escrow and deletes it; a validated entry can be revoked whatever its window (current or future), whether or not its participation is slashed, and whether or not a renewal is pending for it (the escrow of the renewal is then refunded, see execution).
