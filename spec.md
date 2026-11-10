@@ -3899,7 +3899,7 @@ Let `accreditations[]` be the validated entries (`effective_from` set, whether o
 for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]] MUST abort if:
 
 - `p.effective_from` is not later than `now` and (`p.effective_until` is NULL or later than `now`): `p` is effective now, and the entry being validated becomes effective at `now`; OR
-- `p.effective_from` is later than `now` and (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`).
+- `p.effective_from` is later than `now` and `p.effective_from` is lower than the `effective_until` this method will write (the parameter, else `onboarding_exp`; a null result never overlaps a future entry).
 
 > Note: excluding `applicant_accreditation` itself is required: on a renewal, the entry being validated is itself effective and would otherwise always match. The candidates are the current entries of the same participation (same `vs_id`, `schema_id` and `role`), read from its deposit.
 
