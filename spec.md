@@ -354,7 +354,7 @@ object "Ecosystem" as tra #3fbdb6 {
 
 *This section is non-normative.*
 
-[[ref: Credential schemas]] are created and managed by [[ref: ecosystems]] (i.e., by the [[ref: corporation]] controlling each [[ref: ecosystem]]). Each [[ref: Credential schema]] includes, at a minimum:
+[[ref: Credential schemas]] are created and managed by the [[ref: corporation]] controlling each [[ref: ecosystem]]. Each [[ref: Credential schema]] includes, at a minimum:
 
 - A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
 - A **SubjectKind** (`SERVICE` or `PERSON`), a **PresentationMode** (for service credentials: `PUBLIC`, `ON_REQUEST` or `ON_APPROVAL`) a single **CredentialFormat** (`W3C_JSONLD`, `ANONCREDS`, `SD_JWT` or, for persons, `MDOC`) and a **CredentialAnchoring** (`NO_DIGEST`, `DIGEST` or `REVOCABLE_DIGEST`) that declare what credentials of this schema are for and how agents handle them; see [CredentialSchema](#credentialschema).
