@@ -241,7 +241,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The price of one unit of gas, a network parameter expressed in the [[ref: main fiat currency]] (`GlobalVariables.network_gas_price`) and converted into [[ref: native denom]] once per [[ref: epoch]] ([[NET-FEE-1]](#net-fee-1-network-gas-price)). It is the same for every validator and every block of an epoch: the VPR has no fee market and no validator-local price.
 
 [[def: network governance framework, NGF]]:
-~ The governance framework (GF) of the [[ref: VPR]] itself: the rules that bind its validators, its [[ref: governance proposals]] and its participants network-wide. Anchored on the ledger as the [GovernanceFrameworkVersion](#governanceframeworkversion) entries that have no owner, listed in `GlobalVariables.network_governance_framework_versions`; the version in force is the last listed one whose `active_since` is set ([[NGG]](#ngg-genesis-network-governance-framework)). Every corporation records its [[ref: governance framework acceptance]] of the NGF at its creation and of each later version within the grace period of its activation ([[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance)).
+~ The [[ref: governance framework]] of the [[ref: VPR]] itself, which binds its validators, its [[ref: governance proposals]] and its participants network-wide. See [[NGG]](#ngg-genesis-network-governance-framework).
 
 [[def: onboarding process]]:
 ~ A process run by [[ref: applicants]] that want to, for a specific [[ref: credential schema]], be an [[ref: issuer grantor]], a [[ref: verifier grantor]], an [[ref: issuer]], a [[ref: verifier]], or simply hold a verifiable credential linked to the [[ref: credential schema]].
