@@ -301,7 +301,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ see [VT Spec](https://github.com/verana-labs/verifiable-trust-spec).
 
 [[def: verifiable user agent, verifiable user agents, VUA, VUAs]]:
-~ A user agent for accessing and using [[ref: VSs]]. To be considered a [[ref: VUA]], a user agent must conform and enforce this spec, such as presenting a proof of trust to end user before accepting connecting to [[ref: VS]] compliant services, and refuse connecting to not compliant services. See [[ref: VT Spec]].
+~ A user agent that accesses [[ref: verifiable services]] and enforces the trust rules of the [[ref: VT spec]], such as a wallet. See [[ref: VT spec]].
 
 [[def: verifier, verifiers]]:
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or a [[ref: verifier grantor]] for verifying credentials of a given [[ref: credential schema]].
