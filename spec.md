@@ -53,7 +53,7 @@ Before exploring this spec, it is highly recommended to **first read** the [Veri
 
 *This section is non-normative.*
 
-An ecosystem is an approved list of recognized participants, such as ecosystem operators, credential [[ref: issuers]] and [[ref: verifiers]], that are authorized to onboard ecosystem participants, and or issue/verify certain credentials in an ecosystem.
+An [[ref: ecosystem]] is a trust domain controlled by a corporation, that publishes credential schemas and a governance framework and decides who onboards participants and who issues and verifies the credentials of those schemas.
 
 An ecosystem typically exposes APIs that are consumed by services that would like to [[ref: query]] its database, and take decisions based on the returned result:
 
@@ -172,7 +172,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The module account that collects all deposit-bound [[ref: native denom]] amounts, slash repayments, registration and creation fees and [[ref: network fees]]. At epoch end it is paid out in a fixed order (validator budgets, council budget, foundation budget, capped yield to bonded native denom holders) and the **residual is burned**.
 
 [[def: ecosystem, ecosystems]]:
-~ A network of interacting entities, both technical and human, that work together to establish and maintain digital trust. It encompasses applications, credentials, governance frameworks, and the underlying technical infrastructure, all designed to facilitate trustworthy interactions.
+~ An `Ecosystem` entry: a trust domain controlled by a [[ref: corporation]], that publishes [[ref: credential schemas]] and an [[ref: EGF]], and decides who issues and verifies credentials of those schemas. See [Ecosystem](#ecosystem).
 
 [[def: ecosystem governance authority, EGA]]:
 ~ The governance authority (GA) of an [[ref: ecosystem]].
