@@ -4072,7 +4072,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-AC-MSG-7-2-2] Create Root Accreditation controller checks
 
-To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
+To execute this method, all of the following rules MUST hold, else [[ref: transaction]] MUST abort.
 
 - The related `CredentialSchema` entry is loaded with `schema_id`, and will be named `cs` in this section.
 - The related `Ecosystem` entry `ecosystem` is loaded from `cs.ecosystem_id`.
@@ -4899,7 +4899,7 @@ Load `Accreditation` `validator_accreditation` from `validator_accreditation_id`
 
 ###### [MOD-AC-MSG-14-2-2] Self Create Accreditation mode checks
 
-To execute this method, [[ref: account]] MUST match at least one these rules, else [[ref: transaction]] MUST abort.
+To execute this method, all of the following rules MUST hold, else [[ref: transaction]] MUST abort.
 
 - The related `CredentialSchema` entry is loaded with `validator_accreditation.schema_id`, and will be named `cs` in this section.
 - if `role` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
