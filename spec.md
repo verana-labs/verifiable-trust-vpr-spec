@@ -75,7 +75,7 @@ A Verifiable Public Registry (VPR) is a “registry of registries”, a public s
 - ecosystem management:  
   - governance framework publication, versioning and acceptance
   - [[ref: credential schemas]] publication
-  - accreditation onboarding
+  - onboarding of ecosystem participants (issuers, verifiers, grantors, holders)
   - custom business models and permission policies
   - and more.
 
