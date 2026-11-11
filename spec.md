@@ -33,7 +33,7 @@ Decentralized trust ecosystems need shared infrastructure to answer a fundamenta
 
 The **Verifiable Public Registry (VPR)** is a decentralized "registry of registries" that provides this foundational infrastructure. It allows corporations to create and manage ecosystems, define credential schemas with fine-grained onboarding policies, and assign roles — issuers, verifiers, grantors — through a transparent, on-chain governance model.
 
-The VPR exposes a standardized query API that Verifiable Services and Verifiable User Agents use during trust resolution to confirm, in real time, whether a given accreditation is authorized to perform a specific action under a specific credential schema. This is what makes the trust in [Verifiable Trust](https://verana-labs.github.io/verifiable-trust-spec/) actually verifiable.
+The VPR holds the entries, and emits the events, that Verifiable Services and Verifiable User Agents read during trust resolution, through an indexer of their choice, to confirm whether a given participant is authorized to perform a specific action under a specific credential schema. This is what makes the trust in [Verifiable Trust](https://verana-labs.github.io/verifiable-trust-spec/) actually verifiable.
 
 The VPR is DID-method-agnostic — it stores registrations, not validations — leaving trust decisions and cryptographic verification where they belong: with the relying parties. It supports flexible onboarding modes (open, credential-gated, ecosystem-controlled, or grantor-delegated), enabling ecosystems to tailor governance to their specific requirements.
 
@@ -79,8 +79,8 @@ A Verifiable Public Registry (VPR) is a “registry of registries”, a public s
   - custom business models and permission policies
   - and more.
 
-- query API for trust resolution:  
-  A standardized API used by [[ref: verifiable services]] (VSs) and [[ref: verifiable user agents]] (VUAs) to perform trust resolution, enabling them to query registry data and validate roles and permissions in real time.
+- data for trust resolution:  
+  The entries and events that [[ref: verifiable services]] (VSs) and [[ref: verifiable user agents]] (VUAs) read, through an indexer of their choice, to perform trust resolution as the [[ref: VT spec]] specifies.
 
 ```plantuml
 
