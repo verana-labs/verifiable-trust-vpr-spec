@@ -224,7 +224,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or an [[ref: issuer grantor]] for issuing credentials of a given [[ref: credential schema]] to [[ref: holders]].
 
 [[def: issuer grantor, issuer grantors]]:
-~ An ecosystem operator role an [[ref: entity]] is granted by an [[ref: ecosystem]] for a given [[ref: credential schema]] for adding or revoking issuers.
+~ A role under a [[ref: credential schema]], held through an `ISSUER_GRANTOR` `Accreditation` entry, whose holder validates and revokes the [[ref: issuers]] of the schema.
 
 [[def: Json Schema, json schema, json schemas, Json Schemas]]:
 
@@ -312,7 +312,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or a [[ref: verifier grantor]] for verifying credentials of a given [[ref: credential schema]].
 
 [[def: verifier grantor, verifier grantors]]:
-~ An ecosystem operator role an [[ref: entity]] is granted by an [[ref: ecosystem]] for a given [[ref: credential schema]] for adding or revoking verifiers.
+~ A role under a [[ref: credential schema]], held through a `VERIFIER_GRANTOR` `Accreditation` entry, whose holder validates and revokes the [[ref: verifiers]] of the schema.
 
 ## Naming Conventions
 
@@ -370,12 +370,12 @@ object "Ecosystem" as tra #3fbdb6 {
 - An **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` `Accreditation` entries are created. Modes include:
   - `OPEN`: `ISSUER` Accreditations can be self-created by any [[ref: corporation]].
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Accreditations are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
-  - `GRANTOR_ONBOARDING_PROCESS`: `ISSUER` Accreditations are created by one or several [[ref: issuer grantor]](s) — ecosystem operators responsible for onboarding issuers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
+  - `GRANTOR_ONBOARDING_PROCESS`: `ISSUER` Accreditations are created by one or several [[ref: issuer grantor]](s) — participants accredited to onboard issuers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
 - A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` `Accreditation` entries are created. Modes include:
   - `OPEN`: any [[ref: corporation]] verifies without an entry, and MAY self-create a `VERIFIER` entry.
   - `CREDENTIAL`: any [[ref: corporation]] whose service holds a credential of one of the schemas listed in `verifier_credential_schema_ids` verifies without an entry, and MAY self-create a `VERIFIER` entry, as under `OPEN`.
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `VERIFIER` Accreditations are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
-  - `GRANTOR_ONBOARDING_PROCESS`: `VERIFIER` Accreditations are created by one or several [[ref: verifier grantor]](s) — ecosystem operators responsible for onboarding verifiers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
+  - `GRANTOR_ONBOARDING_PROCESS`: `VERIFIER` Accreditations are created by one or several [[ref: verifier grantor]](s) — participants accredited to onboard verifiers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
 - A **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` `Accreditation` entries are created. Modes include:
   - `ISSUER_ONBOARDING_PROCESS`: `HOLDER` Accreditations are created for holders through an [[ref: onboarding process]] validated by the [[ref: issuers]].
   - `PERMISSIONLESS`: a holder that wants to obtain credentials from an [[ref: issuer]] does not require an `Accreditation` entry in the VPR.
@@ -434,8 +434,8 @@ Accreditation roles are defined in the table below:
 | **Accreditation Role**   | **Description**                                                  |
 |-----------------------|------------------------------------------------------------------|
 | **Ecosystem**    | Create and control [[ref: ecosystems]] and credential schemas. Recognize other participants by validating them onto the schema (creating their `Accreditation` entries).        |
-| **Issuer Grantor**    | Ecosystem operator that creates `ISSUER` `Accreditation` entries for candidate issuers.                   |
-| **Verifier Grantor**  | Ecosystem operator that creates `VERIFIER` `Accreditation` entries for candidate verifiers.               |
+| **Issuer Grantor**    | Participant that holds a grantor accreditation and validates the `ISSUER` `Accreditation` entries of candidate issuers.                   |
+| **Verifier Grantor**  | Participant that holds a grantor accreditation and validates the `VERIFIER` `Accreditation` entries of candidate verifiers.               |
 | **Issuer**            | Can issue credentials of this schema.                            |
 | **Verifier**          | Can request presentation of credentials of this schema.          |
 | **Holder**            | Holds credentials of this schema. A `HOLDER` `Accreditation` entry is the relationship the issuer validated, which bounds the trust in the credentials issued to that holder. |
