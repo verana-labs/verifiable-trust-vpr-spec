@@ -142,7 +142,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ [[ref: native denom]] bonded to earn the capped yield of the [[ref: distribution pool]]; bonding confers no consensus power and no governance power. See [[DIST-2]](#dist-2-bonding).
 
 [[def: corporation, corporations]]:
-~ A legal/organizational entity that controls Accreditations in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]]. A `Corporation` is a VPR-level entity with VPR-specific attributes (identifier, governance framework, lifecycle) anchored on-chain by a `policy_address` account that signs on its behalf.
+~ A legal or organizational entity that acts in a [[ref: VPR]]: it can control [[ref: ecosystems]] and hold `Accreditation` entries in ecosystems, its own or others'. A `Corporation` is a VPR-level entity with VPR-specific attributes (identifier, governance framework, lifecycle) anchored on-chain by a `policy_address` account that signs on its behalf.
 
 [[def: corporation governance framework, CGF]]:
 ~ The [[ref: governance framework]] of a [[ref: corporation]], which binds it as its author and the delegates it authorizes. See [[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-a-delegate).
@@ -344,8 +344,8 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 In a [[ref: VPR]], any [[ref: corporation]] can create an `Ecosystem` entry to represent an [[ref: ecosystem]] it controls. Each `Ecosystem` entry MUST provide, at a minimum:
 
 - a registered [[ref: verifiable service entry]] for the ecosystem's identifier (a [[ref: DID]] it controls);
-- one or more [[ref: ecosystem governance framework]] document(s);
-- zero or more [[ref: credential schemas]].
+- its [[ref: ecosystem governance framework]] document(s);
+- its [[ref: credential schemas]].
 
 The Verifiable Public Registry (VPR) is agnostic to the specific DID methods used. Trust resolution is performed externally, outside the VPR, allowing flexibility and interoperability across ecosystems.
 
@@ -563,12 +563,12 @@ vg --> verifier : creates schema accreditation
 
 A [[ref: corporation]] is the VPR-level entity that represents an authority acting in the registry. A `Corporation` carries VPR-specific attributes — the [[ref: verifiable service entry]] of its identifier, a [[ref: corporation governance framework]] (CGF), and lifecycle metadata — and is anchored on-chain by a `policy_address` account that signs on its behalf. The `Corporation` entry has its own `id`; the entities it owns point to it through `corporation_id`, or through the [[ref: verifiable service entries]] it owns.
 
-A corporation interacts with the VPR in two complementary ways:
+A corporation interacts with the VPR in two independent ways:
 
-- as the **controller** of zero or more [[ref: ecosystems]] — i.e., the corporation owns the corresponding `Ecosystem` entries. The controlling corporation manages each ecosystem's [[ref: EGF]], its [[ref: credential schemas]], and the root `ECOSYSTEM` `Accreditation` entries of those schemas.
-- as the **owner of zero or more `Accreditation` entries** in zero or more [[ref: ecosystems]] — i.e., the corporation acts as `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR`, `HOLDER`, or root `ECOSYSTEM` for [[ref: credential schemas]] of those ecosystems.
+- as the **controller** of ecosystems: the corporation owns the `Ecosystem` entries and manages each ecosystem's [[ref: EGF]], its [[ref: credential schemas]] and the root `ECOSYSTEM` `Accreditation` entries of those schemas;
+- as the **owner** of `Accreditation` entries in ecosystems, its own or others': the corporation acts as `ISSUER`, `VERIFIER`, `ISSUER_GRANTOR`, `VERIFIER_GRANTOR` or `HOLDER` for [[ref: credential schemas]] of those ecosystems.
 
-The two roles are **independent**: a corporation MAY control no ecosystem at all and only hold `Accreditation` entries in third-party ecosystems; or it MAY control several ecosystems and additionally hold `Accreditation` entries in others; or any combination of the two.
+A corporation can act in either way, in both, or in neither.
 
 ```plantuml
 
@@ -1520,7 +1520,7 @@ A [[ref: verifiable service entry]] (`VerifiableService`) registers a [[ref: VID
 
 ### Corporation
 
-A `Corporation` is the VPR-level entity representing an authority that acts in the registry. It references the [VerifiableService](#verifiableservice) entry of its identifier, carries a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A Corporation may hold `Accreditation` entries in zero or more [[ref: ecosystems]] and may itself be the controller of zero or more [[ref: ecosystems]].
+A `Corporation` is the VPR-level entity representing an authority that acts in the registry. It references the [VerifiableService](#verifiableservice) entry of its identifier, carries a governance framework, and lifecycle attributes, and is anchored on-chain by a `policy_address` account that signs on its behalf. A Corporation can hold `Accreditation` entries in [[ref: ecosystems]], its own or others', and can itself be the controller of ecosystems.
 
 `Corporation`:
 
