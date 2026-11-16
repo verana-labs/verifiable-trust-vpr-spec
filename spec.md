@@ -5379,8 +5379,7 @@ autonumber stop
 autonumber "<font color='#7677ed'><b>(connects to the validator VS)"
 Applicant --> CE: share id of Accreditation
 autonumber stop
-Applicant <-- CE: Request proof of account and DID ownership (blind sign)
-Applicant --> CE: send blind sign proofs 
+note over Applicant, CE #EEEEEE: the trusted channel is bound to the applicant's DID:\nthat binding is the proof of control, no signature is asked
 note over Applicant, CE #EEEEEE: (*optional*) repeat the following until tasks completed
 Applicant <-- CE: Form fill-ins, request proof documents
 Applicant --> CE: fill-in forms, provides requested documents...
