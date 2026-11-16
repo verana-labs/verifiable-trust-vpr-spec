@@ -1728,6 +1728,8 @@ A `Digest` entry records the digest, its anchoring context (the [VerifiableServi
 
 `MsgType` enumerates the delegable messages of the VPR: the messages a `corporation` executes through a `delegate` under a [DelegateAuthorization](#delegateauthorization) or, in the context of a [VerifiableService](#verifiableservice) entry, through its `vs_account` under the entry's `msg_types`; the same values scope a [FeeGrant](#feegrant), which is why `AcceptCorporationGovernanceFramework`, signed by a delegate alone, has a value: a corporation may pay the fee of its delegate's acceptance, but no authorization or entry configuration may list it. Every `msg_types` list of the data model and of the message parameters is a list of `MsgType` values, never of message names or protobuf type URLs: a configured entry exists per registered service, and a type URL costs about fifty bytes per value where an enumeration value costs one.
 
+Each value names the message type `Msg<value>` of the chain: `StartOnboarding` is `MsgStartOnboarding`. The value is the message name without the `Msg` prefix that the Cosmos SDK convention gives every message type.
+
 Values and their numbers, which are stable and only ever appended to (0 is reserved for an unspecified value):
 
 | # | Value | Message |
