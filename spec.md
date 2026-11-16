@@ -136,7 +136,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A [[ref: corporation]] that starts an [[ref: onboarding process]] to obtain an `Accreditation` entry.
 
 [[def: barred, barred participation, barred corporation]]:
-~ The state of a [[ref: participation]] or a [[ref: corporation]] whose trust deposit carries a slash debt or is excluded. A barred party cannot act under the schema (participation) or in the VPR (corporation). See [ParticipationTrustDeposit](#participationtrustdeposit) and [TrustDeposit](#trustdeposit).
+~ The state of a [[ref: participation]] or a [[ref: corporation]] whose trust deposit carries a slash debt or is excluded. A barred party cannot act under the schema (participation) or in the VPR (corporation), and a corporation with a barred participation cannot act in the ecosystem of its schema. See [ParticipationTrustDeposit](#participationtrustdeposit) and [TrustDeposit](#trustdeposit).
 
 [[def: bonded tokens, bonded native denom]]:
 ~ [[ref: native denom]] bonded to earn the capped yield of the [[ref: distribution pool]]; bonding confers no consensus power and no governance power. See [[DIST-2]](#dist-2-bonding).
@@ -1441,7 +1441,7 @@ vs o-- "0..n" msgtype: msg_types
 
 csp o-- cspt: role
 csp o-- cs: schema_id
-cs o-- "0..n" csp: root_accreditation_ids
+cs o-- "0..2" csp: root_accreditation_ids
 csp o-- "0..1" csp: validator_accreditation_id
 cs o-- tr: ecosystem_id
 
@@ -1503,7 +1503,7 @@ Several entities deviate from this convention and document their own key scheme 
 
 **Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_account` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121). A query of this specification adds no state: it reads by primary key, by key prefix, by one of these three indexes or by a scan of an entity that stays small. Credential schemas are the one scanned entity ([[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)): an ecosystem declares a few of them, where corporations, ecosystems and accreditations grow without bound. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: an [[ref: exchange record]] ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `DelegateAuthorization` by (`corporation_id`, `delegate`), `EcosystemAcceptance` and `EcosystemBar` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
 
-**Events.** The VPR stores current state only: an entry that expires or is revoked is deleted, and no entity keeps its own history. History is read from the transactions and from the events they emit, which indexers keep. A method that creates, changes or deletes an entry MUST therefore emit an event that carries the key of each entry it wrote or deleted and every value it computed that its message does not carry (an id it assigned, a timestamp, an amount it converted or derived); the values the message carries are read from the transaction. The same holds for the operations that no message carries, the end-of-block deletions and the closing of an [[ref: epoch]]. A method called by another method emits its own event unless the event of its caller carries the same values. The methods state the events on whose content trust resolution or accounting depends; this rule covers the others.
+**Events.** The VPR stores current state only: an entry that expires or is revoked is deleted, and no entity keeps its own history. History is read from the transactions and from the events they emit, which indexers keep. A method that creates, changes or deletes an entry MUST therefore emit an event that carries the key of each entry it wrote or deleted and every value it computed that its message does not carry (an id it assigned, a timestamp, an amount it converted or derived); the values the message carries are read from the transaction. The same holds for the operations that no message carries, the end-of-block deletions and the closing of an [[ref: epoch]]. A method called by another method emits its own event unless the event of its caller carries the same values. The methods state the events on whose content trust resolution or accounting depends: the content they list is a minimum, to which this rule adds. The running balances a message consumes (the `remaining_spend` of an authorization, of a budget, of a fee grant or of a sponsorship, and the reset of their cycles) are not entries in the sense of this rule: they follow from the transactions.
 
 ### VID ownership
 
@@ -1674,13 +1674,13 @@ A `ParticipationTrustDeposit` is the part of a corporation's single [[ref: trust
 - `unrepaid_fiat` (decimal) (*mandatory*): the mint-time cost basis of `unrepaid_slash`, in [[ref: main fiat currency]], fixed at each slash and accumulated with it; what its repayment costs ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)): trust scores decay, liabilities do not. 0 when `unrepaid_slash` is 0.
 - `slash_count` (number) (*mandatory*): the number of times this participation has been slashed by an ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)); never reset. Network slashes are counted on the [TrustDeposit](#trustdeposit).
 - `excluded` (boolean) (*mandatory*): set to true by an ecosystem slash whose `exclude` parameter is true ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) or directly by the ecosystem controller ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)): the ecosystem's decision to withdraw trust from what the participation issued or validated before ([[ref: VT spec]]). The participation is [[ref: barred]]: it can no longer take part in the schema, neither through a new entry ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), a renewal ([[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)) or a validation ([[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)), nor through entry-less exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)), until the ecosystem controller lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), the repayment of its debt notwithstanding. A network slash does not set it: the corporation's own flag is on its [TrustDeposit](#trustdeposit).
-- `accreditation_ids` (uint64[]) (*mandatory*): the ids of the current `Accreditation` entries of the participation (pending, future or effective): at most `GlobalVariables.accreditation_max_entries_per_participation`, and at most two under one validator, the current entry and one successor; appended when an entry is created ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), removed when it is deleted. It is how the sibling checks, the exchange guards ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Accreditation` entries.
+- `accreditation_ids` (uint64[]) (*mandatory*): the ids of the current `Accreditation` entries of the participation (pending, future or effective), bounded when an entry is created: at most `GlobalVariables.accreditation_max_entries_per_participation` entries, and at most two under one validator entry, the current one and one successor; appended when an entry is created ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), removed when it is deleted. It is how the sibling checks, the exchange guards ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Accreditation` entries.
 
 A deposit is created by the first entry of its participation, by the first mint to it or by an exclusion ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0 and `excluded` false. It is deleted by the method that empties it when `accreditation_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0 and `excluded` false (a slashed or excluded participation keeps its deposit, repaid or not: its count and its exclusion are its record). For an entry `p`, **deposit(`p`)** denotes `ParticipationTrustDeposit[(p.vs_id, p.schema_id, p.role)]`.
 
 ### EcosystemBar
 
-An `EcosystemBar` lists the [[ref: barred]] participations of a corporation in an ecosystem: the `ParticipationTrustDeposit` entries of its service entries, under the schemas of the ecosystem, that carry an unrepaid slash or an exclusion. One entry per (ecosystem, corporation) pair, kept only while the list is not empty. While it exists, the corporation cannot act in the ecosystem, under any of its service entries, schemas or roles ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)): a sanctioned corporation does not escape the sanction of an ecosystem by registering another identifier. The messages that change the debt or the exclusion of a participation maintain it ([[BAR-CHECK-2]](#bar-check-2-maintenance)). It is read by key; since the key starts with the ecosystem, the sanctioned corporations of an ecosystem are a key-prefix read.
+An `EcosystemBar` lists the [[ref: barred]] participations of a corporation in an ecosystem: the `ParticipationTrustDeposit` entries of its service entries, under the schemas of the ecosystem, that carry an unrepaid slash or an exclusion. One entry per (ecosystem, corporation) pair, kept only while the list is not empty. While it exists, the acts of the corporation in the ecosystem are refused, under any of its service entries, schemas or roles ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar), which names the few messages it keeps): a sanctioned corporation does not escape the sanction of an ecosystem by registering another identifier. The entry belongs to no participation: the messages that change the debt or the exclusion of a participation maintain it ([[BAR-CHECK-2]](#bar-check-2-maintenance)), and [[MOD-TD-QRY-5]](#mod-td-qry-5-get-ecosystem-bar) reads it. An implementation that upgrades a chain whose state predates this entity MUST build the entries from the barred `ParticipationTrustDeposit` entries at upgrade time. It is read by key; since the key starts with the ecosystem, the sanctioned corporations of an ecosystem are a key-prefix read.
 
 `EcosystemBar`:
 
@@ -1887,7 +1887,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 Amounts in [[ref: main fiat currency]] below are in its minor units ([[ref: main fiat currency]]).
 
-Each group below is owned by the module whose Update Module Parameters message changes it: Credential Schema by [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters); Accreditation by [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters); Trust Deposit and Trust Unit Index, Native denom and Network fees by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters); Distribution by [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters); Exchange Rate by [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters); Delegation and Verifiable Service by [[MOD-VS-MSG-4]](#mod-vs-msg-4-update-module-parameters). The Network governance group is set at genesis and maintained by the Governance Framework module; no Update Module Parameters message changes it. The Governance Framework group is changed by [[MOD-GF-MSG-5]](#mod-gf-msg-5-update-module-parameters). The immutable parameters, `main_fiat_currency`, `tu_peg_value_genesis`, `epoch_length`, `vna_total_supply` and `council_account`, are refused by every Update Module Parameters message. The Corporation, Ecosystem and Accreditation modules own no parameter group: their Update Module Parameters messages ([[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters), [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters), [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters)) abort on any key and their List Module Parameters queries return an empty set, until a parameter is assigned to them.
+Each group below is owned by the module whose Update Module Parameters message changes it: Credential Schema by [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters); Accreditation by [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters); Trust Deposit and Trust Unit Index, Native denom and Network fees by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters); Distribution by [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters); Exchange Rate by [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters); Delegation and Verifiable Service by [[MOD-VS-MSG-4]](#mod-vs-msg-4-update-module-parameters). The Network governance group is set at genesis and maintained by the Governance Framework module; no Update Module Parameters message changes it. The Governance Framework group is changed by [[MOD-GF-MSG-5]](#mod-gf-msg-5-update-module-parameters). The immutable parameters, `main_fiat_currency`, `tu_peg_value_genesis`, `epoch_length`, `vna_total_supply` and `council_account`, are refused by every Update Module Parameters message. The Corporation and Ecosystem modules own no parameter group: their Update Module Parameters messages ([[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters), [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters)) abort on any key and their List Module Parameters queries return an empty set, until a parameter is assigned to them.
 
 **Credential Schema:**
 
@@ -2092,7 +2092,7 @@ Given a `corporation`, the signing account `signer` (the `vs_account` field of a
    This step never aborts: `budget.expiration` is the end of the current budget cycle, not a validity window (an entry has none; step 1 enforces the window of the primary entry when there is one). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
 6. If a [VsAccountBudget](#vsaccountbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
 
-> Note: step 1 is what prevents the use of an `Accreditation` entry that is not, or is no longer, an [[ref: active accreditation]]: an entry that has never been validated has no `effective_from` yet, a revoked or expired entry no longer exists, and a slashed participation fails the definition. The configuration itself is unaffected by the state of any single `Accreditation` entry: the same VS account keeps acting for the identifier's other entries. A renewal is unaffected too: [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding) sets `onboarding_state` back to PENDING, but the entry stays active until its `effective_until`.
+> Note: step 1 is what prevents the use of an `Accreditation` entry that is not, or is no longer, an [[ref: active accreditation]]: an entry that has never been validated has no `effective_from` yet, a revoked or expired entry no longer exists, and a slashed participation fails the definition. The configuration itself is unaffected by the state of any single `Accreditation` entry: the same VS account keeps acting for the identifier's other entries, unless the bar of one participation stops its corporation in the whole ecosystem ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)). A renewal is unaffected too: [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding) sets `onboarding_state` back to PENDING, but the entry stays active until its `effective_until`.
 
 ##### [AUTHZ-CHECK-4] VS Account Fee Grant checks
 
@@ -2142,7 +2142,7 @@ Applies to every message of the [Accreditation Module](#accreditation-module) th
 
 A message that runs this check MUST then run [[BAR-CHECK-1]](#bar-check-1-ecosystem-bar) for the same `co` and `e`.
 
-> Note: an act that reaches no transaction (a credential issued, or a presentation requested, under a schema whose exchange requires no record) is not checked by the VPR; the counterparty enforces the acceptance through the acceptance history that indexers serve from the events of [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) ([[ref: VT spec]]).
+> Note: an act that reaches no transaction (a credential issued, or a presentation requested, under a schema whose exchange requires no record) is not checked by the VPR; the counterparty enforces the acceptance through the acceptance history that indexers serve from the events of [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) ([[ref: VT spec]]), and the ecosystem bar likewise.
 
 #### [BAR-CHECK] Ecosystem Bar Checks
 
@@ -2150,11 +2150,11 @@ A corporation that has a [[ref: barred]] participation in an ecosystem cannot ac
 
 ##### [BAR-CHECK-1] Ecosystem bar
 
-Applies wherever [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) applies, after it, for the same ecosystem `e` and corporation `co`, with the same exceptions: the controller of the ecosystem, the sanction messages ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit), [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request), and [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) when the corporation revokes its own entry.
+Applies to every message that runs [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance), after it, for the same ecosystem `e` and corporation `co`, and to a slash executed by a validator ancestor ([[MOD-AC-MSG-12-2-2]](#mod-ac-msg-12-2-2-slash-participation-trust-deposit-authority-checks) Option #1). It does not apply to the controller of the ecosystem, nor to the messages a barred corporation keeps: [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request), and [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) when the corporation revokes its own entry.
 
 1. `EcosystemBar[(e.id, co.id)]` MUST NOT exist, else the [[ref: transaction]] MUST abort with an error naming the participations it lists.
 
-> Note: the checks each message makes on the participation it acts for are unchanged; this check adds the other participations of the corporation in the ecosystem. Repay Slash ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) is not subject to it: a barred corporation can always repay.
+> Note: the checks each message makes on the participation it acts for are unchanged; this check adds the other participations of the corporation in the ecosystem. It refuses acts only: it makes no `Accreditation` entry inactive, and a corporation it stops still receives the fees its entries are beneficiaries of. Repay Slash ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) is not subject to it, so a barred corporation can always repay; nor is Revoke Digest ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)), which only withdraws trust. The messages in which another party depends on the corporation name the check for that party: the applicant of [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding), the validator of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding) and [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding).
 
 ##### [BAR-CHECK-2] Maintenance
 
@@ -2163,7 +2163,7 @@ A method that changes `unrepaid_slash` or `excluded` on a `ParticipationTrustDep
 1. if `d` is barred (`d.unrepaid_slash` > 0 or `d.excluded` is true): add the key of `d` to `EcosystemBar[(e_id, c_id)].participations` unless it is already listed, creating the entry if it does not exist;
 2. else: remove the key of `d` from `EcosystemBar[(e_id, c_id)].participations` if it is listed, and delete the entry if its list becomes empty.
 
-The list is the set of the barred participations, never a count: applied twice, the rule changes nothing.
+The list is the set of the barred participations, never a count: applied twice, the rule changes nothing. When the rule adds or removes a key, the event of the calling method also carries `e_id`, `c_id` and whether the key was added or removed.
 
 #### [FUND-CHECK] Funding Account Resolution
 
@@ -3585,7 +3585,7 @@ A holder MAY directly connect to the DID VS of an issuer in order to get issued 
 
 ###### [MOD-AC-MSG-1-2-2] Start Onboarding role and mode checks
 
-- Load `Accreditation` entry `validator_accreditation` from `validator_accreditation_id`. It MUST be a [[ref: active accreditation]] else transaction MUST abort.
+- Load `Accreditation` entry `validator_accreditation` from `validator_accreditation_id`. It MUST be a [[ref: active accreditation]] else transaction MUST abort. No [EcosystemBar](#ecosystembar) entry MAY exist for the ecosystem of its schema and `validator_accreditation.corporation_id`, unless that corporation controls the ecosystem, else abort: such a validator could not validate ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)), and the applicant would escrow for nothing.
 - Load `CredentialSchema` entry `cs` from `validator_accreditation.schema_id`. It MUST exist.
 
 - if `role` (AccreditationRole) is equal to ISSUER:
@@ -3669,7 +3669,7 @@ if size of `accreditations[]` > 0, an onboarding process is already running in t
 
 Additionally, if any entry of `d.accreditation_ids` matches the same validator with `onboarding_state` = VALIDATED and `effective_until` = NULL, [[ref: transaction]] MUST abort: that entry never expires, so a successor entry could never pass [MOD-AC-MSG-3-2-4](#mod-ac-msg-3-2-4-validate-onboarding-overlap-checks); the validator's corporation MUST first set an `effective_until` on that entry ([Set Accreditation Effective Until](#mod-ac-msg-8-set-accreditation-effective-until)), or `corporation` MUST revoke it ([Revoke Accreditation](#mod-ac-msg-9-revoke-accreditation)).
 
-Finally, the list is bounded. [[ref: transaction]] MUST abort if two entries of `d.accreditation_ids` already name `validator_accreditation_id` as their validator (under one validator, a participation holds its current entry and at most one successor), or if `d.accreditation_ids` already holds `GlobalVariables.accreditation_max_entries_per_participation` entries.
+Finally, the list is bounded: [[ref: transaction]] MUST abort if `d.accreditation_ids` already holds `GlobalVariables.accreditation_max_entries_per_participation` entries, counting only the entries that are PENDING or whose `effective_until` is null or later than `now()` (an expired entry may await the end-of-block deletion). The two checks above already leave at most two entries under one validator, the current entry and the pending successor.
 
 > Note: the candidates are the current entries of the participation, listed on its deposit; no index of entries exists. `role` and `vs_id` are those of the key; all entries sharing a `validator_accreditation_id` share its `schema_id` by construction.
 
@@ -3716,7 +3716,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - register `applicant_accreditation.id` in `ParticipationTrustDeposit[(vs_id, applicant_accreditation.schema_id, role)].accreditation_ids`, creating the deposit with an empty ledger if it does not exist.
 
-The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_accreditation_id` and `vs_id`, so that indexers build the `Accreditation` tree of the schema without a query.
+The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`, `validator_accreditation_id` and `vs_id`, so that indexers build the `Accreditation` tree of the schema without a query, and the `onboarding_fees` and `onboarding_deposit` escrowed with the `onboarding_funding_account`.
 
 > Note: the account that will record exchanges for this entry is `VerifiableService[vs_id].vs_account`, and its authorization is the entry's `msg_types`: nothing is created here. It cannot be used in the context of `applicant_accreditation` until [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding) sets its `effective_from` ([[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) step 1).
 
@@ -3782,7 +3782,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 ###### [MOD-AC-MSG-2-2-2] Renew Onboarding role and mode checks
 
 - Load `Accreditation` entry `applicant_accreditation`. `co.id` MUST equal `applicant_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), else MUST abort. `applicant_accreditation` MUST be a [[ref: active accreditation]].
-- Load `Accreditation` entry `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`. It MUST exist (a validator whose entry expired or was revoked cannot renew its applicants), and be a [[ref: active accreditation]], else MUST abort.
+- Load `Accreditation` entry `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`. It MUST exist (a validator whose entry expired or was revoked cannot renew its applicants), and be a [[ref: active accreditation]], else MUST abort. No [EcosystemBar](#ecosystembar) entry MAY exist for the ecosystem of its schema and `validator_accreditation.corporation_id`, unless that corporation controls the ecosystem, else abort ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)).
 - Load `CredentialSchema` entry `cs` from `validator_accreditation.schema_id`. It MUST exist.
 
 - if `applicant_accreditation.role` (AccreditationRole) is equal to ISSUER:
@@ -3975,7 +3975,7 @@ Now, let's verify `effective_until`:
 
 - load `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`. `validator_accreditation` MUST be a [[ref: active accreditation]].
 - `co.id` MUST equal `validator_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
-- neither deposit(`applicant_accreditation`) nor `TrustDeposit[applicant_accreditation.corporation_id]` MAY be [[ref: barred]] (`unrepaid_slash` > 0 or `excluded`), else abort: a slashed participation or corporation is not validated until its debt is repaid and its exclusion lifted ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion), [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
+- neither deposit(`applicant_accreditation`) nor `TrustDeposit[applicant_accreditation.corporation_id]` MAY be [[ref: barred]] (`unrepaid_slash` > 0 or `excluded`), and no [EcosystemBar](#ecosystembar) entry MAY exist for the ecosystem of the schema and `applicant_accreditation.corporation_id` unless that corporation controls the ecosystem ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)), else abort: a slashed participation or corporation is not validated until its debt is repaid and its exclusion lifted ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion), [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
 
 If `validator_accreditation` is not a [[ref: active accreditation]] (expired, revoked, slashed...) then applicant MUST start a new onboarding process.
 
@@ -4191,7 +4191,7 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 - (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`), AND
 - (`p.effective_until` is NULL or `p.effective_until` is greater than `effective_from_r`).
 
-Finally, [[ref: transaction]] MUST abort if `cs.root_accreditation_ids` already holds two entries: a schema holds its current root entry and at most one successor.
+Finally, [[ref: transaction]] MUST abort if `cs.root_accreditation_ids` already holds two entries whose `effective_until` is null or later than `now()` (an expired entry may await the end-of-block deletion): a schema holds its current root entry and at most one successor.
 
 ###### [MOD-AC-MSG-7-2-5] Create Root Accreditation barred checks
 
@@ -4262,7 +4262,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` from `id`. If no entry found, abort.
-- `applicant_accreditation.effective_from` MUST be set (a validated entry; its window may be current or future, and the entries of a barred participation or corporation may still be adjusted).
+- `applicant_accreditation.effective_from` MUST be set (a validated entry; its window may be current or future, and the entries of a barred participation or corporation may still be adjusted by their validator or by the ecosystem controller; the owner of a self-created entry is itself subject to [[BAR-CHECK-1]](#bar-check-1-ecosystem-bar) and, while barred, can only revoke it).
 - `effective_until` MUST be greater than `applicant_accreditation.effective_from`, else abort.
 
 > Note: This method can be used to both Extend or Reduce the `effective_until`, or set an `effective_until` if it was null.
@@ -4275,7 +4275,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 2. Self-created `Accreditation` entries: `applicant_accreditation.validator_accreditation_id` is set and the schema's mode for `applicant_accreditation.role` allows self-creation (`issuer_onboarding_mode` OPEN for an ISSUER, `verifier_onboarding_mode` OPEN or CREDENTIAL for a VERIFIER)
 
-- let `t` be the later of `now()` and `applicant_accreditation.effective_from`, and `validator_accreditation` the root entry of the schema whose window contains `t`: the entry of `cs.root_accreditation_ids` whose `effective_from` is not later than `t` and whose `effective_until` is null or later than `t` (where `cs` is `CredentialSchema[applicant_accreditation.schema_id]`; the entry's `validator_accreditation_id` may name a root since replaced). For an entry that is effective, this is the root in force; for an entry self-created under a future root ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), it is that future root, not the root currently active, whose end precedes the entry's start. It MUST exist. `co.id` MUST equal `applicant_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account). If `validator_accreditation.effective_until` is not null, `effective_until` MUST be lower or equal to it, else abort (the bound of [[MOD-AC-MSG-14-2-1]](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks), under the root in force).
+- let `t` be the later of `now()` and `applicant_accreditation.effective_from`, and `validator_accreditation` the root entry of the schema whose window contains `t` or, when none does (a gap between two roots), the root entry that starts next: the entry of `cs.root_accreditation_ids` whose `effective_from` is not later than `t` and whose `effective_until` is null or later than `t`, else the one whose `effective_from` is later than `t` (where `cs` is `CredentialSchema[applicant_accreditation.schema_id]`; the entry's `validator_accreditation_id` may name a root since replaced). For an entry that is effective, this is the root in force; for an entry self-created under a future root ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), it is that future root, not the root currently active, whose end precedes the entry's start. It MUST exist. `co.id` MUST equal `applicant_accreditation.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account). If `validator_accreditation.effective_until` is not null, `effective_until` MUST be lower or equal to it, else abort (the bound of [[MOD-AC-MSG-14-2-1]](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks), under that root).
 
 3. `Accreditation` entries that ran an onboarding process: every other entry with a `validator_accreditation_id`
 
@@ -4609,7 +4609,7 @@ A participation keeps its deposit after its entries expired or were revoked: it 
 
 Either Option #1, or #2 MUST return true, else abort. If `exclude` is true, Option #2 MUST return true, else abort.
 
-*Option #1*: executed by a validator ancestor
+*Option #1*: executed by a validator ancestor. [[BAR-CHECK-1]](#bar-check-1-ecosystem-bar) MUST pass for `co` and the ecosystem of the schema, else this option returns false: a corporation that is itself barred in the ecosystem does not sanction others.
 
 for each entry `applicant_accreditation` listed in `d.accreditation_ids` whose `effective_from` is set and whose `validator_accreditation_id` is defined (a pending entry gives the validator it chose no authority over the participation):
 
@@ -4643,7 +4643,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - calculate `tu_amount` = `d.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `d.tu` exactly.
 - calculate `slashed_fiat` = `d.fiat_cost` × `tu_amount` / `d.tu`, rounded down to the ledger precision — the debt in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 
-use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `VerifiableService[vs_id].corporation_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`, `exclude`), which records the debt on `d`, increments `d.slash_count` and sets `d.excluded` when `exclude` is true. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), `tu_amount`, `slashed_fiat`, `exclude` and `now`.
+use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `VerifiableService[vs_id].corporation_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`, `exclude`), which records the debt on `d`, increments `d.slash_count` and sets `d.excluded` when `exclude` is true. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), the `corporation_id` of the deposit, `tu_amount`, `slashed_fiat`, `exclude` and `now`.
 
 - for each entry `p` listed in `d.accreditation_ids` whose `effective_from` is set: delete it exactly as [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) does (the escrow of a pending renewal refunded to `p.onboarding_funding_account`, the id removed from `d.accreditation_ids`, one event each). An entry under its initial onboarding process (`effective_from` null) stays until its applicant cancels it ([[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request)); it cannot be validated while the participation is barred.
 
@@ -4652,7 +4652,7 @@ use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slas
 
 Any authorized `delegate` CAN execute this method on behalf of the `corporation` controlling the `Ecosystem` of the schema.
 
-This method sets or lifts the exclusion of a [[ref: participation]] (`ParticipationTrustDeposit.excluded`). With `excluded` true, the ecosystem withdraws trust from the participation without slashing it: the participation is [[ref: barred]], its entries stay in state but are not active, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]); a slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) sets the same flag while also taking trust units and deleting the validated entries. With `excluded` false, it lifts an exclusion set by a slash or by this method: the participation may again create entries and run entry-less exchanges under the schema, and the entries it still holds resume within their windows. A slash itself is not undone: the trust units stay slashed until repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), the participation stays barred while that debt is open, `slash_count` keeps its value, and the entries a slash deleted are not restored; the party onboards or self-creates anew.
+This method sets or lifts the exclusion of a [[ref: participation]] (`ParticipationTrustDeposit.excluded`). With `excluded` true, the ecosystem withdraws trust from the participation without slashing it: the participation is [[ref: barred]], its corporation can no longer act in the ecosystem under any other participation ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)), its entries stay in state but are not active, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]); a slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) sets the same flag while also taking trust units and deleting the validated entries. With `excluded` false, it lifts an exclusion set by a slash or by this method: the participation may again create entries and run entry-less exchanges under the schema, and the entries it still holds resume within their windows. A slash itself is not undone: the trust units stay slashed until repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), the participation stays barred while that debt is open, `slash_count` keeps its value, and the entries a slash deleted are not restored; the party onboards or self-creates anew.
 
 ##### [MOD-AC-MSG-13-1] Set Participation Exclusion parameters
 
@@ -4767,7 +4767,7 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 - (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`), AND
 - (`p.effective_until` is NULL or `p.effective_until` is greater than `effective_from_r`).
 
-Finally, the list is bounded. [[ref: transaction]] MUST abort if two entries listed in that deposit already name `validator_accreditation_id` as their validator (under one root, a participation holds its current entry and at most one successor), or if the deposit already lists `GlobalVariables.accreditation_max_entries_per_participation` entries.
+Finally, the list is bounded: [[ref: transaction]] MUST abort if two entries listed in that deposit already name `validator_accreditation_id` as their validator (under one root entry, a participation holds its current entry and at most one successor), or if the deposit already lists `GlobalVariables.accreditation_max_entries_per_participation` entries, counting only the entries that are PENDING or whose `effective_until` is null or later than `now()` (an expired entry may await the end-of-block deletion).
 
 > Note: the candidates are the current entries of the participation, read from its deposit.
 
@@ -6492,7 +6492,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `d.created` to `now`.
   - set `d.revoked` to null.
   - set `d.expires` to `expires` (the `credential_valid_until` of the issuance when called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)), null when absent, and file the entry in the expiry queue when not null.
-  - on a direct Msg, emit an event carrying `digest`, `vs_id`, `expires` and `now`; when called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), the `CredentialIssuance` event of the caller carries them.
+  - on a direct Msg, emit an event carrying `digest`, `vs_id`, `expires` and `now`; when called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), the `CredentialIssuance` event of the caller identifies them (`vs_id` through the issuer reference), and the earliest such event for a digest is its anchoring.
 
 #### [MOD-DI-MSG-2] Revoke Digest
 
@@ -7224,7 +7224,7 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 
 **Accreditation:**
 
-- `accreditation_max_entries_per_participation` (number) (*mandatory*): 8.
+- `accreditation_max_entries_per_participation` (number) (*mandatory*): 8 (a value from 2 to 64).
 
 **Trust Deposit and Trust Unit Index:**
 
