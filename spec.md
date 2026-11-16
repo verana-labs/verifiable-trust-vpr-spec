@@ -1319,6 +1319,11 @@ entity "Accreditation" as csp {
   vua_reward_rate: decimal
 }
 
+entity "EcosystemBar" as ebar {
+  *ecosystem_id: uint64
+  *corporation_id: uint64
+}
+
 entity "ParticipationTrustDeposit" as pdep {
   *(vs_id, schema_id, role)
   +tu: decimal
@@ -1455,6 +1460,9 @@ gv "1" --- "0..n" gfv: network_governance_framework_versions
 gfv "1" --- "1..n" gfd: documents
 tr "1" --- "0..n" eacc: ecosystem_id
 corp "1" --- "0..n" eacc: corporation_id
+tr "1" --- "0..n" ebar: ecosystem_id
+corp "1" --- "0..n" ebar: corporation_id
+ebar o-- "1..n" pdep: participations
 
 account "1" --- "1" corp : policy_address
 
@@ -1491,9 +1499,9 @@ Unless otherwise stated, every entity's `id` field is:
 
 Clients MAY rely on `id` ordering as a deterministic cursor for keyset pagination.
 
-Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `DelegateAuthorization` (composite PK on `(corporation_id, delegate)`), `ParticipationTrustDeposit` (composite PK on `(vs_id, schema_id, role)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsAccountBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), `EcosystemAcceptance` (composite PK on `(ecosystem_id, corporation_id)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, feeder)`). In every case the `(key)` annotation on a field marks the entity's primary key.
+Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `DelegateAuthorization` (composite PK on `(corporation_id, delegate)`), `ParticipationTrustDeposit` (composite PK on `(vs_id, schema_id, role)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsAccountBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), `EcosystemAcceptance` and `EcosystemBar` (composite PK on `(ecosystem_id, corporation_id)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, feeder)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
-**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_account` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121). A query of this specification adds no state: it reads by primary key, by key prefix, by one of these three indexes or by a scan of an entity that stays small. Credential schemas are the one scanned entity ([[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)): an ecosystem declares a few of them, where corporations, ecosystems and accreditations grow without bound. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: an [[ref: exchange record]] ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `DelegateAuthorization` by (`corporation_id`, `delegate`), `EcosystemAcceptance` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
+**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_account` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121). A query of this specification adds no state: it reads by primary key, by key prefix, by one of these three indexes or by a scan of an entity that stays small. Credential schemas are the one scanned entity ([[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)): an ecosystem declares a few of them, where corporations, ecosystems and accreditations grow without bound. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: an [[ref: exchange record]] ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `DelegateAuthorization` by (`corporation_id`, `delegate`), `EcosystemAcceptance` and `EcosystemBar` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
 
 ### VID ownership
 
@@ -1667,6 +1675,18 @@ A `ParticipationTrustDeposit` is the part of a corporation's single [[ref: trust
 - `accreditation_ids` (uint64[]) (*mandatory*): the ids of the current `Accreditation` entries of the participation (pending, future or effective): at most `GlobalVariables.accreditation_max_entries_per_participation`, and at most two under one validator, the current entry and one successor; appended when an entry is created ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), removed when it is deleted. It is how the sibling checks, the exchange guards ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Accreditation` entries.
 
 A deposit is created by the first entry of its participation, by the first mint to it or by an exclusion ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0 and `excluded` false. It is deleted by the method that empties it when `accreditation_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0 and `excluded` false (a slashed or excluded participation keeps its deposit, repaid or not: its count and its exclusion are its record). For an entry `p`, **deposit(`p`)** denotes `ParticipationTrustDeposit[(p.vs_id, p.schema_id, p.role)]`.
+
+### EcosystemBar
+
+An `EcosystemBar` lists the [[ref: barred]] participations of a corporation in an ecosystem: the `ParticipationTrustDeposit` entries of its service entries, under the schemas of the ecosystem, that carry an unrepaid slash or an exclusion. One entry per (ecosystem, corporation) pair, kept only while the list is not empty. While it exists, the corporation cannot act in the ecosystem, under any of its service entries, schemas or roles ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)): a sanctioned corporation does not escape the sanction of an ecosystem by registering another identifier. The messages that change the debt or the exclusion of a participation maintain it ([[BAR-CHECK-2]](#bar-check-2-maintenance)). It is read by key; since the key starts with the ecosystem, the sanctioned corporations of an ecosystem are a key-prefix read.
+
+`EcosystemBar`:
+
+- `ecosystem_id` (uint64) (*mandatory*) (key): the id of the [[ref: ecosystem]]. With `corporation_id`, forms the composite key.
+- `corporation_id` (uint64) (*mandatory*) (key): the id of the [[ref: corporation]].
+- `participations` ((`vs_id`, `schema_id`, `role`)[]) (*mandatory*): the keys of the barred [ParticipationTrustDeposit](#participationtrustdeposit) entries of the corporation under the schemas of the ecosystem. Never empty: the entry is deleted with its last key.
+
+> Note: the bar binds a corporation. A party that returns as another corporation is not stopped by the VPR; it gives up the trust deposit and every accreditation of the corporation it leaves, and the Organization credential of its new service still names the same legal entity to relying parties ([[ref: VT spec]]). An ecosystem for which that is not enough does not open its schemas with the OPEN mode.
 
 ### CredentialIssuance
 
@@ -2118,7 +2138,30 @@ Applies to every message of the [Accreditation Module](#accreditation-module) th
 2. Else it passes when `acc` exists, `e.acceptance_deadline` is not null and `now` < `e.acceptance_deadline`.
 3. Else the [[ref: transaction]] MUST abort with an error naming the version to accept. A party that has never accepted the EGF of an ecosystem, including an issuer or a verifier acting with no entry under an `OPEN` or `CREDENTIAL` schema, accepts the version in force before its first act in the ecosystem ([[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version)).
 
+A message that runs this check MUST then run [[BAR-CHECK-1]](#bar-check-1-ecosystem-bar) for the same `co` and `e`.
+
 > Note: an act that reaches no transaction (a credential issued, or a presentation requested, under a schema whose exchange requires no record) is not checked by the VPR; the counterparty enforces the acceptance through the acceptance history that indexers serve from the events of [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) ([[ref: VT spec]]).
+
+#### [BAR-CHECK] Ecosystem Bar Checks
+
+A corporation that has a [[ref: barred]] participation in an ecosystem cannot act in that ecosystem until the debt is repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and the exclusion lifted ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). The barred participations of a corporation in an ecosystem are listed on its [EcosystemBar](#ecosystembar) entry, so that the check is one key lookup.
+
+##### [BAR-CHECK-1] Ecosystem bar
+
+Applies wherever [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) applies, after it, for the same ecosystem `e` and corporation `co`, with the same exceptions: the controller of the ecosystem, the sanction messages ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit), [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request), and [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) when the corporation revokes its own entry.
+
+1. `EcosystemBar[(e.id, co.id)]` MUST NOT exist, else the [[ref: transaction]] MUST abort with an error naming the participations it lists.
+
+> Note: the checks each message makes on the participation it acts for are unchanged; this check adds the other participations of the corporation in the ecosystem. Repay Slash ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) is not subject to it: a barred corporation can always repay.
+
+##### [BAR-CHECK-2] Maintenance
+
+A method that changes `unrepaid_slash` or `excluded` on a `ParticipationTrustDeposit` entry `d` ([[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)) MUST, after the change, with `e_id` = `CredentialSchema[d.schema_id].ecosystem_id` and `c_id` = `VerifiableService[d.vs_id].corporation_id`:
+
+1. if `d` is barred (`d.unrepaid_slash` > 0 or `d.excluded` is true): add the key of `d` to `EcosystemBar[(e_id, c_id)].participations` unless it is already listed, creating the entry if it does not exist;
+2. else: remove the key of `d` from `EcosystemBar[(e_id, c_id)].participations` if it is listed, and delete the entry if its list becomes empty.
+
+The list is the set of the barred participations, never a count: applied twice, the rule changes nothing.
 
 #### [FUND-CHECK] Funding Account Resolution
 
@@ -2224,6 +2267,7 @@ As a result, `accountABC` is authorized to:
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |N/A |
 |                                | Get Network Gas Price                   | /td/v1/gas-price              | Query  | [[MOD-TD-QRY-3]](#mod-td-qry-3-get-network-gas-price)   |N/A  |
 |                                | Get Participation Trust Deposit                 | /td/v1/deposit/get            | Query  | [[MOD-TD-QRY-4]](#mod-td-qry-4-get-participation-trust-deposit)   |N/A  |
+|                                | Get Ecosystem Bar                               | /td/v1/bar/get                | Query  | [[MOD-TD-QRY-5]](#mod-td-qry-5-get-ecosystem-bar)   |N/A  |
 | Distribution                   | Update Module Parameters                | N/A (Tx)                      | Msg    | [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters)   | [[ref: governance proposal]] |
 | Delegation  | Grant Fee Allowance         |   N/A (Tx)  | Msg  | [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)   |module call|
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
@@ -3630,7 +3674,7 @@ Finally, the list is bounded. [[ref: transaction]] MUST abort if two entries of 
 A [[ref: barred]] corporation MUST NOT start an onboarding process, nor may a corporation start one for a barred participation: a slash debt is repaid first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), an exclusion is lifted by the ecosystem controller ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)) or by network governance ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
 
 - `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
-- the participation MUST NOT be barred: `ParticipationTrustDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false; else abort. The exclusion is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); an expired or revoked entry alone does not prevent a new one.
+- the participation MUST NOT be barred: `ParticipationTrustDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false; else abort. The exclusion is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); an expired or revoked entry alone does not prevent a new one. The other participations of the corporation in the ecosystem are checked by [[BAR-CHECK-1]](#bar-check-1-ecosystem-bar).
 
 ##### [MOD-AC-MSG-1-3] Start Onboarding execution
 
@@ -4523,7 +4567,7 @@ This method can only be called by either:
 - a `corporation` ancestor validator of an entry of this participation;
 - the `corporation` controller of the `Ecosystem` object, owner of the corresponding credential schema.
 
-A slash is the ecosystem's sanction on a participation: it removes trust units, which the corporation owes back ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), revokes the participation's validated entries (a renewal pending on one of them included) and, when the ecosystem so decides (`exclude`), excludes it until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). The participation is [[ref: barred]] while its debt is unrepaid or its exclusion stands. An ecosystem cannot slash while the corporation carries a network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)): the trust deposit then holds less than its parts say, and the network debt is repaid first.
+A slash is the ecosystem's sanction on a participation: it removes trust units, which the corporation owes back ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), revokes the participation's validated entries (a renewal pending on one of them included) and, when the ecosystem so decides (`exclude`), excludes it until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). The participation is [[ref: barred]] while its debt is unrepaid or its exclusion stands, and while it is, its corporation cannot act in the ecosystem under any other participation either ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)). An ecosystem cannot slash while the corporation carries a network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)): the trust deposit then holds less than its parts say, and the network debt is repaid first.
 
 ##### [MOD-AC-MSG-12-1] Slash Participation Trust Deposit parameters
 
@@ -4635,6 +4679,7 @@ If all precondition checks passed, [[ref: transaction]] is executed.
 
 - if `d` does not exist, create it with an empty ledger (`tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0, `excluded` false, no entries).
 - set `d.excluded` to `excluded`.
+- apply [[BAR-CHECK-2]](#bar-check-2-maintenance) to `d`.
 - if `excluded` is false and `d` is now empty (`accreditation_ids` empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0), delete `d`.
 
 The method MUST emit an event carrying `vs_id`, `schema_id`, `role`, `excluded` and the current timestamp.
@@ -4694,7 +4739,7 @@ To execute this method, all of the following rules MUST hold, else [[ref: transa
 - The related `CredentialSchema` entry is loaded with `validator_accreditation.schema_id`, and will be named `cs` in this section.
 - if `role` is equal to ISSUER: if `cs.issuer_onboarding_mode` is not equal to OPEN, MUST abort.
 - if `role` is equal to VERIFIER: if `cs.verifier_onboarding_mode` is neither OPEN nor CREDENTIAL, MUST abort.
-- the participation MUST NOT be barred: `ParticipationTrustDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false; else abort. The exclusion is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); an expired or revoked entry alone does not prevent a new one.
+- the participation MUST NOT be barred: `ParticipationTrustDeposit[(vs_id, cs.id, role)]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false; else abort. The exclusion is the ecosystem's sanction on a participation and stands after repayment, until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); an expired or revoked entry alone does not prevent a new one. The other participations of the corporation in the ecosystem are checked by [[BAR-CHECK-1]](#bar-check-1-ecosystem-bar).
 
 ###### [MOD-AC-MSG-14-2-3] Self Create Accreditation fee checks
 
@@ -5636,6 +5681,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - debit `repay_amount` from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account.
 - if `vs_id` is given: set `d.tu` to `d.tu` + `debt_tu`; set `d.fiat_cost` to `d.fiat_cost` + `debt_fiat`; set `d.unrepaid_slash` and `d.unrepaid_fiat` to 0; for the `TrustDeposit` entry `td` of `co`: set `td.tu` to `td.tu` + `debt_tu`; set `td.fiat_cost` to `td.fiat_cost` + `debt_fiat`.
 - else: set `td.tu` to `td.tu` + `debt_tu`; set `td.fiat_cost` to `td.fiat_cost` + `debt_fiat`; set `td.unrepaid_slash` and `td.unrepaid_fiat` to 0.
+- if `vs_id` is given, apply [[BAR-CHECK-2]](#bar-check-2-maintenance) to `d`: the participation leaves the list of its corporation unless it is excluded.
 - emit an event carrying `co.id`, the participation key when given, `debt_tu`, `debt_fiat` and `now`.
 
 #### [MOD-TD-MSG-7] Record Ecosystem Slash
@@ -5677,6 +5723,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - define `now`: current timestamp.
 - set `td.tu` to `td.tu` - `tu_amount`; set `td.fiat_cost` to `td.fiat_cost` - `fiat_amount`.
 - set `d.tu` to `d.tu` - `tu_amount`; set `d.fiat_cost` to `d.fiat_cost` - `fiat_amount`; set `d.unrepaid_slash` to `d.unrepaid_slash` + `tu_amount`; set `d.unrepaid_fiat` to `d.unrepaid_fiat` + `fiat_amount`; set `d.slash_count` to `d.slash_count` + 1; if `exclude` is true, set `d.excluded` to true.
+- apply [[BAR-CHECK-2]](#bar-check-2-maintenance) to `d`: the participation is now barred.
 
 #### [MOD-TD-MSG-8] Set Corporation Exclusion
 
@@ -5781,6 +5828,22 @@ Any [[ref: account]] CAN run this [[ref: query]].
 ##### [MOD-TD-QRY-4-3] Get Participation Trust Deposit execution of the query
 
 Return the [ParticipationTrustDeposit](#participationtrustdeposit) entry `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, if any, with the current `tu_peg_value`. If no entry exists, return not found.
+
+#### [MOD-TD-QRY-5] Get Ecosystem Bar
+
+Any [[ref: account]] CAN run this [[ref: query]].
+
+##### [MOD-TD-QRY-5-1] Get Ecosystem Bar query parameters
+
+- `ecosystem_id` (uint64) (*mandatory*) and `corporation_id` (uint64) (*mandatory*): the key of the entry.
+
+##### [MOD-TD-QRY-5-2] Get Ecosystem Bar query checks
+
+- `ecosystem_id` and `corporation_id` MUST be valid uint64.
+
+##### [MOD-TD-QRY-5-3] Get Ecosystem Bar execution of the query
+
+Return the [EcosystemBar](#ecosystembar) entry `EcosystemBar[(ecosystem_id, corporation_id)]`, or not found: the corporation then has no barred participation in the ecosystem. The keys it lists are those to pass to [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash) or to have lifted by [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion).
 
 ### Network Fees
 
