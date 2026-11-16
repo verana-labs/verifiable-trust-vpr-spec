@@ -6995,7 +6995,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-VS-MSG-3] Rotate Verifiable Identifier
 
-This method is **not delegable**: the `corporation` executes it alone through a corporation proposal. It replaces the identifier string of an entry, the identifier through which relying parties trust-resolve the corporation's service, which is a decision of the corporation itself, not of a delegate. Every `Corporation`, `Ecosystem` and `Accreditation` entry that references the entry, every accreditation, fee term, deposit and VS account configuration, is unaffected: they reference `vs_id`, never the string.
+This method is **not delegable**: the `corporation` executes it alone through a corporation proposal. It replaces the identifier string of an entry, the identifier through which relying parties trust-resolve the corporation's service: every accreditation of the entry moves to the new identifier with no re-validation, and the trust of relying parties moves to new keys. A delegate may change which account signs for an identifier ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)); only the corporation may change the identifier. Every `Corporation`, `Ecosystem` and `Accreditation` entry that references the entry, every accreditation, fee term, deposit and VS account configuration, is unaffected: they reference `vs_id`, never the string. A corporation that needs a fast rotation (a `transition` of 0 after a key compromise) sets the decision policy of its group accordingly.
 
 ##### [MOD-VS-MSG-3-1] Rotate Verifiable Identifier parameters
 
