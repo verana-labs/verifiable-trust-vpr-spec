@@ -165,6 +165,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: decentralized identifier communication, DIDComm]]:
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
 
+[[def: delegable message, delegable messages]]:
+~ A message that a [[ref: corporation]] can let another account sign on its behalf: a [[ref: delegate]] or, for the messages that offer that path, a [[ref: VS account]]. See [MsgType](#msgtype), which lists them.
+
 [[def: delegate, delegates]]:
 ~ An [[ref: account]] that a [[ref: corporation]] authorizes, through a `DelegateAuthorization` entry, to sign delegable messages on its behalf. See [[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks).
 
@@ -1726,7 +1729,7 @@ A `Digest` entry records the digest, its anchoring context (the [VerifiableServi
 
 ### MsgType
 
-`MsgType` enumerates the delegable messages of the VPR: the messages a `corporation` executes through a `delegate` under a [DelegateAuthorization](#delegateauthorization) or, in the context of a [VerifiableService](#verifiableservice) entry, through its `vs_account` under the entry's `msg_types`; the same values scope a [FeeGrant](#feegrant), which is why `AcceptCorporationGovernanceFramework`, signed by a delegate alone, has a value: a corporation may pay the fee of its delegate's acceptance, but no authorization or entry configuration may list it. Every `msg_types` list of the data model and of the message parameters is a list of `MsgType` values, never of message names or protobuf type URLs: a configured entry exists per registered service, and a type URL costs about fifty bytes per value where an enumeration value costs one.
+`MsgType` enumerates the [[ref: delegable messages]] of the VPR: the messages a `corporation` executes through a `delegate` under a [DelegateAuthorization](#delegateauthorization) or, in the context of a [VerifiableService](#verifiableservice) entry, through its `vs_account` under the entry's `msg_types`; the same values scope a [FeeGrant](#feegrant), which is why `AcceptCorporationGovernanceFramework`, signed by a delegate alone, has a value: a corporation may pay the fee of its delegate's acceptance, but no authorization or entry configuration may list it. Every `msg_types` list of the data model and of the message parameters is a list of `MsgType` values, never of message names or protobuf type URLs: a configured entry exists per registered service, and a type URL costs about fifty bytes per value where an enumeration value costs one.
 
 Each value names the message type `Msg<value>` of the chain: `StartOnboarding` is `MsgStartOnboarding`. The value is the message name without the `Msg` prefix that the Cosmos SDK convention gives every message type.
 
@@ -1977,7 +1980,7 @@ It is entirely up to the `corporation` to decide **which accounts may execute wh
 
 #### Not Delegable Module Messages
 
-Some module messages specify only a `corporation`:
+Some module messages are not [[ref: delegable messages]] and specify only a `corporation`:
 
 - `corporation` (account):
   The `policy_address` of the `Corporation` that owns the manipulated resource, which is the signer: the policy account of the corporation's [[ref: group]] executes the Msg when a proposal passes.
