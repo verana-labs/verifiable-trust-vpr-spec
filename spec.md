@@ -196,6 +196,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: estimated transaction fees]]:
 ~ The fee a [[ref: transaction]] declares, at least the [[ref: network fee]] it requires. See [[NET-FEE-2]](#net-fee-2-required-fee).
 
+[[def: exchange record, exchange records]]:
+~ The record of a credential exchange: a `CredentialIssuance` or a `CredentialPresentation`, emitted as an event by the transaction that records it and not stored. See [CredentialIssuance](#credentialissuance).
+
 [[def: funding account, funding accounts]]:
 ~ The account a VPR method debits or credits on behalf of a [[ref: corporation]]: its own `policy_address` or that of its active [[ref: sponsor]]. Resolved by [[FUND-CHECK]](#fund-check-funding-account-resolution).
 
@@ -903,7 +906,7 @@ vg --> verifier : creates schema accreditation
 
 [[ref: Corporations]] acting as **issuers** or **verifiers** for a given credential schema **may be required to pay trust fees** based on the schema's configuration and `Accreditation` tree.
 
-If trust fee payment is required, or the schema sets a presentation validity period, or the verifier anchors the presentation digest, or a credential of a schema whose `credential_anchoring` is DIGEST or REVOCABLE_DIGEST is issued (its digest is anchored through the exchange), the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**, else HOLDER agent will not accept the operation.
+If trust fee payment is required, or the schema sets a presentation validity period, or the verifier anchors the presentation digest, or a credential of a schema whose `credential_anchoring` is DIGEST or REVOCABLE_DIGEST is issued (its digest is anchored through the exchange), the entity **must execute a transaction** in the [[ref: VPR]] to pay the appropriate [[ref: trust fees]] **before issuing or verifying a credential**, else the holder will not accept the operation.
 
 Key Points for "Pay-Per" Business Models
 
@@ -922,7 +925,7 @@ Trust fees are **consistently distributed** across participants:
 - The remaining portion is **transferred directly to the payee's account** — ordinary flow-through revenue, neither burned nor restricted.
 
 :::note
-Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment, or has sent the required `CredentialExchange` transaction whenever [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) requires one (fees greater than 0, a `presentation_validity_period` greater than 0, a presentation digest to anchor, or the issuance of a credential of an anchored schema).  
+Agents that implement the [[ref: VT spec]] **must verify** that the ISSUER or VERIFIER has fulfilled the required trust fee payment, or has recorded the required [[ref: exchange record]], a `CredentialIssuance` or a `CredentialPresentation` transaction, whenever [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) or [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) requires one (fees greater than 0, a `presentation_validity_period` greater than 0, a presentation digest to anchor, or the issuance of a credential of an anchored schema).  
 If not, they **must reject** the issuance or verification request.
 
 :::
@@ -1219,7 +1222,7 @@ enum "MsgType" as msgtype {
   CreateRootAccreditation
   SetAccreditationEffectiveUntil
   RevokeAccreditation
-  RecordCredentialExchange
+  RecordCredentialIssuance
   SlashParticipationTrustDeposit
   SelfCreateAccreditation
   TriggerResolver
@@ -1234,6 +1237,7 @@ enum "MsgType" as msgtype {
   RevokeSponsorship
   AcceptGovernanceFrameworkVersion
   AcceptCorporationGovernanceFramework
+  RecordCredentialPresentation
 }
 
 entity "DelegateAuthorization" as dauthz {
@@ -1485,7 +1489,7 @@ Clients MAY rely on `id` ordering as a deterministic cursor for keyset paginatio
 
 Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `DelegateAuthorization` (composite PK on `(corporation_id, delegate)`), `ParticipationTrustDeposit` (composite PK on `(vs_id, schema_id, role)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsAccountBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), `EcosystemAcceptance` (composite PK on `(ecosystem_id, corporation_id)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, feeder)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
-**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_account` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these three indexes, nothing else. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: a [CredentialExchange](#credentialexchange) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `DelegateAuthorization` by (`corporation_id`, `delegate`), `EcosystemAcceptance` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
+**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_account` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these three indexes, nothing else. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: an [[ref: exchange record]] ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `DelegateAuthorization` by (`corporation_id`, `delegate`), `EcosystemAcceptance` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
 
 ### VID ownership
 
@@ -1507,7 +1511,7 @@ A [[ref: verifiable service entry]] (`VerifiableService`) registers a [[ref: VID
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] that owns the identifier. Set at registration and never changed.
 - `vid` (string) (*mandatory*): the current identifier string. MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters. Globally unique among current `vid` values (see [VID ownership](#vid-ownership)). Changed only by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier), which emits the former value; the VPR does not keep former values.
 - `vs_account` (account) (*optional*): the [[ref: VS account]]: the account that the service identified by `vid` signs with, authorized to execute the entry's `msg_types` in the context of this entry and of every `Accreditation` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks)); null when none is set. One account MAY be the VS account of many entries of the same corporation; an entry has at most one.
-- `msg_types` ([MsgType](#msgtype)[]) (*optional*): the delegable message types `vs_account` is authorized to execute on behalf of the owner corporation in the context of this entry and of every `Accreditation` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks)). Permitted values: `RecordCredentialExchange`, `ValidateOnboarding`, `StoreDigest`, `RevokeDigest`, `TriggerResolver`. Empty when the VS account is authorized for nothing. With `period` and `fee_spend_limit`, this is the VS account configuration of the entry: set with the VS account by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service), changed only when the corporation changes it. The role-specific checks of each message decide what the VS account can actually do with a given `Accreditation` entry. What an operation changes, the running budget, is kept apart in [VsAccountBudget](#vsaccountbudget), so that consuming it never rewrites the entry.
+- `msg_types` ([MsgType](#msgtype)[]) (*optional*): the delegable message types `vs_account` is authorized to execute on behalf of the owner corporation in the context of this entry and of every `Accreditation` entry that references it ([[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks)). Permitted values: `RecordCredentialIssuance`, `RecordCredentialPresentation`, `ValidateOnboarding`, `StoreDigest`, `RevokeDigest`, `TriggerResolver`. Empty when the VS account is authorized for nothing. With `period` and `fee_spend_limit`, this is the VS account configuration of the entry: set with the VS account by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service), changed only when the corporation changes it. The role-specific checks of each message decide what the VS account can actually do with a given `Accreditation` entry. What an operation changes, the running budget, is kept apart in [VsAccountBudget](#vsaccountbudget), so that consuming it never rewrites the entry.
 - `period` (duration) (*optional*): length of the operation-budget cycle of the entry's [VsAccountBudget](#vsaccountbudget). Requires a budget. Does not apply to fees: the fee budget cycles on the network-wide `GlobalVariables.vs_account_fee_period`.
 - `fee_spend_limit` (DenomAmount[]) (*optional*): the entry's **contribution** to the transaction fee allowance the corporation grants to `vs_account`: added to the per-period limit of that allowance, per `GlobalVariables.vs_account_fee_period`, when the configuration is set and subtracted when it is cleared or replaced ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-account-fee-allowance)). The allowance is per account: it pays the fees of every transaction `vs_account` signs with the corporation as granter, whichever entry the messages concern. Empty when the corporation does not pay the VS account's transaction fees; when set, every amount is strictly positive, the entry contributes to the allowance, and [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) accepts corporation-paid fees for messages executed in the context of this entry.
 - `created` (timestamp) (*mandatory*): registration timestamp.
@@ -1597,19 +1601,19 @@ An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of
 - `issuer_accreditation_validity_period` (number) (*mandatory*): number of days after which an issuer `Accreditation` entry expires and must be renewed.
 - `verifier_accreditation_validity_period` (number) (*mandatory*): number of days after which a verifier `Accreditation` entry expires and must be renewed.
 - `holder_accreditation_validity_period` (number) (*mandatory*): number of days after which a holder `Accreditation` entry expires and must be renewed.
-- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how accreditations are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credentials of this schema without an onboarding process: an issuer acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)); it MAY self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the `verification_fees` and `validation_fees` it charges; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER entry; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER entry;
-- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how accreditations are managed for verifiers of this `CredentialSchema`. OPEN means any service can verify credentials of this schema without an onboarding process: a verifier acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash; it MAY self-create a `VERIFIER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)); CREDENTIAL means any service whose identifier is the subject of a valid credential of one of the schemas listed in `verifier_credential_schema_ids`, as established by the holder's trust resolution ([[ref: VT spec]]), can verify, under its service entry likewise; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER entry; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER entry;
+- `issuer_onboarding_mode` (IssuerOnboardingMode) (*mandatory*): defines how accreditations are managed for issuers of this `CredentialSchema`. OPEN means anyone can issue credentials of this schema without an onboarding process: an issuer acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)); it MAY self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the `verification_fees` and `validation_fees` it charges; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and an ISSUER_GRANTOR in order to create an ISSUER entry; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate ISSUER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create an ISSUER entry;
+- `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how accreditations are managed for verifiers of this `CredentialSchema`. OPEN means any service can verify credentials of this schema without an onboarding process: a verifier acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash; it MAY self-create a `VERIFIER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)); CREDENTIAL means any service whose identifier is the subject of a valid credential of one of the schemas listed in `verifier_credential_schema_ids`, as established by the holder's trust resolution ([[ref: VT spec]]), can verify, under its service entry likewise; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER entry; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER entry;
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): ids of the `CredentialSchema` entries whose holders are authorized verifiers when `verifier_onboarding_mode` is CREDENTIAL; MUST be set, non-empty, iff the mode is CREDENTIAL. Each id MUST refer to a `CredentialSchema` entry whose `subject_kind` is SERVICE and whose `presentation_mode` is PUBLIC, so that a holder can establish the verifier's credential from its DID Document alone, before any exchange. The VPR stores the list and does not evaluate it; the holder does, per the [[ref: VT spec]]. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema); a change applies to the presentations that follow it.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how accreditations are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER entry; NO_ONBOARDING_PROCESS means no onboarding process runs on the VPR for holders: a holder needs no `Accreditation` entry, the issuer applies its own checks off the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
 - `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the UserAgent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to NO_ONBOARDING_PROCESS, since a natural person holds no `Accreditation` entry. Immutable.
-- `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service as a Linked Verifiable Presentation in its DID Document, and anyone can read it; reading a published credential is not a Credential Verification: no exchange is recorded and no fees are computed, so the `verification_fees` of a PUBLIC schema's `Accreditation` entries SHOULD be 0, since they can never be collected. ON_REQUEST: the credential is not published; the holder service presents it automatically, without the approval of its controller, to any requesting verifier authorized under the schema's `verifier_onboarding_mode` (under OPEN any peer; under CREDENTIAL a peer whose service identifier is the subject of a credential of one of the schemas listed in `verifier_credential_schema_ids`, published in its DID Document, which the holder establishes itself; under the two onboarding modes the holder of an active VERIFIER `Accreditation` entry), one credential at a time, most recently received first, each after having verified the exchange transaction of the previous one when one is required (see [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)). ON_APPROVAL: as ON_REQUEST, but the controller of the holder service approves each request and selects the credentials to present, before the holder discloses whether it holds a credential of the schema and before any payment is made; a declined request discloses nothing. The VPR stores this declaration; its enforcement is the responsibility of agents, as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Immutable.
+- `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service as a Linked Verifiable Presentation in its DID Document, and anyone can read it; reading a published credential is not a Credential Presentation: no exchange is recorded and no fees are computed, so the `verification_fees` of a PUBLIC schema's `Accreditation` entries SHOULD be 0, since they can never be collected. ON_REQUEST: the credential is not published; the holder service presents it automatically, without the approval of its controller, to any requesting verifier authorized under the schema's `verifier_onboarding_mode` (under OPEN any peer; under CREDENTIAL a peer whose service identifier is the subject of a credential of one of the schemas listed in `verifier_credential_schema_ids`, published in its DID Document, which the holder establishes itself; under the two onboarding modes the holder of an active VERIFIER `Accreditation` entry), one credential at a time, most recently received first, each after having verified the exchange transaction of the previous one when one is required (see [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)). ON_APPROVAL: as ON_REQUEST, but the controller of the holder service approves each request and selects the credentials to present, before the holder discloses whether it holds a credential of the schema and before any payment is made; a declined request discloses nothing. The VPR stores this declaration; its enforcement is the responsibility of agents, as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Immutable.
 - `credential_format` (CredentialFormat) (*mandatory*): the single format in which credentials of this schema are issued: W3C_JSONLD (W3C Verifiable Credentials in JSON-LD), ANONCREDS, SD_JWT, or MDOC (ISO/IEC 18013-5 mobile documents, `mso_mdoc`). MDOC is only allowed when `subject_kind` is PERSON. A PUBLIC credential is necessarily W3C_JSONLD, since it is published as a Linked Verifiable Presentation; a presented (non-published) service credential MAY use ANONCREDS or SD_JWT when selective disclosure or unlinkability matters, as the UserAgent credential does. An ecosystem that needs the same claims in several formats creates one schema per format. Future versions of this specification MAY add values. Immutable.
-- `credential_anchoring` (CredentialAnchoring) (*mandatory*): declares what the VPR holds of every credential of this schema. NO_DIGEST: no credential digest is anchored; the container's native mechanisms apply and trust in the credential requires a currently authorized issuer. DIGEST: the issuer anchors the credential digest, as defined by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/) for the container, through the issuance `CredentialExchange` before delivering the credential; the event of the issuance transaction gives the credential's effective issuance time and the entry it was issued under; nothing is written, and revocation, if any, uses a mechanism native to the container (the [[ref: VT spec]] defines none for a W3C credential under DIGEST: an ecosystem that must revoke W3C credentials declares REVOCABLE_DIGEST). REVOCABLE_DIGEST: as DIGEST, and the issuance transaction persists the digest as a [Digest](#digest) entry, revocable by the owner of the anchoring entry, by a grantor above the issuer's current entries or by the ecosystem controlling the schema ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) and kept until the credential expires; the credential MUST carry an expiry ([[ref: VT spec]]) and the issuance transaction MUST give it (`credential_valid_until`). MUST be DIGEST or REVOCABLE_DIGEST when `credential_format` is W3C_JSONLD and MUST be NO_DIGEST when it is ANONCREDS (a verifier never sees an AnonCreds credential, only a proof derived from it); an ecosystem chooses for SD_JWT and MDOC. [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) requires the `digest` of a Credential Issuance unless the value is NO_DIGEST, and refuses one under NO_DIGEST. Immutable.
-- `presentation_validity_period` (duration) (*optional*): the duration in seconds during which a presentation of a credential of this schema is valid evidence of a verification; null or 0 means no reliance period and no digest requirement. MUST be null or 0 when `presentation_mode` is PUBLIC (published credentials are read, not presented, and produce no receipt). At most `GlobalVariables.credential_schema_presentation_validity_period_max_days` days (3,650 by default), a network governance parameter ([[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)). A value greater than 0 makes a `CredentialExchange` transaction carrying the presentation digest mandatory for every verification of the schema: [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) reads the value in force at the block to require the digest. The end of the reliance period of a presentation is not stored: it is the block time of the exchange transaction that carried the presentation digest plus the value of this attribute in force at that time, computed by the parties, and by indexers from the schema's update history. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): a change applies to the verifications that follow it and does not change the reliance period of the presentations already anchored; agents read the value in force at the time of the verification. The legal effect of the period is stated by the ecosystem in its governance framework.
+- `credential_anchoring` (CredentialAnchoring) (*mandatory*): declares what the VPR holds of every credential of this schema. NO_DIGEST: no credential digest is anchored; the container's native mechanisms apply and trust in the credential requires a currently authorized issuer. DIGEST: the issuer anchors the credential digest, as defined by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/) for the container, through the `CredentialIssuance` transaction before delivering the credential; the event of the issuance transaction gives the credential's effective issuance time and the entry it was issued under; nothing is written, and revocation, if any, uses a mechanism native to the container (the [[ref: VT spec]] defines none for a W3C credential under DIGEST: an ecosystem that must revoke W3C credentials declares REVOCABLE_DIGEST). REVOCABLE_DIGEST: as DIGEST, and the issuance transaction persists the digest as a [Digest](#digest) entry, revocable by the owner of the anchoring entry, by a grantor above the issuer's current entries or by the ecosystem controlling the schema ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) and kept until the credential expires; the credential MUST carry an expiry ([[ref: VT spec]]) and the issuance transaction MUST give it (`credential_valid_until`). MUST be DIGEST or REVOCABLE_DIGEST when `credential_format` is W3C_JSONLD and MUST be NO_DIGEST when it is ANONCREDS (a verifier never sees an AnonCreds credential, only a proof derived from it); an ecosystem chooses for SD_JWT and MDOC. [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) requires the `credential_digest` unless the value is NO_DIGEST, and refuses one under NO_DIGEST. Immutable.
+- `presentation_validity_period` (duration) (*optional*): the duration in seconds during which a presentation of a credential of this schema is valid evidence of a verification; null or 0 means no reliance period and no digest requirement. MUST be null or 0 when `presentation_mode` is PUBLIC (published credentials are read, not presented, and produce no receipt). At most `GlobalVariables.credential_schema_presentation_validity_period_max_days` days (3,650 by default), a network governance parameter ([[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)). A value greater than 0 makes a `CredentialPresentation` transaction carrying the presentation digest mandatory for every presentation of a credential of the schema: [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) reads the value in force at the block to require the digest. The end of the reliance period of a presentation is not stored: it is the block time of the exchange transaction that carried the presentation digest plus the value of this attribute in force at that time, computed by the parties, and by indexers from the schema's update history. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): a change applies to the verifications that follow it and does not change the reliance period of the presentations already anchored; agents read the value in force at the time of the presentation. The legal effect of the period is stated by the ecosystem in its governance framework.
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for pricing business fees. Can be COIN (a token available on the VPR chain) or FIAT (fees are priced in a fiat currency; the fee itself is settled off-chain, while deposit-bound amounts and Verifiable User Agent rewards are settled on-chain in [[ref: native denom]] at the oracle rate). [[ref: Trust units]] are **not** a pricing asset: a decaying unit cannot label prices. Note that in all cases, deposit-bound amounts are always paid in [[ref: native denom]] and minted as [[ref: trust units]].
 - `pricing_asset` (string) (*mandatory*): examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,... (multi-fiat pricing is supported; protocol-level accounting uses the [[ref: main fiat currency]]).
-- `digest_algorithm` (string) (*mandatory*): algorithm used to compute the credential digests of credentials issued under this schema (when `credential_anchoring` is DIGEST or REVOCABLE_DIGEST) and the presentation digests anchored by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
-- `root_accreditation_ids` (uint64[]) (*optional*): the root ECOSYSTEM `Accreditation` entries of this schema, in creation order, appended by [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation) and removed when the entry is deleted; absent until the first is created. At most one of them is an [[ref: active accreditation]] at any time ([[MOD-AC-MSG-7-2-4]](#mod-ac-msg-7-2-4-create-root-accreditation-overlap-checks)): that one is the **active root entry** of the schema, read by [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) and [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange). A few ids per schema, in place of an index of `Accreditation` entries by schema.
+- `digest_algorithm` (string) (*mandatory*): algorithm used to compute the credential digests of credentials issued under this schema (when `credential_anchoring` is DIGEST or REVOCABLE_DIGEST) and the presentation digests anchored by [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation), as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
+- `root_accreditation_ids` (uint64[]) (*optional*): the root ECOSYSTEM `Accreditation` entries of this schema, in creation order, appended by [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation) and removed when the entry is deleted; absent until the first is created. At most one of them is an [[ref: active accreditation]] at any time ([[MOD-AC-MSG-7-2-4]](#mod-ac-msg-7-2-4-create-root-accreditation-overlap-checks)): that one is the **active root entry** of the schema, read by [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) and [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation). A few ids per schema, in place of an index of `Accreditation` entries by schema.
 
 ### Accreditation
 
@@ -1635,7 +1639,7 @@ An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of
 - `onboarding_summary_digest` (bytes) (*optional*): an optional digest, set by the [[ref: validator]], of a summary of the information, proofs... provided by the [[ref: applicant]]; computed with the `digest_algorithm` of the schema, given in SRI form at the API and stored as the decoded 48 or 64 bytes.
 - `issuance_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to an ISSUER_GRANTOR or ISSUER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) or to an ISSUER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated issuance fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
-- `vua_reward_rate` (decimal) (*optional*): on an `ISSUER` entry of a User Agent schema, the rate of the reward the vendor claims on the trust fees of the exchanges its Verifiable User Agents take part in ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), between 0 and `GlobalVariables.vua_reward_rate`; null means the global rate. Declared by the applicant at [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding) like its fees, fixed for the life of the entry (a renewal keeps it); ignored on any entry that is never referenced as `vua_issuer_accreditation_id`.
+- `vua_reward_rate` (decimal) (*optional*): on an `ISSUER` entry of a User Agent schema, the rate of the reward the vendor claims on the trust fees of the exchanges its Verifiable User Agents take part in ([[MOD-AC-MSG-17]](#mod-ac-msg-17-settle-exchange-fees)), between 0 and `GlobalVariables.vua_reward_rate`; null means the global rate. Declared by the applicant at [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding) like its fees, fixed for the life of the entry (a renewal keeps it); ignored on any entry that is never referenced as `vua_issuer_accreditation_id`.
 
 **Expiry.** At the end of every block, the accreditation module deletes every entry whose `onboarding_state` is VALIDATED and whose `effective_until` is not null and not later than the block time (implementations keep an expiry queue, bucketed by time, written whenever `effective_until` is set or changed), removes its id from its [ParticipationTrustDeposit](#participationtrustdeposit) and, for a root entry, from `CredentialSchema.root_accreditation_ids`, and emits an event for each. An entry whose `onboarding_state` is PENDING (a renewal in progress) is not swept: it ends at validation, with its new `effective_until`, or at cancellation, which deletes it at once if its window has already ended.
 
@@ -1655,23 +1659,34 @@ A `ParticipationTrustDeposit` is the part of a corporation's single [[ref: trust
 - `unrepaid_slash` (decimal) (*mandatory*): [[ref: trust units]] slashed from this deposit by an ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) and not yet repaid, accumulated over successive slashes; set back to 0 by repayment ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)). The participation is [[ref: barred]] while it is greater than 0. A network slash ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)) leaves it untouched: the network debt is on the [TrustDeposit](#trustdeposit).
 - `unrepaid_fiat` (decimal) (*mandatory*): the mint-time cost basis of `unrepaid_slash`, in [[ref: main fiat currency]], fixed at each slash and accumulated with it; what its repayment costs ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)): trust scores decay, liabilities do not. 0 when `unrepaid_slash` is 0.
 - `slash_count` (number) (*mandatory*): the number of times this participation has been slashed by an ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)); never reset. Network slashes are counted on the [TrustDeposit](#trustdeposit).
-- `excluded` (boolean) (*mandatory*): set to true by an ecosystem slash whose `exclude` parameter is true ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) or directly by the ecosystem controller ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)): the ecosystem's decision to withdraw trust from what the participation issued or validated before ([[ref: VT spec]]). The participation is [[ref: barred]]: it can no longer take part in the schema, neither through a new entry ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), a renewal ([[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)) or a validation ([[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)), nor through entry-less exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), until the ecosystem controller lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), the repayment of its debt notwithstanding. A network slash does not set it: the corporation's own flag is on its [TrustDeposit](#trustdeposit).
-- `accreditation_ids` (uint64[]) (*mandatory*): the ids of the current `Accreditation` entries of the participation (pending, future or effective), a few at most; appended when an entry is created ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), removed when it is deleted. It is how the sibling checks, the exchange guards ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Accreditation` entries.
+- `excluded` (boolean) (*mandatory*): set to true by an ecosystem slash whose `exclude` parameter is true ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) or directly by the ecosystem controller ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)): the ecosystem's decision to withdraw trust from what the participation issued or validated before ([[ref: VT spec]]). The participation is [[ref: barred]]: it can no longer take part in the schema, neither through a new entry ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), a renewal ([[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)) or a validation ([[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)), nor through entry-less exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)), until the ecosystem controller lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), the repayment of its debt notwithstanding. A network slash does not set it: the corporation's own flag is on its [TrustDeposit](#trustdeposit).
+- `accreditation_ids` (uint64[]) (*mandatory*): the ids of the current `Accreditation` entries of the participation (pending, future or effective), a few at most; appended when an entry is created ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), removed when it is deleted. It is how the sibling checks, the exchange guards ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Accreditation` entries.
 
 A deposit is created by the first entry of its participation, by the first mint to it or by an exclusion ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0 and `excluded` false. It is deleted by the method that empties it when `accreditation_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0 and `excluded` false (a slashed or excluded participation keeps its deposit, repaid or not: its count and its exclusion are its record). For an entry `p`, **deposit(`p`)** denotes `ParticipationTrustDeposit[(p.vs_id, p.schema_id, p.role)]`.
 
-### CredentialExchange
+### CredentialIssuance
 
-A `CredentialExchange` is the record of a credential exchange, an issuance or a verification, that a `vs_account` records under an identifier agreed with its peer. It is a receipt, not state: [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) checks it, routes its fees and deposits, anchors the credential digest of an issuance, and emits it as an event; the VPR stores nothing for it. Indexers serve the exchange records from the events, by `exchange_id`, and notify the parties ([[ref: VT spec]]); the evidence of an exchange is its transaction, which both parties retain by hash. Each event of [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) carries one record:
+A `CredentialIssuance` is the [[ref: exchange record]] of the issuance of one credential, recorded by the `vs_account` of the issuer under an identifier agreed with the holder. It is a receipt, not state: [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) checks it, routes its fees and deposits, anchors the credential digest, and emits it as an event; the VPR stores nothing for it. Indexers serve the exchange records from the events, by `exchange_id`, and notify the parties ([[ref: VT spec]]); the evidence of an exchange is its transaction, which both parties retain by hash. Each event of [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) carries one record:
 
-- `exchange_id` (uuid): the exchange identifier, chosen by the agent that receives the issuance or verification request (the holder side, [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)) and shared with the payer before the transaction.
+- `exchange_id` (uuid): the exchange identifier, chosen by the holder, the party that receives the issuer's offer, and shared with the issuer before the transaction.
 - `schema_id` (uint64): the `CredentialSchema` entry of the credential.
-- `issuer_accreditation_id` (uint64) or `issuer_vs_id` (uint64): the `ISSUER` `Accreditation` entry of the issuer of the credential (the payer's own entry in a Credential Issuance; in a Credential Verification, the entry the credential was anchored under or an effective entry of the issuer for the schema, validated and its `effective_from` passed), or the `VerifiableService` entry of an issuer that holds no active entry for the schema. Exactly one is set.
-- `verifier_accreditation_id` (uint64) or `verifier_vs_id` (uint64): in a Credential Verification, the `VERIFIER` entry of the verifier, or the `VerifiableService` entry of a verifier acting without an entry (OPEN or CREDENTIAL verifier mode).
-- `vua_issuer_accreditation_id` (uint64): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the VUA's User Agent credential, set by the payer from the credential it verified at connection ([[ref: VT spec]]), when applicable.
-- `digest` (bytes): in a Credential Issuance, the credential digest, also persisted as a [Digest](#digest) entry when the schema's `credential_anchoring` is REVOCABLE_DIGEST; in a Credential Verification, the presentation digest, carried by the event only.
-- `credential_valid_until` (timestamp): in a Credential Issuance under REVOCABLE_DIGEST, the expiry given to the `Digest` entry, so that indexers can serve a mismatch with the credential's own expiry ([[ref: VT spec]]).
-- the block time of the transaction: the effective issuance time of the credential, or the effective presentation time of the presentation.
+- `issuer_accreditation_id` (uint64) or `issuer_vs_id` (uint64): the issuer's own `ISSUER` `Accreditation` entry, or the `VerifiableService` entry of an issuer that holds no active entry for the schema. Exactly one is set.
+- `vua_issuer_accreditation_id` (uint64): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the VUA's User Agent credential, set by the issuer from the credential it verified at connection ([[ref: VT spec]]), when applicable.
+- `credential_digest` (bytes): the credential digest, also persisted as a [Digest](#digest) entry when the schema's `credential_anchoring` is REVOCABLE_DIGEST; absent when it is NO_DIGEST.
+- `credential_valid_until` (timestamp): under REVOCABLE_DIGEST, the expiry given to the `Digest` entry, so that indexers can serve a mismatch with the credential's own expiry ([[ref: VT spec]]).
+- the block time of the transaction: the effective issuance time of the credential.
+
+### CredentialPresentation
+
+A `CredentialPresentation` is the [[ref: exchange record]] of the presentation of one credential to a verifier, recorded by the `vs_account` of the verifier, before the holder presents, under an identifier agreed with the holder. It is a receipt, not state, as a [CredentialIssuance](#credentialissuance) is: [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) checks it, routes its fees and deposits, and emits it as an event. It states that the verifier paid for the presentation and dates it; it states nothing about the outcome of the verifier's own verification, which follows. Each event of [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) carries one record:
+
+- `exchange_id` (uuid): the exchange identifier, chosen by the holder, the party that receives the verifier's request, and shared with the verifier before the transaction.
+- `schema_id` (uint64): the `CredentialSchema` entry of the credential.
+- `verifier_accreditation_id` (uint64) or `verifier_vs_id` (uint64): the verifier's own `VERIFIER` entry, or the `VerifiableService` entry of a verifier acting without an entry (OPEN or CREDENTIAL verifier mode). Exactly one is set.
+- `issuer_accreditation_id` (uint64) or `issuer_vs_id` (uint64): the issuer reference the verifier names as fee beneficiary: the `ISSUER` entry the credential was anchored under or an effective entry of the issuer for the schema (validated and its `effective_from` passed), or the `VerifiableService` entry of an issuer that holds no active entry for the schema. Exactly one is set. It anchors nothing: only a [CredentialIssuance](#credentialissuance) anchors a credential digest.
+- `vua_issuer_accreditation_id` (uint64): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the VUA's User Agent credential, set by the verifier from the credential it verified at connection ([[ref: VT spec]]), when applicable.
+- `presentation_digest` (bytes): the presentation digest, when the verifier anchors one; carried by the event only.
+- the block time of the transaction: the effective presentation time of the presentation.
 
 ### TrustDeposit
 
@@ -1697,8 +1712,8 @@ Invariants: `td.tu` + `td.unrepaid_slash` = Σ `d.tu` and `td.fiat_cost` + `td.u
 ### Digest
 
 - `digest` (bytes) (*mandatory*) (key): the raw digest bytes, 48 for `sha384` and 64 for `sha512`, decoded from the base64 form defined by the Verifiable Trust specification; the API accepts and returns that base64 form. Globally unique across all `Digest` entries. For a digest anchored at credential issuance, this is the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential, the digest of the `issuerAuth` of an mdoc credential), computed as the Verifiable Trust specification defines for each container ([W3C VTCs](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time), [SD-JWT VTCs](https://verana-labs.github.io/verifiable-trust-spec/#sd-jwt-vtcs-digest-and-issuance-time), [mdoc VTCs](https://verana-labs.github.io/verifiable-trust-spec/#mdoc-vtcs-digest-and-issuance-time)).
-- `vs_id` (uint64) (*mandatory*): the [VerifiableService](#verifiableservice) entry under which the digest was anchored: the issuer's entry when the digest is stored by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), the entry named by the signer when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). The **owner** of the digest is the corporation of this entry (`VerifiableService.corporation_id`).
-- `schema_id` (uint64) (*optional*): the `CredentialSchema` entry of the credential, set when the digest is stored by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange); null for a direct notarization. With `vs_id`, it names the issuer's participation, whose current entries and their validator chains determine who may revoke the digest besides the owner and the ecosystem ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)). The digest outlives the issuer's entries.
+- `vs_id` (uint64) (*mandatory*): the [VerifiableService](#verifiableservice) entry under which the digest was anchored: the issuer's entry when the digest is stored by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), the entry named by the signer when stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest). The **owner** of the digest is the corporation of this entry (`VerifiableService.corporation_id`).
+- `schema_id` (uint64) (*optional*): the `CredentialSchema` entry of the credential, set when the digest is stored by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance); null for a direct notarization. With `vs_id`, it names the issuer's participation, whose current entries and their validator chains determine who may revoke the digest besides the owner and the ecosystem ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)). The digest outlives the issuer's entries.
 - `created` (timestamp) (*mandatory*): block execution timestamp at which this digest was first persisted. For a digest anchored at credential issuance, this timestamp is the **effective issuance time** of the credential.
 - `revoked` (timestamp) (*optional*): block execution timestamp at which this digest was revoked by [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest); null if the digest has not been revoked. For a digest anchored at credential issuance, a non-null value means that the owning corporation, the corporation of an active ancestor of the issuer's current entries or the ecosystem controlling the schema ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) has revoked the credential as of this timestamp; trust resolution takes it into account together with its check that the anchoring entry is the issuer's (Verifiable Trust specification).
 - `expires` (timestamp) (*optional*): block time after which the entry is deleted by the expiry sweep ([Digests Module](#digests-module)): the expiry of the credential (`credential_valid_until` of the issuance transaction) for a credential digest, the value chosen by the owner for a direct notarization; null keeps the entry indefinitely.
@@ -1733,7 +1748,7 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 | 14 | `CreateRootAccreditation` | [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation) |
 | 15 | `SetAccreditationEffectiveUntil` | [[MOD-AC-MSG-8]](#mod-ac-msg-8-set-accreditation-effective-until) |
 | 16 | `RevokeAccreditation` | [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) |
-| 17 | `RecordCredentialExchange` | [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) |
+| 17 | `RecordCredentialIssuance` | [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) |
 | 18 | `SlashParticipationTrustDeposit` | [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit) |
 | 19 | `SelfCreateAccreditation` | [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation) |
 | 20 | `TriggerResolver` | [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) |
@@ -1748,14 +1763,15 @@ Values and their numbers, which are stable and only ever appended to (0 is reser
 | 29 | `RevokeSponsorship` | [[MOD-DE-MSG-11]](#mod-de-msg-11-revoke-sponsorship) |
 | 30 | `AcceptGovernanceFrameworkVersion` | [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) |
 | 31 | `AcceptCorporationGovernanceFramework` | [[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework), in a [FeeGrant](#feegrant) only |
+| 32 | `RecordCredentialPresentation` | [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) |
 
-> Note: the realization of fee allowances through `x/feegrant` ([Delegation Module](#delegation-module)) requires protobuf type URLs. The implementation maps each `MsgType` value to the type URL of its message when it creates or updates an allowance, and maps the type URL of an incoming message to its `MsgType` value when it checks an authorization ([[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks)). Which values a list may contain is stated by each message: every value except `RecordCredentialExchange` and `AcceptCorporationGovernanceFramework` in a [DelegateAuthorization](#delegateauthorization) ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization)), the values listed by [VerifiableService](#verifiableservice) in an entry's `msg_types`.
+> Note: the realization of fee allowances through `x/feegrant` ([Delegation Module](#delegation-module)) requires protobuf type URLs. The implementation maps each `MsgType` value to the type URL of its message when it creates or updates an allowance, and maps the type URL of an incoming message to its `MsgType` value when it checks an authorization ([[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks)). Which values a list may contain is stated by each message: every value except `RecordCredentialIssuance`, `RecordCredentialPresentation` and `AcceptCorporationGovernanceFramework` in a [DelegateAuthorization](#delegateauthorization) ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization)), the values listed by [VerifiableService](#verifiableservice) in an entry's `msg_types`.
 
 ### DelegateAuthorization
 
 - `corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] granting the authorization. With `delegate`, forms the composite key: at most one entry exists for a given (`corporation_id`, `delegate`).
 - `delegate` (account) (*mandatory*) (key): the delegate account receiving the authorization. With `corporation_id`, forms the composite key.
-- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the delegable messages this authorization applies to; any value except `RecordCredentialExchange`, which is reserved to VS accounts ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization)), and `AcceptCorporationGovernanceFramework`, which no authorization lists ([[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)).
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the delegable messages this authorization applies to; any value except `RecordCredentialIssuance` and `RecordCredentialPresentation`, which are reserved to VS accounts ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization)), and `AcceptCorporationGovernanceFramework`, which no authorization lists ([[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)).
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds that the grantee is allowed to spend
   as a direct consequence of executing authorized messages.
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit` at create time. Decremented per matching `denom` after each authorized operation. Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
@@ -1783,7 +1799,7 @@ A `Sponsorship` records the agreement of a [[ref: sponsor]] corporation to fund 
 
 - `sponsor_corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] that pays; with `sponsored_corporation_id`, forms the composite key. Its `policy_address` is the [[ref: funding account]] of the sponsored corporation while the sponsorship is active.
 - `sponsored_corporation_id` (uint64) (*mandatory*) (key): id of the [[ref: corporation]] whose fund movements are paid; with `sponsor_corporation_id`, forms the composite key. MUST differ from `sponsor_corporation_id`.
-- `msg_types` ([MsgType](#msgtype)[]) (*optional*): the paying message types covered by this sponsorship, among those of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem). Absent means all of them.
+- `msg_types` ([MsgType](#msgtype)[]) (*optional*): the paying message types covered by this sponsorship, among those of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem). Absent means all of them.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum amount the sponsor pays, per cycle, for the operation fund movements of the sponsored corporation (escrows, exchange payments, Verifiable User Agent rewards, slash repayments, registration and ecosystem creation fees). Network fees are not counted here (see `covers_fees`).
 - `remaining_spend` (DenomAmount[]) (*conditional*): runtime balance for `spend_limit`. Present iff `spend_limit` is set. Initialized to `spend_limit`. Decremented per matching `denom` by each debit paid by the sponsor ([[FUND-CHECK-1]](#fund-check-1-debit)). Reset to `spend_limit` when the current cycle ends (see `expiration` and `period` below).
 - `expiration` (timestamp) (*optional*): window boundary, with the same semantics as `DelegateAuthorization.expiration`: absolute end of the sponsorship when `period` is unset; end of the current cycle when `period` is set (`remaining_spend` is reset and `expiration` advanced by `period`; the sponsorship auto-renews until revoked).
@@ -1794,7 +1810,7 @@ A `Sponsorship` records the agreement of a [[ref: sponsor]] corporation to fund 
 
 A `Sponsorship` entry is immutable except for **raise-only** updates by the sponsor ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)): every other change of terms requires a revocation, which clears the sponsored corporation's election, and a fresh grant that the sponsored corporation elects again.
 
-> Note: a sponsorship moves money only. Trust units minted by a sponsor-funded operation are credited to the corporations that performed the trust operation, never to the sponsor (the payer's sponsor also funds the payees' and agents' deposit-bound amounts under FIAT and foreign-coin pricing, and those trust units go to the payees and agents); slash debts, excludes, `Accreditation` entries, `DelegateAuthorization` and `FeeGrant` entries and the VS account configuration of `VerifiableService` entries are unaffected by the existence, change or end of a sponsorship. Nothing owned by the sponsored corporation references the sponsor: the sponsor is resolved at execution time from `Corporation.sponsor_corporation_id`.
+> Note: a sponsorship moves money only. Trust units minted by a sponsor-funded operation are credited to the corporations that performed the trust operation, never to the sponsor (the payer's sponsor also funds the deposit-bound amounts of the payees and of the VUA issuer under FIAT and foreign-coin pricing, and those trust units go to the payees and to the VUA issuer); slash debts, excludes, `Accreditation` entries, `DelegateAuthorization` and `FeeGrant` entries and the VS account configuration of `VerifiableService` entries are unaffected by the existence, change or end of a sponsorship. Nothing owned by the sponsored corporation references the sponsor: the sponsor is resolved at execution time from `Corporation.sponsor_corporation_id`.
 
 ### VsAccountBudget
 
@@ -1862,7 +1878,7 @@ Each group below is owned by the module whose Update Module Parameters message c
 - `tu_peg_value_genesis` (decimal) (*mandatory*): value of one [[ref: trust unit]] in minor units of the [[ref: main fiat currency]] at genesis (index start): 10^e, e being the ISO-4217 exponent of the main fiat currency (100 for a currency with two decimals), so that at genesis one trust unit equals one unit of [[ref: main fiat currency]] and a trust score reads directly as recent fiat-equivalent spend. Immutable: the index only moves through decay.
 - `tu_decay_rate` (decimal) (*mandatory*): per-[[ref: epoch]] decline of the [[ref: trust unit peg value]]. Default value: 0.001 (0.1% per epoch; with the default 1-day `epoch_length`, an index half-life of ≈ 693 days ≈ 23 months). A governance change is **prospective only**: it applies from the next epoch; the index path already elapsed, past mints, and fiat-fixed slash debts are never recomputed.
 - `epoch_length` (duration) (*mandatory*): trust unit index update / distribution payout period. Default value: 1 day. Set at genesis and **immutable**: epochs are counted from `epoch_origin` ([[TUG]](#tug-genesis-trust-unit-index)), which is the genesis time at the first genesis only ([Trust Unit Index](#trust-unit-index)).
-- `vua_reward_rate` (decimal) (*mandatory*): default and maximum rate of the reward a payer adds to its trust fees for the Verifiable User Agent of its peer, paid to the vendor that issued the VUA's User Agent credential at the rate declared on its `ISSUER` entry (`Accreditation.vua_reward_rate`, [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)). Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
+- `vua_reward_rate` (decimal) (*mandatory*): default and maximum rate of the reward a payer adds to its trust fees for the Verifiable User Agent of its peer, paid to the vendor that issued the VUA's User Agent credential at the rate declared on its `ISSUER` entry (`Accreditation.vua_reward_rate`, [[MOD-AC-MSG-17]](#mod-ac-msg-17-settle-exchange-fees)). Default value: 5% (0.05). Adjustable by [[ref: governance proposal]].
 
 **Distribution:**
 
@@ -1938,7 +1954,7 @@ Such messages conceptually involve **two roles**:
 - `delegate` (account):
   The `account` that signs and executes the Msg on behalf of the `corporation`.
   The delegate MUST be explicitly authorized for the given message type.
-  On the VS Account Authorization path of a message that offers one, this field carries the VS account of the entry. The message reserved to VS accounts ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)) names its signer field `vs_account`.
+  On the VS Account Authorization path of a message that offers one, this field carries the VS account of the entry. The messages reserved to VS accounts ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) name their signer field `vs_account`.
 
 When a delegable message is executed by a delegate or by a VS account, that account is the only signer and both roles are authenticated and enforced by the authorization system; the messages that also offer a group-proposal path say so, and `delegate` is then absent.
 
@@ -2031,7 +2047,7 @@ A second authorization mode exists for [[ref: VS accounts]]. It is used when a c
 
 > Note: the set of messages a `vs_account` is authorized to execute in the context of an entry is declared when the configuration is set ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or replaced ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)) and stored in `vs.msg_types`. One configuration covers every role the identifier holds: the role-specific checks of each message decide what the VS account can do with a given `Accreditation` entry.
 
-Given a `corporation`, the signing account `signer` (the `vs_account` field of a message reserved to VS accounts, the `delegate` field of a message that also offers this path), a **primary entry** `perm` (an `Accreditation` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) does or as [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) does for a party acting without an entry), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
+Given a `corporation`, the signing account `signer` (the `vs_account` field of a message reserved to VS accounts, the `delegate` field of a message that also offers this path), a **primary entry** `perm` (an `Accreditation` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) does or as [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) and [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) do for a party acting without an entry), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
 
 1. If `perm` is not null, it MUST be an [[ref: active accreditation]]. Abort otherwise.
 2. `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), and `vs.vs_account` MUST equal `signer`. Abort otherwise.
@@ -2176,12 +2192,14 @@ As a result, `accountABC` is authorized to:
 |                                | Create Root Accreditation                  |         N/A (Tx)                | Msg    | [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation)   |corporation + delegate |
 |                                | Set Accreditation Effective Until                       |         N/A (Tx)            | Msg    | [[MOD-AC-MSG-8]](#mod-ac-msg-8-set-accreditation-effective-until)  |corporation + delegate |
 |                                | Revoke Accreditation                       |          N/A (Tx)              | Msg    | [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)  |corporation + delegate |
-|                                | Record Credential Exchange     |           N/A (Tx)              | Msg    | [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)  |corporation + vs_account (VS Account Authorization) |
+|                                | Record Credential Issuance     |           N/A (Tx)              | Msg    | [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)  |corporation + vs_account (VS Account Authorization) |
 |                                | Update Accreditation Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters) |[[ref: governance proposal]] |
 |                                | Slash Participation Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit) |corporation + delegate |
 |                                | Set Participation Exclusion                  |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion) |corporation + delegate |
 |                                | Self Create Accreditation (OPEN / CREDENTIAL modes) |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation) |corporation + delegate  |
 |                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) |corporation + delegate OR corporation + vs_account |
+|                                | Record Credential Presentation |           N/A (Tx)              | Msg    | [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)  |corporation + vs_account (VS Account Authorization) |
+|                                | Settle Exchange Fees           |           N/A (Tx)              | Msg    | [[MOD-AC-MSG-17]](#mod-ac-msg-17-settle-exchange-fees)  | module call |
 |                                | List Accreditations                        | /ac/v1/list                | Query  | [[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)    |N/A |
 |                                | Get an Accreditation                        | /ac/v1/get                 | Query  | [[MOD-AC-QRY-2]](#mod-ac-qry-2-get-accreditation)    |N/A |
 |                                | Find Beneficiaries                      | /ac/v1/beneficiaries       | Query  | [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)  |N/A |
@@ -2267,7 +2285,7 @@ Provided document MUST be of the same language as the primary `language` of the 
 
 The following VS Account Authorization parameters are **optional** and collectively define the initial VS account configuration of the registered entry: its `msg_types`, `period` and `fee_spend_limit`, and its operation budget ([VsAccountBudget](#vsaccountbudget)) when `vs_account_spend_limit` is given. Presence of `vs_account_msg_types` is the trigger for the whole group, budget included, and implies that `vs_account` is provided: no configuration, and no budget, can be set without an account to apply it to. If `vs_account_msg_types` is not provided, no other parameter of the group MAY be, `msg_types` stays empty and the entry has no VS Account Authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
 
-- `vs_account_msg_types[]` ([MsgType](#msgtype)[]) (*optional*): list of VPR delegable message types `vs_account` is authorized to execute on behalf of the new Corporation in the context of the entry, among `RecordCredentialExchange`, `ValidateOnboarding`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_account` MUST be specified.
+- `vs_account_msg_types[]` ([MsgType](#msgtype)[]) (*optional*): list of VPR delegable message types `vs_account` is authorized to execute on behalf of the new Corporation in the context of the entry, among `RecordCredentialIssuance`, `RecordCredentialPresentation`, `ValidateOnboarding`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_account` MUST be specified.
 - `vs_account_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_account` is allowed to spend in the context of the entry as a direct consequence of executing authorized messages.
 - `vs_account_fee_spend_limit` (DenomAmount[]) (*optional*): the entry's contribution to the fee allowance of `vs_account`, per `GlobalVariables.vs_account_fee_period` (see [VerifiableService](#verifiableservice)). When provided, the corporation pays the VS account's transaction fees and every amount MUST be strictly positive.
 - `vs_account_period` (duration) (*optional*): operation-budget cycle length for `vs_account_spend_limit` (requires it to be provided). Does not apply to fees.
@@ -4359,40 +4377,33 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 The method MUST emit an event carrying `id`, `schema_id`, `role`, `vs_id` and `now`: the revocation is recorded by the transaction, the VPR keeps no revoked entry.
 
-#### [MOD-AC-MSG-10] Record Credential Exchange
+#### [MOD-AC-MSG-10] Record Credential Issuance
 
-Only the `vs_account` of the primary party's [VerifiableService](#verifiableservice) entry (the entry referenced by the primary `Accreditation` entry, or given directly by a party acting without an entry) CAN execute this method on behalf of a `corporation` (a VS Account Authorization; [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization) excludes this message from DelegateAuthorizations). The digest of a credential of a schema whose `credential_anchoring` is DIGEST or REVOCABLE_DIGEST is anchored through the issuance transaction only: such an issuer MUST hold a VS Account Authorization for its agent.
+Only the `vs_account` of the issuer's [VerifiableService](#verifiableservice) entry (the entry referenced by the issuer's `ISSUER` `Accreditation` entry, or given directly by an issuer acting without an entry) CAN execute this method on behalf of a `corporation` (a VS Account Authorization; [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization) excludes this message from DelegateAuthorizations). It records the issuance of one credential: it routes the issuance fees, anchors the credential digest and emits a [CredentialIssuance](#credentialissuance) event. The digest of a credential of a schema whose `credential_anchoring` is DIGEST or REVOCABLE_DIGEST is anchored through this transaction only: such an issuer MUST hold a VS Account Authorization for its VS account.
 
-Any credential exchange that requires issuer or verifier to pay fees or anchor a digest implies a `CredentialExchange` transaction. A Credential Verification implies a `CredentialExchange` transaction when the fees computed for it are greater than 0, when the schema's `presentation_validity_period` is greater than 0 or when the verifier anchors the presentation digest; a verification with zero fees and no digest to anchor needs no exchange record and leaves no transaction (see [CredentialSchema](#credentialschema)).
+A Credential Issuance implies a `CredentialIssuance` transaction when the fees computed for it are greater than 0, or when the schema's `credential_anchoring` is DIGEST or REVOCABLE_DIGEST, since the digest is anchored through it; an issuance with zero fees under a NO_DIGEST schema needs no [[ref: exchange record]] and leaves no transaction (see [CredentialSchema](#credentialschema)).
 
-If the peer wants to issue a credential, the `agent`, the Verifiable User Agent or Verifiable Service that receive the request MUST send to peer:
+The holder, the Verifiable User Agent or Verifiable Service that receives the issuer's offer, MUST send the issuer:
 
-- an `exchange_id` (uuid) for exchange identification;
+- an `exchange_id` (uuid) for exchange identification.
 
-If the peer wants to verify a credential, agent must send to peer:
+In an exchange with a **Verifiable User Agent**, the issuer sets `vua_issuer_accreditation_id` itself, from the User Agent credential it verified at connection or, for the issuance of a User Agent credential itself, to its own `ISSUER` entry under the User Agent schema ([[ref: VT spec]]); the holder sends nothing for it, and the parameter is absent when the holder is a **Verifiable Service**.
 
-- an `exchange_id` (uuid) for exchange identification;
-- *mandatory*: per credential the agent will present (one credential of the schema at a time under an `ON_REQUEST` schema, the credentials its controller or the person selected under `ON_APPROVAL` or for a `PERSON` schema, [[ref: VT spec]]; an empty answer means that the agent presents nothing and the exchange ends without an exchange record): an `exchange_id` (uuid) chosen by the agent, the **issuer DID** of the credential, whether the agent requires a `CredentialExchange` for it, and whether the presentation will be anchored. No VPR reference is sent: each party derives them through its indexer, as this method applies them. The issuer reference is the `ISSUER` `Accreditation` entry the credential's digest was anchored under while that entry exists, else an effective `ISSUER` entry of the issuer for the schema (validated, its `effective_from` passed), else the `vs_id` of the issuer's service entry (for a credential of a schema whose `credential_anchoring` is NO_DIGEST, an effective `ISSUER` entry of the issuer, else its service entry); the VPR refuses the service-entry form while the issuer holds an active entry, so that the issuer's branch is paid. The verifier reference is the verifier's active `VERIFIER` entry for the schema, else its service entry, and none for a Verifiable User Agent.
-- the agent requires a `CredentialExchange` for a credential when the `presentation_validity_period` of the schema, read at that time, is greater than 0, or when the fees it computes with [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) (for the schema, the issuer reference of that credential and the verifier reference it derived) are greater than 0; when the agent requires one, the payer MUST create it whatever its own reading.
-- *mandatory* when the schema's `presentation_validity_period` is greater than 0 (the agent reads the `CredentialSchema` entry at the time of the verification, the VPR evaluates the value at the block), otherwise *optional* and only if the verifier asked for it in its request: the **presentation digest**, computed by the agent over the presentation it is about to send (the signed presentation as it will be transmitted: canonicalized with [JCS](https://www.rfc-editor.org/rfc/rfc8785) when it is a JSON document, its exact bytes otherwise; hashed with the `digest_algorithm` of the schema). The agent builds and signs the presentation first and sends only its digest at this step; the verifier anchors it through the `digest` parameter of the exchange transaction. When it sends a presentation digest, the agent has selected the credential it will present, and the digest is that of its presentation. Unless the schema's `presentation_validity_period` is greater than 0, anchoring a presentation digest is decided by the verifier: a verifier that did not ask for it MUST NOT expect one, and a verifier that asked for it MUST anchor it, since the agent sends the presentation only after checking the exchange transaction. The presentation MUST be a Verifiable Presentation signed by the holder and bound to the exchange identifier (or to the verifier's nonce), so that its digest differs from the credential's `digestJCS` and from any earlier presentation.
-
-In an exchange with a **Verifiable User Agent**, the payer sets `vua_issuer_accreditation_id` itself, from the User Agent credential it verified at connection or, for the issuance of a User Agent credential itself, to its own `ISSUER` entry under the User Agent schema ([[ref: VT spec]]); the agent sends nothing for it, and the parameter is absent when the peer is a **Verifiable Service**.
-
-When an exchange record is required (fees greater than 0; a `presentation_validity_period` of the schema greater than 0; a presentation digest requested by the verifier; or a Credential Issuance under a schema whose `credential_anchoring` is DIGEST or REVOCABLE_DIGEST, since the digest is anchored through the exchange), `payer` MUST create it using the above information, then `agent` MUST check, through the notification of an indexer of its whitelist ([[ref: VT spec]]), that the exchange transaction was included and is valid: signed for the payer's entry, carrying the `exchange_id`, the schema, for a User Agent its vendor's entry as `vua_issuer_accreditation_id`, and, in a Credential Verification, the issuer reference of the credential it is about to present (fees are routed by that reference) and the presentation digest it sent, before performing the action (storing the issued credential, or sending the presentation). The VPR stores no exchange: the transaction is the receipt ([CredentialExchange](#credentialexchange)).
+When an exchange record is required, the issuer MUST create it, then the holder MUST check, through the notification of an indexer of its whitelist ([[ref: VT spec]]), that the transaction was included and is valid: signed for the issuer's entry, carrying the `exchange_id`, the schema and, for a User Agent, its vendor's entry as `vua_issuer_accreditation_id`, before storing the issued credential. The VPR stores no exchange: the transaction is the receipt ([CredentialIssuance](#credentialissuance)).
 
 ```plantuml
 scale max 800 width
-actor "Agent\nVUA or VS" as Issued 
-participant "Payer\nVS" as Issuer 
+actor "Holder\nVUA or VS" as Issued 
+participant "Issuer\nVS" as Issuer 
 participant "VPR" as vpr 
 participant "Indexer" as indexer
 
 
 Issued <-- Issuer: I want to issue a credential from schema id ... to you
 Issued --> Issuer: Here is the exchange_id
-Issuer --> vpr: record the exchange
+Issuer --> vpr: record the issuance
 Issued <-- Issuer: exchange recorded (exchange_id, tx hash)
-vpr --> indexer: exchange event
+vpr --> indexer: CredentialIssuance event
 Issued <-- indexer: exchange notification
 Issued <-- Issuer: Send credential
 Issued <-- Issued: verify the exchange transaction through the indexer, then store the credential
@@ -4401,310 +4412,62 @@ Issued <-- Issued: verify the exchange transaction through the indexer, then sto
 
 See [[ref: VT spec]].
 
-##### [MOD-AC-MSG-10-1] Record Credential Exchange parameters
+##### [MOD-AC-MSG-10-1] Record Credential Issuance parameters
 
-An [[ref: account]] that would like to run a `CredentialExchange` MUST send a Msg by specifying:
+An [[ref: account]] that would like to record a `CredentialIssuance` MUST send a Msg by specifying:
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `vs_account` (account): (Signer) the [[ref: VS account]] of the primary party's `VerifiableService` entry.
-- `exchange_id` (uuid) (*mandatory*): the exchange identifier agreed with the peer, in canonical textual form; a correlation key carried by the event ([CredentialExchange](#credentialexchange)), not stored.
+- `vs_account` (account): (Signer) the [[ref: VS account]] of the issuer's `VerifiableService` entry.
+- `exchange_id` (uuid) (*mandatory*): the exchange identifier agreed with the holder, in canonical textual form; a correlation key carried by the event ([CredentialIssuance](#credentialissuance)), not stored.
 - `schema_id` (uint64) (*mandatory*): the id of the `CredentialSchema` entry of the credential.
-- `issuer_accreditation_id` (uint64) (*conditional*): the id of the `ISSUER` `Accreditation` entry of the issuer of the credential: the payer's own entry in a Credential Issuance, the entry the credential was anchored under, or an effective entry of the issuer (validated, its `effective_from` passed), in a Credential Verification. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
-- `issuer_vs_id` (uint64) (*conditional*): the `VerifiableService` entry of the issuer, when the issuer holds no active `ISSUER` entry for the schema: the payer's own entry in a Credential Issuance (the schema's `issuer_onboarding_mode` is OPEN), the issuer's entry in a Credential Verification (an issuer acting under OPEN, or whose accreditation has since ended); the issuer branch of the fees is then the schema's root ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
-- `verifier_accreditation_id` (uint64) (*conditional*): the id of the `VERIFIER` entry of the verifier, in a Credential Verification. At most one of `verifier_accreditation_id` and `verifier_vs_id` MAY be provided; the presence of either makes the operation a Credential Verification.
-- `verifier_vs_id` (uint64) (*conditional*): the payer's own `VerifiableService` entry in a Credential Verification, when the verifier holds no active `VERIFIER` entry for the schema (the schema's `verifier_onboarding_mode` is OPEN or CREDENTIAL).
-- `vua_issuer_accreditation_id` (uint64) (*optional*): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the User Agent credential the VUA presented at connection, as identified by the payer's own trust resolution of that credential, or the payer's own `ISSUER` entry when the exchange issues the User Agent credential itself ([[ref: VT spec]]): the vendor that receives the Verifiable User Agent reward. Absent when the peer is a Verifiable Service.
-- `digest` (bytes, base64 in the API) (*conditional*): in a Credential Issuance, the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential, the digest of the `issuerAuth` of an mdoc credential), mandatory unless the schema's `credential_anchoring` is NO_DIGEST, absent then (its anchoring fixes the effective issuance time, see [Digest](#digest)); in a Credential Verification, the presentation digest sent by the agent (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
-- `credential_valid_until` (timestamp) (*conditional*): in a Credential Issuance under a schema whose `credential_anchoring` is REVOCABLE_DIGEST, the expiry of the credential (`validUntil`, `exp` or `validityInfo.validUntil`, see the [[ref: VT spec]]), mandatory; absent otherwise. The `Digest` entry is kept until then ([Digests Module](#digests-module)).
+- `issuer_accreditation_id` (uint64) (*conditional*): the id of the issuer's own `ISSUER` `Accreditation` entry for the schema. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
+- `issuer_vs_id` (uint64) (*conditional*): the issuer's own `VerifiableService` entry, when it holds no active `ISSUER` entry for the schema (the schema's `issuer_onboarding_mode` is OPEN); the issuer branch of the fees is then the schema's root ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
+- `vua_issuer_accreditation_id` (uint64) (*optional*): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the User Agent credential the VUA presented at connection, as identified by the issuer's own trust resolution of that credential, or the issuer's own `ISSUER` entry when the exchange issues the User Agent credential itself ([[ref: VT spec]]): the vendor that receives the Verifiable User Agent reward. Absent when the holder is a Verifiable Service.
+- `credential_digest` (bytes, base64 in the API) (*conditional*): the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential, the digest of the `issuerAuth` of an mdoc credential), mandatory unless the schema's `credential_anchoring` is NO_DIGEST, absent then (its anchoring fixes the effective issuance time, see [Digest](#digest)).
+- `credential_valid_until` (timestamp) (*conditional*): under a schema whose `credential_anchoring` is REVOCABLE_DIGEST, the expiry of the credential (`validUntil`, `exp` or `validityInfo.validUntil`, see the [[ref: VT spec]]), mandatory; absent otherwise. The `Digest` entry is kept until then ([Digests Module](#digests-module)).
 
-##### [MOD-AC-MSG-10-2] Record Credential Exchange precondition checks
+##### [MOD-AC-MSG-10-2] Record Credential Issuance precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the VS Account Authorization of the signer ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
 - `vs_account` (account): (Signer) signature must be verified.
 - `exchange_id` MUST be a valid UUID.
-
 - `schema_id` MUST refer to an existing `CredentialSchema` entry `cs`, else abort.
-- exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided, and at most one of `verifier_accreditation_id` and `verifier_vs_id`; else abort.
+- exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided, else abort.
 
-Determine the operation type:
+Issuer (the payer):
 
-- if `verifier_accreditation_id` or `verifier_vs_id` is provided, the operation is a **Credential Verification**: the caller is the `vs_account` of the verifier, and the issuer reference identifies the issuer branch that is a fee beneficiary of the verification (see [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
-- else, the operation is a **Credential Issuance**: the caller is the `vs_account` of the issuer.
-
-- define `issuer_accreditation`, `verifier_accreditation` as null.
-
-Primary party (the payer): let `R` be VERIFIER in a Credential Verification, ISSUER in a Credential Issuance, and the primary reference be the verifier's in a Credential Verification, the issuer's in a Credential Issuance.
-
-- if the primary reference is an entry id: load `perm` from it (abort if not found); `perm.role` MUST be `R` and `perm.schema_id` MUST equal `schema_id`, and `perm` MUST be an [[ref: active accreditation]], else abort. Let `vs` = `VerifiableService[perm.vs_id]`.
-- else (a service entry `vs_id`): `vs` = `VerifiableService[vs_id]` MUST exist, else abort. The schema's mode MUST allow a party without an entry: `cs.issuer_onboarding_mode` MUST be OPEN for an issuer, `cs.verifier_onboarding_mode` MUST be OPEN or CREDENTIAL for a verifier, else abort. Let `d` be `ParticipationTrustDeposit[(vs.id, schema_id, R)]` if it exists: `d.accreditation_ids` MUST list no [[ref: active accreditation]] (the caller MUST reference it instead), and `d` MUST NOT be [[ref: barred]] (`d.unrepaid_slash` = 0 and `d.excluded` false), else abort: the exclusion is the ecosystem's sanction on a participation it did not onboard. `TrustDeposit[co.id]`, if it exists, MUST NOT be barred either (`unrepaid_slash` = 0 and `excluded` false), else abort. `perm` is null.
+- if `issuer_accreditation_id` is provided: load `issuer_accreditation` from it (abort if not found); `issuer_accreditation.role` MUST be ISSUER and `issuer_accreditation.schema_id` MUST equal `schema_id`, and `issuer_accreditation` MUST be an [[ref: active accreditation]], else abort. Let `vs` = `VerifiableService[issuer_accreditation.vs_id]`.
+- else (`issuer_vs_id` is provided): `vs` = `VerifiableService[issuer_vs_id]` MUST exist, else abort. `cs.issuer_onboarding_mode` MUST be OPEN, else abort. Let `d` be `ParticipationTrustDeposit[(vs.id, schema_id, ISSUER)]` if it exists: `d.accreditation_ids` MUST list no [[ref: active accreditation]] (the caller MUST reference it instead), and `d` MUST NOT be [[ref: barred]] (`d.unrepaid_slash` = 0 and `d.excluded` false), else abort: the exclusion is the ecosystem's sanction on a participation it did not onboard. `TrustDeposit[co.id]`, if it exists, MUST NOT be barred either (`unrepaid_slash` = 0 and `excluded` false), else abort. `issuer_accreditation` is null.
 - `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `vs.vs_account` MUST equal `vs_account`, else abort.
 
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `vs_account`, `perm`, `vs`) tuple (`perm` MAY be null).
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `vs_account`, `issuer_accreditation`, `vs`) tuple (`issuer_accreditation` MAY be null).
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the same tuple.
-[[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and `cs.ecosystem_id`: a party that has not accepted the [[ref: EGF]] in force records no exchange, so an issuer anchors nothing and a verifier obtains no receipt.
+[[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and `cs.ecosystem_id`: an issuer that has not accepted the [[ref: EGF]] in force records no issuance, so it anchors nothing.
 
-Issuer reference:
+Credential digest:
 
-- in a Credential Issuance, `issuer_accreditation` = `perm`.
-- in a Credential Verification, if `issuer_accreditation_id` is provided: load `issuer_accreditation` from it (abort if not found); `issuer_accreditation.role` MUST be ISSUER and `issuer_accreditation.schema_id` MUST equal `schema_id`, else abort; `issuer_accreditation.effective_from` MUST be non-null and not later than now (the entry has been validated and became effective), else abort. No other state is required of it: the validity of the credential is established by trust resolution at its issuance time, and the barred filter of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
-- in a Credential Verification, else (`issuer_vs_id` provided): `VerifiableService[issuer_vs_id]` MUST exist, else abort; let `d_i` be `ParticipationTrustDeposit[(issuer_vs_id, schema_id, ISSUER)]` if it exists: `d_i.accreditation_ids` MUST list no [[ref: active accreditation]], else abort (the caller MUST reference it, so that the issuer's branch is paid). `issuer_accreditation` stays null: the issuer branch is the schema's root.
+- if `cs.credential_anchoring` is DIGEST or REVOCABLE_DIGEST and `credential_digest` is absent, abort (the credential digest is anchored through this transaction); if it is NO_DIGEST and `credential_digest` is present, abort (no credential digest is anchored for this schema).
+- if `cs.credential_anchoring` is REVOCABLE_DIGEST, `credential_valid_until` MUST be present and later than `now()`, else abort; otherwise `credential_valid_until` MUST be absent.
+- if `cs.credential_anchoring` is REVOCABLE_DIGEST and a `Digest` entry `d` with the value of `credential_digest` already exists: `d.vs_id` MUST equal `vs.id` and `d.schema_id` MUST equal `schema_id`, else abort (another corporation, or another entry of the issuer, anchored this digest first, or the issuer notarized it directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest): the entry would not be the credential's anchor and, for another corporation, would give it control of the revocation; the issuer re-issues the credential with changed content, as the Verifiable Trust specification requires). An identical anchoring is a re-send: [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) is then a no-op and the entry keeps its `created`.
+- if `credential_digest` is present, its decoded length MUST be the output size of `cs.digest_algorithm` (48 bytes for `sha384`, 64 for `sha512`), else abort.
 
-> Note: the `vs_account` and `corporation_id` checks apply to the primary party only. In a Credential Verification, the issuer reference generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only. An issuer whose entry has since expired or been revoked holds none, and is referenced by its service entry.
+VUA issuer: the basic checks of [[MOD-AC-MSG-17-2]](#mod-ac-msg-17-2-settle-exchange-fees-basic-checks) MUST pass for `vua_issuer_accreditation_id`.
 
-Verifier reference (Credential Verification only): `verifier_accreditation` = `perm`.
+##### [MOD-AC-MSG-10-3] Record Credential Issuance fee checks
 
-- in a Credential Verification: if `cs.presentation_validity_period` > 0 and `digest` is absent, abort: the ecosystem requires a dated receipt of every verification of this schema.
-
-- in a Credential Issuance: if `cs.credential_anchoring` is DIGEST or REVOCABLE_DIGEST and `digest` is absent, abort (the credential digest is anchored through this exchange); if it is NO_DIGEST and `digest` is present, abort (no credential digest is anchored for this schema).
-- in a Credential Issuance: if `cs.credential_anchoring` is REVOCABLE_DIGEST, `credential_valid_until` MUST be present and later than `now()`, else abort; otherwise `credential_valid_until` MUST be absent.
-- in a Credential Issuance under a schema whose `credential_anchoring` is REVOCABLE_DIGEST, if a `Digest` entry `d` with the value of `digest` already exists: `d.vs_id` MUST equal `vs.id` and `d.schema_id` MUST equal `schema_id`, else abort (another corporation, or another entry of the issuer, anchored this digest first, or the issuer notarized it directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest): the entry would not be the credential's anchor and, for another corporation, would give it control of the revocation; the issuer re-issues the credential with changed content, as the Verifiable Trust specification requires). An identical anchoring is a re-send: [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) is then a no-op and the entry keeps its `created`.
-- if `digest` is present, its decoded length MUST be the output size of `cs.digest_algorithm` (48 bytes for `sha384`, 64 for `sha512`), else abort.
-
-VUA issuer:
-
-- if `vua_issuer_accreditation_id` is set: load `vua_issuer_accreditation` from `vua_issuer_accreditation_id`; if `vua_issuer_accreditation.role` is not ISSUER, abort; if `vua_issuer_accreditation.effective_from` is null or later than `now()`, abort (a validated entry whose window has opened; whether it is barred decides the reward, see execution). Define `vua_rate` = min(`vua_issuer_accreditation.vua_reward_rate`, `GlobalVariables.vua_reward_rate`) when the entry sets a rate, else `GlobalVariables.vua_reward_rate`.
-
-:::warning
-The VPR cannot check that the schema of `vua_issuer_accreditation` is a User Agent schema. The payer derives the entry from the User Agent credential it verified at connection and pays the reward itself, so it has no reason to name another entry; and the User Agent, which checks the exchange transaction before completing the exchange, refuses to proceed unless `vua_issuer_accreditation_id` is its vendor's entry ([[ref: VT spec]]).
-:::
-
-##### [MOD-AC-MSG-10-3] Record Credential Exchange fee checks
-
-- Load `CredentialSchema` entry `cs` from `schema_id`.
 - Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]].
+- The fee checks of [[MOD-AC-MSG-17-3]](#mod-ac-msg-17-3-settle-exchange-fees-fee-checks) MUST pass with `verification` = false, the issuer reference (`issuer_accreditation`, or the service entry `issuer_vs_id`) and no verifier reference.
 
-For trust fees, the funding account of `corporation` ([[FUND-CHECK-1]](#fund-check-1-debit)) MUST cover the totals computed below. Each total is the sum, over the beneficiaries, of the per-beneficiary amounts of [[MOD-AC-MSG-10-4]](#mod-ac-msg-10-4-record-credential-exchange-execution) step 1, each rounded per share, so that the balance checked is the balance transferred; the formulas below state the totals in compact form.
-
-**Step 1: Calculate total beneficiary fees in credential schema pricing asset**
-
-Use "Find Beneficiaries" ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)) with `schema_id`, the issuer and verifier references (entry or service entry) and `verification` = true for a Credential Verification, to get the set of beneficiary `Accreditation` entries `found_accreditation_set` (in a Credential Verification the issuer entry, when the issuer holds one, and the ancestors of both branches; in a Credential Issuance the ancestors of the issuer branch only; a party without an entry sits directly under the schema's root ECOSYSTEM entry; filtered as defined there).
-
-- define `issuer_discount` = `issuer_accreditation.issuance_fee_discount` if `issuer_accreditation` is not null, else 0; define `verifier_discount` = `verifier_accreditation.verification_fee_discount` if `verifier_accreditation` is not null, else 0.
-
-- define `total_beneficiary_fees` = 0
-
-If **Credential Issuance** (no verifier reference was given):
-
-- for each `perm` in `found_accreditation_set`:
-  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.issuance_fees` × (1 - `issuer_discount`)
-
-If **Credential Verification** (a verifier reference was given):
-
-- for each `perm` in `found_accreditation_set`:
-  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.verification_fees` × (1 - `verifier_discount`)
-
-> Note: `total_beneficiary_fees` is expressed in the credential schema pricing asset `(cs.pricing_asset_type, cs.pricing_asset)`.
-
-**Step 2: Calculate amounts payer must have available**
-
-Based on the credential schema pricing configuration, calculate the total amounts the payer (the message's `corporation` account) must have available.
-
-Define the following variables:
-
-| Variable | Description |
-|----------|-------------|
-| `total_fees_in_pricing_asset` | Total fees to be distributed to beneficiaries (in pricing asset) |
-| `total_fees_in_native_denom` | Total fees converted to [[ref: native denom]] (if needed) |
-| `total_payer_trust_deposit` | Deposit-bound amount minted to the payer's trust deposit |
-| `total_payees_trust_deposit` | Deposit-bound amounts the payer funds for the payees' trust deposits |
-| `total_payees_fees_to_account` | Fees to be transferred to payees' accounts |
-| `total_vua_reward` | Reward for the Verifiable User Agent (in [[ref: native denom]]) |
-
-Initialize:
-
-- `total_fees_in_pricing_asset` = `total_beneficiary_fees`
-- `total_fees_in_native_denom` = 0
-- `total_payer_trust_deposit` = 0
-- `total_payees_trust_deposit` = 0
-- `total_payees_fees_to_account` = 0
-- `total_vua_reward` = 0
-
-> If a conversion is needed below, use [Get Price](#mod-xr-qry-3-get-price) to convert amounts.
-
----
-
-**Case A: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, [[ref: native denom]])`**
-
-Pricing is in native token. No conversion needed.
-
-Calculate:
-
-- `total_fees_in_native_denom` = `total_fees_in_pricing_asset`
-- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
-- `total_payees_trust_deposit` = `total_payer_trust_deposit`
-- `total_payees_fees_to_account` = `total_fees_in_native_denom` − `total_payer_trust_deposit`
-
-if `vua_issuer_accreditation_id` is set:
-
-- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down, or 0 when `vua_issuer_accreditation` is [[ref: barred]] (no reward is paid then, [[MOD-AC-MSG-10-4]](#mod-ac-msg-10-4-record-credential-exchange-execution) step 2)
-
-Required balance check:
-
-- the [[ref: funding account]] of `corporation` MUST cover `total_fees_in_native_denom` + `total_payer_trust_deposit` + `total_vua_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
-
----
-
-**Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
-
-Pricing is in an arbitrary on-chain coin (e.g., USDC). Fees to payees are paid in that coin; deposits and the VUA reward are converted to native denom.
-
-Calculate:
-
-- `total_fees_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `total_fees_in_pricing_asset`)
-- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
-- `total_payees_trust_deposit` = `total_payer_trust_deposit`
-- `total_payees_fees_to_account` = `total_fees_in_pricing_asset` − (`total_fees_in_pricing_asset` × `GlobalVariables.trust_deposit_rate`, rounded down)
-
-if `vua_issuer_accreditation_id` is set:
-
-- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down, or 0 when `vua_issuer_accreditation` is [[ref: barred]] (no reward is paid then, [[MOD-AC-MSG-10-4]](#mod-ac-msg-10-4-record-credential-exchange-execution) step 2)
-
-Required balance check:
-
-- the [[ref: funding account]] of `corporation` MUST cover `total_payer_trust_deposit` + `total_payees_trust_deposit` + `total_vua_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
-- AND the [[ref: funding account]] of `corporation` MUST cover `total_payees_fees_to_account` in `<arbitrary_denom>` ([[FUND-CHECK-1]](#fund-check-1-debit)).
-
----
-
-**Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
-
-Pricing is in fiat currency (e.g., USD). Fiat fees are settled off-chain; only deposits and the VUA reward are paid on-chain in native denom.
-
-Calculate:
-
-- `total_fees_in_native_denom` = getPrice(`FIAT`, `<fiat_denom>`, `COIN`, `[[ref: native denom]]`, `total_fees_in_pricing_asset`)
-- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
-- `total_payees_trust_deposit` = `total_payer_trust_deposit`
-- `total_payees_fees_to_account` = 0 (FIAT payments are managed off-chain)
-
-if `vua_issuer_accreditation_id` is set:
-
-- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down, or 0 when `vua_issuer_accreditation` is [[ref: barred]] (no reward is paid then, [[MOD-AC-MSG-10-4]](#mod-ac-msg-10-4-record-credential-exchange-execution) step 2)
-
-Required balance check:
-
-- the [[ref: funding account]] of `corporation` MUST cover `total_payer_trust_deposit` + `total_payees_trust_deposit` + `total_vua_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
-
----
-
-:::warning
-- Deposit-bound amounts MUST always be paid in [[ref: native denom]] (trust units are minted from native denom only).
-- Every amount this method debits from `corporation` is taken from its [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit), for this message type), and every amount it credits to a payee or agent corporation goes to that corporation's funding account ([[FUND-CHECK-2]](#fund-check-2-credit)). Trust units are minted to the corporations themselves, whoever paid.
-- When paying with COIN ≠ [[ref: native denom]] or with FIAT, the payer pays the deposit-bound amounts on behalf of payees (since payees receive non-native assets that cannot be deposit-bound), and pays correspondingly less in the pricing asset: net economics match the native-denom case. For FIAT pricing, the off-chain settlement SHOULD likewise be for the fee minus its deposit-bound portion.
-:::
-
-##### [MOD-AC-MSG-10-4] Record Credential Exchange execution
+##### [MOD-AC-MSG-10-4] Record Credential Issuance execution
 
 If all precondition checks passed, method is executed.
 
-- Load all `Accreditation` and `VerifiableService` entries as in basic checks.
-- Load `CredentialSchema` entry `cs` from `schema_id`.
 - define `now`: current timestamp.
-- use "Find Beneficiaries" to build `found_accreditation_set`, as in fee checks.
-
-> Note: All funds are transferred from the funding account of the `corporation` executing the method, resolved once for this message per [[FUND-CHECK-1]](#fund-check-1-debit). The steps below describe what each recipient must receive. Implementation details (batching, order of transfers) are left to the implementer.
-
----
-
-**Step 1: Process fee distribution to each beneficiary**
-
-Initialize the accumulator of the VUA reward:
-
-- `accumulated_vua_reward` = 0
-
-Determine the operation type and applicable discount:
-
-- If **Credential Issuance** (no verifier reference was given):
-  - `fee_field` = `issuance_fees`
-  - `discount` = `issuer_discount`
-  - `payer` = (`vs.id`, `schema_id`, ISSUER), the deposit key of the primary party's participation
-
-- Else if **Credential Verification** (a verifier reference was given):
-  - `fee_field` = `verification_fees`
-  - `discount` = `verifier_discount`
-  - `payer` = (`vs.id`, `schema_id`, VERIFIER), the deposit key of the primary party's participation
-
-**For each beneficiary `Accreditation` `perm` in `found_accreditation_set`:**
-
-Set `vua_reward_portion` = 0 for this beneficiary. If `perm.[fee_field]` > 0:
-
-1. Calculate the discounted fee for this beneficiary:
-   - `beneficiary_fee_in_pricing_asset` = `perm.[fee_field]` × (1 - `discount`)
-
-2. Calculate amounts based on pricing configuration (same logic as fee checks):
-
-   **Case A: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, [[ref: native denom]])`**
-   
-   - `fee_in_native_denom` = `beneficiary_fee_in_pricing_asset`
-   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
-   - `payee_trust_deposit` = `payer_trust_deposit`
-   - `payee_fees_to_account` = `fee_in_native_denom` − `payee_trust_deposit`
-
-  if `vua_issuer_accreditation_id` is set:
-    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`, rounded down
-
-  
-   **Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
-   
-   - `fee_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
-   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
-   - `payee_trust_deposit` = `payer_trust_deposit`
-   - `payee_fees_to_account` = `beneficiary_fee_in_pricing_asset` − (`beneficiary_fee_in_pricing_asset` × `GlobalVariables.trust_deposit_rate`, rounded down) *(in `<arbitrary_denom>`)*
-
-  if `vua_issuer_accreditation_id` is set:
-    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`, rounded down
-
-
-   **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
-   
-   - `fee_in_native_denom` = getPrice(`FIAT`, `<fiat_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
-   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
-   - `payee_trust_deposit` = `payer_trust_deposit`
-   - `payee_fees_to_account` = 0 *(FIAT payments are managed off-chain)*
-
-  if `vua_issuer_accreditation_id` is set:
-    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`, rounded down
-
-3. Execute transfers and mints for this beneficiary:
-
-   - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to the [[ref: funding account]] of `Corporation[perm.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) (in the appropriate denom).
-   - if `payee_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `perm.corporation_id`, `vs_id` = `perm.vs_id`, `schema_id` = `perm.schema_id`, `role` = `perm.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payee_trust_deposit`).
-   - if `payer_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account, the payer), (`vs_id`, `schema_id`, `role`) = `payer`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payer_trust_deposit`).
-
-4. Accumulate the VUA reward:
-
-   - `accumulated_vua_reward` = `accumulated_vua_reward` + `vua_reward_portion`
-
----
-
-**Step 2: Process the VUA reward**
-
-After processing all beneficiaries, pay the accumulated reward to the VUA issuer.
-
-**Verifiable User Agent Reward:**
-
-If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 AND `vua_issuer_accreditation` is not [[ref: barred]] (neither its participation's deposit nor its corporation's trust deposit carries a slash debt or an exclusion; otherwise the reward is not paid, no deposit is funded, and the exchange goes through):
-
-- `vua_trust_deposit` = `accumulated_vua_reward` × `GlobalVariables.trust_deposit_rate`, rounded down
-- `vua_fees_to_account` = `accumulated_vua_reward` - `vua_trust_deposit`
-- Transfer `vua_fees_to_account` to the [[ref: funding account]] of `Corporation[vua_issuer_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) in [[ref: native denom]].
-- if `vua_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `vua_issuer_accreditation.corporation_id`, `vs_id` = `vua_issuer_accreditation.vs_id`, `schema_id` = `vua_issuer_accreditation.schema_id`, `role` = `vua_issuer_accreditation.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `vua_trust_deposit`).
-
----
-
-**Step 3: Report the exchange**
-
-> Now that all transfers have been done, the exchange is reported.
-
-The method MUST emit a `CredentialExchange` event ([CredentialExchange](#credentialexchange)) carrying `exchange_id`, `schema_id`, `issuer_accreditation_id` or `issuer_vs_id` as given, `verifier_accreditation_id` or `verifier_vs_id` as given (none in a Credential Issuance), `vua_issuer_accreditation_id`, `digest` when present, `credential_valid_until` when given, and `now`. Nothing is written for the exchange.
-
-In a Credential Issuance under a schema whose `credential_anchoring` is REVOCABLE_DIGEST, persist `digest` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the `corporation`, passing `vs_id` = `vs.id`, `schema_id` = `schema_id` and `expires` = `credential_valid_until`: when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry, necessarily anchored under the same entry and schema after the precondition checks, keeps its `created`, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op). Under DIGEST the credential digest is carried by the event only: the block time of the transaction is the effective issuance time, and nothing is written. In a Credential Verification the presentation digest is carried by the event only: the block time of the transaction is the effective presentation time, from which the reliance period of the presentation runs when `cs.presentation_validity_period` is greater than 0.
-
-:::warning
-an exchange event always carries `schema_id` and exactly one of `issuer_accreditation_id` and `issuer_vs_id`; `verifier_accreditation_id` or `verifier_vs_id` is set in a Credential Verification only
-:::
+- call [[MOD-AC-MSG-17]](#mod-ac-msg-17-settle-exchange-fees) Settle Exchange Fees with `verification` = false, the issuer reference, no verifier reference, `payer` = (`vs.id`, `schema_id`, ISSUER) and `vua_issuer_accreditation_id` as given.
+- emit a `CredentialIssuance` event ([CredentialIssuance](#credentialissuance)) carrying `exchange_id`, `schema_id`, `issuer_accreditation_id` or `issuer_vs_id` as given, `vua_issuer_accreditation_id`, `credential_digest` when present, `credential_valid_until` when given, and `now`. Nothing is written for the exchange.
+- if `cs.credential_anchoring` is REVOCABLE_DIGEST, persist `credential_digest` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) on behalf of the `corporation`, passing `vs_id` = `vs.id`, `schema_id` = `schema_id` and `expires` = `credential_valid_until`: when the `Digest` entry is created by this transaction, its `created` timestamp is the effective issuance time (a pre-existing entry, necessarily anchored under the same entry and schema after the precondition checks, keeps its `created`, [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) being a no-op). Under DIGEST the credential digest is carried by the event only: the block time of the transaction is the effective issuance time, and nothing is written.
 
 #### [MOD-AC-MSG-11] Update Accreditation Module Parameters
 
@@ -4865,7 +4628,7 @@ The method MUST emit an event carrying `vs_id`, `schema_id`, `role`, `excluded` 
 
 Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
 
-This simple `Accreditation`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Accreditation` entry if issuance mode (resp. verification mode) is set to `OPEN` (resp. `OPEN` or `CREDENTIAL`) for a given schema. Such an entry is **optional**: under these modes a service issues or verifies under its [VerifiableService](#verifiableservice) entry alone ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), and the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by its first mint, holds what the [[ref: ecosystem governance authority]] can slash. An issuer self-creates an entry to declare the `verification_fees` and `validation_fees` it charges; either party may self-create one to bound its participation with a window.
+This simple `Accreditation`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Accreditation` entry if issuance mode (resp. verification mode) is set to `OPEN` (resp. `OPEN` or `CREDENTIAL`) for a given schema. Such an entry is **optional**: under these modes a service issues or verifies under its [VerifiableService](#verifiableservice) entry alone ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)), and the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by its first mint, holds what the [[ref: ecosystem governance authority]] can slash. An issuer self-creates an entry to declare the `verification_fees` and `validation_fees` it charges; either party may self-create one to bound its participation with a window.
 
 :::note
 Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else their `Accreditation` entry may be revoked by the [[ref: ecosystem governance authority]] and their deposit slashed; a slashed participation cannot act under the schema while it is [[ref: barred]].
@@ -4965,7 +4728,7 @@ A new entry `Accreditation` `perm` MUST be created:
 - `perm.validation_fees`: `validation_fees` if specified and `role` is ISSUER, else 0.
 - `perm.issuance_fees`: 0
 - `perm.verification_fees`: `verification_fees` if specified and `role` is ISSUER, else 0.
-- `perm.vua_reward_rate`: null (the global rate applies, [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)).
+- `perm.vua_reward_rate`: null (the global rate applies, [[MOD-AC-MSG-17]](#mod-ac-msg-17-settle-exchange-fees)).
 - `perm.onboarding_state`: VALIDATED
 - `perm.onboarding_last_state_change`: `now`
 - `perm.onboarding_fees`: 0
@@ -5067,6 +4830,331 @@ This method does not modify the state of the [[ref: VPR]]. It MUST emit an event
 
 > Note: the identity of the signers (`corporation`, `delegate`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `VerifiableService` entry and, when present, the `Accreditation` entry to resolve the owner `corporation`, the `vs_account` and the ancestor chain without duplicating them in the event payload.
 
+#### [MOD-AC-MSG-16] Record Credential Presentation
+
+Only the `vs_account` of the verifier's [VerifiableService](#verifiableservice) entry (the entry referenced by the verifier's `VERIFIER` `Accreditation` entry, or given directly by a verifier acting without an entry) CAN execute this method on behalf of a `corporation` (a VS Account Authorization; [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization) excludes this message from DelegateAuthorizations). It records the presentation of one credential to the verifier, before the holder presents it: it routes the verification fees, dates the presentation, carries its digest when there is one, and emits a [CredentialPresentation](#credentialpresentation) event. The record is the verifier's receipt for the presentation: it does not state that the verifier accepted what the holder then presented.
+
+A Credential Presentation implies a `CredentialPresentation` transaction when the fees computed for it are greater than 0, when the schema's `presentation_validity_period` is greater than 0 or when the verifier anchors the presentation digest; a presentation with zero fees and no digest to anchor needs no [[ref: exchange record]] and leaves no transaction (see [CredentialSchema](#credentialschema)).
+
+The holder, the Verifiable User Agent or Verifiable Service that receives the verifier's request, MUST send the verifier:
+
+- *mandatory*: per credential the holder will present (one credential of the schema at a time under an `ON_REQUEST` schema, the credentials its controller or the person selected under `ON_APPROVAL` or for a `PERSON` schema, [[ref: VT spec]]; an empty answer means that the holder presents nothing and the exchange ends without an exchange record): an `exchange_id` (uuid) chosen by the holder, the **issuer DID** of the credential, whether the holder requires a `CredentialPresentation` for it, and whether the presentation will be anchored. No VPR reference is sent: each party derives them through its indexer, as this method applies them. The issuer reference is the `ISSUER` `Accreditation` entry the credential's digest was anchored under while that entry exists, else an effective `ISSUER` entry of the issuer for the schema (validated, its `effective_from` passed), else the `vs_id` of the issuer's service entry (for a credential of a schema whose `credential_anchoring` is NO_DIGEST, an effective `ISSUER` entry of the issuer, else its service entry); the VPR refuses the service-entry form while the issuer holds an active entry, so that the issuer's branch is paid. The verifier reference is the verifier's active `VERIFIER` entry for the schema, else its service entry, and none for a Verifiable User Agent.
+- the holder requires a `CredentialPresentation` for a credential when the `presentation_validity_period` of the schema, read at that time, is greater than 0, or when the fees it computes with [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) (for the schema, the issuer reference of that credential and the verifier reference it derived) are greater than 0; when the holder requires one, the verifier MUST create it whatever its own reading.
+- *mandatory* when the schema's `presentation_validity_period` is greater than 0 (the holder reads the `CredentialSchema` entry at the time of the presentation, the VPR evaluates the value at the block), otherwise *optional* and only if the verifier asked for it in its request: the **presentation digest**, computed by the holder over the presentation it is about to send (the signed presentation as it will be transmitted: canonicalized with [JCS](https://www.rfc-editor.org/rfc/rfc8785) when it is a JSON document, its exact bytes otherwise; hashed with the `digest_algorithm` of the schema). The holder builds and signs the presentation first and sends only its digest at this step; the verifier anchors it through the `presentation_digest` parameter of the transaction. When it sends a presentation digest, the holder has selected the credential it will present, and the digest is that of its presentation. Unless the schema's `presentation_validity_period` is greater than 0, anchoring a presentation digest is decided by the verifier: a verifier that did not ask for it MUST NOT expect one, and a verifier that asked for it MUST anchor it, since the holder sends the presentation only after checking the transaction. The presentation MUST be a Verifiable Presentation signed by the holder and bound to the exchange identifier (or to the verifier's nonce), so that its digest differs from the credential's `digestJCS` and from any earlier presentation.
+
+In an exchange with a **Verifiable User Agent**, the verifier sets `vua_issuer_accreditation_id` itself, from the User Agent credential it verified at connection ([[ref: VT spec]]); the holder sends nothing for it, and the parameter is absent when the holder is a **Verifiable Service**.
+
+When an exchange record is required, the verifier MUST create it using the above information, then the holder MUST check, through the notification of an indexer of its whitelist ([[ref: VT spec]]), that the transaction was included and is valid: signed for the verifier's entry, carrying the `exchange_id`, the schema, for a User Agent its vendor's entry as `vua_issuer_accreditation_id`, the issuer reference of the credential it is about to present (fees are routed by that reference) and the presentation digest it sent, before sending the presentation. The VPR stores no exchange: the transaction is the receipt ([CredentialPresentation](#credentialpresentation)).
+
+See [[ref: VT spec]].
+
+##### [MOD-AC-MSG-16-1] Record Credential Presentation parameters
+
+An [[ref: account]] that would like to record a `CredentialPresentation` MUST send a Msg by specifying:
+
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
+- `vs_account` (account): (Signer) the [[ref: VS account]] of the verifier's `VerifiableService` entry.
+- `exchange_id` (uuid) (*mandatory*): the exchange identifier agreed with the holder, in canonical textual form; a correlation key carried by the event ([CredentialPresentation](#credentialpresentation)), not stored.
+- `schema_id` (uint64) (*mandatory*): the id of the `CredentialSchema` entry of the credential.
+- `verifier_accreditation_id` (uint64) (*conditional*): the id of the verifier's own `VERIFIER` `Accreditation` entry for the schema. Exactly one of `verifier_accreditation_id` and `verifier_vs_id` MUST be provided.
+- `verifier_vs_id` (uint64) (*conditional*): the verifier's own `VerifiableService` entry, when it holds no active `VERIFIER` entry for the schema (the schema's `verifier_onboarding_mode` is OPEN or CREDENTIAL).
+- `issuer_accreditation_id` (uint64) (*conditional*): the id of the `ISSUER` `Accreditation` entry of the issuer of the credential: the entry the credential was anchored under, or an effective entry of the issuer (validated, its `effective_from` passed). It names the issuer branch that receives verification fees; the issuer takes no part in this transaction. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
+- `issuer_vs_id` (uint64) (*conditional*): the `VerifiableService` entry of the issuer, when the issuer holds no active `ISSUER` entry for the schema (an issuer acting under OPEN, or whose accreditation has since ended); the issuer branch of the fees is then the schema's root ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
+- `vua_issuer_accreditation_id` (uint64) (*optional*): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the User Agent credential the VUA presented at connection, as identified by the verifier's own trust resolution of that credential ([[ref: VT spec]]): the vendor that receives the Verifiable User Agent reward. Absent when the holder is a Verifiable Service.
+- `presentation_digest` (bytes, base64 in the API) (*conditional*): the presentation digest sent by the holder (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
+
+##### [MOD-AC-MSG-16-2] Record Credential Presentation precondition checks
+
+If any of these precondition checks fail, [[ref: transaction]] MUST abort.
+
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the VS Account Authorization of the signer ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
+- `vs_account` (account): (Signer) signature must be verified.
+- `exchange_id` MUST be a valid UUID.
+- `schema_id` MUST refer to an existing `CredentialSchema` entry `cs`, else abort.
+- exactly one of `verifier_accreditation_id` and `verifier_vs_id` MUST be provided, and exactly one of `issuer_accreditation_id` and `issuer_vs_id`; else abort.
+
+Verifier (the payer):
+
+- if `verifier_accreditation_id` is provided: load `verifier_accreditation` from it (abort if not found); `verifier_accreditation.role` MUST be VERIFIER and `verifier_accreditation.schema_id` MUST equal `schema_id`, and `verifier_accreditation` MUST be an [[ref: active accreditation]], else abort. Let `vs` = `VerifiableService[verifier_accreditation.vs_id]`.
+- else (`verifier_vs_id` is provided): `vs` = `VerifiableService[verifier_vs_id]` MUST exist, else abort. `cs.verifier_onboarding_mode` MUST be OPEN or CREDENTIAL, else abort. Let `d` be `ParticipationTrustDeposit[(vs.id, schema_id, VERIFIER)]` if it exists: `d.accreditation_ids` MUST list no [[ref: active accreditation]] (the caller MUST reference it instead), and `d` MUST NOT be [[ref: barred]] (`d.unrepaid_slash` = 0 and `d.excluded` false), else abort: the exclusion is the ecosystem's sanction on a participation it did not onboard. `TrustDeposit[co.id]`, if it exists, MUST NOT be barred either (`unrepaid_slash` = 0 and `excluded` false), else abort. `verifier_accreditation` is null.
+- `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `vs.vs_account` MUST equal `vs_account`, else abort.
+
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `vs_account`, `verifier_accreditation`, `vs`) tuple (`verifier_accreditation` MAY be null).
+[[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the same tuple.
+[[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and `cs.ecosystem_id`: a verifier that has not accepted the [[ref: EGF]] in force records no presentation, so it obtains no receipt.
+
+Issuer reference (a fee beneficiary):
+
+- if `issuer_accreditation_id` is provided: load `issuer_accreditation` from it (abort if not found); `issuer_accreditation.role` MUST be ISSUER and `issuer_accreditation.schema_id` MUST equal `schema_id`, else abort; `issuer_accreditation.effective_from` MUST be non-null and not later than now (the entry has been validated and became effective), else abort. No other state is required of it: the validity of the credential is established by trust resolution at its issuance time, and the barred filter of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
+- else (`issuer_vs_id` is provided): `VerifiableService[issuer_vs_id]` MUST exist, else abort; let `d_i` be `ParticipationTrustDeposit[(issuer_vs_id, schema_id, ISSUER)]` if it exists: `d_i.accreditation_ids` MUST list no [[ref: active accreditation]], else abort (the caller MUST reference it, so that the issuer's branch is paid). `issuer_accreditation` stays null: the issuer branch is the schema's root.
+
+> Note: the `vs_account` and `corporation_id` checks apply to the verifier only. The issuer reference generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only. An issuer whose entry has since expired or been revoked holds none, and is referenced by its service entry. A `CredentialPresentation` never anchors a credential: only a [CredentialIssuance](#credentialissuance), recorded by the issuer itself, does.
+
+Presentation digest:
+
+- if `cs.presentation_validity_period` > 0 and `presentation_digest` is absent, abort: the ecosystem requires a dated receipt of every presentation of a credential of this schema.
+- if `presentation_digest` is present, its decoded length MUST be the output size of `cs.digest_algorithm` (48 bytes for `sha384`, 64 for `sha512`), else abort.
+
+VUA issuer: the basic checks of [[MOD-AC-MSG-17-2]](#mod-ac-msg-17-2-settle-exchange-fees-basic-checks) MUST pass for `vua_issuer_accreditation_id`.
+
+##### [MOD-AC-MSG-16-3] Record Credential Presentation fee checks
+
+- Fee payer MUST have sufficient available balance for the required [[ref: estimated transaction fees]].
+- The fee checks of [[MOD-AC-MSG-17-3]](#mod-ac-msg-17-3-settle-exchange-fees-fee-checks) MUST pass with `verification` = true, the issuer reference (`issuer_accreditation`, or the service entry `issuer_vs_id`) and the verifier reference (`verifier_accreditation`, or the service entry `verifier_vs_id`).
+
+##### [MOD-AC-MSG-16-4] Record Credential Presentation execution
+
+If all precondition checks passed, method is executed.
+
+- define `now`: current timestamp.
+- call [[MOD-AC-MSG-17]](#mod-ac-msg-17-settle-exchange-fees) Settle Exchange Fees with `verification` = true, the issuer reference, the verifier reference, `payer` = (`vs.id`, `schema_id`, VERIFIER) and `vua_issuer_accreditation_id` as given.
+- emit a `CredentialPresentation` event ([CredentialPresentation](#credentialpresentation)) carrying `exchange_id`, `schema_id`, `verifier_accreditation_id` or `verifier_vs_id` as given, `issuer_accreditation_id` or `issuer_vs_id` as given, `vua_issuer_accreditation_id`, `presentation_digest` when present, and `now`. Nothing is written for the exchange: the presentation digest is carried by the event only, and the block time of the transaction is the effective presentation time, from which the reliance period of the presentation runs when `cs.presentation_validity_period` is greater than 0.
+
+#### [MOD-AC-MSG-17] Settle Exchange Fees
+
+This method can only be called directly by the following methods, with no signer check:
+
+- [Record Credential Issuance](#mod-ac-msg-10-record-credential-issuance)
+- [Record Credential Presentation](#mod-ac-msg-16-record-credential-presentation)
+
+It computes the [[ref: trust fees]] of one credential exchange, checks that the payer can fund them, distributes them to the beneficiaries with the matching [[ref: trust units]], and pays the Verifiable User Agent reward. The procedure is the same for an issuance and for a presentation: only the fee attribute read on each beneficiary, the discount and the participation of the payer differ.
+
+##### [MOD-AC-MSG-17-1] Settle Exchange Fees parameters
+
+The calling method provides:
+
+- `corporation`, and the `Corporation` entry `co` resolved from it: the payer.
+- `cs`: the `CredentialSchema` entry of the credential (`schema_id`).
+- `verification` (boolean): false for a Credential Issuance, true for a Credential Presentation.
+- the issuer reference: `issuer_accreditation`, or null with the service entry `issuer_vs_id` when the issuer is referenced without an entry.
+- the verifier reference, in a Credential Presentation: `verifier_accreditation`, or null with the service entry `verifier_vs_id` when the verifier acts without an entry.
+- `payer`: the deposit key of the payer's participation, (`vs.id`, `schema_id`, ISSUER) in a Credential Issuance and (`vs.id`, `schema_id`, VERIFIER) in a Credential Presentation.
+- `vua_issuer_accreditation_id` (uint64) (*optional*): as given to the calling method.
+
+##### [MOD-AC-MSG-17-2] Settle Exchange Fees basic checks
+
+The calling method runs these checks with its precondition checks. If any fails, its [[ref: transaction]] MUST abort.
+
+- if `vua_issuer_accreditation_id` is set: load `vua_issuer_accreditation` from `vua_issuer_accreditation_id`; if `vua_issuer_accreditation.role` is not ISSUER, abort; if `vua_issuer_accreditation.effective_from` is null or later than `now()`, abort (a validated entry whose window has opened; whether it is barred decides the reward, see execution). Define `vua_rate` = min(`vua_issuer_accreditation.vua_reward_rate`, `GlobalVariables.vua_reward_rate`) when the entry sets a rate, else `GlobalVariables.vua_reward_rate`.
+
+:::warning
+The VPR cannot check that the schema of `vua_issuer_accreditation` is a User Agent schema. The payer derives the entry from the User Agent credential it verified at connection and pays the reward itself, so it has no reason to name another entry; and the User Agent, which checks the exchange transaction before completing the exchange, refuses to proceed unless `vua_issuer_accreditation_id` is its vendor's entry ([[ref: VT spec]]).
+:::
+
+##### [MOD-AC-MSG-17-3] Settle Exchange Fees fee checks
+
+The calling method runs these checks with its fee checks.
+
+For trust fees, the funding account of the payer, the `corporation` of the calling message ([[FUND-CHECK-1]](#fund-check-1-debit)), MUST cover the totals computed below. Each total is the sum, over the beneficiaries, of the per-beneficiary amounts of [[MOD-AC-MSG-17-4]](#mod-ac-msg-17-4-settle-exchange-fees-execution) step 1, each rounded per share, so that the balance checked is the balance transferred; the formulas below state the totals in compact form.
+
+**Step 1: Calculate total beneficiary fees in credential schema pricing asset**
+
+Use "Find Beneficiaries" ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)) with `schema_id`, the issuer and verifier references (entry or service entry) and `verification`, to get the set of beneficiary `Accreditation` entries `found_accreditation_set` (in a Credential Presentation the issuer entry, when the issuer holds one, and the ancestors of both branches; in a Credential Issuance the ancestors of the issuer branch only; a party without an entry sits directly under the schema's root ECOSYSTEM entry; filtered as defined there).
+
+- define `issuer_discount` = `issuer_accreditation.issuance_fee_discount` if `issuer_accreditation` is not null, else 0; define `verifier_discount` = `verifier_accreditation.verification_fee_discount` if `verifier_accreditation` is not null, else 0.
+
+- define `total_beneficiary_fees` = 0
+
+If **Credential Issuance** (`verification` is false):
+
+- for each `perm` in `found_accreditation_set`:
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.issuance_fees` × (1 - `issuer_discount`)
+
+If **Credential Presentation** (`verification` is true):
+
+- for each `perm` in `found_accreditation_set`:
+  - `total_beneficiary_fees` = `total_beneficiary_fees` + `perm.verification_fees` × (1 - `verifier_discount`)
+
+> Note: `total_beneficiary_fees` is expressed in the credential schema pricing asset `(cs.pricing_asset_type, cs.pricing_asset)`.
+
+**Step 2: Calculate amounts payer must have available**
+
+Based on the credential schema pricing configuration, calculate the total amounts the payer (the `corporation` account of the calling message) must have available.
+
+Define the following variables:
+
+| Variable | Description |
+|----------|-------------|
+| `total_fees_in_pricing_asset` | Total fees to be distributed to beneficiaries (in pricing asset) |
+| `total_fees_in_native_denom` | Total fees converted to [[ref: native denom]] (if needed) |
+| `total_payer_trust_deposit` | Deposit-bound amount minted to the payer's trust deposit |
+| `total_payees_trust_deposit` | Deposit-bound amounts the payer funds for the payees' trust deposits |
+| `total_payees_fees_to_account` | Fees to be transferred to payees' accounts |
+| `total_vua_reward` | Reward for the Verifiable User Agent (in [[ref: native denom]]) |
+
+Initialize:
+
+- `total_fees_in_pricing_asset` = `total_beneficiary_fees`
+- `total_fees_in_native_denom` = 0
+- `total_payer_trust_deposit` = 0
+- `total_payees_trust_deposit` = 0
+- `total_payees_fees_to_account` = 0
+- `total_vua_reward` = 0
+
+> If a conversion is needed below, use [Get Price](#mod-xr-qry-3-get-price) to convert amounts.
+
+---
+
+**Case A: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, [[ref: native denom]])`**
+
+Pricing is in native token. No conversion needed.
+
+Calculate:
+
+- `total_fees_in_native_denom` = `total_fees_in_pricing_asset`
+- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
+- `total_payees_trust_deposit` = `total_payer_trust_deposit`
+- `total_payees_fees_to_account` = `total_fees_in_native_denom` − `total_payer_trust_deposit`
+
+if `vua_issuer_accreditation_id` is set:
+
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down, or 0 when `vua_issuer_accreditation` is [[ref: barred]] (no reward is paid then, [[MOD-AC-MSG-17-4]](#mod-ac-msg-17-4-settle-exchange-fees-execution) step 2)
+
+Required balance check:
+
+- the [[ref: funding account]] of `corporation` MUST cover `total_fees_in_native_denom` + `total_payer_trust_deposit` + `total_vua_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
+
+---
+
+**Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
+
+Pricing is in an arbitrary on-chain coin (e.g., USDC). Fees to payees are paid in that coin; deposits and the VUA reward are converted to native denom.
+
+Calculate:
+
+- `total_fees_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `total_fees_in_pricing_asset`)
+- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
+- `total_payees_trust_deposit` = `total_payer_trust_deposit`
+- `total_payees_fees_to_account` = `total_fees_in_pricing_asset` − (`total_fees_in_pricing_asset` × `GlobalVariables.trust_deposit_rate`, rounded down)
+
+if `vua_issuer_accreditation_id` is set:
+
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down, or 0 when `vua_issuer_accreditation` is [[ref: barred]] (no reward is paid then, [[MOD-AC-MSG-17-4]](#mod-ac-msg-17-4-settle-exchange-fees-execution) step 2)
+
+Required balance check:
+
+- the [[ref: funding account]] of `corporation` MUST cover `total_payer_trust_deposit` + `total_payees_trust_deposit` + `total_vua_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
+- AND the [[ref: funding account]] of `corporation` MUST cover `total_payees_fees_to_account` in `<arbitrary_denom>` ([[FUND-CHECK-1]](#fund-check-1-debit)).
+
+---
+
+**Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
+
+Pricing is in fiat currency (e.g., USD). Fiat fees are settled off-chain; only deposits and the VUA reward are paid on-chain in native denom.
+
+Calculate:
+
+- `total_fees_in_native_denom` = getPrice(`FIAT`, `<fiat_denom>`, `COIN`, `[[ref: native denom]]`, `total_fees_in_pricing_asset`)
+- `total_payer_trust_deposit` = `total_fees_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
+- `total_payees_trust_deposit` = `total_payer_trust_deposit`
+- `total_payees_fees_to_account` = 0 (FIAT payments are managed off-chain)
+
+if `vua_issuer_accreditation_id` is set:
+
+- `total_vua_reward` = `total_fees_in_native_denom` × `vua_rate`, rounded down, or 0 when `vua_issuer_accreditation` is [[ref: barred]] (no reward is paid then, [[MOD-AC-MSG-17-4]](#mod-ac-msg-17-4-settle-exchange-fees-execution) step 2)
+
+Required balance check:
+
+- the [[ref: funding account]] of `corporation` MUST cover `total_payer_trust_deposit` + `total_payees_trust_deposit` + `total_vua_reward` in [[ref: native denom]] ([[FUND-CHECK-1]](#fund-check-1-debit)).
+
+---
+
+:::warning
+- Deposit-bound amounts MUST always be paid in [[ref: native denom]] (trust units are minted from native denom only).
+- Every amount this method debits from `corporation` is taken from its [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit), for the type of the calling message), and every amount it credits to the corporation of a payee or of the VUA issuer goes to that corporation's funding account ([[FUND-CHECK-2]](#fund-check-2-credit)). Trust units are minted to the corporations themselves, whoever paid.
+- When paying with COIN ≠ [[ref: native denom]] or with FIAT, the payer pays the deposit-bound amounts on behalf of payees (since payees receive non-native assets that cannot be deposit-bound), and pays correspondingly less in the pricing asset: net economics match the native-denom case. For FIAT pricing, the off-chain settlement SHOULD likewise be for the fee minus its deposit-bound portion.
+:::
+
+##### [MOD-AC-MSG-17-4] Settle Exchange Fees execution
+
+- use "Find Beneficiaries" to build `found_accreditation_set`, as in the fee checks.
+
+> Note: All funds are transferred from the funding account of the `corporation` of the calling message, resolved once for that message per [[FUND-CHECK-1]](#fund-check-1-debit). The steps below describe what each recipient must receive. Implementation details (batching, order of transfers) are left to the implementer.
+
+---
+
+**Step 1: Process fee distribution to each beneficiary**
+
+Initialize the accumulator of the VUA reward:
+
+- `accumulated_vua_reward` = 0
+
+Determine the fee attribute and the applicable discount (`payer`, the deposit key of the payer's participation, is given by the calling method):
+
+- If **Credential Issuance** (`verification` is false):
+  - `fee_field` = `issuance_fees`
+  - `discount` = `issuer_discount`
+
+- Else, **Credential Presentation** (`verification` is true):
+  - `fee_field` = `verification_fees`
+  - `discount` = `verifier_discount`
+
+**For each beneficiary `Accreditation` `perm` in `found_accreditation_set`:**
+
+Set `vua_reward_portion` = 0 for this beneficiary. If `perm.[fee_field]` > 0:
+
+1. Calculate the discounted fee for this beneficiary:
+   - `beneficiary_fee_in_pricing_asset` = `perm.[fee_field]` × (1 - `discount`)
+
+2. Calculate amounts based on pricing configuration (same logic as fee checks):
+
+   **Case A: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, [[ref: native denom]])`**
+   
+   - `fee_in_native_denom` = `beneficiary_fee_in_pricing_asset`
+   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
+   - `payee_trust_deposit` = `payer_trust_deposit`
+   - `payee_fees_to_account` = `fee_in_native_denom` − `payee_trust_deposit`
+
+  if `vua_issuer_accreditation_id` is set:
+    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`, rounded down
+
+  
+   **Case B: `(cs.pricing_asset_type, cs.pricing_asset)` = `(COIN, <arbitrary_denom>)`**
+   
+   - `fee_in_native_denom` = getPrice(`COIN`, `<arbitrary_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
+   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
+   - `payee_trust_deposit` = `payer_trust_deposit`
+   - `payee_fees_to_account` = `beneficiary_fee_in_pricing_asset` − (`beneficiary_fee_in_pricing_asset` × `GlobalVariables.trust_deposit_rate`, rounded down) *(in `<arbitrary_denom>`)*
+
+  if `vua_issuer_accreditation_id` is set:
+    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`, rounded down
+
+
+   **Case C: `(cs.pricing_asset_type, cs.pricing_asset)` = `(FIAT, <fiat_denom>)`**
+   
+   - `fee_in_native_denom` = getPrice(`FIAT`, `<fiat_denom>`, `COIN`, `[[ref: native denom]]`, `beneficiary_fee_in_pricing_asset`)
+   - `payer_trust_deposit` = `fee_in_native_denom` × `GlobalVariables.trust_deposit_rate`, rounded down
+   - `payee_trust_deposit` = `payer_trust_deposit`
+   - `payee_fees_to_account` = 0 *(FIAT payments are managed off-chain)*
+
+  if `vua_issuer_accreditation_id` is set:
+    - `vua_reward_portion` = `fee_in_native_denom` × `vua_rate`, rounded down
+
+3. Execute transfers and mints for this beneficiary:
+
+   - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to the [[ref: funding account]] of `Corporation[perm.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) (in the appropriate denom).
+   - if `payee_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `perm.corporation_id`, `vs_id` = `perm.vs_id`, `schema_id` = `perm.schema_id`, `role` = `perm.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payee_trust_deposit`).
+   - if `payer_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account, the payer), (`vs_id`, `schema_id`, `role`) = `payer`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payer_trust_deposit`).
+
+4. Accumulate the VUA reward:
+
+   - `accumulated_vua_reward` = `accumulated_vua_reward` + `vua_reward_portion`
+
+---
+
+**Step 2: Process the VUA reward**
+
+After processing all beneficiaries, pay the accumulated reward to the VUA issuer.
+
+**Verifiable User Agent Reward:**
+
+If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 AND `vua_issuer_accreditation` is not [[ref: barred]] (neither its participation's deposit nor its corporation's trust deposit carries a slash debt or an exclusion; otherwise the reward is not paid, no deposit is funded, and the exchange goes through):
+
+- `vua_trust_deposit` = `accumulated_vua_reward` × `GlobalVariables.trust_deposit_rate`, rounded down
+- `vua_fees_to_account` = `accumulated_vua_reward` - `vua_trust_deposit`
+- Transfer `vua_fees_to_account` to the [[ref: funding account]] of `Corporation[vua_issuer_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) in [[ref: native denom]].
+- if `vua_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `vua_issuer_accreditation.corporation_id`, `vs_id` = `vua_issuer_accreditation.vs_id`, `schema_id` = `vua_issuer_accreditation.schema_id`, `role` = `vua_issuer_accreditation.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `vua_trust_deposit`).
+
 #### [MOD-AC-QRY-1] List Accreditations
 
 Anyone CAN execute this method.
@@ -5116,7 +5204,7 @@ Obsoleted by [MOD-AC-QRY-1].
 
 Anyone can execute this method.
 
-To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved entries until the root of the `Accreditation` tree (the ecosystem entry), starting from the 2 branches `issuer_accreditation` and `verifier_accreditation`, either branch being reduced to the schema's root entry when the party is referenced by its service entry (no active `Accreditation` entry: OPEN or CREDENTIAL mode, or an accreditation that has ended). As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found entries. In a Credential Issuance (no verifier reference), `issuer_accreditation` is never added to the set. In a Credential Verification (a verifier reference was given), `issuer_accreditation`, if not null, is added to the set unless it is barred; `verifier_accreditation` itself is never added to the set.
+To calculate the fees required for paying the beneficiaries, it is needed to recurse all involved entries until the root of the `Accreditation` tree (the ecosystem entry), starting from the 2 branches `issuer_accreditation` and `verifier_accreditation`, either branch being reduced to the schema's root entry when the party is referenced by its service entry (no active `Accreditation` entry: OPEN or CREDENTIAL mode, or an accreditation that has ended). As both branches may have common ancestors, we can create a Set (unordered collection with no duplicates), and recurse over the 2 branches, adding found entries. In a Credential Issuance (`verification` is false), `issuer_accreditation` is never added to the set. In a Credential Presentation (`verification` is true), `issuer_accreditation`, if not null, is added to the set unless it is barred; `verifier_accreditation` itself is never added to the set.
 
 Example 1: `verification` is false: it's a credential issuance, schema configured to have Issuer Grantors.
 
@@ -5159,7 +5247,7 @@ i --> tr
 
 ```
 
-Example 3: `verification` is true: it's a credential verification. Schema configured to have Verifier and Issuer Grantors.
+Example 3: `verification` is true: it's a Credential Presentation. Schema configured to have Verifier and Issuer Grantors.
 
 ```plantuml
 
@@ -5194,10 +5282,10 @@ v --> vg
 ##### [MOD-AC-QRY-4-1] Find Beneficiaries parameters
 
 - `schema_id` (uint64) (*mandatory*): id of the `CredentialSchema` entry.
-- `verification` (boolean) (*mandatory*): true for a Credential Verification, false for a Credential Issuance.
+- `verification` (boolean) (*mandatory*): true for a Credential Presentation, false for a Credential Issuance.
 - `issuer_accreditation_id` (uint64) (*conditional*): id of the issuer `Accreditation` entry. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
 - `issuer_vs_id` (uint64) (*conditional*): the issuer's service entry, when the issuer holds no active entry: its branch is the root.
-- `verifier_accreditation_id` (uint64) (*conditional*): id of the verifier `Accreditation` entry; in a Credential Verification, at most one of `verifier_accreditation_id` and `verifier_vs_id` is provided, none meaning a verifier without a service entry (a Verifiable User Agent, [[ref: VT spec]]); none in a Credential Issuance.
+- `verifier_accreditation_id` (uint64) (*conditional*): id of the verifier `Accreditation` entry; in a Credential Presentation, at most one of `verifier_accreditation_id` and `verifier_vs_id` is provided, none meaning a verifier without a service entry (a Verifiable User Agent, [[ref: VT spec]]); none in a Credential Issuance.
 - `verifier_vs_id` (uint64) (*conditional*): the verifier's service entry, when the verifier holds no active entry: its branch is the root.
 
 ##### [MOD-AC-QRY-4-2] Find Beneficiaries checks
@@ -5241,7 +5329,7 @@ A party acting under an OPEN or CREDENTIAL mode, with a self-created entry or no
 
 #### [MOD-AC-QRY-5] Void
 
-> Note: exchange records are not stored ([CredentialExchange](#credentialexchange)); indexers serve them from the events.
+> Note: exchange records are not stored ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)); indexers serve them from the events.
 
 #### [MOD-AC-QRY-6] List Accreditation Module Parameters
 
@@ -5294,7 +5382,7 @@ note over Applicant, CE #EEEEEE: tasks completed
 autonumber "<font color='#7677ed'><b>(run validated method)"
 CE --> VPR #3fbdb6: Validate Onboarding: escrow settled, trust units minted.
 autonumber stop
-CE --> VPR #3fbdb6: Record Credential Exchange under the exchange_id agreed with the applicant\n(credential digest anchored before delivery, exchange checked by the applicant through its indexer).
+CE --> VPR #3fbdb6: Record Credential Issuance under the exchange_id agreed with the applicant\n(credential digest anchored before delivery, exchange checked by the applicant through its indexer).
 CE --> Applicant #3fbdb6: Issue Credential.
 autonumber stop
 ```
@@ -5355,7 +5443,7 @@ The module maintains a single global index, the [[ref: trust unit peg value]] `t
 - A governance change of `tu_decay_rate` is **prospective only**: it is applied at step (4) of the next boundary and first affects the decline that follows. The index path already elapsed MUST NOT be recomputed: past mints, scores, and fiat-fixed slash debts are unaffected; only the future decline steepens or flattens.
 - The price of one trust unit in [[ref: native denom]] is derived from the oracle: `price_tu_in_native_denom(t) = tu_peg_value(t) / P(t)`, where `P(t)` is the current price of one base unit of [[ref: native denom]] in minor units of the [[ref: main fiat currency]], derived from the genesis exchange rate entry `xr` of [[XRG]](#xrg-genesis-exchange-rate) (base (FIAT, `main_fiat_currency`), quote (COIN, native denom): `xr.rate` base units of native denom per minor unit of fiat, scaled by `xr.rate_scale`): `P(t)` = 10^`xr.rate_scale` / `xr.rate`, computed at the ledger precision. It is not obtained through [Get Price](#mod-xr-qry-3-get-price), which converts whole amounts in the stored direction and rounds them down to base units (the price of one base unit of native denom would round to 0). If `xr` is disabled or expired, minting and repayment operations MUST abort.
 - **Ledger precision.** `tu_peg_value`, every `tu` and `fiat_cost` balance, and every amount derived from them (minted, slashed, restored) are decimals with exactly 18 fractional digits: the **ledger precision**. Every operation that produces such an amount rounds down to the ledger precision; an amount that rounds to 0 is 0. A fraction of a trust unit is an ordinary balance (at the genesis peg, a deposit-bound amount worth 0.15 units of [[ref: main fiat currency]], 15 minor units of a two-decimal currency, mints 0.15 trust units) and is slashed like any other. Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic: raw balances grow as the index declines (~×1.44/year at the default `tu_decay_rate`). A redenomination MAY be performed at a chain upgrade.
-- **Native denom and pricing-coin amounts.** Amounts in [[ref: native denom]] or in a pricing coin are integers of base units. An amount a method derives by a multiplication, a division or a conversion (a deposit-bound portion, a Verifiable User Agent reward, a half of an escrowed deposit) is rounded down to an integer; when an amount is split into parts, every part but the last is rounded down and the last part takes the remainder, so that the parts sum to the whole: in [[MOD-AC-MSG-3-3]](#mod-ac-msg-3-3-validate-onboarding-execution) the validator's half of the escrowed deposit is rounded down and the applicant's half takes the remainder; in [[MOD-AC-MSG-10-4]](#mod-ac-msg-10-4-record-credential-exchange-execution) the deposit-bound portion of a share is rounded down and the part transferred to the payee takes the remainder.
+- **Native denom and pricing-coin amounts.** Amounts in [[ref: native denom]] or in a pricing coin are integers of base units. An amount a method derives by a multiplication, a division or a conversion (a deposit-bound portion, a Verifiable User Agent reward, a half of an escrowed deposit) is rounded down to an integer; when an amount is split into parts, every part but the last is rounded down and the last part takes the remainder, so that the parts sum to the whole: in [[MOD-AC-MSG-3-3]](#mod-ac-msg-3-3-validate-onboarding-execution) the validator's half of the escrowed deposit is rounded down and the applicant's half takes the remainder; in [[MOD-AC-MSG-17-4]](#mod-ac-msg-17-4-settle-exchange-fees-execution) the deposit-bound portion of a share is rounded down and the part transferred to the payee takes the remainder.
 
 #### [MOD-TD-MSG-1] Mint Trust Units
 
@@ -5913,7 +6001,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
 - if `delegate` is present: `delegate` (account): (Signer) signature must be verified, and [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type. Else (group proposal) [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
-- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `RecordCredentialExchange` and `AcceptCorporationGovernanceFramework`, which are not allowed.
+- `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `RecordCredentialIssuance`, `RecordCredentialPresentation` and `AcceptCorporationGovernanceFramework`, which are not allowed.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `authz_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `authz_spend_limit_period` (duration): if specified MUST be a valid period. Ignored if `authz_spend_limit` is not set.
@@ -6115,7 +6203,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `sponsored_corporation_id`: a `Corporation` entry MUST exist with this `id`, and it MUST differ from `co.id`.
 - the `policy_address` of that corporation MUST NOT be the `grantee` of a `FeeGrant` of `co`, nor the `vs_account` of a `VerifiableService` entry of `co`, nor, when no `Sponsorship` entry exists for (`co.id`, `sponsored_corporation_id`) or the existing one has `covers_fees` false, the grantee of any `x/feegrant` allowance granted by `co.policy_address`, else abort: the sponsorship allowance and another allowance would share the one (granter, grantee) slot of x/feegrant (when the existing sponsorship covers fees, the allowance in the slot is its own, and the re-grant replaces it).
 - if a `Sponsorship` entry `s` already exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, the new terms MUST be at least as generous as the current ones, else abort with an error indicating that the sponsorship must be revoked first: `period` MUST be unchanged; `msg_types` MUST be absent or a superset of `s.msg_types` (absent counts as all); `spend_limit` MUST be absent or, for every denom of `s.spend_limit`, at least `s.spend_limit` (an absent `s.spend_limit` cannot be set); `expiration` MUST be null or later than `s.expiration` (a null `s.expiration` cannot be set); `covers_fees` MUST NOT change from true to false; when `s.covers_fees` is true, `fee_spend_limit` MUST be absent or at least `s.fee_spend_limit` per denom (an absent `s.fee_spend_limit` cannot be set); when it is false, any `fee_spend_limit` is accepted with `covers_fees` true.
-- `msg_types`, if specified: MUST be a non-empty list of message types among those of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem) (the list of the [Sponsorship](#sponsorship) entity).
+- `msg_types`, if specified: MUST be a non-empty list of message types among those of [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding), [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation), [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash), [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem) (the list of the [Sponsorship](#sponsorship) entity).
 - `spend_limit`, if specified: MUST be a list of valid DenomAmounts.
 - `period`, if specified: MUST be a valid duration, and `spend_limit` and `expiration` MUST also be specified.
 - `expiration`, if specified: MUST be in the future.
@@ -6265,9 +6353,9 @@ The Digests module keeps the [Digest](#digest) entries: the credential digests o
 #### [MOD-DI-MSG-1] Store Digest
 
 - Any authorized `delegate` CAN execute this method on behalf of a `corporation`, in the context of one of the corporation's [VerifiableService](#verifiableservice) entries: a corporation delegate under a DelegateAuthorization, or the VS account of that entry under a VS Account Authorization whose entry's `msg_types` include `StoreDigest`.
-- This method can be called directly by [Record Credential Exchange](#mod-ac-msg-10-record-credential-exchange) ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), with no checks.
+- This method can be called directly by [Record Credential Issuance](#mod-ac-msg-10-record-credential-issuance) ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)), with no checks.
 
-The VS of an issuer does not call this method itself: it anchors the digest of a credential it issues through the issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), `digest` parameter), which it runs even when no fees are due, so that the anchoring entry of the digest is recorded; the entry is written only under a schema whose `credential_anchoring` is REVOCABLE_DIGEST. Called directly, this method anchors a digest for the owner's other needs (a dated proof of the existence of a document, a retention record): such a digest has no anchoring context of a credential.
+The VS of an issuer does not call this method itself: it anchors the digest of a credential it issues through the issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), `credential_digest` parameter), which it runs even when no fees are due, so that the anchoring entry of the digest is recorded; the entry is written only under a schema whose `credential_anchoring` is REVOCABLE_DIGEST. Called directly, this method anchors a digest for the owner's other needs (a dated proof of the existence of a document, a retention record): such a digest has no anchoring context of a credential.
 
 ##### [MOD-DI-MSG-1-1] Store Digest method parameters
 
@@ -6277,7 +6365,7 @@ The VS of an issuer does not call this method itself: it anchors the digest of a
 - `digest` (bytes, base64 in the API) (*mandatory*): digest to store.
 - `expires` (timestamp) (*optional*): block time after which the entry is deleted ([Digests Module](#digests-module)); null keeps it indefinitely.
 
-Module-call inputs, set only when the method is called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) and MUST be absent on a direct Msg: `schema_id` (the schema of the exchange); `vs_id` is then the issuer's service entry, `expires` the credential's expiry, and the authorization checks below are those of the exchange message.
+Module-call inputs, set only when the method is called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) and MUST be absent on a direct Msg: `schema_id` (the schema of the exchange); `vs_id` is then the issuer's service entry, `expires` the credential's expiry, and the authorization checks below are those of the exchange message.
 
 ##### [MOD-DI-MSG-1-2] Store Digest precondition checks
 
@@ -6308,10 +6396,10 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - else create `Digest` entry `d`:
   - set `d.digest` to `digest`.
   - set `d.vs_id` to `vs_id`.
-  - set `d.schema_id` to `schema_id` when called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange), null on a direct Msg.
+  - set `d.schema_id` to `schema_id` when called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), null on a direct Msg.
   - set `d.created` to `now`.
   - set `d.revoked` to null.
-  - set `d.expires` to `expires` (the `credential_valid_until` of the exchange when called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)), null when absent, and file the entry in the expiry queue when not null.
+  - set `d.expires` to `expires` (the `credential_valid_until` of the exchange when called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)), null when absent, and file the entry in the expiry queue when not null.
 
 #### [MOD-DI-MSG-2] Revoke Digest
 
@@ -6321,9 +6409,9 @@ This method revokes a digest. It can be executed on behalf of:
 - the `corporation` of an **ancestor** of a current `ISSUER` entry of the issuer's participation (an entry listed in `ParticipationTrustDeposit[(d.vs_id, d.schema_id, ISSUER)].accreditation_ids`, and a validator in its branch up to the root ECOSYSTEM entry), while that ancestor is an [[ref: active accreditation]]: by any of its delegates under a DelegateAuthorization, or by the VS account of that ancestor entry under a VS Account Authorization whose entry's `msg_types` include `RevokeDigest`;
 - the `corporation` controlling the `Ecosystem` of `d.schema_id`, by any of its delegates under a DelegateAuthorization, whatever the state of the tree (as for [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)).
 
-Revoking a digest is the on-chain revocation mechanism for an individual credential whose issuance was anchored through its issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange)); revoking the holder's `HOLDER` `Accreditation` entry ([[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)) withdraws trust from every credential of that relationship instead. The authority structure mirrors [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation): the issuer, its grantors and the ecosystem can revoke, and the ecosystem governance framework bounds the use of the ancestor path. Trust resolution of a credential of a REVOCABLE_DIGEST schema whose `Digest` entry, written by its issuance transaction under the issuer's entry, carries a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp, whichever of these parties set it; an entry stored directly, or anchored under another entry, is not the credential's anchor and is disregarded ([[ref: VT spec]]). Revocation is irreversible.
+Revoking a digest is the on-chain revocation mechanism for an individual credential whose issuance was anchored through its issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)); revoking the holder's `HOLDER` `Accreditation` entry ([[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)) withdraws trust from every credential of that relationship instead. The authority structure mirrors [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation): the issuer, its grantors and the ecosystem can revoke, and the ecosystem governance framework bounds the use of the ancestor path. Trust resolution of a credential of a REVOCABLE_DIGEST schema whose `Digest` entry, written by its issuance transaction under the issuer's entry, carries a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp, whichever of these parties set it; an entry stored directly, or anchored under another entry, is not the credential's anchor and is disregarded ([[ref: VT spec]]). Revocation is irreversible.
 
-Since any corporation may store any digest and the first to store it owns it, the Verifiable Trust specification requires the issuer of a credential of a schema whose `credential_anchoring` is DIGEST or REVOCABLE_DIGEST to anchor its digest through the issuance transaction before delivering the credential, so that no other corporation can anchor it first and hold the right to revoke it (under REVOCABLE_DIGEST the issuance transaction then aborts, [[MOD-AC-MSG-10-2]](#mod-ac-msg-10-2-record-credential-exchange-precondition-checks); under DIGEST, where nothing is written, such an entry anchors nothing and trust resolution disregards it).
+Since any corporation may store any digest and the first to store it owns it, the Verifiable Trust specification requires the issuer of a credential of a schema whose `credential_anchoring` is DIGEST or REVOCABLE_DIGEST to anchor its digest through the issuance transaction before delivering the credential, so that no other corporation can anchor it first and hold the right to revoke it (under REVOCABLE_DIGEST the issuance transaction then aborts, [[MOD-AC-MSG-10-2]](#mod-ac-msg-10-2-record-credential-issuance-precondition-checks); under DIGEST, where nothing is written, such an entry anchors nothing and trust resolution disregards it).
 
 ##### [MOD-DI-MSG-2-1] Revoke Digest method parameters
 
@@ -6802,11 +6890,11 @@ Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
 - `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `vid` (string) (*mandatory*): the [[ref: VID]] to register.
-- `vs_account` (account) (*optional*): the account that the service identified by `vid` signs with. Null when no software acts for the identifier, which is the common case for the identifier of a legal entity or of an ecosystem, or for a validator that works through corporation delegates: such an entry holds its `Accreditation` entries but cannot run exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-exchange) is reserved to a VS account), so it neither issues nor verifies through the VPR.
+- `vs_account` (account) (*optional*): the account that the service identified by `vid` signs with. Null when no software acts for the identifier, which is the common case for the identifier of a legal entity or of an ecosystem, or for a validator that works through corporation delegates: such an entry holds its `Accreditation` entries but cannot record exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) and [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) are reserved to a VS account), so it neither issues nor verifies through the VPR.
 
 The following VS Account Authorization parameters are **optional** and collectively define the initial VS account configuration of the registered entry: its `msg_types`, `period` and `fee_spend_limit`, and its operation budget ([VsAccountBudget](#vsaccountbudget)) when `vs_account_spend_limit` is given. Presence of `vs_account_msg_types` is the trigger for the whole group, budget included, and implies that `vs_account` is provided: no configuration, and no budget, can be set without an account to apply it to. If `vs_account_msg_types` is not provided, no other parameter of the group MAY be, `msg_types` stays empty and the entry has no VS Account Authorization until [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) sets one.
 
-- `vs_account_msg_types[]` ([MsgType](#msgtype)[]) (*optional*): list of VPR delegable message types `vs_account` is authorized to execute on behalf of `corporation` in the context of the entry, among `RecordCredentialExchange`, `ValidateOnboarding`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_account` MUST be specified.
+- `vs_account_msg_types[]` ([MsgType](#msgtype)[]) (*optional*): list of VPR delegable message types `vs_account` is authorized to execute on behalf of `corporation` in the context of the entry, among `RecordCredentialIssuance`, `RecordCredentialPresentation`, `ValidateOnboarding`, `StoreDigest`, `RevokeDigest` and `TriggerResolver`. If provided, `vs_account` MUST be specified.
 - `vs_account_spend_limit` (DenomAmount[]) (*optional*): maximum amount of funds `vs_account` is allowed to spend in the context of the entry as a direct consequence of executing authorized messages.
 - `vs_account_fee_spend_limit` (DenomAmount[]) (*optional*): the entry's contribution to the fee allowance of `vs_account`, per `GlobalVariables.vs_account_fee_period` (see [VerifiableService](#verifiableservice)). When provided, the corporation pays the VS account's transaction fees and every amount MUST be strictly positive.
 - `vs_account_period` (duration) (*optional*): operation-budget cycle length for `vs_account_spend_limit` (requires it to be provided). Does not apply to fees.
@@ -6898,7 +6986,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - if `vs_account` is null or `vs_account_msg_types` is not provided: call [[MOD-DE-MSG-6]](#mod-de-msg-6-revoke-vs-account-authorization) Revoke VS Account Authorization with `vs_id` (no-op if the entry has no VS account configuration), then set `vs.vs_account` := `vs_account`.
 - else: call [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-account-authorization) Set VS Account Authorization with `vs_account` and the parameters, exactly as in [[MOD-VS-MSG-1-3]](#mod-vs-msg-1-3-register-verifiable-service-execution): it changes the account if it differs, keeps the budget balance when the spend limit is unchanged, and adjusts the fee allowance only by the difference. An update that changes nothing writes the entry and nothing else.
 
-> Note: exchanges are run for the entry, not for the account ([CredentialExchange](#credentialexchange)): an exchange begun under the former VS account is continued by the new one (its transactions are correlated by the `exchange_id`), and the former account can no longer act for this entry.
+> Note: exchanges are recorded for the entry, not for the account ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)): an exchange begun under the former VS account is continued by the new one (its transactions are correlated by the `exchange_id`), and the former account can no longer act for this entry.
 
 #### [MOD-VS-MSG-3] Rotate Verifiable Identifier
 
