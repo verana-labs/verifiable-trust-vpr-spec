@@ -1399,7 +1399,7 @@ sp "1" --- "0..n" da: remaining_spend
 sp "1" --- "0..n" da: fee_spend_limit
 
 xrauthz o-- xr: xr_id
-xrauthz o-- account: operator
+xrauthz o-- account: feeder
 
 xr o-- pricingassettype: base_asset_type
 xr o-- pricingassettype: quote_asset_type
@@ -1477,7 +1477,7 @@ Unless otherwise stated, every entity's `id` field is:
 
 Clients MAY rely on `id` ordering as a deterministic cursor for keyset pagination.
 
-Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `OperatorAuthorization` (composite PK on `(corporation_id, operator)`), `ParticipationTrustDeposit` (composite PK on `(vs_id, schema_id, role)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsOperatorBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), and `ExchangeRateAuthorization`, and `EcosystemAcceptance` (composite PK on (`ecosystem_id`, `corporation_id`)) (composite PK on `(xr_id, operator)`). In every case the `(key)` annotation on a field marks the entity's primary key.
+Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `OperatorAuthorization` (composite PK on `(corporation_id, operator)`), `ParticipationTrustDeposit` (composite PK on `(vs_id, schema_id, role)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsOperatorBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), `EcosystemAcceptance` (composite PK on `(ecosystem_id, corporation_id)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, feeder)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
 **Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_operator` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-operator-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these three indexes, nothing else. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: a [CredentialExchange](#credentialexchange) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `OperatorAuthorization` by (`corporation_id`, `operator`), `EcosystemAcceptance` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
 
@@ -1819,14 +1819,14 @@ Represents an on-chain exchange rate between two assets.
 
 ### ExchangeRateAuthorization
 
-Represents the authorization granted by network governance to a specific operator account to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) Update Exchange Rate on a given `ExchangeRate` entry.
+Represents the authorization granted by network governance to a specific feeder account to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) Update Exchange Rate on a given `ExchangeRate` entry.
 
-Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price) Get Price and used across the protocol (trust unit minting, fee settlement, distribution budgets, slash repayment). Therefore, ownership and update permission of an `ExchangeRate` is scoped to the network (governance), not to a corporation. `ExchangeRateAuthorization` is the on-chain record that designates which operator account is authorized to push fresh values for a given `ExchangeRate`, and under what runtime constraints.
+Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price) Get Price and used across the protocol (trust unit minting, fee settlement, distribution budgets, slash repayment). Therefore, ownership and update permission of an `ExchangeRate` is scoped to the network (governance), not to a corporation. `ExchangeRateAuthorization` is the on-chain record that designates which feeder account is authorized to push fresh values for a given `ExchangeRate`, and under what runtime constraints.
 
 `ExchangeRateAuthorization`:
 
-- `xr_id` (uint64) (*mandatory*) (key): id of the `ExchangeRate` this authorization applies to. Together with `operator`, forms the composite key.
-- `operator` (account) (*mandatory*) (key): account authorized to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) on `xr_id`. Together with `xr_id`, forms the composite key.
+- `xr_id` (uint64) (*mandatory*) (key): id of the `ExchangeRate` this authorization applies to. Together with `feeder`, forms the composite key.
+- `feeder` (account) (*mandatory*) (key): account authorized to execute [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) on `xr_id`. Together with `xr_id`, forms the composite key.
 - `expiration` (timestamp) (*mandatory*): authorization end-of-life. When `now() >= expiration`, the authorization is dead and [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected.
 - `min_interval` (duration) (*optional*): anti-spam guard. If set, two successive successful [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls on the `ExchangeRate` entry, whoever pushed the previous value, MUST be separated by at least `min_interval` (measured on `xr.updated`).
 - `max_deviation_bps` (uint32) (*conditional*): circuit breaker, expressed in basis points (1 bps = 0.01%). MUST be set on every authorization of the [[XRG]](#xrg-genesis-exchange-rate) entry, the rate every fee and every mint depends on; optional on the others. If set, [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) MUST be rejected if the relative change between the new `rate` and the current `xr.rate` exceeds `max_deviation_bps / 10000`. A larger move requires a fresh [[ref: governance proposal]] (an updated authorization with a wider `max_deviation_bps`, [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization)).
@@ -2206,7 +2206,7 @@ As a result, `accountABC` is authorized to:
 |          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation + operator of the owner, of an active ancestor or of the schema's ecosystem (OperatorAuthorization), or vs_operator of the anchoring entry or of an active ancestor |
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
 | Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | [[ref: governance proposal]]|
-|                   | Update Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | operator |
+|                   | Update Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | feeder |
 |                   | Set Exchange Rate State           | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)   |[[ref: governance proposal]]|
 |                   | Grant Exchange Rate Authorization |     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-4]](#mod-xr-msg-4-grant-exchange-rate-authorization)   |[[ref: governance proposal]]|
 |                   | Revoke Exchange Rate Authorization|     N/A (Tx)                     | Msg    | [[MOD-XR-MSG-5]](#mod-xr-msg-5-revoke-exchange-rate-authorization)   |[[ref: governance proposal]]|
@@ -6487,14 +6487,14 @@ Create `ExchangeRate` entry `xr`:
 
 #### [MOD-XR-MSG-2] Update Exchange Rate
 
-The **Update Exchange Rate** method allows an operator authorized by network governance (via an `ExchangeRateAuthorization`) to push a fresh `rate` for a given `ExchangeRate` entry.
+The **Update Exchange Rate** method allows a feeder authorized by network governance (via an `ExchangeRateAuthorization`) to push a fresh `rate` for a given `ExchangeRate` entry.
 
-- Only the `operator` designated in an `ExchangeRateAuthorization` matching the target `ExchangeRate` CAN execute this method.
-- `rate` MUST be the time-weighted average of the operator's source price over `GlobalVariables.twap_window` or, before the native denom is listed on a market, the reference price declared by the governance framework ([[XRG]](#xrg-genesis-exchange-rate)).
+- Only the `feeder` designated in an `ExchangeRateAuthorization` matching the target `ExchangeRate` CAN execute this method.
+- `rate` MUST be the time-weighted average of the feeder's source price over `GlobalVariables.twap_window` or, before the native denom is listed on a market, the reference price declared by the governance framework ([[XRG]](#xrg-genesis-exchange-rate)).
 
 ##### [MOD-XR-MSG-2-1] Update Exchange Rate method parameters
 
-- `operator` (account) (*mandatory*): (Signer) the account pushing the new rate.
+- `feeder` (account) (*mandatory*): (Signer) the account pushing the new rate.
 - `id` (uint64) (*mandatory*): id of the target `ExchangeRate` entry.
 - `rate` (uint64) (*mandatory*): the new fixed-point integer rate value.
 
@@ -6507,11 +6507,11 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
-- `operator` (account): (Signer) signature must be verified.
+- `feeder` (account): (Signer) signature must be verified.
 - `id` MUST refer to an existing `ExchangeRate` entry `xr` with `xr.state` = true.
 - `rate` MUST be strictly greater than 0.
 - **Authorization**:
-  - An `ExchangeRateAuthorization` `xrauthz` MUST exist where `xrauthz.xr_id` = `id` and `xrauthz.operator` = `operator`.
+  - An `ExchangeRateAuthorization` `xrauthz` MUST exist where `xrauthz.xr_id` = `id` and `xrauthz.feeder` = `feeder`.
   - `xrauthz.expiration` MUST be in the future (`now() < xrauthz.expiration`).
   - If `xrauthz.min_interval` is set, then `now() - xr.updated` MUST be greater than or equal to `xrauthz.min_interval`.
   - If `xrauthz.max_deviation_bps` is set, then `|rate - xr.rate| * 10000` MUST be less than or equal to `xrauthz.max_deviation_bps * xr.rate` (i.e., the relative change between the new `rate` and `xr.rate` MUST NOT exceed `xrauthz.max_deviation_bps` basis points). Both values share the same `xr.rate_scale`, since `MOD-XR-MSG-2` does not update the scale.
@@ -6562,14 +6562,14 @@ Load `ExchangeRate` `xr`.
 
 #### [MOD-XR-MSG-4] Grant Exchange Rate Authorization
 
-The **Grant Exchange Rate Authorization** method creates (or updates) an `ExchangeRateAuthorization` record designating a network-level operator allowed to push fresh rates for a given `ExchangeRate` via [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate).
+The **Grant Exchange Rate Authorization** method creates (or updates) an `ExchangeRateAuthorization` record designating a network-level feeder allowed to push fresh rates for a given `ExchangeRate` via [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate).
 
 - Only a [[ref: governance proposal]] CAN execute this method.
 
 ##### [MOD-XR-MSG-4-1] Grant Exchange Rate Authorization method parameters
 
 - `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
-- `operator` (account) (*mandatory*): the account receiving the authorization.
+- `feeder` (account) (*mandatory*): the account receiving the authorization.
 - `expiration` (timestamp) (*mandatory*): authorization end-of-life.
 - `min_interval` (duration) (*optional*): minimum time between two successive [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls on the entry (measured on `xr.updated`).
 - `max_deviation_bps` (uint32) (*conditional*): maximum relative change per update, in basis points; mandatory when `xr_id` is the [[XRG]](#xrg-genesis-exchange-rate) entry.
@@ -6586,7 +6586,7 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 - **Authorization**
   - Only a [[ref: governance proposal]] can grant an `ExchangeRateAuthorization`.
 - `xr_id` MUST refer to an existing `ExchangeRate` entry.
-- `operator` MUST be a valid account.
+- `feeder` MUST be a valid account.
 - `expiration` MUST be in the future.
 - `min_interval`, if specified, MUST be a valid, strictly positive duration.
 - `max_deviation_bps`, if specified, MUST be strictly greater than `0` and less than or equal to `10000`; it MUST be specified when `xr_id` is the [[XRG]](#xrg-genesis-exchange-rate) entry.
@@ -6597,24 +6597,24 @@ Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 
 ##### [MOD-XR-MSG-4-3] Grant Exchange Rate Authorization execution of the method
 
-Create (or update if it already exists) `ExchangeRateAuthorization` `xrauthz` keyed by (`xr_id`, `operator`):
+Create (or update if it already exists) `ExchangeRateAuthorization` `xrauthz` keyed by (`xr_id`, `feeder`):
 
 - `xrauthz.xr_id` = `xr_id`
-- `xrauthz.operator` = `operator`
+- `xrauthz.feeder` = `feeder`
 - `xrauthz.expiration` = `expiration`
 - `xrauthz.min_interval` = `min_interval` (if provided, else unset)
 - `xrauthz.max_deviation_bps` = `max_deviation_bps` (if provided, else unset)
 
 #### [MOD-XR-MSG-5] Revoke Exchange Rate Authorization
 
-The **Revoke Exchange Rate Authorization** method deletes an existing `ExchangeRateAuthorization` record, immediately preventing the designated operator from executing further [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls on the target `ExchangeRate`.
+The **Revoke Exchange Rate Authorization** method deletes an existing `ExchangeRateAuthorization` record, immediately preventing the designated feeder from executing further [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) calls on the target `ExchangeRate`.
 
 - Only a [[ref: governance proposal]] CAN execute this method.
 
 ##### [MOD-XR-MSG-5-1] Revoke Exchange Rate Authorization method parameters
 
 - `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
-- `operator` (account) (*mandatory*): the account whose authorization is revoked.
+- `feeder` (account) (*mandatory*): the account whose authorization is revoked.
 
 ##### [MOD-XR-MSG-5-2] Revoke Exchange Rate Authorization precondition checks
 
@@ -6627,7 +6627,7 @@ If any of the following conditions is not satisfied, [[ref: transaction]] MUST a
 - if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
   - Only a [[ref: governance proposal]] can revoke an `ExchangeRateAuthorization`.
-- An `ExchangeRateAuthorization` entry MUST exist for (`xr_id`, `operator`).
+- An `ExchangeRateAuthorization` entry MUST exist for (`xr_id`, `feeder`).
 
 ###### [MOD-XR-MSG-5-2-2] Revoke Exchange Rate Authorization fee checks
 
@@ -6635,7 +6635,7 @@ Fee payer MUST have sufficient [[ref: estimated transaction fees]].
 
 ##### [MOD-XR-MSG-5-3] Revoke Exchange Rate Authorization execution of the method
 
-- Delete `ExchangeRateAuthorization` entry for (`xr_id`, `operator`).
+- Delete `ExchangeRateAuthorization` entry for (`xr_id`, `feeder`).
 
 #### [MOD-XR-QRY-1] Get Exchange Rate
 
@@ -7094,7 +7094,7 @@ The genesis state of the trust deposit module MUST contain `tu_peg_value`, the p
 
 ### [XRG] Genesis Exchange Rate
 
-The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]), its `rate` being the number of base units of native denom per minor unit of the main fiat currency, scaled by `rate_scale`, with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch oracle operator for that entry, with `max_deviation_bps` set and an `expiration` later than the genesis time. Without this entry no transaction fee can be computed and no transaction can be executed ([[NET-FEE-1]](#net-fee-1-network-gas-price)); while the entry is disabled or its rate expired, no [[ref: trust unit]] can be minted and no slash debt repaid until governance enables it ([[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)) and an operator pushes a rate ([[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)). Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the operator pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
+The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]), its `rate` being the number of base units of native denom per minor unit of the main fiat currency, scaled by `rate_scale`, with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch feeder for that entry, with `max_deviation_bps` set and an `expiration` later than the genesis time. Without this entry no transaction fee can be computed and no transaction can be executed ([[NET-FEE-1]](#net-fee-1-network-gas-price)); while the entry is disabled or its rate expired, no [[ref: trust unit]] can be minted and no slash debt repaid until governance enables it ([[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)) and a feeder pushes a rate ([[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)). Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the feeder pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
 
 ### [GCO] Genesis Council
 
