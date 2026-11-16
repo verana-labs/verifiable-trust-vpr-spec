@@ -2187,8 +2187,8 @@ As a result, `accountABC` is authorized to:
 |                                | Set Corporation Exclusion           |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)   | [[ref: governance proposal]] |
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |N/A |
 |                                | List TD Module Parameters               | /td/v1/params                 | Query  | [[MOD-TD-QRY-2]](#mod-td-qry-2-list-module-parameters)   |N/A |
-|                                | Get Network Gas Price                   | /td/v1/gas-price              | Query  | [[MOD-TD-QRY-4]](#mod-td-qry-4-get-network-gas-price)   |N/A  |
-|                                | Get Participation Trust Deposit                 | /td/v1/deposit/get            | Query  | [[MOD-TD-QRY-5]](#mod-td-qry-5-get-participation-trust-deposit)   |N/A  |
+|                                | Get Network Gas Price                   | /td/v1/gas-price              | Query  | [[MOD-TD-QRY-3]](#mod-td-qry-3-get-network-gas-price)   |N/A  |
+|                                | Get Participation Trust Deposit                 | /td/v1/deposit/get            | Query  | [[MOD-TD-QRY-4]](#mod-td-qry-4-get-participation-trust-deposit)   |N/A  |
 | Distribution                   | Update Module Parameters                | N/A (Tx)                      | Msg    | [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters)   | [[ref: governance proposal]] |
 | Delegation  | Grant Fee Allowance         |   N/A (Tx)  | Msg  | [[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)   |module call|
 |             | Revoke Fee Allowance        |    N/A (Tx)  | Msg  | [[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)   |module call|
@@ -5637,17 +5637,15 @@ Return the list of the existing parameters and their values.
 }
 ```
 
-#### [MOD-TD-QRY-3] Void
-
-#### [MOD-TD-QRY-4] Get Network Gas Price
+#### [MOD-TD-QRY-3] Get Network Gas Price
 
 Anyone CAN run this [[ref: query]]. Clients use it to compute the fee of a transaction ([[NET-FEE-2]](#net-fee-2-required-fee)).
 
-##### [MOD-TD-QRY-4-1] Get Network Gas Price parameters
+##### [MOD-TD-QRY-3-1] Get Network Gas Price parameters
 
 None.
 
-##### [MOD-TD-QRY-4-3] Get Network Gas Price execution of the query
+##### [MOD-TD-QRY-3-3] Get Network Gas Price execution of the query
 
 Return:
 
@@ -5656,19 +5654,19 @@ Return:
 - `epoch` (number): the current epoch number, and `epoch_ends` (timestamp): the start of the next epoch, after which `network_gas_price_native` may change;
 - `max_gas_per_msg_type` (map<string, number>): `GlobalVariables.max_gas_per_msg_type`.
 
-#### [MOD-TD-QRY-5] Get Participation Trust Deposit
+#### [MOD-TD-QRY-4] Get Participation Trust Deposit
 
 Any [[ref: account]] CAN run this [[ref: query]].
 
-##### [MOD-TD-QRY-5-1] Get Participation Trust Deposit query parameters
+##### [MOD-TD-QRY-4-1] Get Participation Trust Deposit query parameters
 
 - `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation; the corporation of the deposit is the owner of `vs_id`.
 
-##### [MOD-TD-QRY-5-2] Get Participation Trust Deposit query checks
+##### [MOD-TD-QRY-4-2] Get Participation Trust Deposit query checks
 
 - `vs_id` and `schema_id` MUST be valid uint64, `role` a valid AccreditationRole.
 
-##### [MOD-TD-QRY-5-3] Get Participation Trust Deposit execution of the query
+##### [MOD-TD-QRY-4-3] Get Participation Trust Deposit execution of the query
 
 Return the [ParticipationTrustDeposit](#participationtrustdeposit) entry `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, if any, with the current `tu_peg_value`. If no entry exists, return not found.
 
@@ -5688,7 +5686,7 @@ Every [[ref: transaction]] pays [[ref: network fees]] in [[ref: native denom]], 
 - In the boundary block of each epoch, as step (5) of the boundary sequence defined in [Trust Unit Index](#trust-unit-index), `network_gas_price_native` MUST be recomputed for the next epoch. If no enabled, non-expired exchange rate is available at that moment, the last stored rate MUST be used even if expired: unlike minting and repayment, fee computation never aborts for lack of a rate, so that the chain, and the exchange-rate update transaction itself, keep working.
 - The recomputed `network_gas_price_native` MUST NOT exceed twice, nor fall below half of, the value of the ending epoch: a larger move is clamped to that bound and reaches its target over successive boundaries. The clamp is a second guard behind the oracle's `max_deviation_bps`: a wrong push (a unit mistake, for instance) can at worst double the price of gas for one epoch, which keeps the corrective push and the council's votes affordable. It does not apply to the first computation at genesis.
 - Within an epoch `network_gas_price_native` MUST NOT change. A governance change of `network_gas_price` takes effect at the next boundary.
-- The current values are returned by [[MOD-TD-QRY-4]](#mod-td-qry-4-get-network-gas-price).
+- The current values are returned by [[MOD-TD-QRY-3]](#mod-td-qry-3-get-network-gas-price).
 
 #### [NET-FEE-2] Required Fee
 
@@ -5712,7 +5710,7 @@ A change of `max_gas_per_msg_type` by [[ref: governance proposal]] applies to th
 
 *This section is non-normative.*
 
-A client estimates gas by simulation, applies its usual gas adjustment, reads `network_gas_price_native` through [[MOD-TD-QRY-4]](#mod-td-qry-4-get-network-gas-price) and signs `fee = gas_limit × network_gas_price_native`. Within an epoch the required fee does not move. A transaction signed just before a boundary and executed just after it is rejected before any deduction if the new price is higher, and is simply resubmitted; a client MAY sign with a small margin to avoid even that, since the excess is never deducted, and the exchange-rate authorization bounds how far the rate can move per update. Wallets SHOULD display the signed fee as a maximum. A fee-granted client keeps `gas_limit` under the sum of the caps of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) for the messages it batches.
+A client estimates gas by simulation, applies its usual gas adjustment, reads `network_gas_price_native` through [[MOD-TD-QRY-3]](#mod-td-qry-3-get-network-gas-price) and signs `fee = gas_limit × network_gas_price_native`. Within an epoch the required fee does not move. A transaction signed just before a boundary and executed just after it is rejected before any deduction if the new price is higher, and is simply resubmitted; a client MAY sign with a small margin to avoid even that, since the excess is never deducted, and the exchange-rate authorization bounds how far the rate can move per update. Wallets SHOULD display the signed fee as a maximum. A fee-granted client keeps `gas_limit` under the sum of the caps of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) for the messages it batches.
 
 ### Distribution Module
 
