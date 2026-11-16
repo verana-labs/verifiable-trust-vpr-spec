@@ -1837,7 +1837,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 Amounts in [[ref: main fiat currency]] below are in its minor units ([[ref: main fiat currency]]).
 
-Each group below is owned by the module whose Update Module Parameters message changes it: Credential Schema by [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters); Trust Deposit and Trust Unit Index, Native denom and Network fees by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters); Distribution by [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters); Exchange Rate by [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters); Delegation and Verifiable Service by [[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters). The Network governance group is set at genesis and maintained by the Governance Framework module; no Update Module Parameters message changes it. The Governance Framework group is changed by [[MOD-GF-MSG-5]](#mod-gf-msg-5-update-module-parameters). The immutable parameters, `main_fiat_currency`, `tu_peg_value_genesis`, `epoch_length`, `vna_total_supply` and `council_account`, are refused by every Update Module Parameters message. The Corporation, Ecosystem and Accreditation modules own no parameter group: their Update Module Parameters messages ([[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters), [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters), [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters)) abort on any key and their List Module Parameters queries return an empty set, until a parameter is assigned to them.
+Each group below is owned by the module whose Update Module Parameters message changes it: Credential Schema by [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters); Trust Deposit and Trust Unit Index, Native denom and Network fees by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters); Distribution by [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters); Exchange Rate by [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters); Delegation and Verifiable Service by [[MOD-VS-MSG-4]](#mod-vs-msg-4-update-module-parameters). The Network governance group is set at genesis and maintained by the Governance Framework module; no Update Module Parameters message changes it. The Governance Framework group is changed by [[MOD-GF-MSG-5]](#mod-gf-msg-5-update-module-parameters). The immutable parameters, `main_fiat_currency`, `tu_peg_value_genesis`, `epoch_length`, `vna_total_supply` and `council_account`, are refused by every Update Module Parameters message. The Corporation, Ecosystem and Accreditation modules own no parameter group: their Update Module Parameters messages ([[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters), [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters), [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters)) abort on any key and their List Module Parameters queries return an empty set, until a parameter is assigned to them.
 
 **Credential Schema:**
 
@@ -1880,7 +1880,7 @@ Each group below is owned by the module whose Update Module Parameters message c
 
 **Delegation:**
 
-- `vs_operator_fee_period` (duration) (*mandatory*): network-wide cycle length of the VS-operator fee allowance (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)): each entry's `fee_spend_limit` is a budget contribution per `vs_operator_fee_period`. Default value: 1 day. Adjustable by [[ref: governance proposal]] ([[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters)); a change applies to the allowances granted or adjusted afterwards.
+- `vs_operator_fee_period` (duration) (*mandatory*): network-wide cycle length of the VS-operator fee allowance (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)): each entry's `fee_spend_limit` is a budget contribution per `vs_operator_fee_period`. Default value: 1 day. Adjustable by [[ref: governance proposal]] ([[MOD-VS-MSG-4]](#mod-vs-msg-4-update-module-parameters)); a change applies to the allowances granted or adjusted afterwards.
 
 **Verifiable Service:**
 
@@ -2217,7 +2217,7 @@ As a result, `accountABC` is authorized to:
 | Verifiable Service        | Register Verifiable Service              | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service)   | corporation + operator |
 |                                | Update Verifiable Service               | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)   | corporation + operator |
 |                                | Rotate Verifiable Identifier            | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)   | corporation (group proposal) |
-|                                | Update VS Module Parameters             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-7]](#mod-vs-msg-7-update-module-parameters)   | [[ref: governance proposal]] |
+|                                | Update VS Module Parameters             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-4]](#mod-vs-msg-4-update-module-parameters)   | [[ref: governance proposal]] |
 |                                | Get Verifiable Service                  | /vs/v1/get                       | Query  | [[MOD-VS-QRY-1]](#mod-vs-qry-1-get-verifiable-service)   | N/A |
 |                                | List Verifiable Services                | /vs/v1/list                      | Query  | [[MOD-VS-QRY-2]](#mod-vs-qry-2-list-verifiable-services)   | N/A |
 |                                | List VS Module Parameters               | /vs/v1/params                    | Query  | [[MOD-VS-QRY-3]](#mod-vs-qry-3-list-module-parameters)   | N/A |
@@ -6937,39 +6937,33 @@ The method MUST emit an event carrying `vs.id`, `former`, `vid` and `transition_
 
 > Note: the VPR does not re-validate anything at rotation. The ecosystems that accredited the service validated an organization, not a string; an [[ref: ecosystem governance authority]] whose framework binds accreditation to a particular identifier (a method, a domain) learns the rotation from the event and keeps its usual remedy, revocation of the `Accreditation` entry. Credentials that carry the former string, as issuer or as subject, are re-issued by their issuers during the transition window, and the former DID Document SHOULD stay resolvable until then so that proofs made with its keys still verify.
 
-#### [MOD-VS-MSG-4] Void
-
-#### [MOD-VS-MSG-5] Void
-
-#### [MOD-VS-MSG-6] Void
-
 > Note: there is no message to remove a `VerifiableService` entry. Once registered, an entry is permanent: the credential digests anchored under it, the exchanges run in its context and the `Accreditation` entries bound to it, while they exist, reference its `id`, and trust resolution resolves the issuer of a credential through that link to the entry's identifier for as long as the credential may be evaluated, which the registry cannot know. A wrong identifier string is corrected by [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) Rotate Verifiable Identifier, with a transition of 0 when nothing was issued under it; an identifier that is no longer operated, or that its owner no longer needs, has its operator cleared by [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service) and stays registered to its owner. The registration deposit is never refunded.
 
-#### [MOD-VS-MSG-7] Update Module Parameters
+#### [MOD-VS-MSG-4] Update Module Parameters
 
 Update the Verifiable Service and Delegation parameters of [[GLO]](#glo-global-variables): `vs_registration_deposit`, `ecosystem_creation_deposit`, `vid_rotation_max_transition` and `vs_operator_fee_period`.
 
 Can only be executed through a [[ref: governance proposal]].
 
-##### [MOD-VS-MSG-7-1] Update Module Parameters parameters
+##### [MOD-VS-MSG-4-1] Update Module Parameters parameters
 
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
-##### [MOD-VS-MSG-7-2] Update Module Parameters precondition checks
+##### [MOD-VS-MSG-4-2] Update Module Parameters precondition checks
 
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
-###### [MOD-VS-MSG-7-2-1] Update Module Parameters basic checks
+###### [MOD-VS-MSG-4-2-1] Update Module Parameters basic checks
 
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Delegation and Verifiable Service parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `vs_registration_deposit` and `ecosystem_creation_deposit`, if updated, MUST be ≥ 0, and `vid_rotation_max_transition` MUST be a duration > 0, else abort.
 - `vs_operator_fee_period` (Delegation group), if updated, MUST be a duration > 0, else abort. The new value applies to the allowances granted or adjusted afterwards ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-operator-fee-allowance)): an entry's allowance keeps its period until the entry's next configuration change, so two periods coexist meanwhile, each a cap on its own allowance.
 
-###### [MOD-VS-MSG-7-2-2] Update Module Parameters fee checks
+###### [MOD-VS-MSG-4-2-2] Update Module Parameters fee checks
 
 provided transaction fees MUST be sufficient for execution.
 
-##### [MOD-VS-MSG-7-3] Update Module Parameters execution
+##### [MOD-VS-MSG-4-3] Update Module Parameters execution
 
 for each parameter `param` <`key`, `value`> in `params`:
 
