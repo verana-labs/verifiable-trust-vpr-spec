@@ -1360,6 +1360,7 @@ entity "GlobalVariables" as gv {
   +credential_schema_verifier_accreditation_validity_period_max_days: number
   +credential_schema_holder_accreditation_validity_period_max_days: number
   +credential_schema_presentation_validity_period_max_days: number
+  +accreditation_max_entries_per_participation: number
   +trust_deposit_rate: decimal
   +main_fiat_currency: string
   +tu_peg_value_genesis: decimal
@@ -1616,7 +1617,7 @@ An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for pricing business fees. Can be COIN (a token available on the VPR chain) or FIAT (fees are priced in a fiat currency; the fee itself is settled off-chain, while deposit-bound amounts and Verifiable User Agent rewards are settled on-chain in [[ref: native denom]] at the oracle rate). [[ref: Trust units]] are **not** a pricing asset: a decaying unit cannot label prices. Note that in all cases, deposit-bound amounts are always paid in [[ref: native denom]] and minted as [[ref: trust units]].
 - `pricing_asset` (string) (*mandatory*): examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,... (multi-fiat pricing is supported; protocol-level accounting uses the [[ref: main fiat currency]]).
 - `digest_algorithm` (string) (*mandatory*): algorithm used to compute the credential digests of credentials issued under this schema (when `credential_anchoring` is DIGEST or REVOCABLE_DIGEST) and the presentation digests anchored by [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation), as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
-- `root_accreditation_ids` (uint64[]) (*optional*): the root ECOSYSTEM `Accreditation` entries of this schema, in creation order, appended by [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation) and removed when the entry is deleted; absent until the first is created. At most one of them is an [[ref: active accreditation]] at any time ([[MOD-AC-MSG-7-2-4]](#mod-ac-msg-7-2-4-create-root-accreditation-overlap-checks)): that one is the **active root entry** of the schema, read by [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries), which [[MOD-AC-MSG-17]](#mod-ac-msg-17-settle-exchange-fees) calls. A few ids per schema, in place of an index of `Accreditation` entries by schema.
+- `root_accreditation_ids` (uint64[]) (*optional*): the root ECOSYSTEM `Accreditation` entries of this schema, in creation order, appended by [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation) and removed when the entry is deleted; absent until the first is created. At most one of them is an [[ref: active accreditation]] at any time ([[MOD-AC-MSG-7-2-4]](#mod-ac-msg-7-2-4-create-root-accreditation-overlap-checks)): that one is the **active root entry** of the schema, read by [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries), which [[MOD-AC-MSG-17]](#mod-ac-msg-17-settle-exchange-fees) calls. At most two ids per schema, the current root entry and one successor ([[MOD-AC-MSG-7-2-4]](#mod-ac-msg-7-2-4-create-root-accreditation-overlap-checks)), in place of an index of `Accreditation` entries by schema.
 
 ### Accreditation
 
@@ -1663,7 +1664,7 @@ A `ParticipationTrustDeposit` is the part of a corporation's single [[ref: trust
 - `unrepaid_fiat` (decimal) (*mandatory*): the mint-time cost basis of `unrepaid_slash`, in [[ref: main fiat currency]], fixed at each slash and accumulated with it; what its repayment costs ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)): trust scores decay, liabilities do not. 0 when `unrepaid_slash` is 0.
 - `slash_count` (number) (*mandatory*): the number of times this participation has been slashed by an ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)); never reset. Network slashes are counted on the [TrustDeposit](#trustdeposit).
 - `excluded` (boolean) (*mandatory*): set to true by an ecosystem slash whose `exclude` parameter is true ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) or directly by the ecosystem controller ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)): the ecosystem's decision to withdraw trust from what the participation issued or validated before ([[ref: VT spec]]). The participation is [[ref: barred]]: it can no longer take part in the schema, neither through a new entry ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), a renewal ([[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)) or a validation ([[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)), nor through entry-less exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)), until the ecosystem controller lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), the repayment of its debt notwithstanding. A network slash does not set it: the corporation's own flag is on its [TrustDeposit](#trustdeposit).
-- `accreditation_ids` (uint64[]) (*mandatory*): the ids of the current `Accreditation` entries of the participation (pending, future or effective), a few at most; appended when an entry is created ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), removed when it is deleted. It is how the sibling checks, the exchange guards ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Accreditation` entries.
+- `accreditation_ids` (uint64[]) (*mandatory*): the ids of the current `Accreditation` entries of the participation (pending, future or effective): at most `GlobalVariables.accreditation_max_entries_per_participation`, and at most two under one validator, the current entry and one successor; appended when an entry is created ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), removed when it is deleted. It is how the sibling checks, the exchange guards ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Accreditation` entries.
 
 A deposit is created by the first entry of its participation, by the first mint to it or by an exclusion ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0 and `excluded` false. It is deleted by the method that empties it when `accreditation_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0 and `excluded` false (a slashed or excluded participation keeps its deposit, repaid or not: its count and its exclusion are its record). For an entry `p`, **deposit(`p`)** denotes `ParticipationTrustDeposit[(p.vs_id, p.schema_id, p.role)]`.
 
@@ -1864,7 +1865,7 @@ Exchange rates are a *protocol-level oracle*: they are consumed by [[MOD-XR-QRY-
 
 Amounts in [[ref: main fiat currency]] below are in its minor units ([[ref: main fiat currency]]).
 
-Each group below is owned by the module whose Update Module Parameters message changes it: Credential Schema by [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters); Trust Deposit and Trust Unit Index, Native denom and Network fees by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters); Distribution by [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters); Exchange Rate by [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters); Delegation and Verifiable Service by [[MOD-VS-MSG-4]](#mod-vs-msg-4-update-module-parameters). The Network governance group is set at genesis and maintained by the Governance Framework module; no Update Module Parameters message changes it. The Governance Framework group is changed by [[MOD-GF-MSG-5]](#mod-gf-msg-5-update-module-parameters). The immutable parameters, `main_fiat_currency`, `tu_peg_value_genesis`, `epoch_length`, `vna_total_supply` and `council_account`, are refused by every Update Module Parameters message. The Corporation, Ecosystem and Accreditation modules own no parameter group: their Update Module Parameters messages ([[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters), [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters), [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters)) abort on any key and their List Module Parameters queries return an empty set, until a parameter is assigned to them.
+Each group below is owned by the module whose Update Module Parameters message changes it: Credential Schema by [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters); Accreditation by [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters); Trust Deposit and Trust Unit Index, Native denom and Network fees by [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters); Distribution by [[MOD-DS-MSG-1]](#mod-ds-msg-1-update-module-parameters); Exchange Rate by [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters); Delegation and Verifiable Service by [[MOD-VS-MSG-4]](#mod-vs-msg-4-update-module-parameters). The Network governance group is set at genesis and maintained by the Governance Framework module; no Update Module Parameters message changes it. The Governance Framework group is changed by [[MOD-GF-MSG-5]](#mod-gf-msg-5-update-module-parameters). The immutable parameters, `main_fiat_currency`, `tu_peg_value_genesis`, `epoch_length`, `vna_total_supply` and `council_account`, are refused by every Update Module Parameters message. The Corporation, Ecosystem and Accreditation modules own no parameter group: their Update Module Parameters messages ([[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters), [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters), [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters)) abort on any key and their List Module Parameters queries return an empty set, until a parameter is assigned to them.
 
 **Credential Schema:**
 
@@ -1875,6 +1876,10 @@ Each group below is owned by the module whose Update Module Parameters message c
 - `credential_schema_verifier_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days a verifier `Accreditation` entry can be valid for.
 - `credential_schema_holder_accreditation_validity_period_max_days` (number) (*mandatory*): maximum number of days a holder `Accreditation` entry can be valid for.
 - `credential_schema_presentation_validity_period_max_days` (number) (*mandatory*): maximum number of days a `CredentialSchema.presentation_validity_period` can span ([[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema), [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)); a change applies to the schemas created or updated after it.
+
+**Accreditation:**
+
+- `accreditation_max_entries_per_participation` (number) (*mandatory*): maximum number of current `Accreditation` entries (pending, future or effective) of one participation, the length of `ParticipationTrustDeposit.accreditation_ids`. Checked when an entry is created ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)); a lower value applies to the entries created afterwards and removes none. Default value: 8. Adjustable by [[ref: governance proposal]] ([[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters)).
 
 **Trust Deposit and Trust Unit Index:**
 
@@ -3616,6 +3621,8 @@ if size of `accreditations[]` > 0, an onboarding process is already running in t
 
 Additionally, if any entry of `d.accreditation_ids` matches the same validator with `onboarding_state` = VALIDATED and `effective_until` = NULL, [[ref: transaction]] MUST abort: that entry never expires, so a successor entry could never pass [MOD-AC-MSG-3-2-4](#mod-ac-msg-3-2-4-validate-onboarding-overlap-checks); the validator's corporation MUST first set an `effective_until` on that entry ([Set Accreditation Effective Until](#mod-ac-msg-8-set-accreditation-effective-until)), or `corporation` MUST revoke it ([Revoke Accreditation](#mod-ac-msg-9-revoke-accreditation)).
 
+Finally, the list is bounded. [[ref: transaction]] MUST abort if two entries of `d.accreditation_ids` already name `validator_accreditation_id` as their validator (under one validator, a participation holds its current entry and at most one successor), or if `d.accreditation_ids` already holds `GlobalVariables.accreditation_max_entries_per_participation` entries.
+
 > Note: the candidates are the current entries of the participation, listed on its deposit; no index of entries exists. `role` and `vs_id` are those of the key; all entries sharing a `validator_accreditation_id` share its `schema_id` by construction.
 
 ###### [MOD-AC-MSG-1-2-5] Start Onboarding barred checks
@@ -4132,6 +4139,8 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 - (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`), AND
 - (`p.effective_until` is NULL or `p.effective_until` is greater than `effective_from_r`).
 
+Finally, [[ref: transaction]] MUST abort if `cs.root_accreditation_ids` already holds two entries: a schema holds its current root entry and at most one successor.
+
 ###### [MOD-AC-MSG-7-2-5] Create Root Accreditation barred checks
 
 - `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else [[ref: transaction]] MUST abort: a [[ref: barred]] corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)) and waits for the exclusion to be lifted ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)).
@@ -4476,7 +4485,7 @@ If all precondition checks passed, method is executed.
 
 #### [MOD-AC-MSG-11] Update Accreditation Module Parameters
 
-Update Accreditation Module Parameters.
+Update the Accreditation parameter of [[GLO]](#glo-global-variables): `accreditation_max_entries_per_participation`.
 
 Can only be executed through a [[ref: governance proposal]].
 
@@ -4490,7 +4499,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-AC-MSG-11-2-1] Update Accreditation Module Parameters basic checks
 
-- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
+- `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Accreditation parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
+- `accreditation_max_entries_per_participation`, if updated, MUST be an integer from 2 to 64, else abort. A lower value applies to the entries created afterwards: no existing entry is removed, and a participation that holds more entries than the new value creates none until it is back under it.
 
 ###### [MOD-AC-MSG-11-2-2] Update Accreditation Module Parameters fee checks
 
@@ -4702,6 +4712,8 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 
 - (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`), AND
 - (`p.effective_until` is NULL or `p.effective_until` is greater than `effective_from_r`).
+
+Finally, the list is bounded. [[ref: transaction]] MUST abort if two entries listed in that deposit already name `validator_accreditation_id` as their validator (under one root, a participation holds its current entry and at most one successor), or if the deposit already lists `GlobalVariables.accreditation_max_entries_per_participation` entries.
 
 > Note: the candidates are the current entries of the participation, read from its deposit.
 
@@ -7133,6 +7145,10 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 - `credential_schema_verifier_accreditation_validity_period_max_days` (number) (*mandatory*): 3650.
 - `credential_schema_holder_accreditation_validity_period_max_days` (number) (*mandatory*): 3650.
 - `credential_schema_presentation_validity_period_max_days` (number) (*mandatory*): 3650.
+
+**Accreditation:**
+
+- `accreditation_max_entries_per_participation` (number) (*mandatory*): 8.
 
 **Trust Deposit and Trust Unit Index:**
 
