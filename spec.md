@@ -1492,7 +1492,7 @@ Clients MAY rely on `id` ordering as a deterministic cursor for keyset paginatio
 
 Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `DelegateAuthorization` (composite PK on `(corporation_id, delegate)`), `ParticipationTrustDeposit` (composite PK on `(vs_id, schema_id, role)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsAccountBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), `EcosystemAcceptance` (composite PK on `(ecosystem_id, corporation_id)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, feeder)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
-**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_account` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121): the queries of this specification expose primary keys and these three indexes, nothing else. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: an [[ref: exchange record]] ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `DelegateAuthorization` by (`corporation_id`, `delegate`), `EcosystemAcceptance` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
+**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_account` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121). A query of this specification adds no state: it reads by primary key, by key prefix, by one of these three indexes or by a scan of an entity that stays small. Credential schemas are the one scanned entity ([[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)): an ecosystem declares a few of them, where corporations, ecosystems and accreditations grow without bound. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: an [[ref: exchange record]] ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `DelegateAuthorization` by (`corporation_id`, `delegate`), `EcosystemAcceptance` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
 
 ### VID ownership
 
@@ -2510,7 +2510,7 @@ Return the `Corporation` entry whose `id` equals `corporation_id` (if any), as w
 
 #### [MOD-CO-QRY-2] Void
 
-> Note: listing is an indexer function; the chain keeps no index for it ([Indexes](#identifier-conventions)).
+> Note: listing would need an index or a scan of an unbounded entity, so it is an indexer function ([Indexes](#identifier-conventions)).
 
 #### [MOD-CO-QRY-3] List Module Parameters
 
@@ -2745,7 +2745,7 @@ return found `Ecosystem` entry (if any), as well as *all its nested* `Governance
 
 #### [MOD-ES-QRY-2] Void
 
-> Note: listing is an indexer function; the chain keeps no index for it ([Indexes](#identifier-conventions)).
+> Note: listing would need an index or a scan of an unbounded entity, so it is an indexer function ([Indexes](#identifier-conventions)).
 
 #### [MOD-ES-QRY-3] List Module Parameters
 
@@ -3012,7 +3012,7 @@ If any of these checks fail, [[ref: query]] MUST fail.
 
 Return the `EcosystemAcceptance` entry with key (`ecosystem_id`, `corporation_id`), or not found. The acceptance of the [[ref: NGF]] by a corporation is read on its `Corporation` entry ([[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)), the acceptance of a [[ref: CGF]] by a delegate on its `DelegateAuthorization` entry.
 
-> Note: listing, and the history of acceptances, are indexer functions; the chain keeps no index for them ([Indexes](#identifier-conventions)).
+> Note: listing, and the history of acceptances, would need an index or a scan of an unbounded entity, so they are indexer functions ([Indexes](#identifier-conventions)).
 
 #### [MOD-GF-MSG-5] Update Module Parameters
 
@@ -6776,7 +6776,7 @@ If found, returns the ExchangeRate entry, unless `state` is given and differs fr
 
 #### [MOD-XR-QRY-2] Void
 
-> Note: listing is an indexer function; the chain keeps no index for it ([Indexes](#identifier-conventions)).
+> Note: listing is an indexer function ([Indexes](#identifier-conventions)).
 
 #### [MOD-XR-QRY-3] Get Price
 
