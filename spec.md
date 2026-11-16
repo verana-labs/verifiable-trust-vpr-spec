@@ -341,7 +341,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 *This section is non-normative.*
 
-In a [[ref: VPR]], any [[ref: corporation]] can create an `Ecosystem` entry to represent an [[ref: ecosystem]] it controls. Each `Ecosystem` entry MUST provide, at a minimum:
+In a [[ref: VPR]], any [[ref: corporation]] can create an `Ecosystem` entry to represent an [[ref: ecosystem]] it controls. Each `Ecosystem` entry provides, at a minimum:
 
 - a registered [[ref: verifiable service entry]] for the ecosystem's identifier (a [[ref: DID]] it controls);
 - its [[ref: ecosystem governance framework]] document(s);
@@ -381,8 +381,8 @@ object "Ecosystem" as tra #3fbdb6 {
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Accreditations are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
   - `GRANTOR_ONBOARDING_PROCESS`: `ISSUER` Accreditations are created by one or several [[ref: issuer grantor]](s) — participants accredited to onboard issuers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
 - A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` `Accreditation` entries are created. Modes include:
-  - `OPEN`: any [[ref: corporation]] verifies without an entry, and MAY self-create a `VERIFIER` entry.
-  - `CREDENTIAL`: any [[ref: corporation]] whose service holds a credential of one of the schemas listed in `verifier_credential_schema_ids` verifies without an entry, and MAY self-create a `VERIFIER` entry, as under `OPEN`.
+  - `OPEN`: any [[ref: corporation]] verifies without an entry, and can self-create a `VERIFIER` entry.
+  - `CREDENTIAL`: any [[ref: corporation]] whose service holds a credential of one of the schemas listed in `verifier_credential_schema_ids` verifies without an entry, and can self-create a `VERIFIER` entry, as under `OPEN`.
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `VERIFIER` Accreditations are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
   - `GRANTOR_ONBOARDING_PROCESS`: `VERIFIER` Accreditations are created by one or several [[ref: verifier grantor]](s) — participants accredited to onboard verifiers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
 - A **HolderOnboardingMode** for **holder policy**, which determines how `HOLDER` `Accreditation` entries are created. Modes include:
@@ -504,9 +504,9 @@ Example of a Json Schema credential schema:
 
 To participate in an [[ref: ecosystem]] and assume a role associated with a specific [[ref: credential schema]]:
 
-- if the schema is `OPEN` for issuance and/or verification: a [[ref: corporation]] that sends exchange transactions under it MUST have a registered `Corporation` entry in the [[ref: VPR]] and a registered verifiable service entry for its identifier (a Verifiable User Agent, which sends no exchange transaction and belongs to no corporation, needs no entry; a service that verifies with zero fees and no digest to anchor sends no transaction either, but the holder still checks it against its corporation's entries, [[ref: VT spec]]); an `Accreditation` entry is optional under `OPEN` (an issuer self-creates one to declare fees, either party to bind its participation with a window) (see [CredentialSchema](#credentialschema)).
+- if the schema is `OPEN` for issuance and/or verification: a [[ref: corporation]] that sends exchange transactions under it needs a registered `Corporation` entry in the [[ref: VPR]] and a registered verifiable service entry for its identifier (a Verifiable User Agent, which sends no exchange transaction and belongs to no corporation, needs no entry; a service that verifies with zero fees and no digest to anchor sends no transaction either, but the holder still checks it against its corporation's entries, [[ref: VT spec]]); an `Accreditation` entry is optional under `OPEN` (an issuer self-creates one to declare fees, either party to bind its participation with a window) (see [CredentialSchema](#credentialschema)).
 
-- if the schema requires an onboarding process for the role (an issuance mode other than `OPEN`, a verification mode other than `OPEN` and `CREDENTIAL`): a [[ref: corporation]] MUST have a registered `Corporation` entry in the [[ref: VPR]] and complete an [[ref: onboarding process]] to obtain its `Accreditation` entry; under `CREDENTIAL`, a verifier needs no entry but its service MUST hold a credential of one of the listed schemas.
+- if the schema requires an onboarding process for the role (an issuance mode other than `OPEN`, a verification mode other than `OPEN` and `CREDENTIAL`): a [[ref: corporation]] needs a registered `Corporation` entry in the [[ref: VPR]] and completes an [[ref: onboarding process]] to obtain its `Accreditation` entry; under `CREDENTIAL`, a verifier needs no entry but its service holds a credential of one of the listed schemas.
 
 The [[ref: onboarding process]] involves two parties:
 
@@ -617,7 +617,7 @@ pA ..> eA : in
 
 The same `Corporation` entry is the single entry point for the corporation's governance (the CGF), authorization delegation (via `DelegateAuthorization` to one or more `delegate` accounts), and trust-deposit accounting (`TrustDeposit`). See the [Corporation Module](#corporation-module) for the methods that manage `Corporation` entries.
 
-A corporation that must not hold [[ref: native denom]] itself (a public entity, for example) MAY be **sponsored** by another corporation: the sponsor's `policy_address` then funds the sponsored corporation's escrows, exchange payments, slash repayments and, optionally, its network fees, while every `Accreditation` entry, trust unit, slash debt and authorization remains the sponsored corporation's own. See [Sponsored Corporations](#sponsored-corporations).
+A corporation that must not hold [[ref: native denom]] itself (a public entity, for example) can be **sponsored** by another corporation: the sponsor's `policy_address` then funds the sponsored corporation's escrows, exchange payments, slash repayments and, optionally, its network fees, while every `Accreditation` entry, trust unit, slash debt and authorization remains the sponsored corporation's own. See [Sponsored Corporations](#sponsored-corporations).
 
 ### DID Indexing
 
@@ -706,7 +706,7 @@ user <|-- search : show enriched\nsearch results
 
 In a [[ref: VPR]], each [[ref: corporation]] is associated with a [[ref: trust deposit]], which holds [[ref: trust units]] (TU).
 
-The trust deposit is automatically funded through transactions involving **trust operations**, such as onboarding processes, credential issuance, or presentation: each time a deposit-bound amount of [[ref: native denom]] is spent, the [[ref: native denom]] is routed to the [[ref: distribution pool]] and the equivalent trust units, computed at the current [[ref: trust unit peg value]], are minted to the corporation's trust deposit. No [[ref: native denom]] is ever held in reserve: trust units are **not collateralized**. The [[ref: native denom]] MAY be paid by a [[ref: sponsor]] on the corporation's behalf; the trust units are always minted to the corporation that performs the trust operation, never to its sponsor.
+The trust deposit is automatically funded through transactions involving **trust operations**, such as onboarding processes, credential issuance, or presentation: each time a deposit-bound amount of [[ref: native denom]] is spent, the [[ref: native denom]] is routed to the [[ref: distribution pool]] and the equivalent trust units, computed at the current [[ref: trust unit peg value]], are minted to the corporation's trust deposit. No [[ref: native denom]] is ever held in reserve: trust units are **not collateralized**. The [[ref: native denom]] can be paid by a [[ref: sponsor]] on the corporation's behalf; the trust units are always minted to the corporation that performs the trust operation, never to its sponsor.
 
 The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
 
@@ -715,7 +715,7 @@ The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of 
 - **network-level penalties**: If a participant violates the [[ref: NGF]] or engages in **fraudulent activity**, their **trust deposit may be partially or fully slashed** by the [[ref: VPR]]'s governance authority. The debt is recorded in [[ref: main fiat currency]] at the **mint-time cost basis** of the slashed trust units — what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**, and misbehavior costs the same whether the deposit was funded yesterday or a year ago.
 - **ecosystem-level penalties**: If a participant operates within an ecosystem (e.g., as a [[ref: grantor]], [[ref: issuer]], [[ref: verifier]], or [[ref: holder]],...) and **fails to comply** with that ecosystem’s governance framework (EGF), the **trust units attributed to the offending participation** (service entry, schema, role) can be slashed by the corresponding [[ref: ecosystem governance authority]], or by a validator above it in the `Accreditation` tree ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)).
 - While a slash debt is unrepaid, the slashed participation (ecosystem slash) or every participation of the corporation (network slash) is **barred**: its entries are not active and no new trust units can be minted to it. The debt is recorded on the slashed [ParticipationTrustDeposit](#participationtrustdeposit) or [TrustDeposit](#trustdeposit) entry, at the mint-time cost basis. Repayment is made in [[ref: native denom]] worth that cost basis at current rates, and **restores the slashed trust units** at their decayed current value: the gap between the basis paid and the value restored is the penalty premium, and restoring trust costs **more tokens when the token is cheap**.
-- A slash MAY also **exclude**, by decision of the ecosystem controller (a participation) or of network governance (a corporation), never of a validator ancestor: the participation, or the whole corporation, stays barred after repayment until the exclusion is lifted, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]). A debt alone withdraws nothing from the past.
+- A slash can also **exclude**, by decision of the ecosystem controller (a participation) or of network governance (a corporation), never of a validator ancestor: the participation, or the whole corporation, stays barred after repayment until the exclusion is lifted, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]). A debt alone withdraws nothing from the past.
 - Holding a large trust deposit **does not grant governance rights** in the [[ref: VPR]]: participants who generate high transaction volume **cannot gain control** over the governance of the [[ref: VPR]] solely through usage or deposit size. Nor does staking: a VPR is governed by its [[ref: council]] ([Network Governance](#network-governance)).
 
 This system ensures that participation in the trust ecosystem is backed by economic accountability, reinforcing the integrity, governability and verifiability of the [[ref: VPR]].
@@ -3445,12 +3445,12 @@ issuer --> holder
 
 `ECOSYSTEM` Accreditations are created directly by the [[ref: credential schema]] owner. All other Accreditations are created by running an [[ref: onboarding process]], except under the `OPEN` and `CREDENTIAL` modes, where no entry is required at all:
 
-- when `issuer_onboarding_mode` is `OPEN`, any service issues under its [VerifiableService](#verifiableservice) entry: its [ParticipationTrustDeposit](#participationtrustdeposit) for the schema is created by the first trust units minted on its payments ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and holds what the ecosystem can slash; it MAY self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the fees it charges;
-- when `verifier_onboarding_mode` is `OPEN` or `CREDENTIAL`, any authorized service verifies under its `VerifiableService` entry likewise; it MAY self-create a `VERIFIER` entry.
+- when `issuer_onboarding_mode` is `OPEN`, any service issues under its [VerifiableService](#verifiableservice) entry: its [ParticipationTrustDeposit](#participationtrustdeposit) for the schema is created by the first trust units minted on its payments ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and holds what the ecosystem can slash; it can self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the fees it charges;
+- when `verifier_onboarding_mode` is `OPEN` or `CREDENTIAL`, any authorized service verifies under its `VerifiableService` entry likewise; it can self-create a `VERIFIER` entry.
 
 Entries are not kept once they end: an expired or revoked entry is deleted, and the deposit of its participation remains ([ParticipationTrustDeposit](#participationtrustdeposit)).
 
-An [[ref: onboarding process]] involves an [[ref: applicant]] (the [[ref: corporation]] of a given Accreditation entry) and a [[ref: validator]] Accreditation. It MAY require the applicant to pay `validation_fees` in addition to [[ref: transaction fees]].
+An [[ref: onboarding process]] involves an [[ref: applicant]] (the [[ref: corporation]] of a given Accreditation entry) and a [[ref: validator]] Accreditation. It can require the applicant to pay `validation_fees` in addition to [[ref: transaction fees]].
 
 An [[ref: onboarding process]] is run by [[ref: applicants]] that want to:
 
@@ -3462,21 +3462,21 @@ An [[ref: onboarding process]] is run by [[ref: applicants]] that want to:
 
 In all cases, the process is very similar. Example execution of an [[ref: onboarding process]]:
 
-1. The [[ref: applicant]] starts an [[ref: onboarding process]] by running [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding). The process MAY be subject to paying `validation_fees`, as defined in the [[ref: validator]]'s Accreditation entry.
+1. The [[ref: applicant]] starts an [[ref: onboarding process]] by running [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding). The process can be subject to paying `validation_fees`, as defined in the [[ref: validator]]'s Accreditation entry.
 2. The [[ref: applicant]] connects to the [[ref: validator]]'s [[ref: VS]] (identified by its [[ref: DID]]) and executes the validation steps required for the [[ref: onboarding process]] to conclude.
 3. If the [[ref: applicant]] qualifies, the [[ref: validator]] runs [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding) to update the Accreditation entry; the [[ref: applicant]] is then granted the new `Accreditation` entries and/or issued a credential.
 
 Once in the `VALIDATED` state, an Accreditation entry remains valid for a specific period (e.g., 365 days), configured in the [[ref: credential schema]].
 
 :::note
-Even when the Accreditation entry remains in the `VALIDATED` state for the configured period, the resulting `Accreditation` entry or issued credential MAY have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the [[ref: applicant]] MUST provide updated information to the [[ref: validator]] before attribute expiration in order to be issued an updated `Accreditation` entry and/or credential.
+Even when the Accreditation entry remains in the `VALIDATED` state for the configured period, the resulting `Accreditation` entry or issued credential can have a shorter expiration timestamp because the validated attribute(s) might expire earlier. In this case, the [[ref: applicant]] provides updated information to the [[ref: validator]] before attribute expiration in order to be issued an updated `Accreditation` entry and/or credential.
 :::
 
-If the `VALIDATED` state is set to expire, an [[ref: applicant]] that wishes to extend the expiration timestamp MUST renew its [[ref: onboarding process]] (see [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)).
+If the `VALIDATED` state is set to expire, an [[ref: applicant]] that wishes to extend the expiration timestamp renews its [[ref: onboarding process]] (see [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)).
 
 At any time, the [[ref: applicant]] CAN cancel the [[ref: onboarding process]] (see [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request)).
 
-Some unexpected situations may arise and MUST be mitigated. Examples:
+Some unexpected situations may arise, and the methods handle them. Examples:
 
 - if the selected [[ref: validator]] Accreditation entry is revoked while the [[ref: applicant]] is in `PENDING` state: applicant CAN cancel the [[ref: onboarding process]] (see [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request));
 - if the selected [[ref: validator]] Accreditation entry is revoked while the [[ref: applicant]] is in `VALIDATED` state: the applicant's entry stays effective until its own `effective_until` but cannot be renewed, since renewal requires the same validator ([[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)); to keep its role, the applicant performs a new [[ref: onboarding process]] with another validator.
@@ -5425,7 +5425,7 @@ ApplicantVS <-- ValidatorVS: notify `Accreditation` entry validated for your ser
 
 *This section is non-normative.*
 
-Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (per-ecosystem attribution is derivable from its `ParticipationTrustDeposit` entries), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. Alongside each `tu` balance, the module tracks its cumulative [[ref: main fiat currency]] **cost basis** (`fiat_cost`): slashing liabilities are denominated at mint-time cost, not at decayed value. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible. The [[ref: native denom]] spent MAY come from a [[ref: sponsor]] ([[FUND-CHECK]](#fund-check-funding-account-resolution)): trust units are always credited to the corporation that performed the trust operation, never to the account that paid.
+Concept: the [[ref: trust deposit]] holds the [[ref: trust units]] (TU) of a [[ref: corporation]] and is the basis of its trust score. Trust units are minted when deposit-bound [[ref: native denom]] amounts are spent: the module computes the trust units equivalent at the current [[ref: trust unit peg value]], credits them to the corporation's deposit (per-ecosystem attribution is derivable from its `ParticipationTrustDeposit` entries), and routes the full [[ref: native denom]] amount to the [[ref: distribution pool]]. Alongside each `tu` balance, the module tracks its cumulative [[ref: main fiat currency]] **cost basis** (`fiat_cost`): slashing liabilities are denominated at mint-time cost, not at decayed value. **No [[ref: native denom]] is retained by this module**: trust units are not collateralized, non-transferable and non-convertible. The [[ref: native denom]] spent can come from a [[ref: sponsor]] ([[FUND-CHECK]](#fund-check-funding-account-resolution)): trust units are always credited to the corporation that performed the trust operation, never to the account that paid.
 
 Because the [[ref: trust unit peg value]] declines each [[ref: epoch]], a deposit that is not fed by new paid activity loses fiat value at exactly `tu_decay_rate` ("trust decay"): trust is a subscription. Decay is implemented through the single global index — there are **no per-account updates**: a deposit's fiat value at time `T` is `td.tu × tu_peg_value(T)`, and relative rankings compare raw `td.tu` directly (the common factor cancels).
 
@@ -5805,7 +5805,7 @@ A change of `max_gas_per_msg_type` by [[ref: governance proposal]] applies to th
 
 *This section is non-normative.*
 
-A client estimates gas by simulation, applies its usual gas adjustment, reads `network_gas_price_native` through [[MOD-TD-QRY-3]](#mod-td-qry-3-get-network-gas-price) and signs `fee = gas_limit × network_gas_price_native`. Within an epoch the required fee does not move. A transaction signed just before a boundary and executed just after it is rejected before any deduction if the new price is higher, and is simply resubmitted; a client MAY sign with a small margin to avoid even that, since the excess is never deducted, and the exchange-rate authorization bounds how far the rate can move per update. Wallets SHOULD display the signed fee as a maximum. A fee-granted client keeps `gas_limit` under the sum of the caps of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) for the messages it batches.
+A client estimates gas by simulation, applies its usual gas adjustment, reads `network_gas_price_native` through [[MOD-TD-QRY-3]](#mod-td-qry-3-get-network-gas-price) and signs `fee = gas_limit × network_gas_price_native`. Within an epoch the required fee does not move. A transaction signed just before a boundary and executed just after it is rejected before any deduction if the new price is higher, and is simply resubmitted; a client can sign with a small margin to avoid even that, since the excess is never deducted, and the exchange-rate authorization bounds how far the rate can move per update. Wallets should display the signed fee as a maximum. A fee-granted client keeps `gas_limit` under the sum of the caps of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) for the messages it batches.
 
 ### Distribution Module
 
