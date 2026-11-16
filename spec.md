@@ -166,7 +166,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ [DIDComm](https://identity.foundation/didcomm-messaging/spec/) uses [[ref: DIDs]] to establish confidential, ongoing connections.
 
 [[def: delegable message, delegable messages]]:
-~ A message that a [[ref: corporation]] can let another account sign on its behalf: a [[ref: delegate]] or, for the messages that offer that path, a [[ref: VS account]]. See [MsgType](#msgtype), which lists them.
+~ A message that a [[ref: corporation]] can let another account sign on its behalf: a [[ref: delegate]], a [[ref: VS account]], or either, as each message states. See [MsgType](#msgtype).
 
 [[def: delegate, delegates]]:
 ~ An [[ref: account]] that a [[ref: corporation]] authorizes, through a `DelegateAuthorization` entry, to sign delegable messages on its behalf. See [[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks).
@@ -1249,7 +1249,7 @@ entity "DelegateAuthorization" as dauthz {
    accepted_cgf_version: int
 }
 
-entity "VsAccountBudget" as obudget {
+entity "VsAccountBudget" as vsbudget {
    expiration: timestamp
 }
 
@@ -1430,7 +1430,7 @@ corp --o dauthz: corporation_id
 account --o dauthz: delegate
 dauthz o-- "0..n" msgtype: msg_types
 
-vs "1" --- "0..1" obudget: vs_id
+vs "1" --- "0..1" vsbudget: vs_id
 vs o-- "0..n" msgtype: msg_types
 
 csp o-- cspt: role
@@ -1444,9 +1444,9 @@ cs o-- tr: ecosystem_id
 dauthz "1" --- "0..n" da: spend_limit
 dauthz "1" --- "0..n" da: remaining_spend
 
-obudget "1" --- "0..n" da: spend_limit
+vsbudget "1" --- "0..n" da: spend_limit
 vs "1" --- "0..n" da: fee_spend_limit
-obudget "1" --- "0..n" da: remaining_spend
+vsbudget "1" --- "0..n" da: remaining_spend
 
 tr "1" --- "0..n" gfv: versions (ecosystem_id)
 corp "1" --- "0..n" gfv: versions (corporation_id)
@@ -1502,7 +1502,7 @@ Uniqueness is enforced on the identifier string by [[MOD-VS-MSG-1]](#mod-vs-msg-
 
 > Rationale: an identifier is attached to a single service and thus controlled by a single organization; two corporations claiming the same identifier anywhere in the registry is always an error or an attack. Registering the identifier once also gives off-chain consumers (indexers, resolvers, trust graphs) the owner function directly, lets a [[ref: VS]] exist in the registry before it holds any `Accreditation` entry, and makes identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)) a change of one string instead of a re-creation of every entry that named it.
 
-> Transitional note: an implementation upgrading a chain whose state predates the `VerifiableService` entity MUST build the entries at upgrade time (or genesis import) from the distinct identifier strings of the existing `Corporation`, `Ecosystem` and `Accreditation` entries, one entry per string owned by the corporation those entries resolve to, assigning ids in the order of first appearance, rewriting the `vs_id` references, and MUST reject or repair any string claimed by two corporations before enabling the checks. The `vs_account` of each new entry is the `vs_account` of the migrated `Accreditation` entries sharing the string, which MUST be unique per string; their per-entry authorization records of the previous version are merged into the VS account configuration of the entry, with the union of the message types and the sum of the limits.
+> Transitional note: an implementation upgrading a chain whose state predates the `VerifiableService` entity MUST build the entries at upgrade time (or genesis import) from the distinct identifier strings of the existing `Corporation`, `Ecosystem` and `Accreditation` entries, one entry per string owned by the corporation those entries resolve to, assigning ids in the order of first appearance, rewriting the `vs_id` references, and MUST reject or repair any string claimed by two corporations before enabling the checks. The `vs_account` of each new entry is the account (`vs_operator` in the previous version) of the migrated `Accreditation` entries sharing the string, which MUST be unique per string; their per-entry authorization records of the previous version are merged into the VS account configuration of the entry, with the union of the message types and the sum of the limits.
 
 ### VerifiableService
 
@@ -1949,7 +1949,7 @@ A [[ref: VPR]] is governed by its [[ref: council]], a group of [[ref: corporatio
 
 Most VPR module messages (Msg) **support delegation** and follow the pattern described below.
 
-Delegable messages are defined as messages that a `corporation` lets another account sign on its behalf, provided that the appropriate authorization has been granted: a [[ref: delegate]] under a [DelegateAuthorization](#delegateauthorization) or, for the messages that name that path, the [[ref: VS account]] of one of its [VerifiableService](#verifiableservice) entries ([[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks)).
+Delegable messages are defined as messages that a `corporation` lets another account sign on its behalf, provided that the appropriate authorization has been granted: a [[ref: delegate]] under a [DelegateAuthorization](#delegateauthorization), the [[ref: VS account]] of one of its [VerifiableService](#verifiableservice) entries ([[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks)), or either, as each message states.
 
 Such messages conceptually involve **two roles**:
 
@@ -1972,7 +1972,7 @@ For the execution of delegable messages:
 
 - the `delegate` account MUST have a valid authorization from the `corporation` for the specific message type being executed.
 
-A `corporation` is not required to delegate all message types to the same `delegate`.  
+A `corporation` is not required to authorize the same `delegate` for all message types.  
 It is entirely up to the `corporation` to decide **which accounts may execute which messages**.
 
 - Authorizations are granted to individual `account`s through corporation-level proposals (a Cosmos SDK group proposal, the `policy_address` being a group policy account) or by a delegate that holds the `GrantDelegateAuthorization` authorization ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization)).
@@ -1995,7 +1995,7 @@ These messages are executable only by the [[ref: council account]], through a pr
 
 #### Fee Grants
 
-A `corporation` MAY allow its `delegate`s to pay **network transaction fees** using the `corporation`’s funds.
+A `corporation` MAY allow its delegates and VS accounts to pay **network transaction fees** using the `corporation`’s funds.
 
 The fee grants of this specification, the `FeeGrant` entries, are **not created directly**.  
 They are created, updated, and revoked **exclusively by Delegation module messages**.  
@@ -2017,7 +2017,7 @@ Network fees are covered through the standard fee-grant machinery: the grantee k
 
 #### [AUTHZ-CHECK] Common Authorization and Fee Grant Checks
 
-For any **delegable message** executed by a `delegate` on behalf of a `corporation`, the checks of the authorization mode in use MUST hold: [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) then [[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) for a delegate acting under a [DelegateAuthorization](#delegateauthorization), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) then [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) for a VS account where the method names that path (the two modes are exclusive for a given account, [[MOD-DE-MSG-3-2]](#mod-de-msg-3-2-grant-delegate-authorization-basic-checks)); if any fails, the [[ref: transaction]] MUST abort. The [[ref: governance framework acceptance]] checks follow: [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) for the corporation on every message (run by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), so that the non-delegable messages and the group-proposal paths, which invoke that check alone, are gated too), [[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-a-delegate) for a delegate acting under a `DelegateAuthorization` ([[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) step 4). The authorization checks ([[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) — existence, message-type membership, cycle reset, corporation registration, and the operation `spend_limit`) are **preconditions** verified by the VPR method before any method-specific checks. The fee-grant checks ([[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) and the fee-payment part of [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks)) are instead realized at **transaction-fee-processing time** (see the note below), not as VPR preconditions.
+For any **delegable message** executed by a delegate or by a VS account on behalf of a `corporation`, the checks of the authorization mode in use MUST hold: [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) then [[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) for a delegate acting under a [DelegateAuthorization](#delegateauthorization), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) then [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) for a VS account where the method names that path (the two modes are exclusive for a given account, [[MOD-DE-MSG-3-2]](#mod-de-msg-3-2-grant-delegate-authorization-basic-checks)); if any fails, the [[ref: transaction]] MUST abort. The [[ref: governance framework acceptance]] checks follow: [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) for the corporation on every message (run by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), so that the non-delegable messages and the group-proposal paths, which invoke that check alone, are gated too), [[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-a-delegate) for a delegate acting under a `DelegateAuthorization` ([[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) step 4). The authorization checks ([[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks), [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) — existence, message-type membership, cycle reset, corporation registration, and the operation `spend_limit`) are **preconditions** verified by the VPR method before any method-specific checks. The fee-grant checks ([[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) and the fee-payment part of [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks)) are instead realized at **transaction-fee-processing time** (see the note below), not as VPR preconditions.
 
 > Note: the grantee elects corporation-paid fees by setting the transaction's fee `granter` to the corporation's `policy_address`; the corporation's `x/feegrant` allowance then performs the fee-grant checks ([[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), and the fee-payment part of [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks)) during fee processing — see the [Delegation Module](#delegation-module) note. The VPR method does not re-check or deduct those fees.
 
@@ -2058,12 +2058,12 @@ Given a `corporation`, the signing account `signer` (the `vs_account` field of a
 2. `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), and `vs.vs_account` MUST equal `signer`. Abort otherwise.
 3. `vs.msg_types` MUST be non-empty. Abort otherwise (step 2 already ties the entry to `co` and `signer`).
 4. `msg_type` MUST be in `vs.msg_types`. Abort otherwise.
-5. Operation-budget cycle. If `vs.period` is set (which implies an [VsAccountBudget](#vsaccountbudget) exists for `vs.id`), load that `budget`; if `now() >= budget.expiration`:
+5. Operation-budget cycle. If `vs.period` is set (which implies a [VsAccountBudget](#vsaccountbudget) exists for `vs.id`), load that `budget`; if `now() >= budget.expiration`:
    - set `budget.remaining_spend := budget.spend_limit`.
    - set `budget.expiration := now() + vs.period`.
 
    This step never aborts: `budget.expiration` is the end of the current budget cycle, not a validity window (an entry has none; step 1 enforces the window of the primary entry when there is one). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
-6. If an [VsAccountBudget](#vsaccountbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
+6. If a [VsAccountBudget](#vsaccountbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
 
 > Note: step 1 is what prevents the use of an `Accreditation` entry that is not, or is no longer, an [[ref: active accreditation]]: an entry that has never been validated has no `effective_from` yet, a revoked or expired entry no longer exists, and a slashed participation fails the definition. The configuration itself is unaffected by the state of any single `Accreditation` entry: the same VS account keeps acting for the identifier's other entries. A renewal is unaffected too: [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding) sets `onboarding_state` back to PENDING, but the entry stays active until its `effective_until`.
 
@@ -2083,7 +2083,7 @@ A `Corporation` entry `co` MUST exist whose `co.policy_address` equals the messa
 
 > Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), whose explicit purpose is to register a new `Corporation` and bind a `policy_address` to it. Uniqueness holds there by construction: the group policy account is created by the method itself, so no `Corporation` entry can reference it yet.
 
-This check applies to every message that carries a `corporation` account: through [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) for a delegable message executed by a delegate, and directly for a non-delegable message and for a group-proposal path, whose checks name it. As a result, every such message requires the message's `corporation` account to be the `policy_address` of a registered `Corporation`. Once `co` is resolved, this check MUST also run [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) on `co`, except for [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews the acceptance: no path, delegate or proposal, reaches a corporation's acts without the network governance framework gate.
+This check applies to every message that carries a `corporation` account: through [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) for a delegable message executed by a delegate or by a VS account, and directly for a non-delegable message and for a group-proposal path, whose checks name it. As a result, every such message requires the message's `corporation` account to be the `policy_address` of a registered `Corporation`. Once `co` is resolved, this check MUST also run [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) on `co`, except for [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews the acceptance: no path, delegate or proposal, reaches a corporation's acts without the network governance framework gate.
 
 #### [GF-CHECK] Governance Framework Acceptance Checks
 
@@ -2099,7 +2099,7 @@ Applies to every message that carries a `corporation` account, delegable or not,
 
 ##### [GF-CHECK-2] Corporation governance framework acceptance by a delegate
 
-Applies to a delegate acting under a [DelegateAuthorization](#delegateauthorization) `dauthz` ([[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks)). It does not apply to a corporation acting for itself through its group policy (the author of its [[ref: CGF]] accepts nothing), nor to a `vs_account` ([[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks)), the software of the corporation or of its integrator, whose obligations are contractual: a CGF activation never stops a running service.
+Applies to a delegate acting under a [DelegateAuthorization](#delegateauthorization) `dauthz` ([[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks)). It does not apply to a corporation acting for itself through its group policy (the author of its [[ref: CGF]] accepts nothing), nor to a VS account ([[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks)), the account of a service run by the corporation or by its integrator, whose obligations are contractual: a CGF activation never stops a running service.
 
 1. The check passes when `dauthz.accepted_cgf_version` = `co.active_version`.
 2. Else it passes when `dauthz.accepted_cgf_version` is not null, `co.acceptance_deadline` is not null and `now` < `co.acceptance_deadline`.
@@ -2232,7 +2232,7 @@ As a result, `accountABC` is authorized to:
 |             | Get Delegate Authorization                | /de/v1/authz/get | Query  | [[MOD-DE-QRY-3]](#mod-de-qry-3-get-delegate-authorization)   |N/A |
 |             | Get Sponsorship                           | /de/v1/sponsorship/get | Query  | [[MOD-DE-QRY-5]](#mod-de-qry-5-get-sponsorship)   |N/A |
 |             | List Sponsorships                         | /de/v1/sponsorship/list | Query  | [[MOD-DE-QRY-6]](#mod-de-qry-6-list-sponsorships)   |N/A |
-| Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + delegate, or VS account of the entry, OR module call|
+| Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + delegate OR corporation + vs_account of the entry OR module call|
 |          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation + delegate of the owner, of an active ancestor or of the schema's ecosystem (DelegateAuthorization), or vs_account of the anchoring entry or of an active ancestor |
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
 | Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | [[ref: governance proposal]]|
@@ -3833,7 +3833,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-AC-MSG-3] Validate Onboarding
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized `delegate` CAN execute this method on behalf of a `corporation`, and so can the VS account of the validator's entry.
 
 ##### [MOD-AC-MSG-3-1] Validate Onboarding parameters
 
@@ -5895,7 +5895,7 @@ The values in force in a boundary block apply to the payout performed in that bl
 
 ### Delegation Module
 
-**Transaction-fee payment on behalf of a corporation (fee grants):** When a `corporation` pays the transaction fees for a grantee (a `delegate` per [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), or a `vs_account` per [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks)), fee payment is handled via the Cosmos SDK `x/feegrant` module; the VPR keeps no fee ledger of its own, and its only additions to fee processing are the fee checker of [[NET-FEE-2]](#net-fee-2-required-fee), the gas cap of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) and the sponsored-fees decorator below. Implementations MUST realize each on-chain `FeeGrant` as an `x/feegrant` allowance granted by the corporation's `policy_address` (the granter) to the `grantee`: an `AllowedMsgAllowance` (whose `allowed_messages` is the `FeeGrant.msg_types`) wrapping a `PeriodicAllowance` when both a `spend_limit` and a `period` are set — the delegate path of [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization), and always the `vs_account` path, whose allowance is capped at the sum of the `fee_spend_limit` of the entries the account operates, per `GlobalVariables.vs_account_fee_period` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-account-fee-allowance)) — otherwise a `BasicAllowance`. The allowance is created (or updated) when the `FeeGrant` is granted ([[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)) and removed when it is revoked ([[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)). A grantee elects corporation-paid fees by setting the transaction fee's `granter` field (the `--fee-granter`) to the corporation's `policy_address`; `x/feegrant` then validates the draw and enforces the `spend_limit`, the periodic reset, and the message-type filter, while the auth fee ante handler performs the actual debit from the corporation's account. Every fee-granted transaction is additionally subject to the per-message gas cap of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions), and the amount debited is the required fee of [[NET-FEE-2]](#net-fee-2-required-fee) (gas limit × network gas price), never the declared excess.
+**Transaction-fee payment on behalf of a corporation (fee grants):** When a `corporation` pays the transaction fees for a grantee (a `delegate` per [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks), or a `vs_account` per [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks)), fee payment is handled via the Cosmos SDK `x/feegrant` module; the VPR keeps no fee ledger of its own, and its only additions to fee processing are the fee checker of [[NET-FEE-2]](#net-fee-2-required-fee), the gas cap of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) and the sponsored-fees decorator below. Implementations MUST realize each on-chain `FeeGrant` as an `x/feegrant` allowance granted by the corporation's `policy_address` (the granter) to the `grantee`: an `AllowedMsgAllowance` (whose `allowed_messages` is the `FeeGrant.msg_types`) wrapping a `PeriodicAllowance` when both a `spend_limit` and a `period` are set — the delegate path of [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization), and always the `vs_account` path, whose allowance is capped at the sum of the `fee_spend_limit` of the entries the account is the VS account of, per `GlobalVariables.vs_account_fee_period` (see [[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-account-fee-allowance)) — otherwise a `BasicAllowance`. The allowance is created (or updated) when the `FeeGrant` is granted ([[MOD-DE-MSG-1]](#mod-de-msg-1-grant-fee-allowance)) and removed when it is revoked ([[MOD-DE-MSG-2]](#mod-de-msg-2-revoke-fee-allowance)). A grantee elects corporation-paid fees by setting the transaction fee's `granter` field (the `--fee-granter`) to the corporation's `policy_address`; `x/feegrant` then validates the draw and enforces the `spend_limit`, the periodic reset, and the message-type filter, while the auth fee ante handler performs the actual debit from the corporation's account. Every fee-granted transaction is additionally subject to the per-message gas cap of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions), and the amount debited is the required fee of [[NET-FEE-2]](#net-fee-2-required-fee) (gas limit × network gas price), never the declared excess.
 
 Mapping of the auto-renewing `FeeGrant.expiration`: when `period` is set, the cycle boundary maps to the allowance's `period_reset` (the allowance carries NO absolute `x/feegrant` expiration, so it auto-renews until revoked, matching `FeeGrant.expiration`); when `period` is unset, `FeeGrant.expiration` maps to the allowance's absolute expiration. If multiple periods elapse with no activity, the `period_reset` skips ahead per the `x/feegrant` `PeriodicAllowance` rule rather than accumulating each skipped period. Accordingly, `FeeGrant.remaining_spend` MAY be sourced from the underlying allowance's running balance (it tracks the fees the allowance has paid) rather than persisted and decremented as a separate field; the normative requirement is the balance's behaviour (initialize at the limit, decrement per fee payment, reset at the end of each cycle), not its physical storage. It is queryable via the standard `x/feegrant` allowance query. On the `vs_account` path, per-entry `fee_spend_limit` values are **summands** of the account allowance's per-period limit; there is no separate VPR-side fee ledger ([[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks)). Design rule: **cycling that gates fee payment lives in `x/feegrant` (fee-processing side); the VPR side hard-gates operations only.**
 
@@ -6021,7 +6021,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `grantee` MUST NOT be the `policy_address` of a corporation sponsored by `co` (a `Sponsorship` entry keyed (`co.id`, that corporation's `id`) exists, [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)), else abort: its fee allowance and the sponsorship's would share the one (granter, grantee) slot of x/feegrant.
 
 ::: warning
-A **Delegate Authorization** CAN be granted ONLY IF no **VS Account Authorization** exists for the same (`corporation_id`, `delegate`) pair, that is, if `delegate` is not the `vs_account` of any `VerifiableService` entry of the corporation. **Delegate Authorization** and **VS Account Authorization** are mutually exclusive for a given grantee.
+A **Delegate Authorization** CAN be granted ONLY IF no **VS Account Authorization** exists for the same (`co.id`, `grantee`) pair, that is, if `grantee` is not the `vs_account` of any `VerifiableService` entry of the corporation. **Delegate Authorization** and **VS Account Authorization** are mutually exclusive for a given grantee.
 :::
 
 ##### [MOD-DE-MSG-3-3] Grant Delegate Authorization fee checks
@@ -6090,7 +6090,7 @@ This method can only be called directly by the following methods, with no signer
 - [Create Corporation](#mod-co-msg-1-create-corporation)
 - [Update Verifiable Service](#mod-vs-msg-2-update-verifiable-service)
 
-It applies an VS account configuration to a `VerifiableService` entry, incrementally: it writes `vs_account`, `msg_types`, `period` and `fee_spend_limit`, keeps the balance of the [VsAccountBudget](#vsaccountbudget) when the spend limit is unchanged, and adjusts the on-chain `FeeGrant` only by what changed, on the former account when the account changes. Called with unchanged values, it writes the entry and nothing else.
+It applies a VS account configuration to a `VerifiableService` entry, incrementally: it writes `vs_account`, `msg_types`, `period` and `fee_spend_limit`, keeps the balance of the [VsAccountBudget](#vsaccountbudget) when the spend limit is unchanged, and adjusts the on-chain `FeeGrant` only by what changed, on the former account when the account changes. Called with unchanged values, it writes the entry and nothing else.
 
 All authorization configuration is provided by the caller, which has already checked that `VerifiableService[vs_id]` is owned by `corporation_id`. `vs_account` is the account to set: it MAY differ from the entry's current one ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)).
 
@@ -6100,7 +6100,7 @@ All authorization configuration is provided by the caller, which has already che
 - `vs_account` (account) (*mandatory*): the account receiving the authorization; becomes the entry's `vs_account`.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry.
 - `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the message types to authorize.
-- `spend_limit` (DenomAmount[]) (*optional*): the operation budget, creating an [VsAccountBudget](#vsaccountbudget).
+- `spend_limit` (DenomAmount[]) (*optional*): the operation budget, creating a [VsAccountBudget](#vsaccountbudget).
 - `period` (duration) (*optional*): the operation-budget cycle; requires `spend_limit`.
 - `fee_spend_limit` (DenomAmount[]) (*optional*): the contribution; empty when the corporation does not pay the VS account's fees.
 
@@ -6146,7 +6146,7 @@ The resulting allowance is an `AllowedMsgAllowance` over every `MsgType` value, 
 
 The `PeriodicAllowance` resets itself during fee deduction, so no VPR action is needed at fee-cycle boundaries. Re-granting mid-cycle resets the running `period_can_spend`: any change of a contribution refreshes the current period's fee budget early — **accepted slack**, bounded by one period's budget per mutation, and mutations are corporation-controlled.
 
-> Note: a mutation costs one `FeeGrant` read and one write, whatever the number of entries the account operates: there is no aggregate entity and no scan. Because the configuration is bound to the `VerifiableService` entry and not to `Accreditation` entries, no entry expiry can silently change the total. Whether a given `Accreditation` entry may be operated is decided at use time by [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) step 1.
+> Note: a mutation costs one `FeeGrant` read and one write, whatever the number of entries the account is the VS account of: there is no aggregate entity and no scan. Because the configuration is bound to the `VerifiableService` entry and not to `Accreditation` entries, no entry expiry can silently change the total. Whether a given `Accreditation` entry may be used is decided at use time by [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) step 1.
 
 #### [MOD-DE-MSG-6] Revoke VS Account Authorization
 
@@ -6358,7 +6358,7 @@ The Digests module keeps the [Digest](#digest) entries: the credential digests o
 
 #### [MOD-DI-MSG-1] Store Digest
 
-- Any authorized `delegate` CAN execute this method on behalf of a `corporation`, in the context of one of the corporation's [VerifiableService](#verifiableservice) entries: a corporation delegate under a DelegateAuthorization, or the VS account of that entry under a VS Account Authorization whose entry's `msg_types` include `StoreDigest`.
+- An authorized account CAN execute this method on behalf of a `corporation`, in the context of one of the corporation's [VerifiableService](#verifiableservice) entries: a delegate of the corporation under a DelegateAuthorization, or the VS account of that entry under a VS Account Authorization whose entry's `msg_types` include `StoreDigest`.
 - This method can be called directly by [Record Credential Issuance](#mod-ac-msg-10-record-credential-issuance) ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)), with no checks.
 
 The VS of an issuer does not call this method itself: it anchors the digest of a credential it issues through the issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), `credential_digest` parameter), which it runs even when no fees are due, so that the anchoring entry of the digest is recorded; the entry is written only under a schema whose `credential_anchoring` is REVOCABLE_DIGEST. Called directly, this method anchors a digest for the owner's other needs (a dated proof of the existence of a document, a retention record): such a digest has no anchoring context of a credential.
