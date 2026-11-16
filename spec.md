@@ -1503,6 +1503,8 @@ Several entities deviate from this convention and document their own key scheme 
 
 **Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_account` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121). A query of this specification adds no state: it reads by primary key, by key prefix, by one of these three indexes or by a scan of an entity that stays small. Credential schemas are the one scanned entity ([[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)): an ecosystem declares a few of them, where corporations, ecosystems and accreditations grow without bound. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: an [[ref: exchange record]] ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `DelegateAuthorization` by (`corporation_id`, `delegate`), `EcosystemAcceptance` and `EcosystemBar` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
 
+**Events.** The VPR stores current state only: an entry that expires or is revoked is deleted, and no entity keeps its own history. History is read from the transactions and from the events they emit, which indexers keep. A method that creates, changes or deletes an entry MUST therefore emit an event that carries the key of each entry it wrote or deleted and every value it computed that its message does not carry (an id it assigned, a timestamp, an amount it converted or derived); the values the message carries are read from the transaction. The same holds for the operations that no message carries, the end-of-block deletions and the closing of an [[ref: epoch]]. A method called by another method emits its own event unless the event of its caller carries the same values. The methods state the events on whose content trust resolution or accounting depends; this rule covers the others.
+
 ### VID ownership
 
 Every [[ref: VID]] known to the VPR is registered once, as a [VerifiableService](#verifiableservice) entry owned by a single `Corporation` (`VerifiableService.corporation_id`). The entities that bind an identifier, `Corporation` (`vs_id`), `Ecosystem` (`vs_id`) and `Accreditation` (`vs_id`), like `Digest` and `ParticipationTrustDeposit`, which key their rows by `vs_id`, never store the identifier string: they reference the entry, and MUST reference an entry owned by their own corporation (for a `Corporation`, by itself; an `Ecosystem` or an `Accreditation` stores no corporation of its own: the owner of the entry is its corporation). The **owner `Corporation`** of an identifier is therefore a total function given by the entry, and a `vs_id` reference is checked with a single lookup at every binding message: [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks), [[MOD-AC-MSG-1-2-1]](#mod-ac-msg-1-2-1-start-onboarding-basic-checks), [[MOD-AC-MSG-7-2-1]](#mod-ac-msg-7-2-1-create-root-accreditation-basic-checks) and [[MOD-AC-MSG-14-2-1]](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks).
@@ -3281,6 +3283,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.presentation_validity_period`: `presentation_validity_period` if present, else unchanged
   - `cs.verifier_credential_schema_ids`: `verifier_credential_schema_ids` if present, else unchanged
 
+The method MUST emit an event carrying `cs.id`, the value of each attribute above after the update, and the current timestamp: the update history of a schema, from which the `presentation_validity_period` in force at a given time is known, is read from these events ([[ref: VT spec]]).
+
 #### [MOD-CS-MSG-3] Archive Credential Schema
 
 Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
@@ -3882,6 +3886,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `applicant_accreditation.onboarding_deposit` (number): `validation_trust_deposit_in_native_denom` (held in escrow; the participation's deposit is only incremented at validation time).
   - `applicant_accreditation.onboarding_funding_account`: the funding account selected above, or null if nothing was escrowed.
 
+The method MUST emit an event carrying `applicant_accreditation.id`, the `onboarding_fees` and `onboarding_deposit` escrowed, the `onboarding_funding_account` and `now`.
+
 #### [MOD-AC-MSG-3] Validate Onboarding
 
 Any authorized `delegate` CAN execute this method on behalf of a `corporation`, and so can the VS account of the validator's entry.
@@ -4053,6 +4059,8 @@ Update `Accreditation` `applicant_accreditation`:
   - set `applicant_accreditation.effective_from` to `now`.
   - set `applicant_accreditation.issuance_fee_discount` to `issuance_fee_discount`.
   - set `applicant_accreditation.verification_fee_discount` to `verification_fee_discount`.
+
+The method MUST emit an event carrying `applicant_accreditation.id`, the `effective_from`, `effective_until` and `onboarding_exp` of the entry after the update, the amounts transferred from the escrow, and `now`: the window of an entry is computed here, and it is what trust resolution reads once the entry is gone.
 
 > Note: no VS Account Authorization step is needed: the applicant's VS account is `VerifiableService[applicant_accreditation.vs_id].vs_account`, whose `msg_types` become usable in the context of this entry as soon as `effective_from` is set ([[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) step 1).
 
@@ -4304,6 +4312,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Accreditation` entry `applicant_accreditation` from `id`.
 - set `applicant_accreditation.effective_until` to `effective_until`, and file the entry in the expiry queue accordingly ([Accreditation](#accreditation)).
+- emit an event carrying `applicant_accreditation.id`, the `effective_until` written and `now`.
 
 #### [MOD-AC-MSG-9] Revoke Accreditation
 
@@ -5549,6 +5558,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `td.tu` to `td.tu` + `minted_tu`; set `td.fiat_cost` to `td.fiat_cost` + `minted_fiat`.
 - let `d` be `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, created with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0, `excluded` false and an empty `accreditation_ids` if it does not exist; set `d.tu` to `d.tu` + `minted_tu`; set `d.fiat_cost` to `d.fiat_cost` + `minted_fiat`.
 - transfer `amount` from `source_account` to the [[ref: distribution pool]] account.
+- emit an event carrying `corporation_id`, the participation key (`vs_id`, `schema_id`, `role`), `amount`, `minted_tu`, `minted_fiat` and the `tu_peg_value` applied: the method is a module call, and no message carries these values.
 - return `minted_tu` and `minted_fiat` to the calling module.
 
 :::note
@@ -5724,6 +5734,8 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - set `td.tu` to `td.tu` - `tu_amount`; set `td.fiat_cost` to `td.fiat_cost` - `fiat_amount`.
 - set `d.tu` to `d.tu` - `tu_amount`; set `d.fiat_cost` to `d.fiat_cost` - `fiat_amount`; set `d.unrepaid_slash` to `d.unrepaid_slash` + `tu_amount`; set `d.unrepaid_fiat` to `d.unrepaid_fiat` + `fiat_amount`; set `d.slash_count` to `d.slash_count` + 1; if `exclude` is true, set `d.excluded` to true.
 - apply [[BAR-CHECK-2]](#bar-check-2-maintenance) to `d`: the participation is now barred.
+
+The method emits no event of its own: the event of the calling method ([[MOD-AC-MSG-12-3]](#mod-ac-msg-12-3-slash-participation-trust-deposit-execution)) carries the deposit key, the trust units removed, the debt and the exclusion.
 
 #### [MOD-TD-MSG-8] Set Corporation Exclusion
 
@@ -6480,6 +6492,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `d.created` to `now`.
   - set `d.revoked` to null.
   - set `d.expires` to `expires` (the `credential_valid_until` of the issuance when called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)), null when absent, and file the entry in the expiry queue when not null.
+  - on a direct Msg, emit an event carrying `digest`, `vs_id`, `expires` and `now`; when called by [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), the `CredentialIssuance` event of the caller carries them.
 
 #### [MOD-DI-MSG-2] Revoke Digest
 
@@ -6538,7 +6551,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 - if `d.revoked` is not null, the method is a no-op (idempotent): execution returns success without modifying state.
-- else set `d.revoked` to `now`.
+- else set `d.revoked` to `now`, and emit an event carrying `d.digest`, `d.vs_id`, `d.schema_id`, the `accreditation_id` in whose context the message was executed, if any, and `now`.
 
 #### [MOD-DI-QRY-1] Get Digest
 
