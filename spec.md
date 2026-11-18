@@ -6014,7 +6014,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 - `spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
 - `period` (duration): if specified MUST be a valid period.
 - `grantee` MUST NOT be the `policy_address` of `Corporation[grantor_corporation_id]`, else abort: x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked. Every caller inherits this check.
-- if no `FeeGrant` entry exists for (`grantor_corporation_id`, `grantee`) and an `x/feegrant` allowance granted by the corporation's `policy_address` to `grantee` exists, abort: the slot is held by an allowance this module did not create (one the corporation granted directly, or a sponsorship's), and the module never overwrites it. Every caller inherits this check.
+- if an `x/feegrant` allowance granted by the corporation's `policy_address` to `grantee` exists and is not this module's, abort: the slot is held by an allowance this module did not create (one the corporation granted directly, or a sponsorship's), and the module never overwrites it. The allowance is not this module's when no `FeeGrant` entry exists for (`grantor_corporation_id`, `grantee`), or when the entry has ended by expiry (`period` unset and `expiration` not later than `now()`) while the allowance itself has not expired: the module's own allowance carried the expiration of the entry. Every caller inherits this check.
 - if `period` is specified, `expiration` MUST also be specified.
 
 ##### [MOD-DE-MSG-1-3] Grant Fee Allowance fee checks
@@ -6035,10 +6035,12 @@ Create (or update if it already exist) FeeGrant `feegrant`:
 - set `feegrant.remaining_spend` to `spend_limit` if it is set, else null
 - set `feegrant.period` to `period` if `spend_limit` is set, else null
 
-Additionally, realize the on-chain allowance (see the [Delegation Module](#delegation-module) note): create the `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee`, or update it when a `FeeGrant` entry existed before this call (the allowance is then the module's own), as an `AllowedMsgAllowance` over `msg_types` wrapping:
+Additionally, realize the on-chain allowance (see the [Delegation Module](#delegation-module) note): create the `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee`, replacing the module's own allowance when one is still in the slot, as an `AllowedMsgAllowance` over `msg_types` wrapping:
 
 - a `PeriodicAllowance` (`period`; per-period limit `period_spend_limit = spend_limit`; initial `period_can_spend = spend_limit`; first `period_reset = expiration`; no absolute expiration, so it auto-renews until revoked) when both `spend_limit` and `period` are set; or
 - a `BasicAllowance` (`spend_limit` when set, otherwise unlimited; `expiration` when set) otherwise.
+
+> Note: `x/feegrant` deletes a `BasicAllowance` by itself when it expires or when its limit is spent, and the `FeeGrant` entry stays. An entry may therefore exist with no allowance: the allowance is then created again, never updated. When an allowance was spent, not expired, the module cannot tell whether an allowance found later in the slot is its own: it treats it as its own, which only concerns an allowance the same corporation granted to the same grantee.
 
 #### [MOD-DE-MSG-2] Revoke Fee Allowance
 
@@ -6068,7 +6070,7 @@ MUST abort if one of these conditions fails:
 
 If FeeGrant entry for this (`grantor_corporation_id`, `grantee`) exist, delete it, else do nothing.
 
-In the same [[ref: transaction]], when a `FeeGrant` entry was deleted, also revoke the corresponding `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee` (see the [Delegation Module](#delegation-module) note). When no `FeeGrant` entry existed, no allowance is touched: an allowance with no `FeeGrant` entry is not this module's (one the corporation granted directly, or a sponsorship's).
+In the same [[ref: transaction]], when a `FeeGrant` entry was deleted, also revoke the corresponding `x/feegrant` allowance granted by the corporation's `policy_address` (resolved from `grantor_corporation_id`) to `grantee`, if one exists and is this module's ([[MOD-DE-MSG-1-2]](#mod-de-msg-1-2-grant-fee-allowance-basic-checks)) (see the [Delegation Module](#delegation-module) note): `x/feegrant` has already removed an allowance that expired or was spent, and revoking an entry whose allowance is gone deletes the entry and nothing else. When no `FeeGrant` entry existed, no allowance is touched: an allowance with no `FeeGrant` entry is not this module's (one the corporation granted directly, or a sponsorship's).
 
 #### [MOD-DE-MSG-3] Grant Delegate Authorization
 
