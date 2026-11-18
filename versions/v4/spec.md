@@ -2,7 +2,7 @@
 
 **Status:** stable. This version only receives minor fixes.
 
-**Latest draft:** [spec v5-draft3](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
+**Latest draft:** [spec v5-draft4](https://verana-labs.github.io/verifiable-trust-vpr-spec/)
 
 **Previous stable:** [spec v3](https://verana-labs.github.io/verifiable-trust-vpr-spec/versions/v3/)
 
@@ -1482,7 +1482,7 @@ A `GovernanceFrameworkVersion` represents a single version of either an [[ref: E
 
 - `id` (uint64) (*mandatory*) (key): the id of this `ParticipantSessionRecord`.
 - `created` (timestamp) (*mandatory*): timestamp this record has been created.
-- `issuer_participant_id` (uint64) (*optional*): related issuer `Participant` id (if applicable).
+- `issuer_participant_id` (uint64) (*optional*): the `ISSUER` `Participant` entry of the issuer of the credential: the payer's own entry in a Credential Issuance, the credential issuer's entry in a Credential Verification when provided.
 - `verifier_participant_id` (uint64) (*optional*): related verifier `Participant` id (if applicable).
 - `wallet_agent_participant_id` (uint64) (*optional*): related wallet agent `Participant` id (if applicable).
 - `agent_participant_id` (uint64) (*optional*): permission id of the agent `Participant` id (if applicable).
@@ -3488,21 +3488,19 @@ else MUST abort.
 
 - `issuance_fee_discount` : (number) (*mandatory*):
   - if `applicant_participant.effective_from` is not null (renewal), then `issuance_fee_discount` must be equal to `applicant_participant.issuance_fee_discount` else MUST abort.
-  - if `cs.issuer_onboarding_mode` is set to GRANTOR_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == ISSUER_GRANTOR: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-    - if `applicant_participant.role` == ISSUER: if `validator_participant.issuance_fee_discount` is defined,  `issuance_fee_discount` can be set between 0 (no discount) and `validator_participant.issuance_fee_discount` (100% discount) inclusive.
-  - if `cs.issuer_onboarding_mode` is set to ECOSYSTEM_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == ISSUER: `issuance_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-  - else MUST abort.
+  - otherwise (first validation), the allowed range depends on `applicant_participant.role` (the onboarding mode of `cs` is implied by the existence of the onboarding process, see [[MOD-PP-MSG-1-2-2]](#mod-pp-msg-1-2-2-start-participant-op-permission-checks)):
+    - if `applicant_participant.role` == ISSUER_GRANTOR: `issuance_fee_discount` MUST be between 0 (no discount) and 1 (100% discount) inclusive, else MUST abort.
+    - if `applicant_participant.role` == ISSUER: `issuance_fee_discount` MUST be between 0 (no discount) and `max_discount` inclusive, else MUST abort, where `max_discount` is `validator_participant.issuance_fee_discount` if `cs.issuer_onboarding_mode` is GRANTOR_ONBOARDING_PROCESS (the validator is a ISSUER_GRANTOR) and 1 if it is ECOSYSTEM_ONBOARDING_PROCESS.
+    - for any other role: `issuance_fee_discount` MUST be 0, else MUST abort.
 
 - `verification_fee_discount` : (number) (*mandatory*):
   - if `applicant_participant.effective_from` is not null (renewal), then `verification_fee_discount` must be equal to `applicant_participant.verification_fee_discount` else MUST abort.
-  - if `cs.verifier_onboarding_mode` is set to GRANTOR_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == VERIFIER_GRANTOR: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-    - if `applicant_participant.role` == VERIFIER: if `validator_participant.verification_fee_discount` is defined,  `verification_fee_discount` can be set between 0 (no discount) and `validator_participant.verification_fee_discount` (100% discount) inclusive.
-  - if `cs.verifier_onboarding_mode` is set to ECOSYSTEM_ONBOARDING_PROCESS:
-    - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` can be set between 0 (no discount) and 1 (100% discount) inclusive.
-  - else MUST abort.
+  - otherwise (first validation), the allowed range depends on `applicant_participant.role` (the onboarding mode of `cs` is implied by the existence of the onboarding process, see [[MOD-PP-MSG-1-2-2]](#mod-pp-msg-1-2-2-start-participant-op-permission-checks)):
+    - if `applicant_participant.role` == VERIFIER_GRANTOR: `verification_fee_discount` MUST be between 0 (no discount) and 1 (100% discount) inclusive, else MUST abort.
+    - if `applicant_participant.role` == VERIFIER: `verification_fee_discount` MUST be between 0 (no discount) and `max_discount` inclusive, else MUST abort, where `max_discount` is `validator_participant.verification_fee_discount` if `cs.verifier_onboarding_mode` is GRANTOR_ONBOARDING_PROCESS (the validator is a VERIFIER_GRANTOR) and 1 if it is ECOSYSTEM_ONBOARDING_PROCESS.
+    - for any other role: `verification_fee_discount` MUST be 0, else MUST abort.
+
+A HOLDER applicant, and any applicant whose `cs.issuer_onboarding_mode` (resp. `cs.verifier_onboarding_mode`) is OPEN, carries no issuance (resp. verification) discount: the mandatory parameter MUST be 0; a value of 0 MUST be accepted, and the method MUST NOT abort because of the schema's onboarding mode.
 
 Calculation of `op_exp`, the onboarding process expiration timestamp, required to verify provided `effective_until`:
 
@@ -4077,11 +4075,11 @@ An [[ref: account]] that would like to create or update a `ParticipantSession` e
 - `corporation` (account): (Signer) the `policy_address` of the corporation on whose behalf this message is executed.
 - `operator` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `id` (uuid) (*mandatory*): id of the `ParticipantSession`.
-- `issuer_participant_id` (uint64) (*optional*): the id of the perm of the issuer, if we are dealing with the issuance of a credential.
+- `issuer_participant_id` (uint64) (*conditional*): the id of the `ISSUER` `Participant` entry of the issuer of the credential: the payer's own entry in a Credential Issuance (required), the entry of the credential's issuer in a Credential Verification (optional; when provided, the issuer branch receives its verification fees).
 - `verifier_participant_id` (uint64) (*optional*): the id of the perm of the verifier, if we are dealing with the verification of a credential.
 - `agent_participant_id` (uint64) (*optional*): the agent credential issuer `Participant` id (extracted from the agent credential that VUA has in its wallet) of the agent that received the request (credential offer for issuance, presentation request for verification). Only set by VUAs, MUST NOT be specified when peer is a VS.
 - `wallet_agent_participant_id` (uint64) (*optional*): the wallet credential issuer `Participant` id of the VUA where the credential will be or is stored. Can be the same perm than `agent_participant_id` if agent and wallet_agent are the same agent. Only set by VUAs, MUST NOT be specified when peer is a VS.
-- `digest` (string(256)) (*optional*): digest derived from an issued or verified credential.
+- `digest` (string(256)) (*optional*): the `digestJCS` of the credential being issued; ignored in a Credential Verification (see execution).
 
 ##### [MOD-PP-MSG-10-2] Create or Update Participant Session precondition checks
 
@@ -4093,6 +4091,11 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if `issuer_participant_id` is null AND `verifier_participant_id` is null, MUST abort.
 
+Determine the operation type from the provided ids:
+
+- if `verifier_participant_id` is not null, the operation is a **Credential Verification**: the caller is the `vs_operator` of the verifier. `issuer_participant_id` SHOULD also be provided so that the issuer branch receives its verification fees (see [[MOD-PP-QRY-4]](#mod-pp-qry-4-find-beneficiaries)); when absent, only the verifier branch is paid.
+- else, the operation is a **Credential Issuance**: the caller is the `vs_operator` of the issuer.
+
 - define `issuer_participant` as null.
 - define `verifier_participant` as null.
 
@@ -4101,20 +4104,22 @@ if `issuer_participant_id` is not null:
 - Load `issuer_participant` from `issuer_participant_id`.
 - if `issuer_participant.role` is not ISSUER, abort.
 - if `issuer_participant` is not a [[ref: active participant]], abort.
-- if `issuer_participant.vs_operator` is not equal to `operator`, abort.
-- if `issuer_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
-- if `digest` is present and longer than 256 characters, abort.
 
 if `verifier_participant_id` is not null:
 
 - Load `verifier_participant` from `verifier_participant_id`.
 - if `verifier_participant.role` is not VERIFIER, abort.
 - if `verifier_participant` is not a [[ref: active participant]], abort.
-- if `verifier_participant.vs_operator` is not equal to `operator`, abort.
-- if `verifier_participant.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
+- if `issuer_participant` is not null and `verifier_participant.schema_id` is not equal to `issuer_participant.schema_id`, abort.
+
 - if `digest` is present and longer than 256 characters, abort.
 
-Define the **primary `Participant`** `perm`: if `verifier_participant` is not null, `perm` = `verifier_participant` (the caller is the `vs_operator` of the verifier). Else, `perm` = `issuer_participant` (the caller is the `vs_operator` of the issuer).
+Define the **primary `Participant`** `perm`: if `verifier_participant` is not null (Credential Verification), `perm` = `verifier_participant`; else (Credential Issuance), `perm` = `issuer_participant`.
+
+- if `perm.vs_operator` is not equal to `operator`, abort.
+- if `perm.corporation_id` is not equal to `co.id` (where `co` is the `Corporation` entry resolved from the signing `corporation` account), abort.
+
+> Note: the `vs_operator` and `corporation_id` checks apply to the primary `Participant` only. In a Credential Verification, the issuer `Participant` entry generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, activity and schema only.
 
 [[AUTHZ-CHECK-3]](#authz-check-3-vs-operator-authorization-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-operator-fee-grant-checks) MUST pass for this (`corporation`, `operator`, `perm`) tuple.
@@ -4148,7 +4153,7 @@ Use "Find Beneficiaries" query method to get the set of beneficiary `Participant
 
 - define `total_beneficiary_fees` = 0
 
-If **Credential Issuance** (`issuer_participant` is NOT null):
+If **Credential Issuance** (`verifier_participant` is null):
 
 - for each `perm` in `found_participant_set`:
   - `total_beneficiary_fees` = `total_beneficiary_fees` + `participant.issuance_fees` × (1 - `issuer_participant.issuance_fee_discount`)
@@ -4318,7 +4323,7 @@ Initialize accumulators for agent rewards:
 
 Determine the operation type and applicable discount:
 
-- If **Credential Issuance** (`issuer_participant` is NOT null):
+- If **Credential Issuance** (`verifier_participant` is null):
   - `fee_field` = `issuance_fees`
   - `discount` = `issuer_participant.issuance_fee_discount`
   - `payer_participant` = `issuer_participant`
@@ -4458,7 +4463,7 @@ then, add the `cspsr` to `session.session_records`
 if current transaction if for issuance of a credential, persist the credential's `digestJCS` by calling [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest).
 
 :::warning
-`session.authz[]` can contain null `issuer_participant_id` OR `verifier_participant_id`
+a `ParticipantSessionRecord` carries `issuer_participant_id` in a Credential Issuance and, when provided, in a Credential Verification; `verifier_participant_id` is set in a Credential Verification only
 :::
 
 #### [MOD-PP-MSG-11] Update Participant Module Parameters
@@ -6384,7 +6389,7 @@ Where:
 - `price_uvna` is expressed in **micro-denominated VNA units (`uvna`)**.
 - Rounding MUST always be performed **downwards**.
 
-If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail.
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail, except for an `amount` of 0, which converts to 0 in any asset, and for identical base and quote assets, which need no `ExchangeRate` entry.
 
 ##### [MOD-XR-QRY-3-1] Get Price parameters
 
@@ -6396,10 +6401,11 @@ If the corresponding `ExchangeRate` entry is expired or missing, the conversion 
 
 ##### [MOD-XR-QRY-3-2] Get Price query checks
 
-If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned
+If the corresponding `ExchangeRate` entry is expired or missing, the conversion MUST fail and an error is returned — unless `amount` is 0 or the base and quote assets are identical (see execution).
 
 ##### [MOD-XR-QRY-3-3] Get Price execution of the query
 
+- if `amount` is 0: `price` = 0, whatever the assets and whether or not an `ExchangeRate` entry exists (a zero fee or deposit on a FIAT-priced schema MUST NOT require an exchange rate).
 - if (base_asset_type, base_asset) == (quote_asset_type, quote_asset): `price` = `amount`.
 - else load (base_asset_type, base_asset, quote_asset_type, quote_asset).
   - if entry doesn't exist or is not active or expired, abort and generate an error.
