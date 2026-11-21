@@ -186,6 +186,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: ecosystem governance framework, EGF]]:
 ~ The [[ref: governance framework]] of an [[ref: ecosystem]], which binds the corporations acting in it. See [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance).
 
+[[def: effective accreditation, effective accreditations, effective entry, effective entries]]:
+~ An `Accreditation` entry whose `effective_from` is not null and lower than or equal to the timestamp considered: it has been validated and has started. Nothing else is required of it. An [[ref: active accreditation]] is an effective accreditation that has not reached its `effective_until` and is not [[ref: barred]].
+
 [[def: entity, entities]]:
 ~ An [[ref: account]] controller.
 
@@ -237,6 +240,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: issuer grantor, issuer grantors]]:
 ~ A role under a [[ref: credential schema]], held through an `ISSUER_GRANTOR` `Accreditation` entry, whose holder validates and revokes the [[ref: issuers]] of the schema.
+
+[[def: issuer reference, issuer references]]:
+~ In a `CredentialIssuance` or `CredentialPresentation` transaction, what designates the issuer of the credential: the id of an `ISSUER` `Accreditation` entry of the issuer (`issuer_accreditation_id`) or, when the issuer holds no [[ref: active accreditation]] for the schema, the id of its [[ref: verifiable service entry]] (`issuer_vs_id`). Exactly one of the two is given. The fees of the issuer's branch are routed by it ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
 
 [[def: Json Schema, json schema, json schemas, Json Schemas]]:
 
@@ -325,6 +331,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: verifier grantor, verifier grantors]]:
 ~ A role under a [[ref: credential schema]], held through a `VERIFIER_GRANTOR` `Accreditation` entry, whose holder validates and revokes the [[ref: verifiers]] of the schema.
+
+[[def: verifier reference, verifier references]]:
+~ In a `CredentialPresentation` transaction, what designates the verifier: the id of its `VERIFIER` `Accreditation` entry for the schema (`verifier_accreditation_id`) or, when it holds no [[ref: active accreditation]] for the schema, the id of its [[ref: verifiable service entry]] (`verifier_vs_id`). Exactly one of the two is given.
 
 [[def: VS account, VS accounts]]:
 ~ The [[ref: account]] that a [[ref: VS]] signs VPR messages with, recorded as `vs_account` on its [[ref: verifiable service entry]]. See [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks).
@@ -4891,7 +4900,7 @@ A Credential Presentation implies a `CredentialPresentation` transaction when th
 The exchange between the verifier and the holder that leads to this transaction is defined by the [[ref: VT spec]], not by this specification: [[VT-PRES-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vt-pres-vs-credential-presentation) defines its messages and their order (the verifier's request, the holder's answer, the verifier's presentation request and, for an anchored presentation, the holder's presentation digest) and the checks the holder makes on the transaction before it presents, and [[VT-DECL-RECORD]](https://verana-labs.github.io/verifiable-trust-spec/#vt-decl-record-exchange-records) when the holder requires an [[ref: exchange record]]. This method takes the following parameters from that exchange:
 
 - `exchange_id` is chosen by the holder, one per credential it will present, and sent in its answer.
-- The **issuer reference** (`issuer_accreditation_id` or `issuer_vs_id`) and the **verifier reference** (`verifier_accreditation_id` or `verifier_vs_id`) are sent by neither party: each party derives them through its indexer, from the issuer DID of the credential and from the verifier's identifier, as this method applies them. The issuer reference is the `ISSUER` `Accreditation` entry the credential's digest was anchored under while that entry exists, else an effective `ISSUER` entry of the issuer for the schema (validated, its `effective_from` passed), else the `vs_id` of the issuer's service entry (for a credential of a schema whose `credential_anchoring` is NO_DIGEST, an effective `ISSUER` entry of the issuer, else its service entry); the VPR refuses the service-entry form while the issuer holds an active entry, so that the issuer's branch is paid. The verifier reference is the verifier's active `VERIFIER` entry for the schema, else its service entry. A Verifiable User Agent that verifies has no service entry: it records no `CredentialPresentation`, and the holder computes its fees with [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) without a verifier reference.
+- The [[ref: issuer reference]] (`issuer_accreditation_id` or `issuer_vs_id`) and the [[ref: verifier reference]] (`verifier_accreditation_id` or `verifier_vs_id`) are sent by neither party: each party derives them through its indexer, from the issuer DID of the credential and from the verifier's identifier, as this method applies them. The issuer reference is the `ISSUER` `Accreditation` entry the credential's digest was anchored under while that entry exists, else an [[ref: effective entry]] of the issuer, of role `ISSUER`, for the schema, else the `vs_id` of the issuer's service entry (for a credential of a schema whose `credential_anchoring` is NO_DIGEST, an effective `ISSUER` entry of the issuer, else its service entry); the VPR refuses the service-entry form while the issuer holds an active entry, so that the issuer's branch is paid. The verifier reference is the verifier's active `VERIFIER` entry for the schema, else its service entry. A Verifiable User Agent that verifies has no service entry: it records no `CredentialPresentation`, and the holder computes its fees with [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) without a verifier reference.
 - `presentation_digest` is the digest of the presentation the holder is about to send, hashed with the `digest_algorithm` of the schema. The holder computes it once it has received the verifier's presentation request, which names what is disclosed, sends the verifier the digest only, and presents after it has checked the transaction. This method requires it when the schema's `presentation_validity_period`, evaluated at the block, is greater than 0; otherwise the verifier decides whether a digest is anchored.
 - `vua_issuer_accreditation_id` is set by the verifier itself when the holder is a **Verifiable User Agent**, from the User Agent credential it verified at connection. The holder sends nothing for it, and the parameter is absent when the holder is a **Verifiable Service**.
 
@@ -4907,7 +4916,7 @@ An [[ref: account]] that would like to record a `CredentialPresentation` MUST se
 - `schema_id` (uint64) (*mandatory*): the id of the `CredentialSchema` entry of the credential.
 - `verifier_accreditation_id` (uint64) (*conditional*): the id of the verifier's own `VERIFIER` `Accreditation` entry for the schema. Exactly one of `verifier_accreditation_id` and `verifier_vs_id` MUST be provided.
 - `verifier_vs_id` (uint64) (*conditional*): the verifier's own `VerifiableService` entry, when it holds no active `VERIFIER` entry for the schema (the schema's `verifier_onboarding_mode` is OPEN or CREDENTIAL).
-- `issuer_accreditation_id` (uint64) (*conditional*): the id of the `ISSUER` `Accreditation` entry of the issuer of the credential: the entry the credential was anchored under, or an effective entry of the issuer (validated, its `effective_from` passed). It names the issuer branch that receives verification fees; the issuer takes no part in this transaction. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
+- `issuer_accreditation_id` (uint64) (*conditional*): the id of the `ISSUER` `Accreditation` entry of the issuer of the credential: the entry the credential was anchored under, or an [[ref: effective entry]] of the issuer. It names the issuer branch that receives verification fees; the issuer takes no part in this transaction. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
 - `issuer_vs_id` (uint64) (*conditional*): the `VerifiableService` entry of the issuer, when the issuer holds no active `ISSUER` entry for the schema (an issuer acting under OPEN, or whose accreditation has since ended); the issuer branch of the fees is then the schema's root ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
 - `vua_issuer_accreditation_id` (uint64) (*optional*): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the User Agent credential the VUA presented at connection, as identified by the verifier's own trust resolution of that credential ([[ref: VT spec]]): the vendor that receives the Verifiable User Agent reward. Absent when the holder is a Verifiable Service.
 - `presentation_digest` (bytes, base64 in the API) (*conditional*): the presentation digest sent by the holder (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
