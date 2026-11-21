@@ -383,7 +383,7 @@ object "Ecosystem" as tra #3fbdb6 {
   - a single **CredentialFormat**: `W3C_JSONLD`, `ANONCREDS`, `SD_JWT` or, for persons, `MDOC`;
   - a **CredentialAnchoring**: `NO_DIGEST`, `DIGEST` or `REVOCABLE_DIGEST`.
 - An **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` `Accreditation` entries are created. Modes include:
-  - `OPEN`: `ISSUER` Accreditations can be self-created by any [[ref: corporation]].
+  - `OPEN`: any [[ref: corporation]] issues without an entry, and can self-create an `ISSUER` entry.
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Accreditations are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
   - `GRANTOR_ONBOARDING_PROCESS`: `ISSUER` Accreditations are created by one or several [[ref: issuer grantor]](s) — participants accredited to onboard issuers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
 - A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` `Accreditation` entries are created. Modes include:
