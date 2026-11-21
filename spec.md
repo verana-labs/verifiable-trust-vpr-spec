@@ -303,7 +303,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The value of one [[ref: trust unit]] in the [[ref: main fiat currency]], a protocol index that declines every [[ref: epoch]]. See [Trust Unit Index](#trust-unit-index).
 
 [[def: validator]]:
-~ A role an [[ref: entity]] performs by participating in onboarding processes with [[ref: applicants]] in order to register them as [[ref: issuer grantor]], [[ref: verifier grantor]], [[ref: issuer]] or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them.
+~ A role an [[ref: entity]] performs by participating in onboarding processes with [[ref: applicants]] in order to register them as [[ref: issuer grantor]], [[ref: verifier grantor]], [[ref: issuer]] or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them. This is the meaning of the word in this specification, except in the rules on network governance, network fees and distribution, which speak of the validators of the network: the members of its validator set, which produce its blocks.
 
 [[def: verifiable credential, verifiable credentials]]:
 ~ A verifiable credential as defined in [[spec-norm:VC-DATA-MODEL]].
