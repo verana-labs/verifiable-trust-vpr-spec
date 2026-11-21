@@ -233,7 +233,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A service that follows the transactions and the events of a [[ref: VPR]] and serves its current state, its history and its [[ref: exchange records]] to [[ref: verifiable services]] and [[ref: verifiable user agents]].
 
 [[def: issuer, issuers]]:
-~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or an [[ref: issuer grantor]] for issuing credentials of a given [[ref: credential schema]] to [[ref: holders]].
+~ A role an [[ref: entity]] performs by issuing credentials of a given [[ref: credential schema]] to [[ref: holders]]. Depending on the issuer onboarding mode of the schema, the role is granted by the [[ref: ecosystem]] or by an [[ref: issuer grantor]] and recorded by an `ISSUER` `Accreditation` entry, or is open to any [[ref: corporation]] (`OPEN`), which then needs no entry.
 
 [[def: issuer grantor, issuer grantors]]:
 ~ A role under a [[ref: credential schema]], held through an `ISSUER_GRANTOR` `Accreditation` entry, whose holder validates and revokes the [[ref: issuers]] of the schema.
@@ -321,7 +321,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A user agent that accesses [[ref: verifiable services]] and enforces the trust rules of the [[ref: VT spec]], such as a wallet. See [[ref: VT spec]].
 
 [[def: verifier, verifiers]]:
-~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or a [[ref: verifier grantor]] for verifying credentials of a given [[ref: credential schema]].
+~ A role an [[ref: entity]] performs by verifying credentials of a given [[ref: credential schema]]. Depending on the verifier onboarding mode of the schema, the role is granted by the [[ref: ecosystem]] or by a [[ref: verifier grantor]] and recorded by a `VERIFIER` `Accreditation` entry, or is open without an entry: to any [[ref: corporation]] (`OPEN`), or to any corporation whose service holds a credential that the schema names (`CREDENTIAL`).
 
 [[def: verifier grantor, verifier grantors]]:
 ~ A role under a [[ref: credential schema]], held through a `VERIFIER_GRANTOR` `Accreditation` entry, whose holder validates and revokes the [[ref: verifiers]] of the schema.
