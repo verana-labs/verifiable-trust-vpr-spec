@@ -244,7 +244,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: issuer reference, issuer references]]:
 ~ In a `CredentialIssuance` or `CredentialPresentation` transaction, what designates the issuer of the credential: the id of an `ISSUER` `Accreditation` entry of the issuer (`issuer_accreditation_id`) or, when the issuer holds no [[ref: active accreditation]] for the schema, the id of its [[ref: verifiable service entry]] (`issuer_vs_id`). Exactly one of the two is given. The fees of the issuer's branch are routed by it ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
 
-[[def: Json Schema, json schema, json schemas, Json Schemas]]:
+[[def: JSON Schema, json schema, json schemas, JSON Schemas]]:
 
 ~ A schema for JSON documents, as defined by [JSON Schema](https://json-schema.org/); the `json_schema` of a [[ref: credential schema]] is one.
 
@@ -321,7 +321,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A public, decentralized, ledger-based network that stores [[ref: ecosystems]], their [[ref: credential schemas]] and the [[ref: credential schema accreditations]] of their participants, and that charges and rewards participants for their use of it. This specification defines a VPR.
 
 [[def: verifiable service, verifiable services, VS, VSs]]:
-~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that conforms to the [[ref: VT spec]] and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
+~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that conforms to the [[ref: VT spec]] and has a resolvable proof of trust. See [[ref: VT Spec]].
 
 [[def: verifiable service entry, verifiable service entries]]:
 ~ A `VerifiableService` entry: the registration of a [[ref: VID]] in a [[ref: VPR]], owned by a single [[ref: corporation]], that every other entity binding that identifier (`Corporation`, `Ecosystem`, `Accreditation`) references by `vs_id`. See [VerifiableService](#verifiableservice).
@@ -391,7 +391,7 @@ object "Ecosystem" as tra #3fbdb6 {
 
 [[ref: Credential schemas]] are created and managed by the [[ref: corporation]] controlling each [[ref: ecosystem]]. Each [[ref: Credential schema]] includes, at a minimum:
 
-- A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
+- A **JSON Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
 - A **declaration** of what credentials of this schema are for and how agents handle them (see [CredentialSchema](#credentialschema)):
   - a **SubjectKind**: `SERVICE` or `PERSON`;
   - a **PresentationMode**, for service credentials: `PUBLIC`, `ON_REQUEST` or `ON_APPROVAL`;
@@ -470,7 +470,7 @@ Accreditation roles are defined in the table below:
 | **Verifier**          | Can request presentation of credentials of this schema.          |
 | **Holder**            | Holds credentials of this schema. A `HOLDER` `Accreditation` entry is the relationship the issuer validated, which bounds the trust in the credentials issued to that holder. |
 
-Example of a Json Schema credential schema:
+Example of a JSON Schema credential schema:
 
 ```json
 {
@@ -729,7 +729,7 @@ In a [[ref: VPR]], each [[ref: corporation]] is associated with a [[ref: trust d
 
 The trust deposit is automatically funded through transactions involving **trust operations**, such as onboarding processes, credential issuance, or presentation: each time a deposit-bound amount of [[ref: native denom]] is spent, the [[ref: native denom]] is routed to the [[ref: distribution pool]] and the equivalent trust units, computed at the current [[ref: trust unit peg value]], are minted to the corporation's trust deposit. No [[ref: native denom]] is ever held in reserve: trust units are **not collateralized**. The [[ref: native denom]] can be paid by a [[ref: sponsor]] on the corporation's behalf; the trust units are always minted to the corporation that performs the trust operation, never to its sponsor.
 
-The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
+The trust deposit is fundamental to the **proof of trust** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
 
 - The more a [[ref: corporation]] uses the [[ref: VPR]], the more its [[ref: trust deposit]] grows.
 - **Trust is a subscription**: because the [[ref: trust unit peg value]] declines each [[ref: epoch]] by `tu_decay_rate`, a static deposit loses fiat value over time. The trust score therefore reflects **recent** paid usage: earned, never bought, and gone if not maintained.
@@ -1627,7 +1627,7 @@ An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of
 - `ecosystem_id` (uint64) (*mandatory*): the id of the ecosystem that controls this `CredentialSchema` entry.
 - `created` (timestamp) (*mandatory*): timestamp this CredentialSchema has been created.
 - `archived` (boolean) (*mandatory*): whether this CredentialSchema is archived. Initialized to `false` at creation by [[MOD-CS-MSG-1-3]](#mod-cs-msg-1-3-create-credential-schema-execution) and toggled by [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema). MUST never be null. Archiving is informational: it hides the entry from listings filtered by `only_active`, and the only messages that refuse an archived schema are those naming it in `verifier_credential_schema_ids` ([[MOD-CS-MSG-1-2-1]](#mod-cs-msg-1-2-1-create-credential-schema-basic-checks)); a schema archived afterwards stays in the lists that name it.
-- `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
+- `json_schema` (string) (*mandatory*): JSON Schema used for issuing credentials based on this schema.
 - `issuer_grantor_accreditation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor `Accreditation` entry expires and must be renewed.
 - `verifier_grantor_accreditation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor `Accreditation` entry expires and must be renewed.
 - `issuer_accreditation_validity_period` (number) (*mandatory*): number of days after which an issuer `Accreditation` entry expires and must be renewed.
@@ -1637,9 +1637,9 @@ An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how accreditations are managed for verifiers of this `CredentialSchema`. OPEN means any service can verify credentials of this schema without an onboarding process: a verifier acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash; it MAY self-create a `VERIFIER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)); CREDENTIAL means any service whose identifier is the subject of a valid credential of one of the schemas listed in `verifier_credential_schema_ids`, as established by the holder's trust resolution ([[ref: VT spec]]), can verify, under its service entry likewise; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER entry; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER entry;
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): ids of the `CredentialSchema` entries whose holders are authorized verifiers when `verifier_onboarding_mode` is CREDENTIAL; MUST be set, non-empty, iff the mode is CREDENTIAL. Each id MUST refer to a `CredentialSchema` entry whose `subject_kind` is SERVICE and whose `presentation_mode` is PUBLIC, so that a holder can establish the verifier's credential from its DID Document alone, before any exchange. The VPR stores the list and does not evaluate it; the holder does, per the [[ref: VT spec]]. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema); a change applies to the presentations that follow it.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how accreditations are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER entry; NO_ONBOARDING_PROCESS means no onboarding process runs on the VPR for holders: a holder needs no `Accreditation` entry, the issuer applies its own checks off the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
-- `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the UserAgent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to NO_ONBOARDING_PROCESS, since a natural person holds no `Accreditation` entry. Immutable.
+- `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the User Agent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to NO_ONBOARDING_PROCESS, since a natural person holds no `Accreditation` entry. Immutable.
 - `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service, and anyone can read it; reading a published credential is not a Credential Presentation: no exchange is recorded and no fees are computed, so the `verification_fees` of a PUBLIC schema's `Accreditation` entries SHOULD be 0, since they can never be collected. ON_REQUEST: the credential is not published; the holder service presents it, without an approval on its side, to a verifier authorized under the schema's `verifier_onboarding_mode`. ON_APPROVAL: as ON_REQUEST, after each request has been approved on the holder's side. The VPR stores this declaration and checks nothing else about it: what an agent does under each value is defined by [[VT-DECL-MODE]](https://verana-labs.github.io/verifiable-trust-spec/#vt-decl-mode-presentation-mode-of-service-credentials) of the [[ref: VT spec]]. Immutable.
-- `credential_format` (CredentialFormat) (*mandatory*): the single format in which credentials of this schema are issued: W3C_JSONLD (W3C Verifiable Credentials in JSON-LD), ANONCREDS, SD_JWT, or MDOC (ISO/IEC 18013-5 mobile documents, `mso_mdoc`). MDOC is only allowed when `subject_kind` is PERSON. A PUBLIC credential is necessarily W3C_JSONLD, since it is published as a Linked Verifiable Presentation; the VPR accepts ANONCREDS and SD_JWT for a presented (non-published) service credential, for which selective disclosure or unlinkability can matter, as for the UserAgent credential. The [[ref: VT spec]] can accept, in a given version, fewer combinations of `subject_kind`, `credential_format` and `credential_anchoring` than the VPR stores: agents apply its restrictions, which the VPR does not enforce. An ecosystem that needs the same claims in several formats creates one schema per format. Future versions of this specification MAY add values. Immutable.
+- `credential_format` (CredentialFormat) (*mandatory*): the single format in which credentials of this schema are issued: W3C_JSONLD (W3C Verifiable Credentials in JSON-LD), ANONCREDS, SD_JWT, or MDOC (ISO/IEC 18013-5 mobile documents, `mso_mdoc`). MDOC is only allowed when `subject_kind` is PERSON. A PUBLIC credential is necessarily W3C_JSONLD, since it is published as a Linked Verifiable Presentation; the VPR accepts ANONCREDS and SD_JWT for a presented (non-published) service credential, for which selective disclosure or unlinkability can matter, as for the User Agent credential. The [[ref: VT spec]] can accept, in a given version, fewer combinations of `subject_kind`, `credential_format` and `credential_anchoring` than the VPR stores: agents apply its restrictions, which the VPR does not enforce. An ecosystem that needs the same claims in several formats creates one schema per format. Future versions of this specification MAY add values. Immutable.
 - `credential_anchoring` (CredentialAnchoring) (*mandatory*): declares what the VPR holds of every credential of this schema. NO_DIGEST: no credential digest is anchored. DIGEST: the `CredentialIssuance` transaction carries the credential digest; its event gives the credential's effective issuance time and the entry it was issued under; nothing is written. REVOCABLE_DIGEST: as DIGEST, and the issuance transaction persists the digest as a [Digest](#digest) entry, revocable by the owner of the anchoring entry, by a grantor above the issuer's current entries or by the ecosystem controlling the schema ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) and kept until the credential expires: the issuance transaction MUST give that expiry (`credential_valid_until`). MUST be DIGEST or REVOCABLE_DIGEST when `credential_format` is W3C_JSONLD and MUST be NO_DIGEST when it is ANONCREDS (a verifier never sees an AnonCreds credential, only a proof derived from it); the VPR accepts every value for SD_JWT and MDOC, subject to the restrictions of the [[ref: VT spec]] (see `credential_format`). [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) requires the `credential_digest` unless the value is NO_DIGEST, and refuses one under NO_DIGEST. How the digest of each container is computed, when the issuer anchors it and how a credential is revoked under each value are defined by [[VT-DECL-ANCHOR]](https://verana-labs.github.io/verifiable-trust-spec/#vt-decl-anchor-credential-anchoring) of the [[ref: VT spec]]. Immutable.
 - `presentation_validity_period` (duration) (*optional*): the duration in seconds during which a presentation of a credential of this schema is valid evidence of a verification; null or 0 means no reliance period and no digest requirement. MUST be null or 0 when `presentation_mode` is PUBLIC (published credentials are read, not presented, and produce no receipt). At most `GlobalVariables.credential_schema_presentation_validity_period_max_days` days (3,650 by default), a network governance parameter ([[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)). A value greater than 0 makes a `CredentialPresentation` transaction carrying the presentation digest mandatory for every presentation of a credential of the schema: [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) reads the value in force at the block to require the digest. The end of the reliance period of a presentation is not stored: it is the block time of the exchange transaction that carried the presentation digest plus the value of this attribute in force at that time, computed by the parties, and by indexers from the schema's update history. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): a change applies to the presentations that follow it and does not change the reliance period of the presentations already anchored; agents read the value in force at the time of the presentation. The legal effect of the period is stated by the ecosystem in its governance framework.
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for pricing business fees. Can be COIN (a token available on the VPR chain) or FIAT (fees are priced in a fiat currency; the fee itself is settled off-chain, while deposit-bound amounts and Verifiable User Agent rewards are settled on-chain in [[ref: native denom]] at the oracle rate). [[ref: Trust units]] are **not** a pricing asset: a decaying unit cannot label prices. Note that in all cases, deposit-bound amounts are always paid in [[ref: native denom]] and minted as [[ref: trust units]].
@@ -2256,7 +2256,7 @@ As a result, `accountABC` is authorized to:
 |                                | Update CS Module Parameters             |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |[[ref: governance proposal]] |
 |                                | List Credential Schemas                 | /cs/v1/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |N/A  |
 |                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |N/A  |
-|                                | Render Json Schema                      | /cs/v1/js/{id}               | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |N/A  |
+|                                | Render JSON Schema                      | /cs/v1/js/{id}               | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |N/A  |
 |                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-CS-QRY-4]](#mod-cs-qry-4-list-module-parameters)   |N/A  |
 | Accreditation                    | Start Onboarding                     |     N/A (Tx)                       | Msg    | [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding)    |corporation + delegate |
 |                                | Renew Onboarding                   |       N/A (Tx)                     | Msg    | [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)    |corporation + delegate |
@@ -3141,7 +3141,7 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
 - `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
 - `ecosystem_id` (uint64) (*mandatory*): id of the ecosystem.
-- `json_schema` (string) (*mandatory*): the [[ref: Json Schema]] of the credential.
+- `json_schema` (string) (*mandatory*): the [[ref: JSON Schema]] of the credential.
 - `issuer_grantor_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
 - `verifier_grantor_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
 - `issuer_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
@@ -3172,7 +3172,7 @@ If any of these precondition checks fail, method MUST abort.
 - `delegate` (account): (Signer) signature must be verified.
 - [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
 - `ecosystem_id` MUST represent an existing `Ecosystem` entry `ecosystem` and `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
-- `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]], whatever was submitted, is set during execution to `vpr:verana:<chain id>:cs:<id>`, the chain id of the VPR and the auto-generated id of this `CredentialSchema`.
+- `json_schema` MUST be a valid [[ref: JSON Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: JSON Schema]], whatever was submitted, is set during execution to `vpr:verana:<chain id>:cs:<id>`, the chain id of the VPR and the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_accreditation_validity_period_max_days` days.
 - `verifier_grantor_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_accreditation_validity_period_max_days` days.
 - `issuer_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_accreditation_validity_period_max_days` days.
@@ -3420,19 +3420,19 @@ Anyone CAN execute this method.
 
 return found entry (if any).
 
-#### [MOD-CS-QRY-3] Render Json Schema
+#### [MOD-CS-QRY-3] Render JSON Schema
 
 Anyone CAN execute this method.
 
-##### [MOD-CS-QRY-3-1] Render Json Schema parameters
+##### [MOD-CS-QRY-3-1] Render JSON Schema parameters
 
 - `id` of the [[ref: credential schema]] (*mandatory*);
 
-##### [MOD-CS-QRY-3-2] Render Json Schema checks
+##### [MOD-CS-QRY-3-2] Render JSON Schema checks
 
 - `id` must be a uint64.
 
-##### [MOD-CS-QRY-3-3] Render Json Schema execution
+##### [MOD-CS-QRY-3-3] Render JSON Schema execution
 
 Render found entry (if any). In case value is returned by a REST API, content type MUST be set to "application/schema+json".
 
