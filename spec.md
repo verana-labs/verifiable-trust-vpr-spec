@@ -4450,34 +4450,12 @@ Only the `vs_account` of the issuer's [VerifiableService](#verifiableservice) en
 
 A Credential Issuance implies a `CredentialIssuance` transaction when the fees computed for it are greater than 0, or when the schema's `credential_anchoring` is DIGEST or REVOCABLE_DIGEST, since the digest is anchored through it; an issuance with zero fees under a NO_DIGEST schema needs no [[ref: exchange record]] and leaves no transaction (see [CredentialSchema](#credentialschema)).
 
-The holder, the Verifiable User Agent or Verifiable Service that receives the issuer's offer, MUST send the issuer:
+The exchange between the issuer and the holder that leads to this transaction is defined by the [[ref: VT spec]], not by this specification: [[VT-PROTO-ISS]](https://verana-labs.github.io/verifiable-trust-spec/#vt-proto-iss-credential-issuance) defines its messages and their order, and [[CIT]](https://verana-labs.github.io/verifiable-trust-spec/#cit-credential-issued-to) the checks the holder makes on the transaction before it stores the credential. This method takes two of its parameters from that exchange:
 
-- an `exchange_id` (uuid) for exchange identification.
+- `exchange_id` is chosen by the holder, which sends it to the issuer when it accepts the offer.
+- `vua_issuer_accreditation_id` is set by the issuer itself when the holder is a **Verifiable User Agent**: from the User Agent credential it verified at connection or, for the issuance of a User Agent credential itself, to its own `ISSUER` entry under the User Agent schema. The holder sends nothing for it, and the parameter is absent when the holder is a **Verifiable Service**.
 
-In an exchange with a **Verifiable User Agent**, the issuer sets `vua_issuer_accreditation_id` itself, from the User Agent credential it verified at connection or, for the issuance of a User Agent credential itself, to its own `ISSUER` entry under the User Agent schema ([[ref: VT spec]]); the holder sends nothing for it, and the parameter is absent when the holder is a **Verifiable Service**.
-
-When an exchange record is required, the issuer MUST create it, then the holder MUST check, through the notification of an indexer of its whitelist ([[ref: VT spec]]), that the transaction was included and is valid: signed for the issuer's entry, carrying the `exchange_id`, the schema and, for a User Agent, its vendor's entry as `vua_issuer_accreditation_id`, before storing the issued credential. The VPR stores no exchange: the transaction is the receipt ([CredentialIssuance](#credentialissuance)).
-
-```plantuml
-scale max 800 width
-actor "Holder\nVUA or VS" as Issued 
-participant "Issuer\nVS" as Issuer 
-participant "VPR" as vpr 
-participant "Indexer" as indexer
-
-
-Issued <-- Issuer: I want to issue a credential from schema id ... to you
-Issued --> Issuer: Here is the exchange_id
-Issuer --> vpr: record the issuance
-Issued <-- Issuer: exchange recorded (exchange_id, tx hash)
-vpr --> indexer: CredentialIssuance event
-Issued <-- indexer: exchange notification
-Issued <-- Issuer: Send credential
-Issued <-- Issued: verify the exchange transaction through the indexer, then store the credential
-
-```
-
-See [[ref: VT spec]].
+The VPR stores no exchange: the transaction is the receipt ([CredentialIssuance](#credentialissuance)).
 
 ##### [MOD-AC-MSG-10-1] Record Credential Issuance parameters
 
