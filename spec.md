@@ -2280,7 +2280,7 @@ As a result, `accountABC` is authorized to:
 | Trust Deposit                  | Mint Trust Units                    |   N/A (Tx)                       | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)   | module call |
 |                                | Update TD Module Parameters             |      N/A (Tx)               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |[[ref: governance proposal]] |
 |                                | Slash Trust Deposit             |           N/A (Tx)               | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |[[ref: governance proposal]] |
-|                                | Repay Slash          |         N/A (Tx)                    | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)   |corporation + delegate |
+|                                | Repay Slash          |         N/A (Tx)                    | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)   |corporation (group proposal) OR corporation + delegate |
 |                                | Record Ecosystem Slash          |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)   | module call|
 |                                | Set Corporation Exclusion           |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)   | [[ref: governance proposal]] |
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |N/A |
@@ -5647,12 +5647,15 @@ Nothing is burned here: [[ref: trust units]] are not a token. The economic penal
 
 #### [MOD-TD-MSG-6] Repay Slash
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation` to repay a slash debt: the debt of one of its participations (an ecosystem slash, [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) or its network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)). Repayment is made in [[ref: native denom]] worth the debt's mint-time cost basis (`unrepaid_fiat`) at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the [ParticipationTrustDeposit](#participationtrustdeposit) entry, or to the [TrustDeposit](#trustdeposit) for a network debt, and the debt is cleared; the slash count and any exclusion stay. No trust units are minted. A debt is repaid in full in one message, successive unrepaid slashes having accumulated into it; partial repayment (installments) is a candidate for a later version.
+- Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+- `corporation` CAN execute this method alone through a group proposal, so that a corporation can always repay, whatever its delegates and their spend limits.
+
+It repays a slash debt: the debt of one of the corporation's participations (an ecosystem slash, [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) or its network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)). Repayment is made in [[ref: native denom]] worth the debt's mint-time cost basis (`unrepaid_fiat`) at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the [ParticipationTrustDeposit](#participationtrustdeposit) entry, or to the [TrustDeposit](#trustdeposit) for a network debt, and the debt is cleared; the slash count and any exclusion stay. No trust units are minted. A debt is repaid in full in one message, successive unrepaid slashes having accumulated into it; partial repayment (installments) is a candidate for a later version.
 
 ##### [MOD-TD-MSG-6-1] Repay Slash method parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `delegate` (account) (*conditional*): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal ([[MOD-DE-MSG-3-1]](#mod-de-msg-3-1-grant-delegate-authorization-method-parameters)).
 - `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*conditional*): the participation whose debt is repaid, `ParticipationTrustDeposit[(vs_id, schema_id, role)]`; all three present, or none to repay the corporation's network debt.
 
 ##### [MOD-TD-MSG-6-2] Repay Slash precondition checks
@@ -5663,9 +5666,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- if `delegate` is present: `delegate` (account): (Signer) signature must be verified, and [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type. Else (group proposal) [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`: no delegate spend limit applies, the corporation spending its own funds.
 - if `vs_id` is given: `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]` MUST exist, `VerifiableService[vs_id].corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `d.unrepaid_slash` MUST be greater than 0; else: `td` = `TrustDeposit[co.id]` MUST exist, with `td.unrepaid_slash` greater than 0. Let `debt_tu` and `debt_fiat` be the `unrepaid_slash` and `unrepaid_fiat` of that entry.
 - the exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired ([Trust Unit Index](#trust-unit-index)).
 
