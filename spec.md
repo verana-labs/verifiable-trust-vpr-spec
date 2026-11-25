@@ -2152,7 +2152,7 @@ Applies to a delegate acting under a [DelegateAuthorization](#delegateauthorizat
 
 ##### [GF-CHECK-3] Ecosystem governance framework acceptance
 
-Applies to every message of the [Accreditation Module](#accreditation-module) that acts under a `CredentialSchema` entry `cs`, as applicant, validator, grantor, issuer, verifier or holder, for the ecosystem `e` = `Ecosystem[cs.ecosystem_id]` and the message's corporation `co`, except when `co.id` = `e.corporation_id` (the controller of the ecosystem is the author of its [[ref: EGF]]), and except the sanction messages of the ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit), [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)) and the two exits a party keeps whatever it has accepted: [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request), which recovers its escrow, and [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) when the corporation revokes its own entry (Option #3), which lets it leave the ecosystem. Let `acc` be `EcosystemAcceptance[(e.id, co.id)]`.
+Applies to every message of the [Accreditation Module](#accreditation-module) that acts under a `CredentialSchema` entry `cs`, as applicant, validator, grantor, issuer, verifier or holder, for the ecosystem `e` = `Ecosystem[cs.ecosystem_id]` and the message's corporation `co`, except when `co.id` = `e.corporation_id` (the controller of the ecosystem is the author of its [[ref: EGF]]), and except the sanction messages of the ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit), [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)) and the two exits a party keeps whatever it has accepted: [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request), which recovers its escrow, and [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) when the corporation revokes its own entry (Option #3), which lets it leave the ecosystem. It does not apply either to [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver), in its `vs_id` form or in its `id` form: that message writes nothing and only asks for a new trust resolution. Let `acc` be `EcosystemAcceptance[(e.id, co.id)]`.
 
 1. The check passes when `acc` exists and `acc.version` = `e.active_version`.
 2. Else it passes when `acc` exists, `e.acceptance_deadline` is not null and `now` < `e.acceptance_deadline`.
@@ -4853,7 +4853,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 ###### [MOD-AC-MSG-15-2-2] Trigger Resolver authorization checks
 
-At least one of the authorization paths below MUST pass, else [[ref: transaction]] MUST abort.
+At least one of the authorization paths below MUST pass, else [[ref: transaction]] MUST abort. Neither [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) nor [[BAR-CHECK-1]](#bar-check-1-ecosystem-bar) is run, in the `vs_id` form or in the `id` form: a corporation that has not accepted the governance framework of the ecosystem, or that is barred in it, can still ask for a new trust resolution. [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) applies, as on every message that carries a `corporation` account.
 
 *Path 1 — vs_account of the target entry*
 
