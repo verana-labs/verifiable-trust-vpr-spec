@@ -2027,10 +2027,10 @@ It is entirely up to the `corporation` to decide **which accounts may execute wh
 
 #### Not Delegable Module Messages
 
-Some module messages are not [[ref: delegable messages]] and specify only a `corporation`:
+Some module messages are not [[ref: delegable messages]] and specify only a `signer`:
 
-- `corporation` (account):
-  The `policy_address` of the `Corporation` that owns the manipulated resource, which is the signer: the policy account of the corporation's [[ref: group]] executes the Msg when a proposal passes.
+- `signer` (account):
+  The `policy_address` of the `Corporation` that owns the manipulated resource: the policy account of the corporation's [[ref: group]] executes the Msg when a proposal passes, and is its only signer. These messages carry no `corporation` field.
 
 Such messages **cannot be delegated** and MUST be executed exclusively through a **corporation proposal**.
 
@@ -2038,7 +2038,7 @@ Such messages **cannot be delegated** and MUST be executed exclusively through a
 
 Some module messages can be executed **only through a VPR council [[ref: governance proposal]]**.
 
-These messages are executable only by the [[ref: council account]], through a proposal of the council group ([GOV-2](#network-governance), [GOV-3](#network-governance)); they are not delegable, and no other account, delegate or corporation, can execute them.
+These messages are executable only by the [[ref: council account]], through a proposal of the council group ([GOV-2](#network-governance), [GOV-3](#network-governance)); they are not delegable, and no other account, delegate or corporation, can execute them. Their signer field is `signer`, as in every other message, and it MUST be `GlobalVariables.council_account`.
 
 #### Fee Grants
 
@@ -2126,11 +2126,11 @@ If the [[ref: transaction]] fees are paid by the `corporation` account (via fee 
 
 ##### [AUTHZ-CHECK-5] Corporation Registration check
 
-A `Corporation` entry `co` MUST exist whose `co.policy_address` equals the message's `corporation` account. If none exists, the [[ref: transaction]] MUST abort with an error indicating that the message's `corporation` account has not yet been registered as the `policy_address` of a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)). The resolved `co.id` is the `corporation_id` used by the message.
+A `Corporation` entry `co` MUST exist whose `co.policy_address` equals the message's `corporation` account, or its `signer` account for the messages that carry no `corporation` field ([[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor), [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship), [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)). If none exists, the [[ref: transaction]] MUST abort with an error indicating that the message's `corporation` account has not yet been registered as the `policy_address` of a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)). The resolved `co.id` is the `corporation_id` used by the message.
 
 > Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), whose explicit purpose is to register a new `Corporation` and bind a `policy_address` to it. Uniqueness holds there by construction: the group policy account is created by the method itself, so no `Corporation` entry can reference it yet.
 
-This check applies to every message that carries a `corporation` account: through [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) for a delegable message executed by a delegate or by a VS account, and directly for a non-delegable message and for a group-proposal path, whose checks name it. As a result, every such message requires the message's `corporation` account to be the `policy_address` of a registered `Corporation`. Once `co` is resolved, this check MUST also run [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) on `co`, except for [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews the acceptance: no path, delegate or proposal, reaches a corporation's acts without the network governance framework gate.
+This check applies to every message executed for a corporation (it carries a `corporation` account, or its `signer` is the corporation's own account): through [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) for a delegable message executed by a delegate or by a VS account, and directly for a non-delegable message and for a group-proposal path, whose checks name it. As a result, every such message requires the message's `corporation` account to be the `policy_address` of a registered `Corporation`. Once `co` is resolved, this check MUST also run [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) on `co`, except for [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews the acceptance: no path, delegate or proposal, reaches a corporation's acts without the network governance framework gate.
 
 #### [GF-CHECK] Governance Framework Acceptance Checks
 
@@ -2138,7 +2138,7 @@ A party acts under a [[ref: governance framework]] only after recording its [[re
 
 ##### [GF-CHECK-1] Network governance framework acceptance
 
-Applies to every message that carries a `corporation` account, delegable or not, except [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), which records the acceptance, and [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews it; it is evaluated by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), after the resolution of the `Corporation` entry `co`, on every path that resolves it. Let `ngf` be the version in force of the [[ref: NGF]] (the last entry of `GlobalVariables.network_governance_framework_versions` whose `active_since` is set).
+Applies to every message executed for a corporation, delegable or not (it carries a `corporation` account, or its `signer` is the corporation's own account), except [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), which records the acceptance, and [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews it; it is evaluated by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), after the resolution of the `Corporation` entry `co`, on every path that resolves it. Let `ngf` be the version in force of the [[ref: NGF]] (the last entry of `GlobalVariables.network_governance_framework_versions` whose `active_since` is set).
 
 1. The check passes when `co.accepted_ngf_version` = `ngf.version`.
 2. Else it passes when `GlobalVariables.ngf_acceptance_deadline` is not null and `now` < `GlobalVariables.ngf_acceptance_deadline` (the grace period of the version in force).
@@ -2499,6 +2499,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-CO-MSG-3-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-CO-MSG-3-2] Update Module Parameters precondition checks
@@ -2507,6 +2508,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-CO-MSG-3-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
 
 ###### [MOD-CO-MSG-3-2-2] Update Module Parameters fee checks
@@ -2525,11 +2527,11 @@ for each parameter `param` <`key`, `value`> in `params`:
 
 #### [MOD-CO-MSG-4] Set Sponsor
 
-This method is **not delegable**: the `corporation` executes it alone through a corporation proposal, to elect a [[ref: sponsor]] among the corporations that granted it a `Sponsorship` ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)), or to stop being sponsored. Electing a sponsor redirects the corporation's receipts to it ([[FUND-CHECK-2]](#fund-check-2-credit)), which is a treasury decision of the corporation itself, not of a delegate.
+This method is **not delegable**: the corporation executes it alone through a corporation proposal, to elect a [[ref: sponsor]] among the corporations that granted it a `Sponsorship` ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)), or to stop being sponsored. Electing a sponsor redirects the corporation's receipts to it ([[FUND-CHECK-2]](#fund-check-2-credit)), which is a treasury decision of the corporation itself, not of a delegate.
 
 ##### [MOD-CO-MSG-4-1] Set Sponsor parameters
 
-- `corporation` (account): (Signer) the `policy_address` of the corporation, whose group policy account executes this message through a passed proposal.
+- `signer` (account) (*mandatory*): (Signer) the `policy_address` of the corporation, whose group policy account executes this message through a passed proposal. This message carries no `corporation` field: the corporation is its only possible signer.
 - `sponsor_corporation_id` (uint64) (*optional*): id of the `Corporation` to elect as sponsor; null to clear the current sponsor.
 
 ##### [MOD-CO-MSG-4-2] Set Sponsor precondition checks
@@ -2538,8 +2540,8 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-CO-MSG-4-2-1] Set Sponsor basic checks
 
-- `corporation` (account): (Signer) the message is executed by the corporation's group policy account; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
-- let `co` be the `Corporation` entry resolved from the message's `corporation` account.
+- `signer` (account): (Signer) the message is executed by the corporation's group policy account; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `signer`.
+- let `co` be the `Corporation` entry resolved from the message's `signer` account.
 - if `sponsor_corporation_id` is not null:
   - a `Corporation` entry `sp` with `sp.id` = `sponsor_corporation_id` MUST exist, and `sp.id` MUST differ from `co.id`;
   - a `Sponsorship` entry `s` MUST exist with `s.sponsor_corporation_id` = `sp.id` and `s.sponsored_corporation_id` = `co.id`, and MUST NOT be expired (`s.period` is set, or `s.expiration` is null, or `s.expiration` > `now()`).
@@ -2770,6 +2772,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-ES-MSG-4-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-ES-MSG-4-2] Update Module Parameters precondition checks
@@ -2778,6 +2781,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-ES-MSG-4-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
 
 ###### [MOD-ES-MSG-4-2-2] Update Module Parameters fee checks
@@ -2850,9 +2854,9 @@ Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corpora
 ##### [MOD-GF-MSG-1-1] Add Governance Framework Document parameters
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
-- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)). When `network` is true, it is the [[ref: council account]].
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]] whose governance framework will be modified. If set, the `corporation` MUST be the controller of the target `Ecosystem`. If not set, the target subject is the `corporation`'s own [[ref: CGF]].
-- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `signer` are absent, and the message is executed through a [[ref: governance proposal]].
+- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` and `corporation` MUST be absent, `signer` is the [[ref: council account]], and the message is executed through a [[ref: governance proposal]].
 - `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the governance framework document.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
@@ -2866,7 +2870,7 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-GF-MSG-1-2-1] Add Governance Framework Document basic checks
 
-if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a [[ref: governance proposal]], else abort; the signer and authorization checks below then do not apply.
+if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a [[ref: governance proposal]]: `signer` MUST be `GlobalVariables.council_account`, else abort; the checks below on `corporation` and on the authorization of `signer` then do not apply.
 
 - `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
 - `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
@@ -2917,9 +2921,9 @@ Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corpora
 ##### [MOD-GF-MSG-2-1] Increase Active Governance Framework Version parameters
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
-- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)). When `network` is true, it is the [[ref: council account]].
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]]. If set, the `corporation` MUST be its controller. If not set, the target subject is the `corporation`'s own [[ref: CGF]].
-- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `signer` are absent, and the message is executed through a [[ref: governance proposal]].
+- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` and `corporation` MUST be absent, `signer` is the [[ref: council account]], and the message is executed through a [[ref: governance proposal]].
 - `acceptance_grace` (duration) (*mandatory*): the grace period, from the activation, during which the parties bound by the framework that accepted a former version keep acting under it ([[GF-CHECK]](#gf-check-governance-framework-acceptance-checks)): the corporations of the network for the [[ref: NGF]], the corporations acting in the ecosystem for an [[ref: EGF]], the delegates of the corporation for a [[ref: CGF]]. MUST be at least `GlobalVariables.gf_acceptance_grace_min`; no maximum.
 
 ##### [MOD-GF-MSG-2-2] Increase Active Governance Framework Version precondition checks
@@ -2928,7 +2932,7 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-GF-MSG-2-2-1] Increase Active Governance Framework Version basic checks
 
-- if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a [[ref: governance proposal]], else abort; the signer and authorization checks below then do not apply.
+- if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a [[ref: governance proposal]]: `signer` MUST be `GlobalVariables.council_account`, else abort; the checks below on `corporation` and on the authorization of `signer` then do not apply.
 
 - `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
 - `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
@@ -3005,11 +3009,11 @@ The method MUST emit an event carrying `co.id`, `ecosystem_id` or the network, `
 
 #### [MOD-GF-MSG-4] Accept Corporation Governance Framework
 
-The `delegate` of a [DelegateAuthorization](#delegateauthorization) CAN execute this method. It records the [[ref: governance framework acceptance]] by the delegate of the version in force of the [[ref: CGF]] of the corporation that authorized it ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-a-delegate)). The message is signed by the delegate alone, outside [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks): it is the act that makes the authorization usable, so it cannot require it. The delegate pays the [[ref: network fees]], or the corporation does through a [FeeGrant](#feegrant) whose `msg_types` include `AcceptCorporationGovernanceFramework` ([MsgType](#msgtype) 31), which [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization) adds to the allowance of every delegate it grants a fee limit, and which a [[ref: sponsor]] covering the corporation's fees pays like any other fee of its delegates ([Delegation Module](#delegation-module)); the message is not delegable.
+The [[ref: delegate]] of a [DelegateAuthorization](#delegateauthorization) CAN execute this method. It records the [[ref: governance framework acceptance]] by the delegate of the version in force of the [[ref: CGF]] of the corporation that authorized it ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-a-delegate)). The message is signed by the delegate alone, outside [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks): it is the act that makes the authorization usable, so it cannot require it. The delegate pays the [[ref: network fees]], or the corporation does through a [FeeGrant](#feegrant) whose `msg_types` include `AcceptCorporationGovernanceFramework` ([MsgType](#msgtype) 31), which [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization) adds to the allowance of every delegate it grants a fee limit, and which a [[ref: sponsor]] covering the corporation's fees pays like any other fee of its delegates ([Delegation Module](#delegation-module)); the message is not delegable.
 
 ##### [MOD-GF-MSG-4-1] Accept Corporation Governance Framework parameters
 
-- `delegate` (account): (Signer) the account that holds the authorization.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg. It MUST be the delegate itself, the account that holds the authorization.
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] whose [[ref: CGF]] is accepted.
 - `version` (int) (*mandatory*): the version accepted. MUST be the version in force.
 
@@ -3020,9 +3024,9 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-GF-MSG-4-2-1] Accept Corporation Governance Framework basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `delegate` (account): (Signer) signature must be verified.
+- `signer` (account): (Signer) signature must be verified.
 - a `Corporation` entry `co` with id `corporation_id` MUST exist, else abort.
-- a `DelegateAuthorization` entry `dauthz` with key (`co.id`, `delegate`) MUST exist, else abort: the corporation grants first ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization)), the delegate accepts, then uses the authorization. The expiration and the budget of `dauthz` are not checked here.
+- a `DelegateAuthorization` entry `dauthz` with key (`co.id`, `signer`) MUST exist, else abort: the corporation grants first ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization)), the delegate accepts, then uses the authorization. The expiration and the budget of `dauthz` are not checked here.
 - `version` MUST equal `co.active_version`, else abort.
 
 ###### [MOD-GF-MSG-4-2-2] Accept Corporation Governance Framework fee checks
@@ -3037,7 +3041,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - set `dauthz.accepted_cgf_version` to `version` and persist.
 
-The method MUST emit an event carrying `co.id`, `delegate`, `version` and the current timestamp.
+The method MUST emit an event carrying `co.id`, the delegate account `signer`, `version` and the current timestamp.
 
 #### [MOD-GF-QRY-1] Get Governance Framework Version
 
@@ -3087,6 +3091,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-GF-MSG-5-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-GF-MSG-5-2] Update Module Parameters precondition checks
@@ -3095,6 +3100,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-GF-MSG-5-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Governance Framework parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `gf_acceptance_grace_min`, if updated, MUST be a duration > 0, else abort.
 
@@ -3348,6 +3354,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-CS-MSG-4-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-CS-MSG-4-2] Update Module Parameters precondition checks
@@ -3356,6 +3363,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-CS-MSG-4-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Credential Schema parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `credential_schema_schema_max_size` and every `credential_schema_*_max_days` value, if updated, MUST be > 0, else abort.
 
@@ -4529,6 +4537,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-AC-MSG-11-1] Update Accreditation Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-AC-MSG-11-2] Update Accreditation Module Parameters precondition checks
@@ -4537,6 +4546,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-AC-MSG-11-2-1] Update Accreditation Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Accreditation parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `accreditation_max_entries_per_participation`, if updated, MUST be an integer from 2 to 64, else abort. A lower value applies to the entries created afterwards: no existing entry is removed, and a participation that holds more entries than the new value creates none until it is back under it.
 
@@ -5558,6 +5568,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-TD-MSG-4-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-TD-MSG-4-2] Update Module Parameters precondition checks
@@ -5566,6 +5577,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-TD-MSG-4-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Trust Deposit and Trust Unit Index, Native denom and Network fees parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `tu_peg_value_genesis`, `main_fiat_currency`, `epoch_length` and `vna_total_supply`, immutable, MUST be refused ([GlobalVariables](#globalvariables)): the index only moves through decay, and the other three would re-denominate or re-index everything.
 - `network_gas_price` and `max_gas_per_msg_type`, if updated, take effect as stated by [[NET-FEE-1]](#net-fee-1-network-gas-price) and [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions).
@@ -5598,6 +5610,7 @@ The parts of the trust deposit, the [ParticipationTrustDeposit](#participationtr
 
 ##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `corporation_id` (uint64) (*mandatory*): id of the corporation we want to slash.
 - `percent` (decimal) (*mandatory*): the fraction of the corporation's [[ref: trust deposit]] to slash, greater than 0 and at most 1.
 - `exclude` (boolean) (*mandatory*): the network's decision to exclude the corporation in addition to the debt: true withdraws trust from everything the corporation issued or validated ([[ref: VT spec]]) and bars it until network governance lifts it ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)); false bars it until the debt is repaid only. A later slash with false does not clear an earlier exclusion.
@@ -5610,6 +5623,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `percent` MUST be greater than 0 and lower or equal to 1.
 - `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.tu` MUST be greater than 0.
 
@@ -5726,6 +5740,7 @@ This method can only be called by a [[ref: governance proposal]]. It sets or lif
 
 ##### [MOD-TD-MSG-8-1] Set Corporation Exclusion method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `corporation_id` (uint64) (*mandatory*): id of the corporation.
 - `excluded` (boolean) (*mandatory*): the new value of the flag.
 
@@ -5735,6 +5750,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-TD-MSG-8-2-1] Set Corporation Exclusion basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `Corporation[corporation_id]` MUST exist, else abort. If the `TrustDeposit` entry `td` whose `td.corporation_id` equals `corporation_id` exists, `td.excluded` MUST differ from `excluded`, else abort (nothing to change); if it does not exist, `excluded` MUST be true, else abort.
 
 ###### [MOD-TD-MSG-8-2-2] Set Corporation Exclusion fee checks
@@ -5930,6 +5946,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-DS-MSG-1-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-DS-MSG-1-2] Update Module Parameters precondition checks
@@ -5938,6 +5955,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-DS-MSG-1-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Distribution parameters listed above, else abort.
 - `validator_node_budget`, `council_budget` and `foundation_budget`, if updated, MUST be ≥ 0, in [[ref: main fiat currency]].
 - `validator_target_uptime` and `validator_min_uptime`: the resulting values MUST satisfy 0 ≤ `validator_min_uptime` ≤ `validator_target_uptime` ≤ 1, else abort.
@@ -6256,13 +6274,13 @@ It clears the VS account configuration of the `VerifiableService` entry `vs_id` 
 
 #### [MOD-DE-MSG-10] Grant Sponsorship
 
-This method is **not delegable**: the `corporation` (the [[ref: sponsor]]) executes it alone through a corporation proposal, since it commits the corporation's funds to be spent by another corporation's delegates and VS accounts, outside any delegate spend limit.
+This method is **not delegable**: the corporation (the [[ref: sponsor]]) executes it alone through a corporation proposal, since it commits the corporation's funds to be spent by another corporation's delegates and VS accounts, outside any delegate spend limit.
 
 The sponsor declares the budget it is willing to pay for another corporation. The sponsorship takes effect only once the sponsored corporation elects it with [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor). A `Sponsorship` entry is **create-only**: an existing (`sponsor`, `sponsored`) pair can only be re-granted with terms that are at least as generous (raise-only update, see the execution); any reduction requires [[MOD-DE-MSG-11]](#mod-de-msg-11-revoke-sponsorship), which clears the sponsored corporation's election, followed by a fresh grant and a fresh election.
 
 ##### [MOD-DE-MSG-10-1] Grant Sponsorship method parameters
 
-- `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the sponsor corporation, whose group policy account executes this message through a passed proposal.
+- `signer` (account) (*mandatory*): (Signer) the `policy_address` of the sponsor corporation, whose group policy account executes this message through a passed proposal. This message carries no `corporation` field: the corporation is its only possible signer.
 - `sponsored_corporation_id` (uint64) (*mandatory*): id of the `Corporation` to sponsor.
 - `msg_types` ([MsgType](#msgtype)[]) (*optional*): covered paying message types (see [Sponsorship](#sponsorship)); all of them when absent.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum operation funds paid per cycle.
@@ -6275,8 +6293,8 @@ The sponsor declares the budget it is willing to pay for another corporation. Th
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): (Signer) the message is executed by the corporation's group policy account; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
-- let `co` be the `Corporation` entry resolved from the message's `corporation` account (the sponsor).
+- `signer` (account): (Signer) the message is executed by the corporation's group policy account; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `signer`.
+- let `co` be the `Corporation` entry resolved from the message's `signer` account (the sponsor).
 - `sponsored_corporation_id`: a `Corporation` entry MUST exist with this `id`, and it MUST differ from `co.id`.
 - the `policy_address` of that corporation MUST NOT be the `grantee` of a `FeeGrant` of `co`, nor the `vs_account` of a `VerifiableService` entry of `co`, nor, when no `Sponsorship` entry exists for (`co.id`, `sponsored_corporation_id`) or the existing one has `covers_fees` false, the grantee of any `x/feegrant` allowance granted by `co.policy_address`, else abort: the sponsorship allowance and another allowance would share the one (granter, grantee) slot of x/feegrant (when the existing sponsorship covers fees, the allowance in the slot is its own, and the re-grant replaces it).
 - if a `Sponsorship` entry `s` already exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, the new terms MUST be at least as generous as the current ones, else abort with an error indicating that the sponsorship must be revoked first: `period` MUST be unchanged; `msg_types` MUST be absent or a superset of `s.msg_types` (absent counts as all); `spend_limit` MUST be absent or, for every denom of `s.spend_limit`, at least `s.spend_limit` (an absent `s.spend_limit` cannot be set); `expiration` MUST be null or later than `s.expiration` (a null `s.expiration` cannot be set); `covers_fees` MUST NOT change from true to false; when `s.covers_fees` is true, `fee_spend_limit` MUST be absent or at least `s.fee_spend_limit` per denom (an absent `s.fee_spend_limit` cannot be set); when it is false, any `fee_spend_limit` is accepted with `covers_fees` true.
@@ -6590,6 +6608,7 @@ The **Create Exchange Rate** method allows creating an `ExchangeRate` entry for 
 
 ##### [MOD-XR-MSG-1-1] Create Exchange Rate method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `base_asset_type` (PricingAssetType) (*mandatory*)  
 - `base_asset` (string) (*mandatory*)  
 - `quote_asset_type` (PricingAssetType) (*mandatory*)  
@@ -6606,6 +6625,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - if a mandatory parameter is not present, method MUST abort.
 - **Asset type validity**
   - `base_asset_type` MUST be a valid `PricingAssetType` value.
@@ -6672,7 +6692,7 @@ The **Update Exchange Rate** method allows a feeder authorized by network govern
 
 ##### [MOD-XR-MSG-2-1] Update Exchange Rate method parameters
 
-- `feeder` (account) (*mandatory*): (Signer) the account pushing the new rate.
+- `signer` (account) (*mandatory*): (Signer) the account pushing the new rate. It MUST be a feeder: the `feeder` of an `ExchangeRateAuthorization` for the target `ExchangeRate`.
 - `id` (uint64) (*mandatory*): id of the target `ExchangeRate` entry.
 - `rate` (uint64) (*mandatory*): the new fixed-point integer rate value.
 
@@ -6685,11 +6705,11 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
-- `feeder` (account): (Signer) signature must be verified.
+- `signer` (account): (Signer) signature must be verified.
 - `id` MUST refer to an existing `ExchangeRate` entry `xr` with `xr.state` = true.
 - `rate` MUST be strictly greater than 0.
 - **Authorization**:
-  - An `ExchangeRateAuthorization` `xrauthz` MUST exist where `xrauthz.xr_id` = `id` and `xrauthz.feeder` = `feeder`.
+  - An `ExchangeRateAuthorization` `xrauthz` MUST exist where `xrauthz.xr_id` = `id` and `xrauthz.feeder` = `signer`.
   - `xrauthz.expiration` MUST be in the future (`now() < xrauthz.expiration`).
   - If `xrauthz.min_interval` is set, then `now() - xr.updated` MUST be greater than or equal to `xrauthz.min_interval`.
   - If `xrauthz.max_deviation_bps` is set, then `|rate - xr.rate| * 10000` MUST be less than or equal to `xrauthz.max_deviation_bps * xr.rate` (i.e., the relative change between the new `rate` and `xr.rate` MUST NOT exceed `xrauthz.max_deviation_bps` basis points). Both values share the same `xr.rate_scale`, since `MOD-XR-MSG-2` does not update the scale.
@@ -6712,6 +6732,7 @@ The **Set Exchange Rate State** method allows an authorized actor to enable or d
 
 ##### [MOD-XR-MSG-3-1] Set Exchange Rate State method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `id` (uint64) (*mandatory*): id of the exchange rate.
 - `state` (boolean) (*mandatory*): true to set enabled, false to set disabled.
 
@@ -6723,6 +6744,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
   - Only a [[ref: governance proposal]] can enable or disable an exchange rate.
@@ -6746,6 +6768,7 @@ The **Grant Exchange Rate Authorization** method creates (or updates) an `Exchan
 
 ##### [MOD-XR-MSG-4-1] Grant Exchange Rate Authorization method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
 - `feeder` (account) (*mandatory*): the account receiving the authorization.
 - `expiration` (timestamp) (*mandatory*): authorization end-of-life.
@@ -6760,6 +6783,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
   - Only a [[ref: governance proposal]] can grant an `ExchangeRateAuthorization`.
@@ -6791,6 +6815,7 @@ The **Revoke Exchange Rate Authorization** method deletes an existing `ExchangeR
 
 ##### [MOD-XR-MSG-5-1] Revoke Exchange Rate Authorization method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
 - `feeder` (account) (*mandatory*): the account whose authorization is revoked.
 
@@ -6802,6 +6827,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
   - Only a [[ref: governance proposal]] can revoke an `ExchangeRateAuthorization`.
@@ -6929,6 +6955,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-XR-MSG-6-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-XR-MSG-6-2] Update Module Parameters precondition checks
@@ -6937,6 +6964,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-XR-MSG-6-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Exchange Rate parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `twap_window` MUST be a strictly positive duration.
 
@@ -7071,11 +7099,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-VS-MSG-3] Rotate Verifiable Identifier
 
-This method is **not delegable**: the `corporation` executes it alone through a corporation proposal. It replaces the identifier string of an entry, the identifier through which relying parties trust-resolve the corporation's service: every accreditation of the entry moves to the new identifier with no re-validation, and the trust of relying parties moves to new keys. A delegate may change which account signs for an identifier ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)); only the corporation may change the identifier. Every `Corporation`, `Ecosystem` and `Accreditation` entry that references the entry, every accreditation, fee term, deposit and VS account configuration, is unaffected: they reference `vs_id`, never the string. A corporation that needs a fast rotation (a `transition` of 0 after a key compromise) sets the decision policy of its group accordingly.
+This method is **not delegable**: the corporation executes it alone through a corporation proposal. It replaces the identifier string of an entry, the identifier through which relying parties trust-resolve the corporation's service: every accreditation of the entry moves to the new identifier with no re-validation, and the trust of relying parties moves to new keys. A delegate may change which account signs for an identifier ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)); only the corporation may change the identifier. Every `Corporation`, `Ecosystem` and `Accreditation` entry that references the entry, every accreditation, fee term, deposit and VS account configuration, is unaffected: they reference `vs_id`, never the string. A corporation that needs a fast rotation (a `transition` of 0 after a key compromise) sets the decision policy of its group accordingly.
 
 ##### [MOD-VS-MSG-3-1] Rotate Verifiable Identifier parameters
 
-- `corporation` (account): (Signer) the `policy_address` of the corporation, whose group policy account executes this message through a passed proposal.
+- `signer` (account) (*mandatory*): (Signer) the `policy_address` of the corporation, whose group policy account executes this message through a passed proposal. This message carries no `corporation` field: the corporation is its only possible signer.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry whose identifier is rotated.
 - `vid` (string) (*mandatory*): the new identifier string.
 - `transition` (duration) (*optional*): length of the transition window during which the former string remains acceptable to trust resolution for credentials issued under it as defined by the [[ref: VT spec]]. Defaults to `GlobalVariables.vid_rotation_max_transition`; 0 ends the former string at once, for instance after a key compromise. The window is carried by the event of this method and applied by indexers; the VPR does not store it.
@@ -7087,8 +7115,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 ###### [MOD-VS-MSG-3-2-1] Rotate Verifiable Identifier basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified: the message is executed by the corporation's group policy account.
-- [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; let `co` be the `Corporation` entry it resolves.
+- `signer` (account): (Signer) signature must be verified: the message is executed by the corporation's group policy account.
+- [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `signer`; let `co` be the `Corporation` entry it resolves.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters, and MUST differ from `vs.vid`.
 - `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else abort ([VID ownership](#vid-ownership)).
@@ -7121,6 +7149,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-VS-MSG-4-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-VS-MSG-4-2] Update Module Parameters precondition checks
@@ -7129,6 +7158,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-VS-MSG-4-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Delegation and Verifiable Service parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `vs_registration_deposit` and `ecosystem_creation_deposit`, if updated, MUST be ≥ 0, and `vid_rotation_max_transition` MUST be a duration > 0, else abort.
 - `vs_account_fee_period` (Delegation group), if updated, MUST be a duration > 0, else abort. The new value applies to the allowances granted or adjusted afterwards ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-account-fee-allowance)): an entry's allowance keeps its period until the entry's next configuration change, so two periods coexist meanwhile, each a cap on its own allowance.
