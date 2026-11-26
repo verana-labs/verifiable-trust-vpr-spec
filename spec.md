@@ -5515,7 +5515,7 @@ Only the modules that require trust deposit manipulation CAN call this method (i
 
 ##### [MOD-TD-MSG-1-1] Mint Trust Units method parameters
 
-- `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]]; `vs_id` MUST be owned by it.
+- `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]].
 - `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation the mint is attributed to, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, created with an empty ledger (`slash_count` 0, `excluded` false) and no entries when it does not exist (a party acting under an OPEN or CREDENTIAL mode without an entry).
 - `source_account` (account) (*mandatory*): account funding the mint (the payer's [[ref: funding account]], or the escrow account at validation time).
 - `amount` (number) (*mandatory*): deposit-bound amount, in [[ref: native denom]].
@@ -5528,6 +5528,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `amount` MUST be strictly positive.
+- `VerifiableService[vs_id]` MUST exist and its `corporation_id` MUST equal `corporation_id`, else [[ref: transaction]] MUST abort: the method verifies the ownership itself and does not rely on its caller, since a mint credited to the wrong corporation is not undone.
 - neither `TrustDeposit[corporation_id]` (if it exists) nor `ParticipationTrustDeposit[(vs_id, schema_id, role)]` (if it exists) MAY be [[ref: barred]] (`unrepaid_slash` > 0 or `excluded`), else [[ref: transaction]] MUST abort: no trust units are minted to a barred participation or corporation.
 - the exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired ([Trust Unit Index](#trust-unit-index)), else [[ref: transaction]] MUST abort.
 
