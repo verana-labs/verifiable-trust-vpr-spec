@@ -4056,8 +4056,8 @@ Fees and Trust Deposits — settle the escrow (mint-at-validation):
 - else (pricing in an arbitrary COIN or in FIAT):
   - calculate `validator_deposit_bound` = `applicant_accreditation.onboarding_deposit` / 2, rounded down, and `applicant_deposit_bound` = `applicant_accreditation.onboarding_deposit` − `validator_deposit_bound` (the applicant escrowed both, see fee checks);
   - transfer the full amount `applicant_accreditation.onboarding_fees` in the pricing [[ref: denom]] from the escrow [[ref: account]] to the [[ref: funding account]] of the validator corporation `Corporation[validator_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) (for COIN pricing this already equals the fee minus its deposit-bound portion, see fee checks; 0 if FIAT).
-- if `validator_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_accreditation.corporation_id`, `vs_id` = `validator_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `validator_accreditation.role`, `source_account` = escrow account, `amount` = `validator_deposit_bound`).
-- if `applicant_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_accreditation.corporation_id`, `vs_id` = `applicant_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `applicant_accreditation.role`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`).
+- if `validator_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`vs_id` = `validator_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `validator_accreditation.role`, `source_account` = escrow account, `amount` = `validator_deposit_bound`).
+- if `applicant_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`vs_id` = `applicant_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `applicant_accreditation.role`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`).
 
 Update `Accreditation` `applicant_accreditation`:
 
@@ -4637,7 +4637,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - calculate `tu_amount` = `d.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `d.tu` exactly.
 - calculate `slashed_fiat` = `d.fiat_cost` × `tu_amount` / `d.tu`, rounded down to the ledger precision — the debt in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 
-use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `VerifiableService[vs_id].corporation_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`, `exclude`), which records the debt on `d`, increments `d.slash_count` and sets `d.excluded` when `exclude` is true. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), the `corporation_id` of the deposit, `tu_amount`, `slashed_fiat`, `exclude` and `now`.
+use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`, `exclude`), which records the debt on `d`, increments `d.slash_count` and sets `d.excluded` when `exclude` is true. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), the `corporation_id` of the deposit, `tu_amount`, `slashed_fiat`, `exclude` and `now`.
 
 - for each entry `p` listed in `d.accreditation_ids` whose `effective_from` is set: delete it exactly as [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) does (the escrow of a pending renewal refunded to `p.onboarding_funding_account`, the id removed from `d.accreditation_ids`, one event each). An entry under its initial onboarding process (`effective_from` null) stays until its applicant cancels it ([[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request)); it cannot be validated while the participation is barred.
 
@@ -5194,8 +5194,8 @@ Set `vua_reward_portion` = 0 for this beneficiary. If `perm.[fee_field]` > 0:
 3. Execute transfers and mints for this beneficiary:
 
    - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to the [[ref: funding account]] of `Corporation[perm.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) (in the appropriate denom).
-   - if `payee_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `perm.corporation_id`, `vs_id` = `perm.vs_id`, `schema_id` = `perm.schema_id`, `role` = `perm.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payee_trust_deposit`).
-   - if `payer_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id`, (`vs_id`, `schema_id`, `role`) = `payer_participation`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payer_trust_deposit`).
+   - if `payee_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`vs_id` = `perm.vs_id`, `schema_id` = `perm.schema_id`, `role` = `perm.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payee_trust_deposit`).
+   - if `payer_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with ((`vs_id`, `schema_id`, `role`) = `payer_participation`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payer_trust_deposit`).
 
 4. Accumulate the VUA reward:
 
@@ -5214,7 +5214,7 @@ If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 AND `vu
 - `vua_trust_deposit` = `accumulated_vua_reward` × `GlobalVariables.trust_deposit_rate`, rounded down
 - `vua_fees_to_account` = `accumulated_vua_reward` - `vua_trust_deposit`
 - Transfer `vua_fees_to_account` to the [[ref: funding account]] of `Corporation[vua_issuer_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) in [[ref: native denom]].
-- if `vua_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `vua_issuer_accreditation.corporation_id`, `vs_id` = `vua_issuer_accreditation.vs_id`, `schema_id` = `vua_issuer_accreditation.schema_id`, `role` = `vua_issuer_accreditation.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `vua_trust_deposit`).
+- if `vua_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`vs_id` = `vua_issuer_accreditation.vs_id`, `schema_id` = `vua_issuer_accreditation.schema_id`, `role` = `vua_issuer_accreditation.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `vua_trust_deposit`).
 
 #### [MOD-AC-QRY-1] List Accreditations
 
@@ -5513,8 +5513,7 @@ Only the modules that require trust deposit manipulation CAN call this method (i
 
 ##### [MOD-TD-MSG-1-1] Mint Trust Units method parameters
 
-- `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]].
-- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation the mint is attributed to, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, created with an empty ledger (`slash_count` 0, `excluded` false) and no entries when it does not exist (a party acting under an OPEN or CREDENTIAL mode without an entry).
+- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation the mint is attributed to, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, created with an empty ledger (`slash_count` 0, `excluded` false) and no entries when it does not exist (a party acting under an OPEN or CREDENTIAL mode without an entry). The [[ref: trust deposit]] credited is that of the corporation that owns `vs_id`: the method takes no corporation as a parameter.
 - `source_account` (account) (*mandatory*): account funding the mint (the payer's [[ref: funding account]], or the escrow account at validation time).
 - `amount` (number) (*mandatory*): deposit-bound amount, in [[ref: native denom]].
 
@@ -5526,7 +5525,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `amount` MUST be strictly positive.
-- `VerifiableService[vs_id]` MUST exist and its `corporation_id` MUST equal `corporation_id`, else [[ref: transaction]] MUST abort: the method verifies the ownership itself and does not rely on its caller, since a mint credited to the wrong corporation is not undone.
+- `VerifiableService[vs_id]` MUST exist, else [[ref: transaction]] MUST abort. Let `corporation_id` be its `corporation_id`: the method derives the corporation from the participation, so that a mint cannot be credited to another corporation than the owner of the service entry.
 - neither `TrustDeposit[corporation_id]` (if it exists) nor `ParticipationTrustDeposit[(vs_id, schema_id, role)]` (if it exists) MAY be [[ref: barred]] (`unrepaid_slash` > 0 or `excluded`), else [[ref: transaction]] MUST abort: no trust units are minted to a barred participation or corporation.
 - the exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired ([Trust Unit Index](#trust-unit-index)), else [[ref: transaction]] MUST abort.
 
@@ -5540,7 +5539,7 @@ If all precondition checks passed, method is executed in a [[ref: transaction]].
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- if a `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` does not exist, create entry `td`:
+- if a `TrustDeposit` entry `td` whose `td.corporation_id` equals `corporation_id` does not exist, create entry `td`:
   - set `td.corporation_id` to `corporation_id`;
   - set `td.tu`, `td.fiat_cost`, `td.unrepaid_slash`, `td.unrepaid_fiat` and `td.slash_count` to 0 and `td.excluded` to false;
 - calculate `minted_fiat` = `amount` × `P(now)`, at the ledger precision — the [[ref: main fiat currency]] cost of this mint, in minor units.
@@ -5700,8 +5699,7 @@ Make sure to **properly protect access to the execution of this method** else it
 
 ##### [MOD-TD-MSG-7-1] Record Ecosystem Slash method parameters
 
-- `corporation_id` (uint64) (*mandatory*): id of the corporation of the [[ref: trust deposit]].
-- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the slashed participation, `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, whose service entry belongs to `corporation_id`.
+- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the slashed participation, `ParticipationTrustDeposit[(vs_id, schema_id, role)]`. The [[ref: trust deposit]] debited is that of the corporation that owns `vs_id`: the method takes no corporation as a parameter.
 - `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] removed.
 - `fiat_amount` (decimal) (*mandatory*): cost basis of the removed trust units, in [[ref: main fiat currency]], as computed by the caller.
 - `exclude` (boolean) (*mandatory*): whether the participation is excluded as well ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)).
@@ -5714,8 +5712,9 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `VerifiableService[vs_id]` MUST exist. Let `corporation_id` be its `corporation_id`: the method derives the corporation from the participation, so that the trust units cannot be taken from another corporation than the owner of the service entry.
 - `tu_amount` must be > 0 and `fiat_amount` must be ≥ 0. `fiat_amount` is 0 when the cost basis of the removed trust units rounds to 0: the debt is then recorded with `unrepaid_fiat` = 0, the participation is barred all the same (`unrepaid_slash` > 0), and [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash) clears it with no transfer.
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, with `td.tu` ≥ `tu_amount`, `td.fiat_cost` ≥ `fiat_amount` and `td.unrepaid_slash` = 0 (no open network debt).
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals `corporation_id` MUST exist, with `td.tu` ≥ `tu_amount`, `td.fiat_cost` ≥ `fiat_amount` and `td.unrepaid_slash` = 0 (no open network debt).
 - the deposit `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]` MUST exist, with `d.tu` ≥ `tu_amount` and `d.fiat_cost` ≥ `fiat_amount`.
 
 ###### [MOD-TD-MSG-7-2-2] Record Ecosystem Slash fee checks
