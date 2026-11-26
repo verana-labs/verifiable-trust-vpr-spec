@@ -1531,8 +1531,6 @@ Uniqueness is enforced on the identifier string by [[MOD-VS-MSG-1]](#mod-vs-msg-
 
 > Rationale: an identifier is attached to a single service and thus controlled by a single organization; two corporations claiming the same identifier anywhere in the registry is always an error or an attack. Registering the identifier once also gives off-chain consumers ([[ref: indexers]], [[ref: resolvers]], trust graphs) the owner function directly, lets a [[ref: VS]] exist in the registry before it holds any `Accreditation` entry, and makes identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)) a change of one string instead of a re-creation of every entry that named it.
 
-> Transitional note: an implementation upgrading a chain whose state predates the `VerifiableService` entity MUST build the entries at upgrade time (or genesis import) from the distinct identifier strings of the existing `Corporation`, `Ecosystem` and `Accreditation` entries, one entry per string owned by the corporation those entries resolve to, assigning ids in the order of first appearance, rewriting the `vs_id` references, and MUST reject or repair any string claimed by two corporations before enabling the checks. The `vs_account` of each new entry is the account (`vs_operator` in the previous version) of the migrated `Accreditation` entries sharing the string, which MUST be unique per string; their per-entry authorization records of the previous version are merged into the VS account configuration of the entry, with the union of the message types and the sum of the limits.
-
 ### VerifiableService
 
 A [[ref: verifiable service entry]] (`VerifiableService`) registers a [[ref: VID]] in the VPR: who owns it, which account its [[ref: VS]] signs with, and what that account may do. The registration fee is paid to the [[ref: distribution pool]] and never refunded. It is the single place where an identifier string is stored; `Corporation`, `Ecosystem` and `Accreditation` entries reference it by `vs_id`. An entry MAY exist with no `Accreditation` entry at all: a registered service is indexable and can request trust resolution ([[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver)) before, or without ever, taking a role in an ecosystem.
@@ -1698,7 +1696,7 @@ A deposit is created by the first entry of its participation, by the first mint 
 
 ### EcosystemBar
 
-An `EcosystemBar` lists the [[ref: barred]] participations of a corporation in an ecosystem: the `ParticipationTrustDeposit` entries of its service entries, under the schemas of the ecosystem, that carry an unrepaid slash or an exclusion. One entry per (ecosystem, corporation) pair, kept only while the list is not empty. While it exists, the acts of the corporation in the ecosystem are refused, under any of its service entries, schemas or roles ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar), which names the few messages it keeps): a sanctioned corporation does not escape the sanction of an ecosystem by registering another identifier. The entry belongs to no participation: the messages that change the debt or the exclusion of a participation maintain it ([[BAR-CHECK-2]](#bar-check-2-maintenance)), and [[MOD-TD-QRY-5]](#mod-td-qry-5-get-ecosystem-bar) reads it. An implementation that upgrades a chain whose state predates this entity MUST build the entries from the barred `ParticipationTrustDeposit` entries at upgrade time. It is read by key; since the key starts with the ecosystem, the sanctioned corporations of an ecosystem are a key-prefix read.
+An `EcosystemBar` lists the [[ref: barred]] participations of a corporation in an ecosystem: the `ParticipationTrustDeposit` entries of its service entries, under the schemas of the ecosystem, that carry an unrepaid slash or an exclusion. One entry per (ecosystem, corporation) pair, kept only while the list is not empty. While it exists, the acts of the corporation in the ecosystem are refused, under any of its service entries, schemas or roles ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar), which names the few messages it keeps): a sanctioned corporation does not escape the sanction of an ecosystem by registering another identifier. The entry belongs to no participation: the messages that change the debt or the exclusion of a participation maintain it ([[BAR-CHECK-2]](#bar-check-2-maintenance)), and [[MOD-TD-QRY-5]](#mod-td-qry-5-get-ecosystem-bar) reads it. It is read by key; since the key starts with the ecosystem, the sanctioned corporations of an ecosystem are a key-prefix read.
 
 `EcosystemBar`:
 
@@ -7224,6 +7222,8 @@ Return the module parameters: `vs_registration_deposit`, `ecosystem_creation_dep
 
 
 ## Initial Data Requirements
+
+A network of this version starts from a genesis built for it. This specification defines no migration from the state of a chain that runs an earlier version: such a network is started anew. A genesis produced by exporting the state of a chain of this version is covered by [[TUG]](#tug-genesis-trust-unit-index).
 
 ### [GLO] Global Variables
 
