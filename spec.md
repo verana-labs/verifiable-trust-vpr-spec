@@ -3124,7 +3124,7 @@ Anyone CAN run this [[ref: query]].
 
 ##### [MOD-GF-QRY-3-1] List Module Parameters execution of the query
 
-Return the list of the existing parameters and their values (the Governance Framework group of [GlobalVariables](#globalvariables)).
+Return the list of the existing parameters and their values: the Governance Framework group of [GlobalVariables](#globalvariables), and its Network governance group, which no message changes and no other query returns (`council_account`, `network_governance_framework_versions`, `ngf_acceptance_deadline`). Return also `ngf_version`, the `version` of the [[ref: NGF]] version in force (the last entry of `network_governance_framework_versions` whose `active_since` is set): a client needs it to build [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version), and reads it here by key, without an indexer.
 
 ### [NGG] Genesis Network Governance Framework
 
