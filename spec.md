@@ -5686,7 +5686,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 - calculate `repay_amount` as in fee checks.
-- debit `repay_amount` from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account.
+- if `repay_amount` is greater than 0, debit it from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account. It is 0 only for a debt whose cost basis is 0: the message is still needed to clear the debt, and transfers nothing.
 - if `vs_id` is given: set `d.tu` to `d.tu` + `debt_tu`; set `d.fiat_cost` to `d.fiat_cost` + `debt_fiat`; set `d.unrepaid_slash` and `d.unrepaid_fiat` to 0; for the `TrustDeposit` entry `td` of `co`: set `td.tu` to `td.tu` + `debt_tu`; set `td.fiat_cost` to `td.fiat_cost` + `debt_fiat`.
 - else: set `td.tu` to `td.tu` + `debt_tu`; set `td.fiat_cost` to `td.fiat_cost` + `debt_fiat`; set `td.unrepaid_slash` and `td.unrepaid_fiat` to 0.
 - if `vs_id` is given, apply [[BAR-CHECK-2]](#bar-check-2-maintenance) to `d`: the participation leaves the list of its corporation unless it is excluded.
@@ -5716,7 +5716,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `tu_amount` must be > 0 and `fiat_amount` must be ≥ 0.
+- `tu_amount` must be > 0 and `fiat_amount` must be ≥ 0. `fiat_amount` is 0 when the cost basis of the removed trust units rounds to 0: the debt is then recorded with `unrepaid_fiat` = 0, the participation is barred all the same (`unrepaid_slash` > 0), and [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash) clears it with no transfer.
 - `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, with `td.tu` ≥ `tu_amount`, `td.fiat_cost` ≥ `fiat_amount` and `td.unrepaid_slash` = 0 (no open network debt).
 - the deposit `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]` MUST exist, with `d.tu` ≥ `tu_amount` and `d.fiat_cost` ≥ `fiat_amount`.
 
