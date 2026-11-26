@@ -6108,6 +6108,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `grantee` MUST NOT be the `vs_account` of any `VerifiableService` entry of the corporation (index of entries by VS account); else abort.
 - `grantee` MUST NOT be `co.policy_address` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), with or without a fee grant, else abort: a corporation needs no authorization to itself, and x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked.
+- `grantee` MUST NOT be `signer`, else abort: a delegate does not grant an authorization to itself, to widen or to extend its own. The protection is limited: a delegate that holds `GrantDelegateAuthorization` can still grant to another account, so a corporation that wants no such power delegates that message type to nobody.
 - `grantee` MUST NOT be the `policy_address` of a corporation sponsored by `co` (a `Sponsorship` entry keyed (`co.id`, that corporation's `id`) exists, [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)), else abort: its fee allowance and the sponsorship's would share the one (granter, grantee) slot of x/feegrant.
 
 ::: warning
