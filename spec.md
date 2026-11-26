@@ -7200,20 +7200,19 @@ Anyone CAN execute this method.
 
 ##### [MOD-VS-QRY-2-1] List Verifiable Services query parameters
 
-The following parameters are optional:
-
-- `vs_account` (account) (*optional*): if specified, filter by VS account, served by the index the one-corporation rule requires ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)). Listing by corporation or by time is an indexer function.
+- `vs_account` (account) (*mandatory*): the VS account whose entries are listed, served by the index the one-corporation rule requires ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)). Listing every entry, or listing by corporation or by time, is an indexer function: service entries grow without bound, and no query scans them.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 
 ##### [MOD-VS-QRY-2-2] List Verifiable Services query checks
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
+- `vs_account` MUST be provided.
 - `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
 
 ##### [MOD-VS-QRY-2-3] List Verifiable Services execution
 
-Return a list of `VerifiableService` entries matching the filter criteria, ordered by `id`, or an empty list if nothing found.
+Return the `VerifiableService` entries whose `vs_account` is the given account, ordered by `id`, or an empty list if nothing found.
 
 #### [MOD-VS-QRY-3] List Module Parameters
 
