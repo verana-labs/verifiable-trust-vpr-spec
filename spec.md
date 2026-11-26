@@ -80,7 +80,7 @@ A Verifiable Public Registry (VPR) is a “registry of registries”, a public s
   - and more.
 
 - data for trust resolution:  
-  The entries and events that [[ref: verifiable services]] (VSs) and [[ref: verifiable user agents]] (VUAs) read, through an indexer of their choice, to perform trust resolution as the [[ref: VT spec]] specifies.
+  The entries and events that [[ref: verifiable services]] (VSs) and [[ref: verifiable user agents]] (VUAs) read, through an [[ref: indexer]] of their choice, to perform trust resolution as the [[ref: VT spec]] specifies.
 
 ```plantuml
 
@@ -186,6 +186,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: ecosystem governance framework, EGF]]:
 ~ The [[ref: governance framework]] of an [[ref: ecosystem]], which binds the corporations acting in it. See [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance).
 
+[[def: effective accreditation, effective accreditations, effective entry, effective entries]]:
+~ An `Accreditation` entry whose `effective_from` is not null and lower than or equal to the timestamp considered: it has been validated and has started. Nothing else is required of it. An [[ref: active accreditation]] is an effective accreditation that has not reached its `effective_until` and is not [[ref: barred]].
+
 [[def: entity, entities]]:
 ~ An [[ref: account]] controller.
 
@@ -229,13 +232,19 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: holder, holders]]:
 ~ A role an [[ref: entity]] performs by holding one or more [[ref: verifiable credentials]] of a [[ref: credential schema]], of which it is usually the [[ref: subject]], and presenting them to [[ref: verifiers]].
 
+[[def: indexer, indexers]]:
+~ A service that follows the transactions and the events of a [[ref: VPR]] and serves its current state, its history and its [[ref: exchange records]] to [[ref: verifiable services]] and [[ref: verifiable user agents]].
+
 [[def: issuer, issuers]]:
-~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or an [[ref: issuer grantor]] for issuing credentials of a given [[ref: credential schema]] to [[ref: holders]].
+~ A role an [[ref: entity]] performs by issuing credentials of a given [[ref: credential schema]] to [[ref: holders]]. Depending on the issuer onboarding mode of the schema, the role is granted by the [[ref: ecosystem]] or by an [[ref: issuer grantor]] and recorded by an `ISSUER` `Accreditation` entry, or is open to any [[ref: corporation]] (`OPEN`), which then needs no entry.
 
 [[def: issuer grantor, issuer grantors]]:
 ~ A role under a [[ref: credential schema]], held through an `ISSUER_GRANTOR` `Accreditation` entry, whose holder validates and revokes the [[ref: issuers]] of the schema.
 
-[[def: Json Schema, json schema, json schemas, Json Schemas]]:
+[[def: issuer reference, issuer references]]:
+~ In a `CredentialIssuance` or `CredentialPresentation` transaction, what designates the issuer of the credential: the id of an `ISSUER` `Accreditation` entry of the issuer (`issuer_accreditation_id`) or, when the issuer holds no [[ref: active accreditation]] for the schema, the id of its [[ref: verifiable service entry]] (`issuer_vs_id`). Exactly one of the two is given. The fees of the issuer's branch are routed by it ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
+
+[[def: JSON Schema, json schema, json schemas, JSON Schemas]]:
 
 ~ A schema for JSON documents, as defined by [JSON Schema](https://json-schema.org/); the `json_schema` of a [[ref: credential schema]] is one.
 
@@ -269,6 +278,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 [[def: query]]:
 ~ A read-only action that perform some reading in a [[ref: VPR]] and returns value.
 
+[[def: resolver, resolvers]]:
+~ A component that performs trust resolution on an identifier, as the [[ref: VT spec]] defines it, for its own decisions or for others. It reads the VPR through an [[ref: indexer]], and learns that an identifier needs a new resolution from the event of [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver).
+
 [[def: sponsor, sponsors, sponsorship, sponsored corporation]]:
 ~ A [[ref: corporation]] that pays the fund movements and, optionally, the [[ref: network fees]] of another corporation, the sponsored corporation, under a `Sponsorship` entry. See [Sponsored Corporations](#sponsored-corporations).
 
@@ -280,6 +292,9 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 
 [[def: transaction fees]]:
 ~ The [[ref: network fees]] required to execute a [[ref: transaction]] in a [[ref: VPR]]: its gas limit times the [[ref: network gas price]], in [[ref: native denom]] ([[NET-FEE-2]](#net-fee-2-required-fee)).
+
+[[def: transition window, transition windows]]:
+~ The period during which a former identifier remains acceptable to trust resolution after it was replaced: from the transaction that replaced it to the `transition_until` of the event of that transaction. An identifier is replaced by its rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)), or for an ecosystem by its move to another verifiable service entry ([[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)). The VPR stores no transition window: it is known from the event, and the [[ref: VT spec]] defines what a former identifier remains acceptable for.
 
 [[def: trust deposit, trust deposits]]:
 ~ The [[ref: trust unit]] balance of a [[ref: corporation]], its trust guarantee and the basis of its trust score; it can be slashed but never withdrawn. See [TrustDeposit](#trustdeposit).
@@ -294,7 +309,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ The value of one [[ref: trust unit]] in the [[ref: main fiat currency]], a protocol index that declines every [[ref: epoch]]. See [Trust Unit Index](#trust-unit-index).
 
 [[def: validator]]:
-~ A role an [[ref: entity]] performs by participating in onboarding processes with [[ref: applicants]] in order to register them as [[ref: issuer grantor]], [[ref: verifier grantor]], [[ref: issuer]] or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them.
+~ A role an [[ref: entity]] performs by participating in onboarding processes with [[ref: applicants]] in order to register them as [[ref: issuer grantor]], [[ref: verifier grantor]], [[ref: issuer]] or [[ref: verifier]] of a [[ref: credential schema]], or to deliver a verifiable credential to them. This is the meaning of the word in this specification, except in the rules on network governance, network fees and distribution, which speak of the validators of the network: the members of its validator set, which produce its blocks.
 
 [[def: verifiable credential, verifiable credentials]]:
 ~ A verifiable credential as defined in [[spec-norm:VC-DATA-MODEL]].
@@ -306,7 +321,7 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A public, decentralized, ledger-based network that stores [[ref: ecosystems]], their [[ref: credential schemas]] and the [[ref: credential schema accreditations]] of their participants, and that charges and rewards participants for their use of it. This specification defines a VPR.
 
 [[def: verifiable service, verifiable services, VS, VSs]]:
-~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that conforms to the [[ref: VT spec]] and has a resolvable Proof-of-Trust. See [[ref: VT Spec]].
+~ A service, identified by a resolvable [[ref: DID]] that can be deployed anywhere by its owner, and that conforms to the [[ref: VT spec]] and has a resolvable proof of trust. See [[ref: VT Spec]].
 
 [[def: verifiable service entry, verifiable service entries]]:
 ~ A `VerifiableService` entry: the registration of a [[ref: VID]] in a [[ref: VPR]], owned by a single [[ref: corporation]], that every other entity binding that identifier (`Corporation`, `Ecosystem`, `Accreditation`) references by `vs_id`. See [VerifiableService](#verifiableservice).
@@ -318,10 +333,13 @@ The key words MAY, MUST, MUST NOT, OPTIONAL, RECOMMENDED, REQUIRED, SHOULD, and 
 ~ A user agent that accesses [[ref: verifiable services]] and enforces the trust rules of the [[ref: VT spec]], such as a wallet. See [[ref: VT spec]].
 
 [[def: verifier, verifiers]]:
-~ A role an [[ref: entity]] is granted by an [[ref: ecosystem]] or a [[ref: verifier grantor]] for verifying credentials of a given [[ref: credential schema]].
+~ A role an [[ref: entity]] performs by verifying credentials of a given [[ref: credential schema]]. Depending on the verifier onboarding mode of the schema, the role is granted by the [[ref: ecosystem]] or by a [[ref: verifier grantor]] and recorded by a `VERIFIER` `Accreditation` entry, or is open without an entry: to any [[ref: corporation]] (`OPEN`), or to any corporation whose service holds a credential that the schema names (`CREDENTIAL`).
 
 [[def: verifier grantor, verifier grantors]]:
 ~ A role under a [[ref: credential schema]], held through a `VERIFIER_GRANTOR` `Accreditation` entry, whose holder validates and revokes the [[ref: verifiers]] of the schema.
+
+[[def: verifier reference, verifier references]]:
+~ In a `CredentialPresentation` transaction, what designates the verifier: the id of its `VERIFIER` `Accreditation` entry for the schema (`verifier_accreditation_id`) or, when it holds no [[ref: active accreditation]] for the schema, the id of its [[ref: verifiable service entry]] (`verifier_vs_id`). Exactly one of the two is given.
 
 [[def: VS account, VS accounts]]:
 ~ The [[ref: account]] that a [[ref: VS]] signs VPR messages with, recorded as `vs_account` on its [[ref: verifiable service entry]]. See [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks).
@@ -373,14 +391,14 @@ object "Ecosystem" as tra #3fbdb6 {
 
 [[ref: Credential schemas]] are created and managed by the [[ref: corporation]] controlling each [[ref: ecosystem]]. Each [[ref: Credential schema]] includes, at a minimum:
 
-- A **Json Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
+- A **JSON Schema** that defines the structure of the corresponding [[ref: verifiable credential]].
 - A **declaration** of what credentials of this schema are for and how agents handle them (see [CredentialSchema](#credentialschema)):
   - a **SubjectKind**: `SERVICE` or `PERSON`;
   - a **PresentationMode**, for service credentials: `PUBLIC`, `ON_REQUEST` or `ON_APPROVAL`;
   - a single **CredentialFormat**: `W3C_JSONLD`, `ANONCREDS`, `SD_JWT` or, for persons, `MDOC`;
   - a **CredentialAnchoring**: `NO_DIGEST`, `DIGEST` or `REVOCABLE_DIGEST`.
 - An **IssuerOnboardingMode** for **issuance policy**, which determines how `ISSUER` `Accreditation` entries are created. Modes include:
-  - `OPEN`: `ISSUER` Accreditations can be self-created by any [[ref: corporation]].
+  - `OPEN`: any [[ref: corporation]] issues without an entry, and can self-create an `ISSUER` entry.
   - `ECOSYSTEM_ONBOARDING_PROCESS`: `ISSUER` Accreditations are created directly by the controlling [[ref: ecosystem]] through an [[ref: onboarding process]].
   - `GRANTOR_ONBOARDING_PROCESS`: `ISSUER` Accreditations are created by one or several [[ref: issuer grantor]](s) — participants accredited to onboard issuers for the credential schema of this [[ref: ecosystem]] — selected by the [[ref: ecosystem]] through an [[ref: onboarding process]].
 - A **VerifierOnboardingMode** for **verification policy**, which determines how `VERIFIER` `Accreditation` entries are created. Modes include:
@@ -452,7 +470,7 @@ Accreditation roles are defined in the table below:
 | **Verifier**          | Can request presentation of credentials of this schema.          |
 | **Holder**            | Holds credentials of this schema. A `HOLDER` `Accreditation` entry is the relationship the issuer validated, which bounds the trust in the credentials issued to that holder. |
 
-Example of a Json Schema credential schema:
+Example of a JSON Schema credential schema:
 
 ```json
 {
@@ -711,7 +729,7 @@ In a [[ref: VPR]], each [[ref: corporation]] is associated with a [[ref: trust d
 
 The trust deposit is automatically funded through transactions involving **trust operations**, such as onboarding processes, credential issuance, or presentation: each time a deposit-bound amount of [[ref: native denom]] is spent, the [[ref: native denom]] is routed to the [[ref: distribution pool]] and the equivalent trust units, computed at the current [[ref: trust unit peg value]], are minted to the corporation's trust deposit. No [[ref: native denom]] is ever held in reserve: trust units are **not collateralized**. The [[ref: native denom]] can be paid by a [[ref: sponsor]] on the corporation's behalf; the trust units are always minted to the corporation that performs the trust operation, never to its sponsor.
 
-The trust deposit is fundamental to the **"Proof-of-Trust" (PoT)** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
+The trust deposit is fundamental to the **proof of trust** mechanism of the [[ref: Verifiable Trust Specification]], and it operates as follows:
 
 - The more a [[ref: corporation]] uses the [[ref: VPR]], the more its [[ref: trust deposit]] grows.
 - **Trust is a subscription**: because the [[ref: trust unit peg value]] declines each [[ref: epoch]] by `tu_decay_rate`, a static deposit loses fiat value over time. The trust score therefore reflects **recent** paid usage: earned, never bought, and gone if not maintained.
@@ -1501,7 +1519,7 @@ Clients MAY rely on `id` ordering as a deterministic cursor for keyset paginatio
 
 Several entities deviate from this convention and document their own key scheme explicitly: `Digest` (bytes PK on its `digest` content), `TrustDeposit` (single-field PK on `corporation_id`), `DelegateAuthorization` (composite PK on `(corporation_id, delegate)`), `ParticipationTrustDeposit` (composite PK on `(vs_id, schema_id, role)`), `Sponsorship` (composite PK on `(sponsor_corporation_id, sponsored_corporation_id)`), `VsAccountBudget` (single-field PK on `vs_id`), `FeeGrant` (composite PK on `(grantor_corporation_id, grantee)`), `EcosystemAcceptance` and `EcosystemBar` (composite PK on `(ecosystem_id, corporation_id)`), and `ExchangeRateAuthorization` (composite PK on `(xr_id, feeder)`). In every case the `(key)` annotation on a field marks the entity's primary key.
 
-**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_account` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is an indexer function (verana-spec#121). A query of this specification adds no state: it reads by primary key, by key prefix, by one of these three indexes or by a scan of an entity that stays small. Credential schemas are the one scanned entity ([[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)): an ecosystem declares a few of them, where corporations, ecosystems and accreditations grow without bound. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: an [[ref: exchange record]] ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `DelegateAuthorization` by (`corporation_id`, `delegate`), `EcosystemAcceptance` and `EcosystemBar` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
+**Indexes.** Besides primary keys, the VPR maintains only the lookups its checks need: `Corporation` by `policy_address` ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), on every delegable message), `VerifiableService` by `vid` ([VID ownership](#vid-ownership)) and by `vs_account` ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)), and nothing on `Accreditation`: the current entries of a participation are listed on its [ParticipationTrustDeposit](#participationtrustdeposit) (`accreditation_ids`), which the sibling checks and the exchange guards read by key, and the deposits of a service entry are a key-prefix scan ([[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)). Lookups that would need an index over a large entity are replaced by a few ids kept on the parent, as the root entries of a schema (`CredentialSchema.root_accreditation_ids`). Every other way of finding entries, by corporation, by schema, by validator, by state or by time, is a function of an [[ref: indexer]]. A query of this specification adds no state: it reads by primary key, by key prefix, by one of these three indexes or by a scan of an entity that stays small. Credential schemas are the one scanned entity ([[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)): an ecosystem declares a few of them, where corporations, ecosystems and accreditations grow without bound. A secondary index entry costs as much state as the row it points to. Receipts are not state at all: an [[ref: exchange record]] ([CredentialIssuance](#credentialissuance), [CredentialPresentation](#credentialpresentation)) exists only as the event of its transaction. Composite primary keys serve the remaining lookups: `DelegateAuthorization` by (`corporation_id`, `delegate`), `EcosystemAcceptance` and `EcosystemBar` by (`ecosystem_id`, `corporation_id`), `FeeGrant` by (`grantor_corporation_id`, `grantee`), `Sponsorship` by (`sponsor_corporation_id`, `sponsored_corporation_id`), `ParticipationTrustDeposit` by (`vs_id`, `schema_id`, `role`), whose sanctions every guard reads by key. Entities that stay few, `Ecosystem`, `CredentialSchema` and `ExchangeRate` (looked up by its asset pair), are scanned by the checks that need them. `GovernanceFrameworkVersion` and `GovernanceFrameworkDocument` entries are found through their owner (`ecosystem_id`, `corporation_id`, or the list `GlobalVariables.network_governance_framework_versions`) and their version or language, a lookup an implementation realizes with a key prefixed by the owner. The expiry sweeps of `Accreditation` and `Digest` entries keep time-bucketed queues: schedules, not lookups.
 
 **Events.** The VPR stores current state only: an entry that expires or is revoked is deleted, and no entity keeps its own history. History is read from the transactions and from the events they emit, which indexers keep. A method that creates, changes or deletes an entry MUST therefore emit an event that carries the key of each entry it wrote or deleted and every value it computed that its message does not carry (an id it assigned, a timestamp, an amount it converted or derived); the values the message carries are read from the transaction that carries it. A method executed through a proposal, of the group of a corporation or of the council, is the exception: the executing transaction carries the id of the proposal, not the message, so the event of the method MUST also carry the values of its parameters. The same holds for the operations that no message carries, the end-of-block deletions and the closing of an [[ref: epoch]]. A method called by another method emits its own event unless the event of its caller carries the same values. The methods state the events on whose content trust resolution or accounting depends: the content they list is a minimum, to which this rule adds. The running balances a message consumes (the `remaining_spend` of an authorization, of a budget, of a fee grant or of a sponsorship, and the reset of their cycles) are not entries in the sense of this rule: they follow from the transactions.
 
@@ -1509,11 +1527,9 @@ Several entities deviate from this convention and document their own key scheme 
 
 Every [[ref: VID]] known to the VPR is registered once, as a [VerifiableService](#verifiableservice) entry owned by a single `Corporation` (`VerifiableService.corporation_id`). The entities that bind an identifier, `Corporation` (`vs_id`), `Ecosystem` (`vs_id`) and `Accreditation` (`vs_id`), like `Digest` and `ParticipationTrustDeposit`, which key their rows by `vs_id`, never store the identifier string: they reference the entry, and MUST reference an entry owned by their own corporation (for a `Corporation`, by itself; an `Ecosystem` or an `Accreditation` stores no corporation of its own: the owner of the entry is its corporation). The **owner `Corporation`** of an identifier is therefore a total function given by the entry, and a `vs_id` reference is checked with a single lookup at every binding message: [[MOD-CO-MSG-2-2-1]](#mod-co-msg-2-2-1-update-corporation-basic-checks), [[MOD-ES-MSG-1-2-1]](#mod-es-msg-1-2-1-create-ecosystem-basic-checks) / [[MOD-ES-MSG-2-2-1]](#mod-es-msg-2-2-1-update-ecosystem-basic-checks), [[MOD-AC-MSG-1-2-1]](#mod-ac-msg-1-2-1-start-onboarding-basic-checks), [[MOD-AC-MSG-7-2-1]](#mod-ac-msg-7-2-1-create-root-accreditation-basic-checks) and [[MOD-AC-MSG-14-2-1]](#mod-ac-msg-14-2-1-self-create-accreditation-basic-checks).
 
-Uniqueness is enforced on the identifier string by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier): at any block height, a string is the current `vid` of at most one entry. The VPR stores only the current string. The former strings of an entry, and the transition window during which each of them remains acceptable to trust resolution, are known from the events emitted at registration and rotation; indexers keep that history and apply the continuity rules of the [[ref: VT spec]]. An entry MAY be referenced by several `Ecosystem` and `Accreditation` entries of its owner and by the owner `Corporation` itself: one service, one identifier, many roles.
+Uniqueness is enforced on the identifier string by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier): at any block height, a string is the current `vid` of at most one entry. The VPR stores only the current string. The former strings of an entry, and the [[ref: transition window]] during which each of them remains acceptable to trust resolution, are known from the events emitted at registration and rotation; indexers keep that history and apply the continuity rules of the [[ref: VT spec]]. An entry MAY be referenced by several `Ecosystem` and `Accreditation` entries of its owner and by the owner `Corporation` itself: one service, one identifier, many roles.
 
-> Rationale: an identifier is attached to a single service and thus controlled by a single organization; two corporations claiming the same identifier anywhere in the registry is always an error or an attack. Registering the identifier once also gives off-chain consumers (indexers, resolvers, trust graphs) the owner function directly, lets a [[ref: VS]] exist in the registry before it holds any `Accreditation` entry, and makes identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)) a change of one string instead of a re-creation of every entry that named it.
-
-> Transitional note: an implementation upgrading a chain whose state predates the `VerifiableService` entity MUST build the entries at upgrade time (or genesis import) from the distinct identifier strings of the existing `Corporation`, `Ecosystem` and `Accreditation` entries, one entry per string owned by the corporation those entries resolve to, assigning ids in the order of first appearance, rewriting the `vs_id` references, and MUST reject or repair any string claimed by two corporations before enabling the checks. The `vs_account` of each new entry is the account (`vs_operator` in the previous version) of the migrated `Accreditation` entries sharing the string, which MUST be unique per string; their per-entry authorization records of the previous version are merged into the VS account configuration of the entry, with the union of the message types and the sum of the limits.
+> Rationale: an identifier is attached to a single service and thus controlled by a single organization; two corporations claiming the same identifier anywhere in the registry is always an error or an attack. Registering the identifier once also gives off-chain consumers ([[ref: indexers]], [[ref: resolvers]], trust graphs) the owner function directly, lets a [[ref: VS]] exist in the registry before it holds any `Accreditation` entry, and makes identifier rotation ([[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)) a change of one string instead of a re-creation of every entry that named it.
 
 ### VerifiableService
 
@@ -1609,7 +1625,7 @@ An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of
 - `ecosystem_id` (uint64) (*mandatory*): the id of the ecosystem that controls this `CredentialSchema` entry.
 - `created` (timestamp) (*mandatory*): timestamp this CredentialSchema has been created.
 - `archived` (boolean) (*mandatory*): whether this CredentialSchema is archived. Initialized to `false` at creation by [[MOD-CS-MSG-1-3]](#mod-cs-msg-1-3-create-credential-schema-execution) and toggled by [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema). MUST never be null. Archiving is informational: it hides the entry from listings filtered by `only_active`, and the only messages that refuse an archived schema are those naming it in `verifier_credential_schema_ids` ([[MOD-CS-MSG-1-2-1]](#mod-cs-msg-1-2-1-create-credential-schema-basic-checks)); a schema archived afterwards stays in the lists that name it.
-- `json_schema` (string) (*mandatory*): Json Schema used for issuing credentials based on this schema.
+- `json_schema` (string) (*mandatory*): JSON Schema used for issuing credentials based on this schema.
 - `issuer_grantor_accreditation_validity_period` (number) (*mandatory*): number of days after which an issuer grantor `Accreditation` entry expires and must be renewed.
 - `verifier_grantor_accreditation_validity_period` (number) (*mandatory*): number of days after which a verifier grantor `Accreditation` entry expires and must be renewed.
 - `issuer_accreditation_validity_period` (number) (*mandatory*): number of days after which an issuer `Accreditation` entry expires and must be renewed.
@@ -1619,11 +1635,11 @@ An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of
 - `verifier_onboarding_mode` (VerifierOnboardingMode) (*mandatory*): defines how accreditations are managed for verifiers of this `CredentialSchema`. OPEN means any service can verify credentials of this schema without an onboarding process: a verifier acts under its [VerifiableService](#verifiableservice) entry ([[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)); the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by the first trust units minted on its payments, holds what the ecosystem can slash; it MAY self-create a `VERIFIER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)); CREDENTIAL means any service whose identifier is the subject of a valid credential of one of the schemas listed in `verifier_credential_schema_ids`, as established by the holder's trust resolution ([[ref: VT spec]]), can verify, under its service entry likewise; GRANTOR_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and a VERIFIER_GRANTOR in order to create a VERIFIER entry; ECOSYSTEM_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate VERIFIER and the ecosystem owner (ecosystem) of the `CredentialSchema` entry in order to create a VERIFIER entry;
 - `verifier_credential_schema_ids` (uint64[]) (*conditional*): ids of the `CredentialSchema` entries whose holders are authorized verifiers when `verifier_onboarding_mode` is CREDENTIAL; MUST be set, non-empty, iff the mode is CREDENTIAL. Each id MUST refer to a `CredentialSchema` entry whose `subject_kind` is SERVICE and whose `presentation_mode` is PUBLIC, so that a holder can establish the verifier's credential from its DID Document alone, before any exchange. The VPR stores the list and does not evaluate it; the holder does, per the [[ref: VT spec]]. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema); a change applies to the presentations that follow it.
 - `holder_onboarding_mode` (HolderOnboardingMode) (*mandatory*): defines how accreditations are managed for holders of this `CredentialSchema`. ISSUER_ONBOARDING_PROCESS means an onboarding process MUST be run between a candidate HOLDER and an ISSUER in order to create a HOLDER entry; NO_ONBOARDING_PROCESS means no onboarding process runs on the VPR for holders: a holder needs no `Accreditation` entry, the issuer applies its own checks off the VPR (and thus an ISSUER cannot use the VPR to charge validation fees to candidate holders);
-- `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the UserAgent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to NO_ONBOARDING_PROCESS, since a natural person holds no `Accreditation` entry. Immutable.
-- `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service as a Linked Verifiable Presentation in its DID Document, and anyone can read it; reading a published credential is not a Credential Presentation: no exchange is recorded and no fees are computed, so the `verification_fees` of a PUBLIC schema's `Accreditation` entries SHOULD be 0, since they can never be collected. ON_REQUEST: the credential is not published; the holder service presents it automatically, without the approval of its controller, to any requesting verifier authorized under the schema's `verifier_onboarding_mode` (under OPEN any peer; under CREDENTIAL a peer whose service identifier is the subject of a credential of one of the schemas listed in `verifier_credential_schema_ids`, published in its DID Document, which the holder establishes itself; under the two onboarding modes the holder of an active VERIFIER `Accreditation` entry), one credential at a time, most recently received first, each after having verified the exchange transaction of the previous one when one is required (see [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)). ON_APPROVAL: as ON_REQUEST, but the controller of the holder service approves each request and selects the credentials to present, before the holder discloses whether it holds a credential of the schema and before any payment is made; a declined request discloses nothing. The VPR stores this declaration; its enforcement is the responsibility of agents, as specified by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/). Immutable.
-- `credential_format` (CredentialFormat) (*mandatory*): the single format in which credentials of this schema are issued: W3C_JSONLD (W3C Verifiable Credentials in JSON-LD), ANONCREDS, SD_JWT, or MDOC (ISO/IEC 18013-5 mobile documents, `mso_mdoc`). MDOC is only allowed when `subject_kind` is PERSON. A PUBLIC credential is necessarily W3C_JSONLD, since it is published as a Linked Verifiable Presentation; a presented (non-published) service credential MAY use ANONCREDS or SD_JWT when selective disclosure or unlinkability matters, as the UserAgent credential does. An ecosystem that needs the same claims in several formats creates one schema per format. Future versions of this specification MAY add values. Immutable.
-- `credential_anchoring` (CredentialAnchoring) (*mandatory*): declares what the VPR holds of every credential of this schema. NO_DIGEST: no credential digest is anchored; the container's native mechanisms apply and trust in the credential requires a currently authorized issuer. DIGEST: the issuer anchors the credential digest, as defined by the [Verifiable Trust Spec](https://verana-labs.github.io/verifiable-trust-spec/) for the container, through the `CredentialIssuance` transaction before delivering the credential; the event of the issuance transaction gives the credential's effective issuance time and the entry it was issued under; nothing is written, and revocation, if any, uses a mechanism native to the container (the [[ref: VT spec]] defines none for a W3C credential under DIGEST: an ecosystem that must revoke W3C credentials declares REVOCABLE_DIGEST). REVOCABLE_DIGEST: as DIGEST, and the issuance transaction persists the digest as a [Digest](#digest) entry, revocable by the owner of the anchoring entry, by a grantor above the issuer's current entries or by the ecosystem controlling the schema ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) and kept until the credential expires; the credential MUST carry an expiry ([[ref: VT spec]]) and the issuance transaction MUST give it (`credential_valid_until`). MUST be DIGEST or REVOCABLE_DIGEST when `credential_format` is W3C_JSONLD and MUST be NO_DIGEST when it is ANONCREDS (a verifier never sees an AnonCreds credential, only a proof derived from it); an ecosystem chooses for SD_JWT and MDOC. [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) requires the `credential_digest` unless the value is NO_DIGEST, and refuses one under NO_DIGEST. Immutable.
-- `presentation_validity_period` (duration) (*optional*): the duration in seconds during which a presentation of a credential of this schema is valid evidence of a verification; null or 0 means no reliance period and no digest requirement. MUST be null or 0 when `presentation_mode` is PUBLIC (published credentials are read, not presented, and produce no receipt). At most `GlobalVariables.credential_schema_presentation_validity_period_max_days` days (3,650 by default), a network governance parameter ([[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)). A value greater than 0 makes a `CredentialPresentation` transaction carrying the presentation digest mandatory for every presentation of a credential of the schema: [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) reads the value in force at the block to require the digest. The end of the reliance period of a presentation is not stored: it is the block time of the exchange transaction that carried the presentation digest plus the value of this attribute in force at that time, computed by the parties, and by indexers from the schema's update history. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): a change applies to the presentations that follow it and does not change the reliance period of the presentations already anchored; agents read the value in force at the time of the presentation. The legal effect of the period is stated by the ecosystem in its governance framework.
+- `subject_kind` (SubjectKind) (*mandatory*): declares to whom credentials of this schema are issued. SERVICE: the subject is a software: a [[ref: VS]] identified by a [[ref: DID]], or an instance of a software such as a Verifiable User Agent (the User Agent credential identifies a running instance of a wallet software, not its user); the credential is held by that software. PERSON: the subject is a natural person, and the credential is held in the person's Verifiable User Agent (user wallet); a PERSON schema sets `holder_onboarding_mode` to NO_ONBOARDING_PROCESS, since a natural person holds no `Accreditation` entry. Immutable.
+- `presentation_mode` (PresentationMode) (*conditional*): declares how a credential of this schema is made available to verifiers. MUST be set if `subject_kind` is SERVICE and MUST be null if `subject_kind` is PERSON (a person decides in its wallet what to present). PUBLIC: the credential is published by the holder service, and anyone can read it; reading a published credential is not a Credential Presentation: no exchange is recorded and no fees are computed, so the `verification_fees` of a PUBLIC schema's `Accreditation` entries SHOULD be 0, since they can never be collected. ON_REQUEST: the credential is not published; the holder service presents it, without an approval on its side, to a verifier authorized under the schema's `verifier_onboarding_mode`. ON_APPROVAL: as ON_REQUEST, after each request has been approved on the holder's side. The VPR stores this declaration and checks nothing else about it: what an agent does under each value is defined by [[VT-DECL-MODE]](https://verana-labs.github.io/verifiable-trust-spec/#vt-decl-mode-presentation-mode-of-service-credentials) of the [[ref: VT spec]]. Immutable.
+- `credential_format` (CredentialFormat) (*mandatory*): the single format in which credentials of this schema are issued: W3C_JSONLD (W3C Verifiable Credentials in JSON-LD), ANONCREDS, SD_JWT, or MDOC (ISO/IEC 18013-5 mobile documents, `mso_mdoc`). MDOC is only allowed when `subject_kind` is PERSON. A PUBLIC credential is necessarily W3C_JSONLD, since it is published as a Linked Verifiable Presentation; the VPR accepts ANONCREDS and SD_JWT for a presented (non-published) service credential, for which selective disclosure or unlinkability can matter, as for the User Agent credential. The [[ref: VT spec]] can accept, in a given version, fewer combinations of `subject_kind`, `credential_format` and `credential_anchoring` than the VPR stores: agents apply its restrictions, which the VPR does not enforce. An ecosystem that needs the same claims in several formats creates one schema per format. Future versions of this specification MAY add values. Immutable.
+- `credential_anchoring` (CredentialAnchoring) (*mandatory*): declares what the VPR holds of every credential of this schema. NO_DIGEST: no credential digest is anchored. DIGEST: the `CredentialIssuance` transaction carries the credential digest; its event gives the credential's effective issuance time and the entry it was issued under; nothing is written. REVOCABLE_DIGEST: as DIGEST, and the issuance transaction persists the digest as a [Digest](#digest) entry, revocable by the owner of the anchoring entry, by a grantor above the issuer's current entries or by the ecosystem controlling the schema ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) and kept until the credential expires: the issuance transaction MUST give that expiry (`credential_valid_until`). MUST be DIGEST or REVOCABLE_DIGEST when `credential_format` is W3C_JSONLD and MUST be NO_DIGEST when it is ANONCREDS (a verifier never sees an AnonCreds credential, only a proof derived from it); the VPR accepts every value for SD_JWT and MDOC, subject to the restrictions of the [[ref: VT spec]] (see `credential_format`). [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) requires the `credential_digest` unless the value is NO_DIGEST, and refuses one under NO_DIGEST. How the digest of each container is computed, when the issuer anchors it and how a credential is revoked under each value are defined by [[VT-DECL-ANCHOR]](https://verana-labs.github.io/verifiable-trust-spec/#vt-decl-anchor-credential-anchoring) of the [[ref: VT spec]]. Immutable.
+- `presentation_validity_period` (duration) (*optional*): the duration in seconds during which a presentation of a credential of this schema is valid evidence of a verification; 0 means no reliance period and no digest requirement; the attribute is never null, an absent parameter at creation being stored as 0. MUST be 0 when `presentation_mode` is PUBLIC (published credentials are read, not presented, and produce no receipt). At most `GlobalVariables.credential_schema_presentation_validity_period_max_days` days (3,650 by default), a network governance parameter ([[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)). A value greater than 0 makes a `CredentialPresentation` transaction carrying the presentation digest mandatory for every presentation of a credential of the schema: [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) reads the value in force at the block to require the digest. The end of the reliance period of a presentation is not stored: it is the block time of the exchange transaction that carried the presentation digest plus the value of this attribute in force at that time, computed by the parties, and by indexers from the schema's update history. Updatable through [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema): a change applies to the presentations that follow it and does not change the reliance period of the presentations already anchored; agents read the value in force at the time of the presentation. The legal effect of the period is stated by the ecosystem in its governance framework.
 - `pricing_asset_type` (PricingAssetType) (*mandatory*): used asset for pricing business fees. Can be COIN (a token available on the VPR chain) or FIAT (fees are priced in a fiat currency; the fee itself is settled off-chain, while deposit-bound amounts and Verifiable User Agent rewards are settled on-chain in [[ref: native denom]] at the oracle rate). [[ref: Trust units]] are **not** a pricing asset: a decaying unit cannot label prices. Note that in all cases, deposit-bound amounts are always paid in [[ref: native denom]] and minted as [[ref: trust units]].
 - `pricing_asset` (string) (*mandatory*): examples: COIN: `denom` `"uvna"`, `"ufoo"`, `"ibc/3A0F9C2E4E2A9B7D6F..."`, `"factory/verana1.../ueurv"`, FIAT: `"USD"`, `"GBP"`,... (multi-fiat pricing is supported; protocol-level accounting uses the [[ref: main fiat currency]]).
 - `digest_algorithm` (string) (*mandatory*): algorithm used to compute the credential digests of credentials issued under this schema (when `credential_anchoring` is DIGEST or REVOCABLE_DIGEST) and the presentation digests anchored by [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation), as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time). MUST be one of the lowercase tokens `sha384` or `sha512`. This attribute is immutable: it is set when the entry is created and cannot be updated (see [[MOD-CS-MSG-2-1]](#mod-cs-msg-2-1-update-credential-schema-parameters)).
@@ -1655,7 +1671,7 @@ An `EcosystemAcceptance` records the [[ref: governance framework acceptance]] of
 - `verification_fee_discount`: (number) (*mandatory*): default to 0 (no discount). Maximum 1 (100% discount). Can be set to a VERIFIER_GRANTOR or VERIFIER `Accreditation` entry (if GRANTOR_ONBOARDING_PROCESS mode) and/or to a VERIFIER `Accreditation` entry (ECOSYSTEM_ONBOARDING_PROCESS mode) to reduce (or void) calculated fees for the subtree of `Accreditation` entries. Note: this should generally not be used because it reduces or void commission of all related ecosystem participants.
 - `vua_reward_rate` (decimal) (*optional*): on an `ISSUER` entry of a User Agent schema, the rate of the reward the vendor claims on the trust fees of the exchanges its Verifiable User Agents take part in ([[MOD-AC-MSG-17]](#mod-ac-msg-17-settle-exchange-fees)), between 0 and `GlobalVariables.vua_reward_rate`; null means the global rate. Declared by the applicant at [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding) like its fees, fixed for the life of the entry (a renewal keeps it); ignored on any entry that is never referenced as `vua_issuer_accreditation_id`.
 
-**Expiry.** At the end of every block, the accreditation module deletes every entry whose `onboarding_state` is VALIDATED and whose `effective_until` is not null and not later than the block time (implementations keep an expiry queue, bucketed by time, written whenever `effective_until` is set or changed), removes its id from its [ParticipationTrustDeposit](#participationtrustdeposit) and, for a root entry, from `CredentialSchema.root_accreditation_ids`, and emits an event for each. An entry whose `onboarding_state` is PENDING (a renewal in progress) is not swept: it ends at validation, with its new `effective_until`, or at cancellation, which deletes it at once if its window has already ended.
+**Expiry.** At the end of every block, the accreditation module deletes every entry whose `onboarding_state` is VALIDATED and whose `effective_until` is not null and not later than the block time (implementations keep an expiry queue, bucketed by time, written whenever `effective_until` is set or changed), removes its id from its [ParticipationTrustDeposit](#participationtrustdeposit) and, for a root entry, from `CredentialSchema.root_accreditation_ids`, deletes that deposit if it is now empty, and emits an event for each. An entry whose `onboarding_state` is PENDING (a renewal in progress) is not swept: it ends at validation, with its new `effective_until`, or at cancellation, which deletes it at once if its window has already ended.
 
 > Note: the account that signs for an `Accreditation` entry is `VerifiableService[vs_id].vs_account`, and its authorization settings (message types, spend limits, operation-budget cycle, fee grant) are the entry's own `msg_types`, `period` and `fee_spend_limit`, with its [VsAccountBudget](#vsaccountbudget). An `Accreditation` entry carries no VS account configuration of its own. See [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-account-authorization) and [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks).
 
@@ -1676,11 +1692,11 @@ A `ParticipationTrustDeposit` is the part of a corporation's single [[ref: trust
 - `excluded` (boolean) (*mandatory*): set to true by an ecosystem slash whose `exclude` parameter is true ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) or directly by the ecosystem controller ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)): the ecosystem's decision to withdraw trust from what the participation issued or validated before ([[ref: VT spec]]). The participation is [[ref: barred]]: it can no longer take part in the schema, neither through a new entry ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), a renewal ([[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)) or a validation ([[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)), nor through entry-less exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)), until the ecosystem controller lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), the repayment of its debt notwithstanding. A network slash does not set it: the corporation's own flag is on its [TrustDeposit](#trustdeposit).
 - `accreditation_ids` (uint64[]) (*mandatory*): the ids of the current `Accreditation` entries of the participation (pending, future or effective), bounded when an entry is created: at most `GlobalVariables.accreditation_max_entries_per_participation` entries, and at most two under one validator entry, the current one and one successor; appended when an entry is created ([[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding), [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation), [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)), removed when it is deleted. It is how the sibling checks, the exchange guards ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) and the revocation of digests ([[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)) find the entries of a participation: the VPR keeps no index of `Accreditation` entries.
 
-A deposit is created by the first entry of its participation, by the first mint to it or by an exclusion ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0 and `excluded` false. It is deleted by the method that empties it when `accreditation_ids` is empty, `tu` = 0, `unrepaid_slash` = 0 and `slash_count` = 0 and `excluded` false (a slashed or excluded participation keeps its deposit, repaid or not: its count and its exclusion are its record). For an entry `p`, **deposit(`p`)** denotes `ParticipationTrustDeposit[(p.vs_id, p.schema_id, p.role)]`.
+A deposit is created by the first entry of its participation, by the first mint to it or by an exclusion ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), whichever comes first, with `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count` at 0 and `excluded` false. It is deleted when it is **empty**: `accreditation_ids` is empty, `tu` = 0, `unrepaid_slash` = 0, `slash_count` = 0 and `excluded` is false (a slashed or excluded participation keeps its deposit, repaid or not: its count and its exclusion are its record). Two modules write the entry. The accreditation module writes `accreditation_ids`, and `excluded` when the ecosystem sets or lifts an exclusion ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). The trust deposit module writes `tu`, `fiat_cost`, `unrepaid_slash`, `unrepaid_fiat` and `slash_count`, and `excluded` when a slash excludes ([[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)). Only the accreditation module deletes a deposit, in the method that leaves it empty: the one that removes its last entry ([[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request), [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation), the expiry of an entry) or that lifts its exclusion ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). No method of the trust deposit module can leave it empty: a mint adds trust units, a slash sets its count, and a repayment keeps that count. For an entry `p`, **deposit(`p`)** denotes `ParticipationTrustDeposit[(p.vs_id, p.schema_id, p.role)]`.
 
 ### EcosystemBar
 
-An `EcosystemBar` lists the [[ref: barred]] participations of a corporation in an ecosystem: the `ParticipationTrustDeposit` entries of its service entries, under the schemas of the ecosystem, that carry an unrepaid slash or an exclusion. One entry per (ecosystem, corporation) pair, kept only while the list is not empty. While it exists, the acts of the corporation in the ecosystem are refused, under any of its service entries, schemas or roles ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar), which names the few messages it keeps): a sanctioned corporation does not escape the sanction of an ecosystem by registering another identifier. The entry belongs to no participation: the messages that change the debt or the exclusion of a participation maintain it ([[BAR-CHECK-2]](#bar-check-2-maintenance)), and [[MOD-TD-QRY-5]](#mod-td-qry-5-get-ecosystem-bar) reads it. An implementation that upgrades a chain whose state predates this entity MUST build the entries from the barred `ParticipationTrustDeposit` entries at upgrade time. It is read by key; since the key starts with the ecosystem, the sanctioned corporations of an ecosystem are a key-prefix read.
+An `EcosystemBar` lists the [[ref: barred]] participations of a corporation in an ecosystem: the `ParticipationTrustDeposit` entries of its service entries, under the schemas of the ecosystem, that carry an unrepaid slash or an exclusion. One entry per (ecosystem, corporation) pair, kept only while the list is not empty. While it exists, the acts of the corporation in the ecosystem are refused, under any of its service entries, schemas or roles ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar), which names the few messages it keeps): a sanctioned corporation does not escape the sanction of an ecosystem by registering another identifier. The entry belongs to no participation: the messages that change the debt or the exclusion of a participation maintain it ([[BAR-CHECK-2]](#bar-check-2-maintenance)), and [[MOD-TD-QRY-5]](#mod-td-qry-5-get-ecosystem-bar) reads it. It is read by key; since the key starts with the ecosystem, the sanctioned corporations of an ecosystem are a key-prefix read.
 
 `EcosystemBar`:
 
@@ -1983,23 +1999,25 @@ Such messages conceptually involve **two roles**:
 - `corporation` (account):
   The `policy_address` of the `Corporation` that owns the created or manipulated resource. It is a **field** of the Msg, not a signer: a group policy account holds no key and cannot sign a transaction. When a delegate executes the Msg, [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) authenticates the field through the authorization the corporation granted to that delegate; when the corporation executes the Msg itself, through a passed proposal of its [[ref: group]], the policy account executes it and is then its only signer.
 
-- `delegate` (account):
-  The `account` that signs and executes the Msg on behalf of the `corporation`.
-  The delegate MUST be explicitly authorized for the given message type.
-  On the VS Account Authorization path of a message that offers one, this field carries the VS account of the entry. The messages reserved to VS accounts ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) name their signer field `vs_account`.
+- `signer` (account):
+  The `account` that signs and executes the Msg. It is one of three:
+  a [[ref: delegate]], which MUST be explicitly authorized by the `corporation` for the given message type;
+  the [[ref: VS account]] of an entry, on the VS Account Authorization path of a message that offers one;
+  or the `corporation` account itself, when the corporation executes the Msg through a passed proposal of its group.
+  The path is known from the field: `signer` equal to `corporation` is the group-proposal path. The messages reserved to VS accounts ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) use the same field: there `signer` is always the VS account of the entry, as each of them states.
 
-When a delegable message is executed by a delegate or by a VS account, that account is the only signer and both roles are authenticated and enforced by the authorization system; the messages that also offer a group-proposal path say so, and `delegate` is then absent.
+When a delegable message is executed by a delegate or by a VS account, that account is the only signer and both roles are authenticated and enforced by the authorization system; every message that a delegate can execute can also be executed by the corporation itself, through a passed proposal of its group: `signer` is then the `corporation` account, which is the only signer, [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) is the only authorization check, and no delegate authorization, spend limit or fee grant applies. The two messages reserved to VS accounts ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) offer no such path: they are executed during an exchange, by the service itself.
 
 Using this model makes it possible to:
 
-- identify, within the Msg, both the authenticated `corporation` and the executing `delegate`,
-- allow network fees to be paid either by the `delegate` account or by the `corporation` account via a fee grant.
+- identify, within the Msg, both the authenticated `corporation` and the executing `signer`,
+- allow network fees to be paid either by the `signer` account or by the `corporation` account via a fee grant.
 
 For the execution of delegable messages:
 
-- the `delegate` account MUST have a valid authorization from the `corporation` for the specific message type being executed.
+- a delegate MUST have a valid authorization from the `corporation` for the specific message type being executed.
 
-A `corporation` is not required to authorize the same `delegate` for all message types.  
+A `corporation` is not required to authorize the same delegate for all message types.  
 It is entirely up to the `corporation` to decide **which accounts may execute which messages**.
 
 - Authorizations are granted to individual `account`s through corporation-level proposals (a Cosmos SDK group proposal, the `policy_address` being a group policy account) or by a delegate that holds the `GrantDelegateAuthorization` authorization ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization)).
@@ -2007,10 +2025,10 @@ It is entirely up to the `corporation` to decide **which accounts may execute wh
 
 #### Not Delegable Module Messages
 
-Some module messages are not [[ref: delegable messages]] and specify only a `corporation`:
+Some module messages are not [[ref: delegable messages]] and specify only a `signer`:
 
-- `corporation` (account):
-  The `policy_address` of the `Corporation` that owns the manipulated resource, which is the signer: the policy account of the corporation's [[ref: group]] executes the Msg when a proposal passes.
+- `signer` (account):
+  The `policy_address` of the `Corporation` that owns the manipulated resource: the policy account of the corporation's [[ref: group]] executes the Msg when a proposal passes, and is its only signer. These messages carry no `corporation` field.
 
 Such messages **cannot be delegated** and MUST be executed exclusively through a **corporation proposal**.
 
@@ -2018,7 +2036,7 @@ Such messages **cannot be delegated** and MUST be executed exclusively through a
 
 Some module messages can be executed **only through a VPR council [[ref: governance proposal]]**.
 
-These messages are executable only by the [[ref: council account]], through a proposal of the council group ([GOV-2](#network-governance), [GOV-3](#network-governance)); they are not delegable, and no other account, delegate or corporation, can execute them.
+These messages are executable only by the [[ref: council account]], through a proposal of the council group ([GOV-2](#network-governance), [GOV-3](#network-governance)); they are not delegable, and no other account, delegate or corporation, can execute them. Their signer field is `signer`, as in every other message, and it MUST be `GlobalVariables.council_account`.
 
 #### Fee Grants
 
@@ -2050,22 +2068,22 @@ For any **delegable message** executed by a delegate or by a VS account on behal
 
 ##### [AUTHZ-CHECK-1] Delegate Authorization checks
 
-1. A `DelegateAuthorization` `dauthz` MUST exist where `dauthz.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), `dauthz.delegate` = `delegate`, and `dauthz.msg_types` includes the current message type.
+1. A `DelegateAuthorization` `dauthz` MUST exist where `dauthz.corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), `dauthz.delegate` = `signer`, and `dauthz.msg_types` includes the current message type.
 2. If `dauthz.expiration` is set:
    - if `dauthz.period` is set and `now() >= dauthz.expiration`:
      - if `dauthz.spend_limit` is set, set `dauthz.remaining_spend := dauthz.spend_limit`.
      - set `dauthz.expiration := now() + dauthz.period`.
    - else, `dauthz.expiration` MUST be strictly greater than `now()`. Abort otherwise.
-3. If `dauthz.spend_limit` is set, `dauthz.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `dauthz.remaining_spend` (per matching `denom` entry).
+3. If `dauthz.spend_limit` is set, `dauthz.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `dauthz.remaining_spend` (per matching `denom` entry). The **consumed amount** of a message is what its method debits for the corporation through [[FUND-CHECK-1]](#fund-check-1-debit), per [[ref: denom]], whichever account funds it, the corporation's own or its sponsor's. It is zero for a message that debits nothing, such as [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding), whose amounts all come from the escrow: what a corporation receives, in its account or as [[ref: trust units]], is never counted.
 4. [[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-a-delegate) MUST pass for `dauthz` and `co`: the delegate has accepted the corporation's [[ref: CGF]] version in force, or a former one within the grace period of the activation.
 
 ##### [AUTHZ-CHECK-2] Fee Grant checks
 
-If the transaction fees are paid by the `corporation` account (via fee grant) instead of the `delegate` account:
+If the transaction fees are paid by the `corporation` account (via fee grant) instead of the `signer` account:
 
 > Realization: this check is performed by the corporation's `x/feegrant` allowance during standard transaction-fee processing (see the [Delegation Module](#delegation-module) note), not by the VPR message handler. The allowance enforces steps 1–3 below — existence + message-type filter (step 1), cycle reset (step 2), and sufficiency (step 3) — and the fee-deduction path performs the debit from the corporation's account, or from its sponsor's under the sponsored-fees rule of the [Delegation Module](#delegation-module). Steps 1–3 therefore specify the behaviour the allowance MUST realize, not separate handler logic; `fg.remaining_spend` reflects the allowance's running balance (see the [FeeGrant](#feegrant) entity). The same fee-processing step enforces the per-message gas cap of [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions) and deducts the required fee of [[NET-FEE-2]](#net-fee-2-required-fee).
 
-1. A `FeeGrant` `fg` MUST exist where `fg.grantor_corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), `fg.grantee` = `delegate`, and `fg.msg_types` includes the current message type.
+1. A `FeeGrant` `fg` MUST exist where `fg.grantor_corporation_id` = `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), `fg.grantee` = `signer`, and `fg.msg_types` includes the current message type.
 2. If `fg.expiration` is set:
    - if `fg.period` is set and `now() >= fg.expiration`:
      - if `fg.spend_limit` is set, set `fg.remaining_spend := fg.spend_limit`.
@@ -2079,7 +2097,7 @@ A second authorization mode exists for [[ref: VS accounts]]. It is used when a c
 
 > Note: the set of messages a `vs_account` is authorized to execute in the context of an entry is declared when the configuration is set ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or replaced ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)) and stored in `vs.msg_types`. One configuration covers every role the identifier holds: the role-specific checks of each message decide what the VS account can do with a given `Accreditation` entry.
 
-Given a `corporation`, the signing account `signer` (the `vs_account` field of a message reserved to VS accounts, the `delegate` field of a message that also offers this path), a **primary entry** `perm` (an `Accreditation` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) does or as [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) and [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) do for a party acting without an entry), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
+Given a `corporation`, the signing account `signer`, a **primary entry** `perm` (an `Accreditation` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) does or as [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) and [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) do for a party acting without an entry), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
 
 1. If `perm` is not null, it MUST be an [[ref: active accreditation]]. Abort otherwise.
 2. `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), and `vs.vs_account` MUST equal `signer`. Abort otherwise.
@@ -2090,7 +2108,7 @@ Given a `corporation`, the signing account `signer` (the `vs_account` field of a
    - set `budget.expiration := now() + vs.period`.
 
    This step never aborts: `budget.expiration` is the end of the current budget cycle, not a validity window (an entry has none; step 1 enforces the window of the primary entry when there is one). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
-6. If a [VsAccountBudget](#vsaccountbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
+6. If a [VsAccountBudget](#vsaccountbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written. The consumed amount is the one [[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) step 3 defines: what the method debits for the corporation, and zero when it debits nothing, as when the VS account of a validator executes [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding).
 
 > Note: step 1 is what prevents the use of an `Accreditation` entry that is not, or is no longer, an [[ref: active accreditation]]: an entry that has never been validated has no `effective_from` yet, a revoked or expired entry no longer exists, and a slashed participation fails the definition. The configuration itself is unaffected by the state of any single `Accreditation` entry: the same VS account keeps acting for the identifier's other entries, unless the bar of one participation stops its corporation in the whole ecosystem ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)). A renewal is unaffected too: [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding) sets `onboarding_state` back to PENDING, but the entry stays active until its `effective_until`.
 
@@ -2106,11 +2124,11 @@ If the [[ref: transaction]] fees are paid by the `corporation` account (via fee 
 
 ##### [AUTHZ-CHECK-5] Corporation Registration check
 
-A `Corporation` entry `co` MUST exist whose `co.policy_address` equals the message's `corporation` account. If none exists, the [[ref: transaction]] MUST abort with an error indicating that the message's `corporation` account has not yet been registered as the `policy_address` of a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)). The resolved `co.id` is the `corporation_id` used by the message.
+A `Corporation` entry `co` MUST exist whose `co.policy_address` equals the message's `corporation` account, or its `signer` account for the messages that carry no `corporation` field ([[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor), [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship), [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)). If none exists, the [[ref: transaction]] MUST abort with an error indicating that the message's `corporation` account has not yet been registered as the `policy_address` of a [[ref: corporation]] (see [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)). The resolved `co.id` is the `corporation_id` used by the message.
 
 > Exception: this check MUST NOT be applied for [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), whose explicit purpose is to register a new `Corporation` and bind a `policy_address` to it. Uniqueness holds there by construction: the group policy account is created by the method itself, so no `Corporation` entry can reference it yet.
 
-This check applies to every message that carries a `corporation` account: through [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) for a delegable message executed by a delegate or by a VS account, and directly for a non-delegable message and for a group-proposal path, whose checks name it. As a result, every such message requires the message's `corporation` account to be the `policy_address` of a registered `Corporation`. Once `co` is resolved, this check MUST also run [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) on `co`, except for [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews the acceptance: no path, delegate or proposal, reaches a corporation's acts without the network governance framework gate.
+This check applies to every message executed for a corporation (it carries a `corporation` account, or its `signer` is the corporation's own account): through [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) for a delegable message executed by a delegate or by a VS account, and directly for a non-delegable message and for a group-proposal path, whose checks name it. As a result, every such message requires the message's `corporation` account to be the `policy_address` of a registered `Corporation`. Once `co` is resolved, this check MUST also run [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) on `co`, except for [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews the acceptance: no path, delegate or proposal, reaches a corporation's acts without the network governance framework gate.
 
 #### [GF-CHECK] Governance Framework Acceptance Checks
 
@@ -2118,7 +2136,7 @@ A party acts under a [[ref: governance framework]] only after recording its [[re
 
 ##### [GF-CHECK-1] Network governance framework acceptance
 
-Applies to every message that carries a `corporation` account, delegable or not, except [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), which records the acceptance, and [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews it; it is evaluated by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), after the resolution of the `Corporation` entry `co`, on every path that resolves it. Let `ngf` be the version in force of the [[ref: NGF]] (the last entry of `GlobalVariables.network_governance_framework_versions` whose `active_since` is set).
+Applies to every message executed for a corporation, delegable or not (it carries a `corporation` account, or its `signer` is the corporation's own account), except [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation), which records the acceptance, and [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version) with `network` true, which renews it; it is evaluated by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check), after the resolution of the `Corporation` entry `co`, on every path that resolves it. Let `ngf` be the version in force of the [[ref: NGF]] (the last entry of `GlobalVariables.network_governance_framework_versions` whose `active_since` is set).
 
 1. The check passes when `co.accepted_ngf_version` = `ngf.version`.
 2. Else it passes when `GlobalVariables.ngf_acceptance_deadline` is not null and `now` < `GlobalVariables.ngf_acceptance_deadline` (the grace period of the version in force).
@@ -2134,7 +2152,7 @@ Applies to a delegate acting under a [DelegateAuthorization](#delegateauthorizat
 
 ##### [GF-CHECK-3] Ecosystem governance framework acceptance
 
-Applies to every message of the [Accreditation Module](#accreditation-module) that acts under a `CredentialSchema` entry `cs`, as applicant, validator, grantor, issuer, verifier or holder, for the ecosystem `e` = `Ecosystem[cs.ecosystem_id]` and the message's corporation `co`, except when `co.id` = `e.corporation_id` (the controller of the ecosystem is the author of its [[ref: EGF]]), and except the sanction messages of the ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit), [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)) and the two exits a party keeps whatever it has accepted: [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request), which recovers its escrow, and [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) when the corporation revokes its own entry (Option #3), which lets it leave the ecosystem. Let `acc` be `EcosystemAcceptance[(e.id, co.id)]`.
+Applies to every message of the [Accreditation Module](#accreditation-module) that acts under a `CredentialSchema` entry `cs`, as applicant, validator, grantor, issuer, verifier or holder, for the ecosystem `e` = `Ecosystem[cs.ecosystem_id]` and the message's corporation `co`, except when `co.id` = `e.corporation_id` (the controller of the ecosystem is the author of its [[ref: EGF]]), and except the sanction messages of the ecosystem ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit), [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)) and the two exits a party keeps whatever it has accepted: [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request), which recovers its escrow, and [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) when the corporation revokes its own entry (Option #3), which lets it leave the ecosystem. It does not apply either to [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver), in its `vs_id` form or in its `id` form: that message writes nothing and only asks for a new trust resolution. Let `acc` be `EcosystemAcceptance[(e.id, co.id)]`.
 
 1. The check passes when `acc` exists and `acc.version` = `e.active_version`.
 2. Else it passes when `acc` exists, `e.acceptance_deadline` is not null and `now` < `e.acceptance_deadline`.
@@ -2213,46 +2231,46 @@ As a result, `accountABC` is authorized to:
 | Module                         | Method Name                             | Relative REST API path           | Type   |Requirements      | Signers |
 |--------------------------------|-----------------------------------------|----------------------------------|--------|------------------|---|
 | Corporation               | Create Corporation                       | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)   | any account |
-|                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation + delegate |
+|                                | Update Corporation                           | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-2]](#mod-co-msg-2-update-corporation)   | corporation (group proposal) OR corporation + delegate |
 |                                | Update Corporation Module Parameters         | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-3]](#mod-co-msg-3-update-module-parameters)   | [[ref: governance proposal]] |
 |                                | Set Sponsor                                  | N/A (Tx)                         | Msg    | [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor)   | corporation (group proposal) |
 |                                | Get Corporation                              | /co/v1/get                       | Query  | [[MOD-CO-QRY-1]](#mod-co-qry-1-get-corporation)   | N/A |
 |                                | List Corporation Module Parameters           | /co/v1/params                    | Query  | [[MOD-CO-QRY-3]](#mod-co-qry-3-list-module-parameters)   | N/A |
-| Ecosystem                 | Create Ecosystem                 |    N/A (Tx)                    | Msg    | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem)   | corporation + delegate |
-|                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)   |corporation + delegate |
-|                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem)   |corporation + delegate |
+| Ecosystem                 | Create Ecosystem                 |    N/A (Tx)                    | Msg    | [[MOD-ES-MSG-1]](#mod-es-msg-1-create-ecosystem)   | corporation (group proposal) OR corporation + delegate |
+|                                | Update Ecosystem                   |       N/A (Tx)                   | Msg    | [[MOD-ES-MSG-2]](#mod-es-msg-2-update-ecosystem)   |corporation (group proposal) OR corporation + delegate |
+|                                | Archive Ecosystem                  |        N/A (Tx)                 | Msg    | [[MOD-ES-MSG-3]](#mod-es-msg-3-archive-ecosystem)   |corporation (group proposal) OR corporation + delegate |
 |                                | Update Ecosystem Module Parameters             |         N/A (Tx)                 | Msg    | [[MOD-ES-MSG-4]](#mod-es-msg-4-update-module-parameters)   |[[ref: governance proposal]] |
 |                                | Get Ecosystem                      | /ec/v1/get                  | Query  | [[MOD-ES-QRY-1]](#mod-es-qry-1-get-ecosystem)   |N/A |
 |                                | List Ecosystem Module Parameters               | /ec/v1/params                 | Query  | [[MOD-ES-QRY-3]](#mod-es-qry-3-list-module-parameters)   |N/A |
-| Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation + delegate, or [[ref: governance proposal]] (NGF) |
-|                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation + delegate, or [[ref: governance proposal]] (NGF) |
+| Governance Framework      | Add Governance Framework Document            | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-1]](#mod-gf-msg-1-add-governance-framework-document)   | corporation (group proposal) OR corporation + delegate, or [[ref: governance proposal]] (NGF) |
+|                                | Increase Active Governance Framework Version | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-2]](#mod-gf-msg-2-increase-active-governance-framework-version)   | corporation (group proposal) OR corporation + delegate, or [[ref: governance proposal]] (NGF) |
 |                                | Accept Governance Framework Version          | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version)   | corporation (group proposal) OR corporation + delegate |
 |                                | Accept Corporation Governance Framework      | N/A (Tx)                         | Msg    | [[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)   | delegate |
 |                                | Update Governance Framework Module Parameters | N/A (Tx)                        | Msg    | [[MOD-GF-MSG-5]](#mod-gf-msg-5-update-module-parameters)   | [[ref: governance proposal]] |
 |                                | Get Governance Framework Version             | /gf/v1/get                       | Query  | [[MOD-GF-QRY-1]](#mod-gf-qry-1-get-governance-framework-version)   | N/A |
 |                                | Get Ecosystem Acceptance                     | /gf/v1/acceptance                | Query  | [[MOD-GF-QRY-2]](#mod-gf-qry-2-get-ecosystem-acceptance)   | N/A |
 |                                | List Governance Framework Module Parameters  | /gf/v1/params                    | Query  | [[MOD-GF-QRY-3]](#mod-gf-qry-3-list-module-parameters)   | N/A |
-| Credential Schema              | Create Credential Schema              |       N/A (Tx)                   | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema)   |corporation + delegate |
-|                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation + delegate |
-|                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |corporation + delegate |
+| Credential Schema              | Create Credential Schema              |       N/A (Tx)                   | Msg    | [[MOD-CS-MSG-1]](#mod-cs-msg-1-create-credential-schema)   |corporation (group proposal) OR corporation + delegate |
+|                                | Update a Credential Schema              |      N/A (Tx)                     | Msg    | [[MOD-CS-MSG-2]](#mod-cs-msg-2-update-credential-schema)   |corporation (group proposal) OR corporation + delegate |
+|                                | Archive Credential Schema               |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-3]](#mod-cs-msg-3-archive-credential-schema)   |corporation (group proposal) OR corporation + delegate |
 |                                | Update CS Module Parameters             |       N/A (Tx)                      | Msg    | [[MOD-CS-MSG-4]](#mod-cs-msg-4-update-module-parameters)   |[[ref: governance proposal]] |
 |                                | List Credential Schemas                 | /cs/v1/list                 | Query  | [[MOD-CS-QRY-1]](#mod-cs-qry-1-list-credential-schemas)   |N/A  |
 |                                | Get a Credential Schema                 | /cs/v1/get                  | Query  | [[MOD-CS-QRY-2]](#mod-cs-qry-2-get-credential-schema)   |N/A  |
-|                                | Render Json Schema                      | /cs/v1/js/{id}               | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |N/A  |
+|                                | Render JSON Schema                      | /cs/v1/js/{id}               | Query  | [[MOD-CS-QRY-3]](#mod-cs-qry-3-render-json-schema)   |N/A  |
 |                                | List CS Module Parameters               | /cs/v1/params                 | Query  | [[MOD-CS-QRY-4]](#mod-cs-qry-4-list-module-parameters)   |N/A  |
-| Accreditation                    | Start Onboarding                     |     N/A (Tx)                       | Msg    | [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding)    |corporation + delegate |
-|                                | Renew Onboarding                   |       N/A (Tx)                     | Msg    | [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)    |corporation + delegate |
-|                                | Validate Onboarding          |        N/A (Tx)                     | Msg    | [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)    |corporation + delegate OR corporation + vs_account of the validator's entry |
-|                                | Withdraw Onboarding Request       |         N/A (Tx)                    | Msg    | [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request)    |corporation + delegate |
-|                                | Create Root Accreditation                  |         N/A (Tx)                | Msg    | [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation)   |corporation + delegate |
-|                                | Set Accreditation Effective Until                       |         N/A (Tx)            | Msg    | [[MOD-AC-MSG-8]](#mod-ac-msg-8-set-accreditation-effective-until)  |corporation + delegate |
-|                                | Revoke Accreditation                       |          N/A (Tx)              | Msg    | [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)  |corporation + delegate |
+| Accreditation                    | Start Onboarding                     |     N/A (Tx)                       | Msg    | [[MOD-AC-MSG-1]](#mod-ac-msg-1-start-onboarding)    |corporation (group proposal) OR corporation + delegate |
+|                                | Renew Onboarding                   |       N/A (Tx)                     | Msg    | [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding)    |corporation (group proposal) OR corporation + delegate |
+|                                | Validate Onboarding          |        N/A (Tx)                     | Msg    | [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding)    |corporation (group proposal) OR corporation + delegate OR corporation + vs_account of the validator's entry |
+|                                | Withdraw Onboarding Request       |         N/A (Tx)                    | Msg    | [[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request)    |corporation (group proposal) OR corporation + delegate |
+|                                | Create Root Accreditation                  |         N/A (Tx)                | Msg    | [[MOD-AC-MSG-7]](#mod-ac-msg-7-create-root-accreditation)   |corporation (group proposal) OR corporation + delegate |
+|                                | Set Accreditation Effective Until                       |         N/A (Tx)            | Msg    | [[MOD-AC-MSG-8]](#mod-ac-msg-8-set-accreditation-effective-until)  |corporation (group proposal) OR corporation + delegate |
+|                                | Revoke Accreditation                       |          N/A (Tx)              | Msg    | [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)  |corporation (group proposal) OR corporation + delegate |
 |                                | Record Credential Issuance     |           N/A (Tx)              | Msg    | [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)  |corporation + vs_account (VS Account Authorization) |
 |                                | Update Accreditation Module Parameters     |           N/A (Tx)             | Msg    | [[MOD-AC-MSG-11]](#mod-ac-msg-11-update-accreditation-module-parameters) |[[ref: governance proposal]] |
-|                                | Slash Participation Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit) |corporation + delegate |
-|                                | Set Participation Exclusion                  |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion) |corporation + delegate |
-|                                | Self Create Accreditation (OPEN / CREDENTIAL modes) |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation) |corporation + delegate  |
-|                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) |corporation + delegate OR corporation + vs_account |
+|                                | Slash Participation Trust Deposit          |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit) |corporation (group proposal) OR corporation + delegate |
+|                                | Set Participation Exclusion                  |                N/A (Tx)       | Msg    | [[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion) |corporation (group proposal) OR corporation + delegate |
+|                                | Self Create Accreditation (OPEN / CREDENTIAL modes) |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation) |corporation (group proposal) OR corporation + delegate  |
+|                                | Trigger Resolver                        |         N/A (Tx)              | Msg    | [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) |corporation (group proposal) OR corporation + delegate OR corporation + vs_account |
 |                                | Record Credential Presentation |           N/A (Tx)              | Msg    | [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)  |corporation + vs_account (VS Account Authorization) |
 |                                | Settle Exchange Fees           |           N/A (Tx)              | Msg    | [[MOD-AC-MSG-17]](#mod-ac-msg-17-settle-exchange-fees)  | module call |
 |                                | List Accreditations                        | /ac/v1/list                | Query  | [[MOD-AC-QRY-1]](#mod-ac-qry-1-list-accreditations)    |N/A |
@@ -2262,7 +2280,7 @@ As a result, `accountABC` is authorized to:
 | Trust Deposit                  | Mint Trust Units                    |   N/A (Tx)                       | Msg    | [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)   | module call |
 |                                | Update TD Module Parameters             |      N/A (Tx)               | Msg  | [[MOD-TD-MSG-4]](#mod-td-msg-4-update-module-parameters)   |[[ref: governance proposal]] |
 |                                | Slash Trust Deposit             |           N/A (Tx)               | Msg  | [[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)   |[[ref: governance proposal]] |
-|                                | Repay Slash          |         N/A (Tx)                    | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)   |corporation + delegate |
+|                                | Repay Slash          |         N/A (Tx)                    | Msg  | [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)   |corporation (group proposal) OR corporation + delegate |
 |                                | Record Ecosystem Slash          |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash)   | module call|
 |                                | Set Corporation Exclusion           |     N/A (Tx)               | Msg  | [[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)   | [[ref: governance proposal]] |
 |                                | Get Trust Deposit                       | /td/v1/get                  | Query  | [[MOD-TD-QRY-1]](#mod-td-qry-1-get-trust-deposit)   |N/A |
@@ -2283,8 +2301,8 @@ As a result, `accountABC` is authorized to:
 |             | Get Delegate Authorization                | /de/v1/authz/get | Query  | [[MOD-DE-QRY-3]](#mod-de-qry-3-get-delegate-authorization)   |N/A |
 |             | Get Sponsorship                           | /de/v1/sponsorship/get | Query  | [[MOD-DE-QRY-5]](#mod-de-qry-5-get-sponsorship)   |N/A |
 |             | List Sponsorships                         | /de/v1/sponsorship/list | Query  | [[MOD-DE-QRY-6]](#mod-de-qry-6-list-sponsorships)   |N/A |
-| Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation + delegate OR corporation + vs_account of the entry OR module call|
-|          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation + delegate of the owner, of an active ancestor or of the schema's ecosystem (DelegateAuthorization), or vs_account of the anchoring entry or of an active ancestor |
+| Digests  | Store Digest         |   N/A (Tx) | Msg  | [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest)   |corporation (group proposal) OR corporation + delegate OR corporation + vs_account of the entry OR module call|
+|          | Revoke Digest        |   N/A (Tx) | Msg  | [[MOD-DI-MSG-2]](#mod-di-msg-2-revoke-digest)   |corporation (group proposal) OR corporation + delegate of the owner, of an active ancestor or of the schema's ecosystem (DelegateAuthorization), or vs_account of the anchoring entry or of an active ancestor |
 |          | Get Digest           | /di/v1/get | Query  | [[MOD-DI-QRY-1]](#mod-di-qry-1-get-digest)   |N/A |
 | Exchange Rate     | Create Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-1]](#mod-xr-msg-1-create-exchange-rate)   | [[ref: governance proposal]]|
 |                   | Update Exchange Rate              | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)   | feeder |
@@ -2295,8 +2313,8 @@ As a result, `accountABC` is authorized to:
 |                   | Get Price               | /xr/v1/price                 | Query  | [[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)   |N/A |
 |                   | Update XR Module Parameters       | N/A (Tx)                         | Msg    | [[MOD-XR-MSG-6]](#mod-xr-msg-6-update-module-parameters)   | [[ref: governance proposal]] |
 |                   | List XR Module Parameters         | /xr/v1/params               | Query  | [[MOD-XR-QRY-4]](#mod-xr-qry-4-list-module-parameters)   |N/A |
-| Verifiable Service        | Register Verifiable Service              | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service)   | corporation + delegate |
-|                                | Update Verifiable Service               | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)   | corporation + delegate |
+| Verifiable Service        | Register Verifiable Service              | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service)   | corporation (group proposal) OR corporation + delegate |
+|                                | Update Verifiable Service               | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)   | corporation (group proposal) OR corporation + delegate |
 |                                | Rotate Verifiable Identifier            | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier)   | corporation (group proposal) |
 |                                | Update VS Module Parameters             | N/A (Tx)                         | Msg    | [[MOD-VS-MSG-4]](#mod-vs-msg-4-update-module-parameters)   | [[ref: governance proposal]] |
 |                                | Get Verifiable Service                  | /vs/v1/get                       | Query  | [[MOD-VS-QRY-1]](#mod-vs-qry-1-get-verifiable-service)   | N/A |
@@ -2368,7 +2386,7 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-CO-MSG-1-2-2] Create Corporation fee checks
 
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and `signer` MUST have an available balance of at least the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)): the registration deposit of the Corporation's identifier is paid by `signer`, the only account that exists before the Corporation does.
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and `signer` MUST have an available balance of at least the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)): the registration deposit of the Corporation's identifier is paid by `signer`, the only account that exists before the Corporation does. The exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired, else [[ref: transaction]] MUST abort: a deposit is not priced with a stale rate, any more than a mint is.
 
 ##### [MOD-CO-MSG-1-3] Create Corporation execution
 
@@ -2431,12 +2449,12 @@ The method MUST emit an event carrying `co.id`, `co.policy_address`, `co.accepte
 
 #### [MOD-CO-MSG-2] Update Corporation
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 ##### [MOD-CO-MSG-2-1] Update Corporation parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry that becomes the Corporation's own identifier. To rotate the identifier string itself, use [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier) instead: it changes the string on the entry without touching this `Corporation` entry or any `Accreditation` entry.
 
 > Note: `language` is set at creation time by [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and is **immutable** thereafter; it cannot be updated through this method.
@@ -2449,9 +2467,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - A `Corporation` entry `co` whose `co.policy_address` equals the message's `corporation` account MUST exist; if none exists, method MUST abort.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else method MUST abort ([VID ownership](#vid-ownership)).
 - Setting the value `co.vs_id` already holds is a no-op that succeeds. No other `Corporation` entry can reference the entry, since only its owner may.
@@ -2480,6 +2497,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-CO-MSG-3-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-CO-MSG-3-2] Update Module Parameters precondition checks
@@ -2488,6 +2506,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-CO-MSG-3-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST exist, else abort.
 
 ###### [MOD-CO-MSG-3-2-2] Update Module Parameters fee checks
@@ -2506,11 +2525,11 @@ for each parameter `param` <`key`, `value`> in `params`:
 
 #### [MOD-CO-MSG-4] Set Sponsor
 
-This method is **not delegable**: the `corporation` executes it alone through a corporation proposal, to elect a [[ref: sponsor]] among the corporations that granted it a `Sponsorship` ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)), or to stop being sponsored. Electing a sponsor redirects the corporation's receipts to it ([[FUND-CHECK-2]](#fund-check-2-credit)), which is a treasury decision of the corporation itself, not of a delegate.
+This method is **not delegable**: the corporation executes it alone through a corporation proposal, to elect a [[ref: sponsor]] among the corporations that granted it a `Sponsorship` ([[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)), or to stop being sponsored. Electing a sponsor redirects the corporation's receipts to it ([[FUND-CHECK-2]](#fund-check-2-credit)), which is a treasury decision of the corporation itself, not of a delegate.
 
 ##### [MOD-CO-MSG-4-1] Set Sponsor parameters
 
-- `corporation` (account): (Signer) the `policy_address` of the corporation, whose group policy account executes this message through a passed proposal.
+- `signer` (account) (*mandatory*): (Signer) the `policy_address` of the corporation, whose group policy account executes this message through a passed proposal. This message carries no `corporation` field: the corporation is its only possible signer.
 - `sponsor_corporation_id` (uint64) (*optional*): id of the `Corporation` to elect as sponsor; null to clear the current sponsor.
 
 ##### [MOD-CO-MSG-4-2] Set Sponsor precondition checks
@@ -2519,8 +2538,8 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-CO-MSG-4-2-1] Set Sponsor basic checks
 
-- `corporation` (account): (Signer) the message is executed by the corporation's group policy account; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
-- let `co` be the `Corporation` entry resolved from the message's `corporation` account.
+- `signer` (account): (Signer) the message is executed by the corporation's group policy account; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `signer`.
+- let `co` be the `Corporation` entry resolved from the message's `signer` account.
 - if `sponsor_corporation_id` is not null:
   - a `Corporation` entry `sp` with `sp.id` = `sponsor_corporation_id` MUST exist, and `sp.id` MUST differ from `co.id`;
   - a `Sponsorship` entry `s` MUST exist with `s.sponsor_corporation_id` = `sp.id` and `s.sponsored_corporation_id` = `co.id`, and MUST NOT be expired (`s.period` is set, or `s.expiration` is null, or `s.expiration` > `now()`).
@@ -2586,14 +2605,14 @@ Return the list of parameters of this module as a json file:
 
 #### [MOD-ES-MSG-1] Create Ecosystem
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 ##### [MOD-ES-MSG-1-1] Create Ecosystem parameters
 
-An authorized `delegate` that would like to create a [[ref: ecosystem]] MUST call this method by specifying:
+An authorized [[ref: delegate]], or the `corporation` itself, that would like to create a [[ref: ecosystem]] MUST call this method by specifying:
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the ecosystem's identifier, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) (or at the creation of the corporation) and owned by `corporation`.
 - `language` (string) (*mandatory*): primary language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of this ecosystem.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
@@ -2609,9 +2628,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)); else method MUST abort ([VID ownership](#vid-ownership)).
 - `language` (string(17)) (*mandatory*): MUST be a language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)).
 - `doc_url` (string) (*mandatory*): MUST be a valid URL .
@@ -2623,7 +2641,7 @@ Several `Ecosystem` entries MAY share the same identifier. The identity of an `E
 
 ###### [MOD-ES-MSG-1-2-2] Create Ecosystem fee checks
 
-Fee payer MUST have an available balance to cover the [[ref: estimated transaction fees]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.ecosystem_creation_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)).
+Fee payer MUST have an available balance to cover the [[ref: estimated transaction fees]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.ecosystem_creation_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)). The exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired, else [[ref: transaction]] MUST abort: a deposit is not priced with a stale rate, any more than a mint is.
 
 ##### [MOD-ES-MSG-1-3] Create Ecosystem execution
 
@@ -2665,12 +2683,12 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-ES-MSG-2] Update Ecosystem
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 ##### [MOD-ES-MSG-2-1] Update Ecosystem parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `id` (uint64) (*mandatory*): the id of the ecosystem.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry that becomes the ecosystem's identifier. To rotate the identifier string itself, use [[MOD-VS-MSG-3]](#mod-vs-msg-3-rotate-verifiable-identifier).
 - `transition` (duration) (*optional*): length of the transition window during which the former identifier remains acceptable to trust resolution for the schema credentials (VTJSCs) the ecosystem issued under it, as after a rotation ([[ref: VT spec]]). Defaults to `GlobalVariables.vid_rotation_max_transition`; 0 ends the former identifier at once. Carried by the event; the VPR does not store it.
@@ -2683,9 +2701,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - `id` (uint64) (*mandatory*): an `Ecosystem` entry `ecosystem` with id `id` MUST exist and `co.id` MUST equal `ecosystem.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else method MUST abort ([VID ownership](#vid-ownership)).
 - `transition` (duration) (*optional*): if provided, MUST be between 0 and `GlobalVariables.vid_rotation_max_transition` (inclusive).
@@ -2708,12 +2725,12 @@ The method MUST emit an event carrying `ecosystem.id`, the former `vs_id`, the n
 
 #### [MOD-ES-MSG-3] Archive Ecosystem
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 ##### [MOD-ES-MSG-3-1] Archive Ecosystem parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `id` (uint64) (*mandatory*): id of the ecosystem.
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
 
@@ -2725,9 +2742,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - load `Ecosystem` `ecosystem` from `id`. `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean.
   - If `archive` is true and `ecosystem.archived` is true, MUST abort as `Ecosystem` is already archived.
@@ -2754,6 +2770,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-ES-MSG-4-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-ES-MSG-4-2] Update Module Parameters precondition checks
@@ -2762,6 +2779,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-ES-MSG-4-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`> `key` MUST exist, else abort.
 
 ###### [MOD-ES-MSG-4-2-2] Update Module Parameters fee checks
@@ -2829,14 +2847,14 @@ The initial `GovernanceFrameworkVersion` and its first `GovernanceFrameworkDocum
 
 #### [MOD-GF-MSG-1] Add Governance Framework Document
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`. For the [[ref: NGF]] (`network` true) it can only be executed through a [[ref: governance proposal]].
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal. For the [[ref: NGF]] (`network` true) it can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-GF-MSG-1-1] Add Governance Framework Document parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)). When `network` is true, it is the [[ref: council account]].
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]] whose governance framework will be modified. If set, the `corporation` MUST be the controller of the target `Ecosystem`. If not set, the target subject is the `corporation`'s own [[ref: CGF]].
-- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `delegate` are absent, and the message is executed through a [[ref: governance proposal]].
+- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` and `corporation` MUST be absent, `signer` is the [[ref: council account]], and the message is executed through a [[ref: governance proposal]].
 - `doc_language` (string) (*mandatory*): language tag ([BCP 47](https://www.rfc-editor.org/info/bcp47)) of the governance framework document.
 - `doc_url` (string) (*mandatory*): URL where the document is published.
 - `doc_digest_sri` (string) (*mandatory*): digest_sri of the document.
@@ -2850,11 +2868,10 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-GF-MSG-1-2-1] Add Governance Framework Document basic checks
 
-if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a [[ref: governance proposal]], else abort; the signer and authorization checks below then do not apply.
+if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a [[ref: governance proposal]]: `signer` MUST be `GlobalVariables.council_account`, else abort; the checks below on `corporation` and on the authorization of `signer` then do not apply.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - Define `subject` as:
   - if `network` is true: the [[ref: NGF]]; `ecosystem_id` MUST be absent.
   - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
@@ -2897,14 +2914,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-GF-MSG-2] Increase Active Governance Framework Version
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`. For the [[ref: NGF]] (`network` true) it can only be executed through a [[ref: governance proposal]].
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal. For the [[ref: NGF]] (`network` true) it can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-GF-MSG-2-1] Increase Active Governance Framework Version parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)). When `network` is true, it is the [[ref: council account]].
 - `ecosystem_id` (uint64) (*optional*): id of the target [[ref: ecosystem]]. If set, the `corporation` MUST be its controller. If not set, the target subject is the `corporation`'s own [[ref: CGF]].
-- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` MUST be absent, `corporation` and `delegate` are absent, and the message is executed through a [[ref: governance proposal]].
+- `network` (boolean) (*optional*): if true, the target subject is the [[ref: NGF]]: `ecosystem_id` and `corporation` MUST be absent, `signer` is the [[ref: council account]], and the message is executed through a [[ref: governance proposal]].
 - `acceptance_grace` (duration) (*mandatory*): the grace period, from the activation, during which the parties bound by the framework that accepted a former version keep acting under it ([[GF-CHECK]](#gf-check-governance-framework-acceptance-checks)): the corporations of the network for the [[ref: NGF]], the corporations acting in the ecosystem for an [[ref: EGF]], the delegates of the corporation for a [[ref: CGF]]. MUST be at least `GlobalVariables.gf_acceptance_grace_min`; no maximum.
 
 ##### [MOD-GF-MSG-2-2] Increase Active Governance Framework Version precondition checks
@@ -2913,11 +2930,10 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-GF-MSG-2-2-1] Increase Active Governance Framework Version basic checks
 
-- if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a [[ref: governance proposal]], else abort; the signer and authorization checks below then do not apply.
+- if a mandatory parameter is not present, method MUST abort. When `network` is true the message MUST be carried by a [[ref: governance proposal]]: `signer` MUST be `GlobalVariables.council_account`, else abort; the checks below on `corporation` and on the authorization of `signer` then do not apply.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - Define `subject` as:
   - if `network` is true: the [[ref: NGF]]; `ecosystem_id` MUST be absent.
   - if `ecosystem_id` is set: the `Ecosystem` entry with this id. The entry MUST exist and `subject.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
@@ -2948,7 +2964,7 @@ The method MUST emit an event carrying the subject (`ecosystem_id`, `corporation
 
 #### [MOD-GF-MSG-3] Accept Governance Framework Version
 
-- Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+- Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`.
 - `corporation` CAN execute this method alone through a group proposal, which is how a corporation with no delegate authorized for this message re-accepts the [[ref: NGF]] once a grace period has ended.
 
 It records the [[ref: governance framework acceptance]] by the corporation of the version in force of the [[ref: NGF]], or of the [[ref: EGF]] of an ecosystem ([[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance), [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance)). A corporation never accepts a [[ref: CGF]]: its own binds it as its author, and those of other corporations bind their delegates ([[MOD-GF-MSG-4]](#mod-gf-msg-4-accept-corporation-governance-framework)). Only the version in force can be accepted: a draft is still editable.
@@ -2956,7 +2972,7 @@ It records the [[ref: governance framework acceptance]] by the corporation of th
 ##### [MOD-GF-MSG-3-1] Accept Governance Framework Version parameters
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
-- `delegate` (account) (*conditional*): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal: the corporation's group policy account is then the only signer (an implementation whose message carries a single signer field realizes this path by setting `delegate` to the `corporation` account itself, the policy account that executes the proposal), as in [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization).
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `ecosystem_id` (uint64) (*conditional*): id of the [[ref: ecosystem]] whose [[ref: EGF]] is accepted. MUST be absent when `network` is true, present otherwise.
 - `network` (boolean) (*optional*): if true, the [[ref: NGF]] is accepted.
 - `version` (int) (*mandatory*): the version accepted. MUST be the version in force.
@@ -2968,8 +2984,8 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-GF-MSG-3-2-1] Accept Governance Framework Version basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
-- if `delegate` is present: `delegate` (account): (Signer) signature must be verified, and [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type. Else (group proposal) [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`. On either path, [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) is not applied when `network` is true (this message is the one that satisfies it).
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type. On either path, [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) is not applied when `network` is true (this message is the one that satisfies it).
 - exactly one of `ecosystem_id` and `network` MUST be given, else abort.
 - if `network` is true: let `ngf` be the version in force of the [[ref: NGF]] (the last entry of `GlobalVariables.network_governance_framework_versions` whose `active_since` is set); `version` MUST equal `ngf.version`, else abort.
 - else: an `Ecosystem` entry `e` with id `ecosystem_id` MUST exist, else abort; `e.corporation_id` MUST NOT equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), else abort: the controller of an ecosystem accepts nothing; `version` MUST equal `e.active_version`, else abort.
@@ -2991,11 +3007,11 @@ The method MUST emit an event carrying `co.id`, `ecosystem_id` or the network, `
 
 #### [MOD-GF-MSG-4] Accept Corporation Governance Framework
 
-The `delegate` of a [DelegateAuthorization](#delegateauthorization) CAN execute this method. It records the [[ref: governance framework acceptance]] by the delegate of the version in force of the [[ref: CGF]] of the corporation that authorized it ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-a-delegate)). The message is signed by the delegate alone, outside [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks): it is the act that makes the authorization usable, so it cannot require it. The delegate pays the [[ref: network fees]], or the corporation does through a [FeeGrant](#feegrant) whose `msg_types` include `AcceptCorporationGovernanceFramework` ([MsgType](#msgtype) 31), which [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization) adds to the allowance of every delegate it grants a fee limit, and which a [[ref: sponsor]] covering the corporation's fees pays like any other fee of its delegates ([Delegation Module](#delegation-module)); the message is not delegable.
+The [[ref: delegate]] of a [DelegateAuthorization](#delegateauthorization) CAN execute this method. It records the [[ref: governance framework acceptance]] by the delegate of the version in force of the [[ref: CGF]] of the corporation that authorized it ([[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-a-delegate)). The message is signed by the delegate alone, outside [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks): it is the act that makes the authorization usable, so it cannot require it. The delegate pays the [[ref: network fees]], or the corporation does through a [FeeGrant](#feegrant) whose `msg_types` include `AcceptCorporationGovernanceFramework` ([MsgType](#msgtype) 31), which [[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization) adds to the allowance of every delegate it grants a fee limit, and which a [[ref: sponsor]] covering the corporation's fees pays like any other fee of its delegates ([Delegation Module](#delegation-module)); the message is not delegable.
 
 ##### [MOD-GF-MSG-4-1] Accept Corporation Governance Framework parameters
 
-- `delegate` (account): (Signer) the account that holds the authorization.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg. It MUST be the delegate itself, the account that holds the authorization.
 - `corporation_id` (uint64) (*mandatory*): id of the [[ref: corporation]] whose [[ref: CGF]] is accepted.
 - `version` (int) (*mandatory*): the version accepted. MUST be the version in force.
 
@@ -3006,9 +3022,9 @@ If any of these precondition checks fail, method MUST abort.
 ###### [MOD-GF-MSG-4-2-1] Accept Corporation Governance Framework basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `delegate` (account): (Signer) signature must be verified.
+- `signer` (account): (Signer) signature must be verified.
 - a `Corporation` entry `co` with id `corporation_id` MUST exist, else abort.
-- a `DelegateAuthorization` entry `dauthz` with key (`co.id`, `delegate`) MUST exist, else abort: the corporation grants first ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization)), the delegate accepts, then uses the authorization. The expiration and the budget of `dauthz` are not checked here.
+- a `DelegateAuthorization` entry `dauthz` with key (`co.id`, `signer`) MUST exist, else abort: the corporation grants first ([[MOD-DE-MSG-3]](#mod-de-msg-3-grant-delegate-authorization)), the delegate accepts, then uses the authorization. The expiration and the budget of `dauthz` are not checked here.
 - `version` MUST equal `co.active_version`, else abort.
 
 ###### [MOD-GF-MSG-4-2-2] Accept Corporation Governance Framework fee checks
@@ -3023,7 +3039,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - set `dauthz.accepted_cgf_version` to `version` and persist.
 
-The method MUST emit an event carrying `co.id`, `delegate`, `version` and the current timestamp.
+The method MUST emit an event carrying `co.id`, the delegate account `signer`, `version` and the current timestamp.
 
 #### [MOD-GF-QRY-1] Get Governance Framework Version
 
@@ -3073,6 +3089,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-GF-MSG-5-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-GF-MSG-5-2] Update Module Parameters precondition checks
@@ -3081,6 +3098,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-GF-MSG-5-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Governance Framework parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `gf_acceptance_grace_min`, if updated, MUST be a duration > 0, else abort.
 
@@ -3104,7 +3122,7 @@ Anyone CAN run this [[ref: query]].
 
 ##### [MOD-GF-QRY-3-1] List Module Parameters execution of the query
 
-Return the list of the existing parameters and their values (the Governance Framework group of [GlobalVariables](#globalvariables)).
+Return the list of the existing parameters and their values: the Governance Framework group of [GlobalVariables](#globalvariables), and its Network governance group, which no message changes and no other query returns (`council_account`, `network_governance_framework_versions`, `ngf_acceptance_deadline`). Return also `ngf_version`, the `version` of the [[ref: NGF]] version in force (the last entry of `network_governance_framework_versions` whose `active_since` is set): a client needs it to build [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation) and [[MOD-GF-MSG-3]](#mod-gf-msg-3-accept-governance-framework-version), and reads it here by key, without an indexer.
 
 ### [NGG] Genesis Network Governance Framework
 
@@ -3114,16 +3132,16 @@ The genesis state MUST contain one `GovernanceFrameworkVersion` entry with neith
 
 #### [MOD-CS-MSG-1] Create Credential Schema
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 ##### [MOD-CS-MSG-1-1] Create Credential Schema parameters
 
 An [[ref: account]] that would like to create a [[ref: credential schema]] MUST call this method by specifying:
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `ecosystem_id` (uint64) (*mandatory*): id of the ecosystem.
-- `json_schema` (string) (*mandatory*): the [[ref: Json Schema]] of the credential.
+- `json_schema` (string) (*mandatory*): the [[ref: JSON Schema]] of the credential.
 - `issuer_grantor_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
 - `verifier_grantor_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
 - `issuer_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
@@ -3137,7 +3155,7 @@ An [[ref: account]] that would like to create a [[ref: credential schema]] MUST 
 - `presentation_mode` (PresentationMode) (*conditional*): mandatory if `subject_kind` is SERVICE, MUST be absent otherwise.
 - `credential_format` (CredentialFormat) (*mandatory*).
 - `credential_anchoring` (CredentialAnchoring) (*conditional*): mandatory unless `credential_format` is ANONCREDS, where it is NO_DIGEST if absent.
-- `presentation_validity_period` (duration) (*optional*): seconds, default to null (no reliance period).
+- `presentation_validity_period` (duration) (*optional*): seconds, default to 0 (no reliance period).
 - `pricing_asset_type` (PricingAssetType) (*mandatory*).
 - `pricing_asset` (string) (*mandatory*).
 - `digest_algorithm` (string) (*mandatory*): MUST be one of the lowercase tokens `sha384` or `sha512`, as defined in [W3C VTCs: Determining Credential Issuance Time](https://verana-labs.github.io/verifiable-trust-spec/#w3c-vtcs-determining-credential-issuance-time).
@@ -3150,11 +3168,10 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - `ecosystem_id` MUST represent an existing `Ecosystem` entry `ecosystem` and `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
-- `json_schema` MUST be a valid [[ref: Json Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: Json Schema]], whatever was submitted, is set during execution to `vpr:verana:<chain id>:cs:<id>`, the chain id of the VPR and the auto-generated id of this `CredentialSchema`.
+- `json_schema` MUST be a valid [[ref: JSON Schema]], and size must not be greater than `GlobalVariables.credential_schema_schema_max_size`. `$id` of the [[ref: JSON Schema]], whatever was submitted, is set during execution to `vpr:verana:<chain id>:cs:<id>`, the chain id of the VPR and the auto-generated id of this `CredentialSchema`.
 - `issuer_grantor_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_accreditation_validity_period_max_days` days.
 - `verifier_grantor_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_verifier_grantor_accreditation_validity_period_max_days` days.
 - `issuer_accreditation_validity_period` must be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_accreditation_validity_period_max_days` days.
@@ -3210,7 +3227,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - `cs.presentation_mode`: `presentation_mode` (null if `subject_kind` is PERSON)
   - `cs.credential_format`: `credential_format`
   - `cs.credential_anchoring`: `credential_anchoring` if present, else NO_DIGEST (ANONCREDS)
-  - `cs.presentation_validity_period`: `presentation_validity_period` (null if absent)
+  - `cs.presentation_validity_period`: `presentation_validity_period` (0 if absent)
   - `cs.created`: current timestamp
   - `cs.archived`: false
   - `cs.pricing_asset_type`: `pricing_asset_type`
@@ -3223,14 +3240,14 @@ If needed, depending on configuration mode, Ecosystem controller MAY need to cre
 
 #### [MOD-CS-MSG-2] Update Credential Schema
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 ##### [MOD-CS-MSG-2-1] Update Credential Schema parameters
 
 An [[ref: account]] that would like to update a [[ref: credential schema]] MUST call this method by specifying:
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `id` id of the credential schema (*mandatory*);
 - `issuer_grantor_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
 - `verifier_grantor_accreditation_validity_period` (number) (*mandatory*): days, 0 meaning that the entries never expire.
@@ -3250,9 +3267,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
 - load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), else MUST abort.
 - `issuer_grantor_accreditation_validity_period` MUST be between 0 (never expire) and `GlobalVariables.credential_schema_issuer_grantor_accreditation_validity_period_max_days` days.
@@ -3287,14 +3303,14 @@ The method MUST emit an event carrying `cs.id`, the value of each attribute abov
 
 #### [MOD-CS-MSG-3] Archive Credential Schema
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 ##### [MOD-CS-MSG-3-1] Archive Credential Schema parameters
 
 An [[ref: account]] that would like to archive or unarchive a [[ref: credential schema]] MUST call this method by specifying:
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `id` (uint64) (*mandatory*): id of the credential schema.
 - `archive` (boolean) (*mandatory*), true means archive, false means unarchive.
 
@@ -3306,9 +3322,8 @@ If any of these precondition checks fail, method MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - `id` MUST represent an existing `CredentialSchema` entry `cs`.
 - load `Ecosystem` `ecosystem` from `cs.ecosystem_id`. `ecosystem.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), else MUST abort.
 - `archive` (boolean) (*mandatory*) MUST be a boolean. 
@@ -3337,6 +3352,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-CS-MSG-4-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-CS-MSG-4-2] Update Module Parameters precondition checks
@@ -3345,6 +3361,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-CS-MSG-4-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Credential Schema parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `credential_schema_schema_max_size` and every `credential_schema_*_max_days` value, if updated, MUST be > 0, else abort.
 
@@ -3402,19 +3419,19 @@ Anyone CAN execute this method.
 
 return found entry (if any).
 
-#### [MOD-CS-QRY-3] Render Json Schema
+#### [MOD-CS-QRY-3] Render JSON Schema
 
 Anyone CAN execute this method.
 
-##### [MOD-CS-QRY-3-1] Render Json Schema parameters
+##### [MOD-CS-QRY-3-1] Render JSON Schema parameters
 
 - `id` of the [[ref: credential schema]] (*mandatory*);
 
-##### [MOD-CS-QRY-3-2] Render Json Schema checks
+##### [MOD-CS-QRY-3-2] Render JSON Schema checks
 
 - `id` must be a uint64.
 
-##### [MOD-CS-QRY-3-3] Render Json Schema execution
+##### [MOD-CS-QRY-3-3] Render JSON Schema execution
 
 Render found entry (if any). In case value is returned by a REST API, content type MUST be set to "application/schema+json".
 
@@ -3506,7 +3523,7 @@ issuer --> holder
 - when `issuer_onboarding_mode` is `OPEN`, any service issues under its [VerifiableService](#verifiableservice) entry: its [ParticipationTrustDeposit](#participationtrustdeposit) for the schema is created by the first trust units minted on its payments ([[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units)) and holds what the ecosystem can slash; it can self-create an `ISSUER` entry ([[MOD-AC-MSG-14]](#mod-ac-msg-14-self-create-accreditation)) to declare the fees it charges;
 - when `verifier_onboarding_mode` is `OPEN` or `CREDENTIAL`, any authorized service verifies under its `VerifiableService` entry likewise; it can self-create a `VERIFIER` entry.
 
-Entries are not kept once they end: an expired or revoked entry is deleted, and the deposit of its participation remains ([ParticipationTrustDeposit](#participationtrustdeposit)).
+Entries are not kept once they end: an expired or revoked entry is deleted. The deposit of its participation remains while it holds trust units, a slash count or an exclusion, and is deleted with its last entry otherwise ([ParticipationTrustDeposit](#participationtrustdeposit)).
 
 An [[ref: onboarding process]] involves an [[ref: applicant]] (the [[ref: corporation]] of a given Accreditation entry) and a [[ref: validator]] Accreditation. It can require the applicant to pay `validation_fees` in addition to [[ref: transaction fees]].
 
@@ -3541,14 +3558,14 @@ Some unexpected situations may arise, and the methods handle them. Examples:
 
 #### [MOD-AC-MSG-1] Start Onboarding
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 ##### [MOD-AC-MSG-1-1] Start Onboarding parameters
 
 An Applicant that would like to start an onboarding process MUST execute this method by specifying:
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `role` (AccreditationRole) (*mandatory*): (ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER): the Accreditation role that the applicant would like to get;
 - `validator_accreditation_id` (uint64) (*mandatory*): the [[ref: validator]] accreditation (parent accreditation in the tree), chosen by the applicant; its entry MUST exist (an expired or revoked validator entry no longer does).
 - `validation_fees` (number) (*optional*): Requested validation_fees for this accreditation (can be modified by validator).
@@ -3567,9 +3584,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `role` (AccreditationRole) (*mandatory*) MUST be a valid AccreditationRole: ISSUER_GRANTOR, VERIFIER_GRANTOR, ISSUER, VERIFIER, HOLDER.
 - `validator_accreditation_id` (uint64) (*mandatory*): see [MOD-AC-MSG-1-2-2](#mod-ac-msg-1-2-2-start-onboarding-role-and-mode-checks).
@@ -3580,7 +3596,7 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account); else method MUST abort ([VID ownership](#vid-ownership)).
 
 :::note
-A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. When the schema's `holder_onboarding_mode` is `ISSUER_ONBOARDING_PROCESS`, the onboarding process MUST have reached `VALIDATED` before the credential is issued: the Verifiable Trust specification requires an active `HOLDER` entry at issuance, and trust resolution requires it to stay in force (its window open, neither its participation nor its corporation excluded; a slash debt withdraws nothing). When it is `NO_ONBOARDING_PROCESS`, no `HOLDER` entry exists and the issuer applies its own checks.
+A holder MAY directly connect to the DID VS of an issuer in order to get issued a credential. When the schema's `holder_onboarding_mode` is `ISSUER_ONBOARDING_PROCESS`, the onboarding process MUST have reached `VALIDATED` before the credential is issued: the Verifiable Trust specification requires an active `HOLDER` entry at issuance, and trust resolution requires it to stay recognized, as that specification defines the term (its window open, neither its participation nor its corporation excluded; a slash debt withdraws nothing). When it is `NO_ONBOARDING_PROCESS`, no `HOLDER` entry exists and the issuer applies its own checks.
 :::
 
 ###### [MOD-AC-MSG-1-2-2] Start Onboarding role and mode checks
@@ -3669,7 +3685,7 @@ if size of `accreditations[]` > 0, an onboarding process is already running in t
 
 Additionally, if any entry of `d.accreditation_ids` matches the same validator with `onboarding_state` = VALIDATED and `effective_until` = NULL, [[ref: transaction]] MUST abort: that entry never expires, so a successor entry could never pass [MOD-AC-MSG-3-2-4](#mod-ac-msg-3-2-4-validate-onboarding-overlap-checks); the validator's corporation MUST first set an `effective_until` on that entry ([Set Accreditation Effective Until](#mod-ac-msg-8-set-accreditation-effective-until)), or `corporation` MUST revoke it ([Revoke Accreditation](#mod-ac-msg-9-revoke-accreditation)).
 
-Finally, the list is bounded: [[ref: transaction]] MUST abort if `d.accreditation_ids` already holds `GlobalVariables.accreditation_max_entries_per_participation` entries, counting only the entries that are PENDING or whose `effective_until` is null or later than `now()` (an expired entry may await the end-of-block deletion). The two checks above already leave at most two entries under one validator, the current entry and the pending successor.
+Finally, the list is bounded: [[ref: transaction]] MUST abort if two entries of `d.accreditation_ids` already name `validator_accreditation_id` as their validator (under one validator entry, a participation holds its current entry and at most one successor; the two checks above do not ensure it, since a current entry and a validated successor whose `effective_from` is still in the future pass both), or if `d.accreditation_ids` already holds `GlobalVariables.accreditation_max_entries_per_participation` entries. Both counts take only the entries that are PENDING or whose `effective_until` is null or later than `now()`: an expired entry may await the end-of-block deletion, and counting it would make the result depend on the block.
 
 > Note: the candidates are the current entries of the participation, listed on its deposit; no index of entries exists. `role` and `vs_id` are those of the key; all entries sharing a `validator_accreditation_id` share its `schema_id` by construction.
 
@@ -3748,7 +3764,7 @@ For audit or governance purposes, the [[ref: validator]] should register a diges
 
 #### [MOD-AC-MSG-2] Renew Onboarding
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 - Requesting a renewal has no effect on `Accreditation` expiration or issued credentials.
 - Renewal is only possible with the same validator.
@@ -3760,8 +3776,8 @@ Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
 
 ##### [MOD-AC-MSG-2-1] Renew Onboarding parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `id` (uint64) (*mandatory*): id of the `Accreditation` entry for which applicant would like to renew the onboarding process;
 
 ##### [MOD-AC-MSG-2-2] Renew Onboarding precondition checks
@@ -3772,9 +3788,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `id` MUST be a valid uint64 and an `Accreditation` entry with the same id MUST exist (an expired or revoked entry no longer does).
 - the `onboarding_state` of that entry MUST be VALIDATED: a renewal cannot be started while an onboarding process is PENDING (its escrow, and the account that funded it, would otherwise be overwritten).
@@ -3890,14 +3905,14 @@ The method MUST emit an event carrying `applicant_accreditation.id`, the `onboar
 
 #### [MOD-AC-MSG-3] Validate Onboarding
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`, and so can the VS account of the validator's entry.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and so can the VS account of the validator's entry. The `corporation` CAN also execute it alone through a group proposal.
 
 ##### [MOD-AC-MSG-3-1] Validate Onboarding parameters
 
 An [[ref: account]] that would like to set a validation entry to VALIDATED MUST execute this method by specifying:
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, the [[ref: VS account]] that this method accepts, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `id` (uint64) (*mandatory*): id of the onboarding process;
 - `effective_until` (timestamp) (*optional*): timestamp until when (exclusive) this `Accreditation` is effective, null if no time limit should be set for this `Accreditation` entry or if we want it to be aligned with the onboarding process expiration timestamp calculated by this method.
 - `validation_fees` (number) (*mandatory*): Agreed validation_fees for this `Accreditation` entry. Can be set only the first time this method is called (cannot be set for renewals). Use 0 for no fees.
@@ -3915,19 +3930,21 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified.
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` from `id`. If no entry found, abort.
 - Load `Accreditation` entry `validator_accreditation` from `applicant_accreditation.validator_accreditation_id`.
 - Authorization:
 
 either (executed by any delegate of corporation):
-[[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) MUST pass for this (`corporation`, `delegate`) tuple and `ValidateOnboarding` message.
-[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) tuple and `ValidateOnboarding` message.
+[[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) MUST pass for this (`corporation`, `signer`) tuple and `ValidateOnboarding` message.
+[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `signer`) tuple and `ValidateOnboarding` message.
 OR (executed by the VS account of the validator's entry, `VerifiableService[validator_accreditation.vs_id].vs_account`):
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `delegate`, `perm` = `validator_accreditation`, `vs` = `VerifiableService[validator_accreditation.vs_id]`) tuple.
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `signer`, `perm` = `validator_accreditation`, `vs` = `VerifiableService[validator_accreditation.vs_id]`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the same tuple.
+OR (executed by the corporation itself through a group proposal; `signer` is the `corporation` account):
+[[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
 else MUST abort.
 
 [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and the ecosystem of the schema of `applicant_accreditation`.
@@ -4039,8 +4056,8 @@ Fees and Trust Deposits — settle the escrow (mint-at-validation):
 - else (pricing in an arbitrary COIN or in FIAT):
   - calculate `validator_deposit_bound` = `applicant_accreditation.onboarding_deposit` / 2, rounded down, and `applicant_deposit_bound` = `applicant_accreditation.onboarding_deposit` − `validator_deposit_bound` (the applicant escrowed both, see fee checks);
   - transfer the full amount `applicant_accreditation.onboarding_fees` in the pricing [[ref: denom]] from the escrow [[ref: account]] to the [[ref: funding account]] of the validator corporation `Corporation[validator_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) (for COIN pricing this already equals the fee minus its deposit-bound portion, see fee checks; 0 if FIAT).
-- if `validator_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `validator_accreditation.corporation_id`, `vs_id` = `validator_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `validator_accreditation.role`, `source_account` = escrow account, `amount` = `validator_deposit_bound`).
-- if `applicant_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `applicant_accreditation.corporation_id`, `vs_id` = `applicant_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `applicant_accreditation.role`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`).
+- if `validator_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`vs_id` = `validator_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `validator_accreditation.role`, `source_account` = escrow account, `amount` = `validator_deposit_bound`).
+- if `applicant_deposit_bound` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`vs_id` = `applicant_accreditation.vs_id`, `schema_id` = `cs.id`, `role` = `applicant_accreditation.role`, `source_account` = escrow account, `amount` = `applicant_deposit_bound`).
 
 Update `Accreditation` `applicant_accreditation`:
 
@@ -4070,14 +4087,14 @@ The method MUST emit an event carrying `applicant_accreditation.id`, the `effect
 
 #### [MOD-AC-MSG-6] Withdraw Onboarding Request
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 At any time, [[ref: applicant]] of an onboarding process may request cancellation of the process, provided state is PENDING. Upon method execution, the pending validation is cancelled and the escrowed [[ref: trust fees]] and deposit-bound amount are refunded. If `effective_from` is set (a renewal), `onboarding_state` is set back to VALIDATED; else the entry, never validated, is deleted.
 
 ##### [MOD-AC-MSG-6-1] Withdraw Onboarding Request parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `id` (uint64) (*mandatory*): id of the `Accreditation` entry;
 
 ##### [MOD-AC-MSG-6-2] Withdraw Onboarding Request precondition checks
@@ -4088,9 +4105,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) is not applied: an applicant withdraws its request, and recovers its escrow, whatever the state of its acceptance of the ecosystem's framework.
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` with this id. It MUST exist.
@@ -4119,14 +4135,14 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
   - set `applicant_accreditation.onboarding_deposit` to 0.
 
 - set `applicant_accreditation.onboarding_funding_account` to null.
-- if `applicant_accreditation.effective_from` is null (validation never completed): delete the entry, removing its id from deposit(`applicant_accreditation`).`accreditation_ids` ([Accreditation](#accreditation)).
+- if `applicant_accreditation.effective_from` is null (validation never completed): delete the entry, removing its id from deposit(`applicant_accreditation`).`accreditation_ids` ([Accreditation](#accreditation)), then delete that deposit if it is now empty ([ParticipationTrustDeposit](#participationtrustdeposit)).
 - else: set `applicant_accreditation.onboarding_state` to VALIDATED and `applicant_accreditation.onboarding_last_state_change` to `now`; if `applicant_accreditation.effective_until` is not null and not later than `now`, the entry has expired meanwhile: delete it likewise.
 
 The method MUST emit an event carrying `id` and the outcome.
 
 #### [MOD-AC-MSG-7] Create Root Accreditation
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 This method is used by controller authorities of Ecosystems. When they create a Credential Schema, they need to create (a) `Accreditation` entry(ies) of role ECOSYSTEM so that other participants can run onboarding processes (if schema mode is ECOSYSTEM) or self create their `Accreditation` entries (schema mode set to OPEN).
 
@@ -4134,8 +4150,8 @@ This method is used by controller authorities of Ecosystems. When they create a 
 
 An [[ref: account]] that would like to create an `Accreditation` entry MUST call this method by specifying:
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `schema_id` (uint64) (*mandatory*)
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Accreditation` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
 - `effective_from` (timestamp) (*optional*): timestamp from which (inclusive) this `Accreditation` entry is effective. If present, MUST NOT be lower than the current block timestamp. If absent, the VPR MUST set it to the current block timestamp during execution.
@@ -4152,9 +4168,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `schema_id` MUST be a valid uint64 and a [[ref: credential schema]] entry with this id MUST exist.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account); else method MUST abort ([VID ownership](#vid-ownership)).
@@ -4233,7 +4248,7 @@ The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`
 
 #### [MOD-AC-MSG-8] Set Accreditation Effective Until
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 This method can be called:
 
@@ -4243,8 +4258,8 @@ This method can be called:
 
 ##### [MOD-AC-MSG-8-1] Set Accreditation Effective Until parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `id` (uint64) (*mandatory*): id of the `Accreditation` entry;
 - `effective_until` (timestamp) (*mandatory*): timestamp until when (exclusive) this `Accreditation` will be effective.
 
@@ -4256,9 +4271,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` from `id`. If no entry found, abort.
@@ -4316,7 +4330,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-AC-MSG-9] Revoke Accreditation
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 This method can only be called:
 
@@ -4326,8 +4340,8 @@ This method can only be called:
 
 ##### [MOD-AC-MSG-9-1] Revoke Accreditation parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `id` (uint64) (*mandatory*): id of the `Accreditation` entry;
 
 ##### [MOD-AC-MSG-9-2] Revoke Accreditation precondition checks
@@ -4338,9 +4352,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads), unless `co` owns the entry (Option #3 of the advanced checks): a corporation revokes its own entry, and so leaves the ecosystem, whatever the state of its acceptance.
 - `id` MUST be a valid uint64.
 - Load `Accreditation` entry `applicant_accreditation` from `id`. If no entry found, abort.
@@ -4440,7 +4453,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - Load `Accreditation` entry `applicant_accreditation` from `id`.
 - if `applicant_accreditation.onboarding_state` is PENDING (a renewal in progress): transfer `applicant_accreditation.onboarding_fees` (in its denom) and `applicant_accreditation.onboarding_deposit` (in [[ref: native denom]]) back from the escrow [[ref: account]] to `applicant_accreditation.onboarding_funding_account`, as [[MOD-AC-MSG-6-3]](#mod-ac-msg-6-3-withdraw-onboarding-request-execution) does: nothing was minted for them.
-- delete `applicant_accreditation`, removing its id from deposit(`applicant_accreditation`).`accreditation_ids` and, for a root entry, from `CredentialSchema[applicant_accreditation.schema_id].root_accreditation_ids` ([Accreditation](#accreditation)).
+- delete `applicant_accreditation`, removing its id from deposit(`applicant_accreditation`).`accreditation_ids` and, for a root entry, from `CredentialSchema[applicant_accreditation.schema_id].root_accreditation_ids` ([Accreditation](#accreditation)); then delete that deposit if it is now empty ([ParticipationTrustDeposit](#participationtrustdeposit)).
 
 The method MUST emit an event carrying `id`, `schema_id`, `role`, `vs_id` and `now`: the revocation is recorded by the transaction, the VPR keeps no revoked entry.
 
@@ -4450,45 +4463,23 @@ Only the `vs_account` of the issuer's [VerifiableService](#verifiableservice) en
 
 A Credential Issuance implies a `CredentialIssuance` transaction when the fees computed for it are greater than 0, or when the schema's `credential_anchoring` is DIGEST or REVOCABLE_DIGEST, since the digest is anchored through it; an issuance with zero fees under a NO_DIGEST schema needs no [[ref: exchange record]] and leaves no transaction (see [CredentialSchema](#credentialschema)).
 
-The holder, the Verifiable User Agent or Verifiable Service that receives the issuer's offer, MUST send the issuer:
+The exchange between the issuer and the holder that leads to this transaction is defined by the [[ref: VT spec]], not by this specification: [[VT-PROTO-ISS]](https://verana-labs.github.io/verifiable-trust-spec/#vt-proto-iss-credential-issuance) defines its messages and their order, and [[CIT]](https://verana-labs.github.io/verifiable-trust-spec/#cit-credential-issued-to) the checks the holder makes on the transaction before it stores the credential. This method takes two of its parameters from that exchange:
 
-- an `exchange_id` (uuid) for exchange identification.
+- `exchange_id` is chosen by the holder, which sends it to the issuer when it accepts the offer.
+- `vua_issuer_accreditation_id` is set by the issuer itself when the holder is a **Verifiable User Agent**: from the User Agent credential it verified at connection or, for the issuance of a User Agent credential itself, to its own `ISSUER` entry under the User Agent schema. The holder sends nothing for it, and the parameter is absent when the holder is a **Verifiable Service**.
 
-In an exchange with a **Verifiable User Agent**, the issuer sets `vua_issuer_accreditation_id` itself, from the User Agent credential it verified at connection or, for the issuance of a User Agent credential itself, to its own `ISSUER` entry under the User Agent schema ([[ref: VT spec]]); the holder sends nothing for it, and the parameter is absent when the holder is a **Verifiable Service**.
-
-When an exchange record is required, the issuer MUST create it, then the holder MUST check, through the notification of an indexer of its whitelist ([[ref: VT spec]]), that the transaction was included and is valid: signed for the issuer's entry, carrying the `exchange_id`, the schema and, for a User Agent, its vendor's entry as `vua_issuer_accreditation_id`, before storing the issued credential. The VPR stores no exchange: the transaction is the receipt ([CredentialIssuance](#credentialissuance)).
-
-```plantuml
-scale max 800 width
-actor "Holder\nVUA or VS" as Issued 
-participant "Issuer\nVS" as Issuer 
-participant "VPR" as vpr 
-participant "Indexer" as indexer
-
-
-Issued <-- Issuer: I want to issue a credential from schema id ... to you
-Issued --> Issuer: Here is the exchange_id
-Issuer --> vpr: record the issuance
-Issued <-- Issuer: exchange recorded (exchange_id, tx hash)
-vpr --> indexer: CredentialIssuance event
-Issued <-- indexer: exchange notification
-Issued <-- Issuer: Send credential
-Issued <-- Issued: verify the exchange transaction through the indexer, then store the credential
-
-```
-
-See [[ref: VT spec]].
+The VPR stores no exchange: the transaction is the receipt ([CredentialIssuance](#credentialissuance)).
 
 ##### [MOD-AC-MSG-10-1] Record Credential Issuance parameters
 
 An [[ref: account]] that would like to record a `CredentialIssuance` MUST send a Msg by specifying:
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `vs_account` (account): (Signer) the [[ref: VS account]] of the issuer's `VerifiableService` entry.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg. It MUST be the [[ref: VS account]] of the issuer's `VerifiableService` entry (its `vs_account`): this method is reserved to VS accounts, and neither a delegate nor the `corporation` account can execute it.
 - `exchange_id` (uuid) (*mandatory*): the exchange identifier agreed with the holder, in canonical textual form; a correlation key carried by the event ([CredentialIssuance](#credentialissuance)), not stored.
 - `schema_id` (uint64) (*mandatory*): the id of the `CredentialSchema` entry of the credential.
 - `issuer_accreditation_id` (uint64) (*conditional*): the id of the issuer's own `ISSUER` `Accreditation` entry for the schema. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
-- `issuer_vs_id` (uint64) (*conditional*): the issuer's own `VerifiableService` entry, when it holds no active `ISSUER` entry for the schema (the schema's `issuer_onboarding_mode` is OPEN); the issuer branch of the fees is then the schema's root ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
+- `issuer_vs_id` (uint64) (*conditional*): the issuer's own `VerifiableService` entry, when it holds no active `ISSUER` entry for the schema (the schema's `issuer_onboarding_mode` is OPEN); the issuer branch of the fees is then the schema's root ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)). It is accepted under OPEN only: under an onboarding mode an issuer is authorized to issue only while it holds an entry, so an issuer whose entry has ended records no issuance until it is onboarded again. [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) does accept the service entry of such an issuer: a presentation concerns a credential issued earlier, while the issuer was authorized, and the issuer takes no part in it.
 - `vua_issuer_accreditation_id` (uint64) (*optional*): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the User Agent credential the VUA presented at connection, as identified by the issuer's own trust resolution of that credential, or the issuer's own `ISSUER` entry when the exchange issues the User Agent credential itself ([[ref: VT spec]]): the vendor that receives the Verifiable User Agent reward. Absent when the holder is a Verifiable Service.
 - `credential_digest` (bytes, base64 in the API) (*conditional*): the credential digest defined by the Verifiable Trust specification for the container (the `digestJCS` of a W3C credential, the digest of the issuer-signed JWT of an SD-JWT credential, the digest of the `issuerAuth` of an mdoc credential), mandatory unless the schema's `credential_anchoring` is NO_DIGEST, absent then (its anchoring fixes the effective issuance time, see [Digest](#digest)).
 - `credential_valid_until` (timestamp) (*conditional*): under a schema whose `credential_anchoring` is REVOCABLE_DIGEST, the expiry of the credential (`validUntil`, `exp` or `validityInfo.validUntil`, see the [[ref: VT spec]]), mandatory; absent otherwise. The `Digest` entry is kept until then ([Digests Module](#digests-module)).
@@ -4498,7 +4489,7 @@ An [[ref: account]] that would like to record a `CredentialIssuance` MUST send a
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the VS Account Authorization of the signer ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `vs_account` (account): (Signer) signature must be verified.
+- `signer` (account): (Signer) signature must be verified.
 - `exchange_id` MUST be a valid UUID.
 - `schema_id` MUST refer to an existing `CredentialSchema` entry `cs`, else abort.
 - exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided, else abort.
@@ -4507,9 +4498,9 @@ Issuer (the payer):
 
 - if `issuer_accreditation_id` is provided: load `issuer_accreditation` from it (abort if not found); `issuer_accreditation.role` MUST be ISSUER and `issuer_accreditation.schema_id` MUST equal `schema_id`, and `issuer_accreditation` MUST be an [[ref: active accreditation]], else abort. Let `vs` = `VerifiableService[issuer_accreditation.vs_id]`.
 - else (`issuer_vs_id` is provided): `vs` = `VerifiableService[issuer_vs_id]` MUST exist, else abort. `cs.issuer_onboarding_mode` MUST be OPEN, else abort. Let `d` be `ParticipationTrustDeposit[(vs.id, schema_id, ISSUER)]` if it exists: `d.accreditation_ids` MUST list no [[ref: active accreditation]] (the caller MUST reference it instead), and `d` MUST NOT be [[ref: barred]] (`d.unrepaid_slash` = 0 and `d.excluded` false), else abort: the exclusion is the ecosystem's sanction on a participation it did not onboard. `TrustDeposit[co.id]`, if it exists, MUST NOT be barred either (`unrepaid_slash` = 0 and `excluded` false), else abort. `issuer_accreditation` is null.
-- `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `vs.vs_account` MUST equal `vs_account`, else abort.
+- `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `vs.vs_account` MUST equal `signer`, else abort: the signer is the VS account of that entry.
 
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `vs_account`, `issuer_accreditation`, `vs`) tuple (`issuer_accreditation` MAY be null).
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `signer`, `issuer_accreditation`, `vs`) tuple (`issuer_accreditation` MAY be null).
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the same tuple.
 [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and `cs.ecosystem_id`: an issuer that has not accepted the [[ref: EGF]] in force records no issuance, so it anchors nothing.
 
@@ -4544,6 +4535,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-AC-MSG-11-1] Update Accreditation Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-AC-MSG-11-2] Update Accreditation Module Parameters precondition checks
@@ -4552,6 +4544,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-AC-MSG-11-2-1] Update Accreditation Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Accreditation parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `accreditation_max_entries_per_participation`, if updated, MUST be an integer from 2 to 64, else abort. A lower value applies to the entries created afterwards: no existing entry is removed, and a participation that holds more entries than the new value creates none until it is back under it.
 
@@ -4576,12 +4569,14 @@ This method can only be called by either:
 - a `corporation` ancestor validator of an entry of this participation;
 - the `corporation` controller of the `Ecosystem` object, owner of the corresponding credential schema.
 
+Either acts through an authorized [[ref: delegate]], or alone through a group proposal.
+
 A slash is the ecosystem's sanction on a participation: it removes trust units, which the corporation owes back ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), revokes the participation's validated entries (a renewal pending on one of them included) and, when the ecosystem so decides (`exclude`), excludes it until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)). The participation is [[ref: barred]] while its debt is unrepaid or its exclusion stands, and while it is, its corporation cannot act in the ecosystem under any other participation either ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)). An ecosystem cannot slash while the corporation carries a network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)): the trust deposit then holds less than its parts say, and the network debt is repaid first.
 
 ##### [MOD-AC-MSG-12-1] Slash Participation Trust Deposit parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation to slash, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]`.
 - `percent` (decimal) (*mandatory*): the fraction of the [[ref: trust units]] currently held by this participation (`d.tu`) to slash, greater than 0 and at most 1. The ecosystem governance framework defines the fractions of its sanction schedule; a corporation holding several participations in the ecosystem is slashed participation by participation, one message each, which lets the ecosystem target the ones that breached.
 - `exclude` (boolean) (*mandatory*): the ecosystem's decision to exclude the participation in addition to the debt: true withdraws trust from everything the participation issued or validated before the slash ([[ref: VT spec]]) and bars it until the ecosystem lifts it ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)); false bars it until the debt is repaid only. A later slash with false does not clear an earlier exclusion. Only the ecosystem controller (Option #2 of the authority checks) MAY set it to true: exclusion is the ecosystem's decision ([[MOD-AC-MSG-13]](#mod-ac-msg-13-set-participation-exclusion)), and a validator ancestor, one grantor among several, slashes with `exclude` false.
@@ -4594,9 +4589,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - `vs_id` MUST name an existing `VerifiableService` entry, `schema_id` an existing `CredentialSchema` entry `cs`, and `d` MUST exist, else abort.
 - `percent` MUST be greater than 0 and lower or equal to 1, and `d.tu` MUST be greater than 0, else MUST abort (an ecosystem can only slash trust units accumulated in the context of its own schema — never the rest of the corporation's deposit).
 - `TrustDeposit[VerifiableService[vs_id].corporation_id]` MUST have `unrepaid_slash` = 0, else abort: the corporation repays its network debt first ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)).
@@ -4643,21 +4637,21 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 - calculate `tu_amount` = `d.tu` × `percent`, rounded down to the ledger precision ([Trust Unit Index](#trust-unit-index)): the amount of trust units removed; if it is 0, abort. With `percent` = 1, `tu_amount` equals `d.tu` exactly.
 - calculate `slashed_fiat` = `d.fiat_cost` × `tu_amount` / `d.tu`, rounded down to the ledger precision — the debt in [[ref: main fiat currency]], equal to the pro-rata **mint-time cost basis** of the slashed trust units (what was originally paid for them, not their decayed value: trust scores decay, **liabilities do not**).
 
-use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`corporation_id` = `VerifiableService[vs_id].corporation_id`, `vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`, `exclude`), which records the debt on `d`, increments `d.slash_count` and sets `d.excluded` when `exclude` is true. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), the `corporation_id` of the deposit, `tu_amount`, `slashed_fiat`, `exclude` and `now`.
+use [[MOD-TD-MSG-7]](#mod-td-msg-7-record-ecosystem-slash) Record Ecosystem Slash with (`vs_id`, `schema_id`, `role`, `tu_amount`, `fiat_amount` = `slashed_fiat`, `exclude`), which records the debt on `d`, increments `d.slash_count` and sets `d.excluded` when `exclude` is true. The method MUST emit an event carrying the deposit key (`vs_id`, `schema_id`, `role`), the `corporation_id` of the deposit, `tu_amount`, `slashed_fiat`, `exclude` and `now`.
 
 - for each entry `p` listed in `d.accreditation_ids` whose `effective_from` is set: delete it exactly as [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation) does (the escrow of a pending renewal refunded to `p.onboarding_funding_account`, the id removed from `d.accreditation_ids`, one event each). An entry under its initial onboarding process (`effective_from` null) stays until its applicant cancels it ([[MOD-AC-MSG-6]](#mod-ac-msg-6-withdraw-onboarding-request)); it cannot be validated while the participation is barred.
 
 
 #### [MOD-AC-MSG-13] Set Participation Exclusion
 
-Any authorized `delegate` CAN execute this method on behalf of the `corporation` controlling the `Ecosystem` of the schema.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of the `corporation` controlling the `Ecosystem` of the schema, and that `corporation` CAN execute it alone through a group proposal.
 
 This method sets or lifts the exclusion of a [[ref: participation]] (`ParticipationTrustDeposit.excluded`). With `excluded` true, the ecosystem withdraws trust from the participation without slashing it: the participation is [[ref: barred]], its corporation can no longer act in the ecosystem under any other participation ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)), its entries stay in state but are not active, and everything it issued or validated resolves as untrusted while the exclusion stands ([[ref: VT spec]]); a slash ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) sets the same flag while also taking trust units and deleting the validated entries. With `excluded` false, it lifts an exclusion set by a slash or by this method: the participation may again create entries and run entry-less exchanges under the schema, and the entries it still holds resume within their windows. A slash itself is not undone: the trust units stay slashed until repaid ([[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash)), the participation stays barred while that debt is open, `slash_count` keeps its value, and the entries a slash deleted are not restored; the party onboards or self-creates anew.
 
 ##### [MOD-AC-MSG-13-1] Set Participation Exclusion parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]`.
 - `excluded` (boolean) (*mandatory*): the new value of the flag.
 
@@ -4669,9 +4663,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - `vs_id` MUST name an existing `VerifiableService` entry and `schema_id` an existing `CredentialSchema` entry `cs`, else abort. If `d` exists, `d.excluded` MUST differ from `excluded`, else abort (nothing to change); if `d` does not exist, `excluded` MUST be true, else abort.
 
 ###### [MOD-AC-MSG-13-2-2] Set Participation Exclusion controller checks
@@ -4695,7 +4688,7 @@ The method MUST emit an event carrying `vs_id`, `schema_id`, `role`, `excluded` 
 
 #### [MOD-AC-MSG-14] Self Create Accreditation
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 This simple `Accreditation`-creation method can be used to self-create an ISSUER (resp. VERIFIER) `Accreditation` entry if issuance mode (resp. verification mode) is set to `OPEN` (resp. `OPEN` or `CREDENTIAL`) for a given schema. Such an entry is **optional**: under these modes a service issues or verifies under its [VerifiableService](#verifiableservice) entry alone ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)), and the [ParticipationTrustDeposit](#participationtrustdeposit) of its participation, created by its first mint, holds what the [[ref: ecosystem governance authority]] can slash. An issuer self-creates an entry to declare the `verification_fees` and `validation_fees` it charges; either party may self-create one to bound its participation with a window.
 
@@ -4705,8 +4698,8 @@ Even if a schema is OPEN, candidate MUST make sure they comply with the EGF else
 
 ##### [MOD-AC-MSG-14-1] Self Create Accreditation parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `role` (AccreditationRole) (*mandatory*): ISSUER or VERIFIER.
 - `validator_accreditation_id` (uint64) (*mandatory*): MUST be an ECOSYSTEM [[ref: active accreditation]] or [[ref: future accreditation]].
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry of the [[ref: VS]] this `Accreditation` entry refers to, registered beforehand by [[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service) and owned by `corporation`.
@@ -4725,9 +4718,8 @@ if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
 Load `Accreditation` `validator_accreditation` from `validator_accreditation_id`.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) MUST pass for `co` and the ecosystem of the `CredentialSchema` entry this message acts under (that of the `Accreditation` entry it loads, or of its `schema_id`).
 - `role` (AccreditationRole) (*mandatory*): MUST be ISSUER or VERIFIER, else abort.
 - `validator_accreditation_id` (uint64) (*mandatory*): `validator_accreditation` MUST be an ECOSYSTEM [[ref: active accreditation]] or [[ref: future accreditation]].
@@ -4767,7 +4759,7 @@ for each `Accreditation` entry `p` from `accreditations[]`, [[ref: transaction]]
 - (`effective_until` is NULL or `p.effective_from` is lower than `effective_until`), AND
 - (`p.effective_until` is NULL or `p.effective_until` is greater than `effective_from_r`).
 
-Finally, the list is bounded: [[ref: transaction]] MUST abort if two entries listed in that deposit already name `validator_accreditation_id` as their validator (under one root entry, a participation holds its current entry and at most one successor), or if the deposit already lists `GlobalVariables.accreditation_max_entries_per_participation` entries, counting only the entries that are PENDING or whose `effective_until` is null or later than `now()` (an expired entry may await the end-of-block deletion).
+Finally, the list is bounded: [[ref: transaction]] MUST abort if two entries listed in that deposit already name `validator_accreditation_id` as their validator (under one root entry, a participation holds its current entry and at most one successor), or if the deposit already lists `GlobalVariables.accreditation_max_entries_per_participation` entries. Both counts take only the entries that are PENDING or whose `effective_until` is null or later than `now()`: an expired entry may await the end-of-block deletion, and counting it would make the result depend on the block.
 
 > Note: the candidates are the current entries of the participation, read from its deposit.
 
@@ -4818,12 +4810,12 @@ The method MUST emit an event carrying the new entry's `id`, `schema_id`, `role`
 This method CAN be executed, for a `VerifiableService` entry `vs` identified directly by `vs_id`:
 
 - by the `vs_account` of `vs`, acting on behalf of `Corporation[vs.corporation_id]` under the entry's `msg_types`; or
-- by any `delegate` authorized by `Corporation[vs.corporation_id]` for this message type.
+- by any [[ref: delegate]] authorized by `Corporation[vs.corporation_id]` for this message type, or by that corporation alone through a group proposal.
 
 and, for an `Accreditation` entry `perm` identified by `id`:
 
 - by the `vs_account` of `VerifiableService[perm.vs_id]`, acting on behalf of `Corporation[perm.corporation_id]`; or
-- by any ancestor validator of `perm` in the `Accreditation` tree (from the direct parent up to the root `Accreditation` entry). For an ancestor validator `v`, the method CAN be executed by the `vs_account` of `VerifiableService[v.vs_id]`, or by any `delegate` authorized by `Corporation[v.corporation_id]` for this message type.
+- by any ancestor validator of `perm` in the `Accreditation` tree (from the direct parent up to the root `Accreditation` entry). For an ancestor validator `v`, the method CAN be executed by the `vs_account` of `VerifiableService[v.vs_id]`, or by any [[ref: delegate]] authorized by `Corporation[v.corporation_id]` for this message type. The corporation of an ancestor validator CAN also execute it alone through a group proposal.
 
 This method is intended to be used by external services (such as the Verana indexer) to be notified that a trust resolution must be performed for the identifier of `vs`, or of the `VerifiableService` entry referenced by `perm`. Typical use cases include:
 
@@ -4836,8 +4828,8 @@ The method does not modify the [[ref: VPR]] state; it only emits an event that o
 
 ##### [MOD-AC-MSG-15-1] Trigger Resolver parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, the [[ref: VS account]] that this method accepts, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `vs_id` (uint64) (*conditional*): id of the `VerifiableService` entry for which a trust resolution must be triggered. Exactly one of `vs_id` and `id` MUST be provided.
 - `id` (uint64) (*conditional*): id of the `Accreditation` entry for which a trust resolution must be triggered.
 
@@ -4849,27 +4841,27 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified.
 - exactly one of `vs_id` and `id` MUST be provided, else abort.
 - if `vs_id` is provided: it MUST be a valid uint64, and a `VerifiableService` entry `vs` with this id MUST exist, else abort.
 - if `id` is provided: it MUST be a valid uint64; load `Accreditation` entry `perm` from `id` (abort if no entry found); `perm` MUST be an [[ref: active accreditation]], else abort.
 
 ###### [MOD-AC-MSG-15-2-2] Trigger Resolver authorization checks
 
-At least one of the authorization paths below MUST pass, else [[ref: transaction]] MUST abort.
+At least one of the authorization paths below MUST pass, else [[ref: transaction]] MUST abort. Neither [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) nor [[BAR-CHECK-1]](#bar-check-1-ecosystem-bar) is run, in the `vs_id` form or in the `id` form: a corporation that has not accepted the governance framework of the ecosystem, or that is barred in it, can still ask for a new trust resolution. [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) applies, as on every message that carries a `corporation` account.
 
 *Path 1 — vs_account of the target entry*
 
 - Let `vs` be the given entry (`vs_id` form) or `VerifiableService[perm.vs_id]` (`id` form).
 - `co.id` MUST equal `vs.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account).
-- [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `delegate`, `perm` or null, `vs`) tuple.
+- [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `signer`, `perm` or null, `vs`) tuple.
 - [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the same tuple.
 
-*Path 2 — delegate of the owner (`vs_id` form only)*
+*Path 2 — delegate of the owner, or the owner itself (`vs_id` form only)*
 
 - `co.id` MUST equal `vs.corporation_id`.
-- [[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) MUST pass for this (`corporation`, `delegate`) tuple and message `TriggerResolver`, and [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for the same tuple and message.
+- [[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) MUST pass for this (`corporation`, `signer`) tuple and message `TriggerResolver`, and [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for the same tuple and message; or the corporation executes the message itself through a group proposal (`signer` is the `corporation` account).
 
 *Path 3 — ancestor validator in the `Accreditation` tree (`id` form only)*
 
@@ -4880,8 +4872,9 @@ The target `perm` itself is excluded from this walk; only its ancestors (from th
   - load `v` from `v.validator_accreditation_id`; if it no longer exists, stop: Path 3 fails.
   - if `v` is not a [[ref: active accreditation]], continue with the next iteration.
   - if `co.id` != `v.corporation_id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), continue with the next iteration.
-  - if [AUTHZ-CHECK-1](#authz-check-1-delegate-authorization-checks) pass for this (`corporation`, `delegate`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `delegate`) tuple and message `TriggerResolver`, then authorization is granted => match.
-  - else if `delegate` equals `VerifiableService[v.vs_id].vs_account` and [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) and [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) pass for (`corporation`, `delegate`, `v`, `VerifiableService[v.vs_id]`), authorization is granted => match.
+  - if the corporation executes the message itself through a group proposal (`signer` is the `corporation` account), authorization is granted => match.
+  - else if [AUTHZ-CHECK-1](#authz-check-1-delegate-authorization-checks) pass for this (`corporation`, `signer`) tuple and message `TriggerResolver` AND [AUTHZ-CHECK-2](#authz-check-2-fee-grant-checks) pass for this (`corporation`, `signer`) tuple and message `TriggerResolver`, then authorization is granted => match.
+  - else if `signer` equals `VerifiableService[v.vs_id].vs_account` and [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) and [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) pass for (`corporation`, `signer`, `v`, `VerifiableService[v.vs_id]`), authorization is granted => match.
 
 If the walk terminates without a match, Path 3 fails.
 
@@ -4899,7 +4892,7 @@ This method does not modify the state of the [[ref: VPR]]. It MUST emit an event
 - `vid`: its current identifier string, `VerifiableService[vs_id].vid`;
 - `accreditation_id`: equal to `id` when the `id` form was used, absent otherwise.
 
-> Note: the identity of the signers (`corporation`, `delegate`), the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `VerifiableService` entry and, when present, the `Accreditation` entry to resolve the owner `corporation`, the `vs_account` and the ancestor chain without duplicating them in the event payload.
+> Note: the `corporation` and the `signer` of the message, the fee payer, the block height and timestamp, and the full Msg payload are already observable from the transaction itself. Indexers MAY use the `VerifiableService` entry and, when present, the `Accreditation` entry to resolve the owner `corporation`, the `vs_account` and the ancestor chain without duplicating them in the event payload.
 
 #### [MOD-AC-MSG-16] Record Credential Presentation
 
@@ -4907,31 +4900,27 @@ Only the `vs_account` of the verifier's [VerifiableService](#verifiableservice) 
 
 A Credential Presentation implies a `CredentialPresentation` transaction when the fees computed for it are greater than 0, when the schema's `presentation_validity_period` is greater than 0 or when the verifier anchors the presentation digest; a presentation with zero fees and no digest to anchor needs no [[ref: exchange record]] and leaves no transaction (see [CredentialSchema](#credentialschema)).
 
-The holder, the Verifiable User Agent or Verifiable Service that receives the verifier's request, MUST send the verifier:
+The exchange between the verifier and the holder that leads to this transaction is defined by the [[ref: VT spec]], not by this specification: [[VT-PRES-VS]](https://verana-labs.github.io/verifiable-trust-spec/#vt-pres-vs-credential-presentation) defines its messages and their order (the verifier's request, the holder's answer, the verifier's presentation request and, for an anchored presentation, the holder's presentation digest) and the checks the holder makes on the transaction before it presents, and [[VT-DECL-RECORD]](https://verana-labs.github.io/verifiable-trust-spec/#vt-decl-record-exchange-records) when the holder requires an [[ref: exchange record]]. This method takes the following parameters from that exchange:
 
-- *mandatory*: per credential the holder will present (one credential of the schema at a time under an `ON_REQUEST` schema, the credentials its controller or the person selected under `ON_APPROVAL` or for a `PERSON` schema, [[ref: VT spec]]; an empty answer means that the holder presents nothing and the exchange ends without an exchange record): an `exchange_id` (uuid) chosen by the holder, the **issuer DID** of the credential, whether the holder requires a `CredentialPresentation` for it, and whether the presentation will be anchored. No VPR reference is sent: each party derives them through its indexer, as this method applies them. The issuer reference is the `ISSUER` `Accreditation` entry the credential's digest was anchored under while that entry exists, else an effective `ISSUER` entry of the issuer for the schema (validated, its `effective_from` passed), else the `vs_id` of the issuer's service entry (for a credential of a schema whose `credential_anchoring` is NO_DIGEST, an effective `ISSUER` entry of the issuer, else its service entry); the VPR refuses the service-entry form while the issuer holds an active entry, so that the issuer's branch is paid. The verifier reference is the verifier's active `VERIFIER` entry for the schema, else its service entry. A Verifiable User Agent that verifies has no service entry: it records no `CredentialPresentation`, and the holder computes its fees with [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) without a verifier reference.
-- *mandatory* when the schema's `presentation_validity_period` is greater than 0 (the holder reads the `CredentialSchema` entry at the time of the presentation, the VPR evaluates the value at the block), otherwise *optional* and only if the verifier asked for it in its request: the **presentation digest**, computed by the holder over the presentation it is about to send (the signed presentation as it will be transmitted: canonicalized with [JCS](https://www.rfc-editor.org/rfc/rfc8785) when it is a JSON document, its exact bytes otherwise; hashed with the `digest_algorithm` of the schema). The holder builds and signs the presentation first and sends only its digest at this step; the verifier anchors it through the `presentation_digest` parameter of the transaction. When it sends a presentation digest, the holder has selected the credential it will present, and the digest is that of its presentation. Unless the schema's `presentation_validity_period` is greater than 0, anchoring a presentation digest is decided by the verifier: a verifier that did not ask for it MUST NOT expect one, and a verifier that asked for it MUST anchor it, since the holder sends the presentation only after checking the transaction. The presentation MUST be a Verifiable Presentation signed by the holder and bound to the exchange identifier (or to the verifier's nonce), so that its digest differs from the credential's `digestJCS` and from any earlier presentation.
+- `exchange_id` is chosen by the holder, one per credential it will present, and sent in its answer.
+- The [[ref: issuer reference]] (`issuer_accreditation_id` or `issuer_vs_id`) and the [[ref: verifier reference]] (`verifier_accreditation_id` or `verifier_vs_id`) are sent by neither party: each party derives them through its indexer, from the issuer DID of the credential and from the verifier's identifier, as this method applies them. The issuer reference is the `ISSUER` `Accreditation` entry the credential's digest was anchored under while that entry exists, else an [[ref: effective entry]] of the issuer, of role `ISSUER`, for the schema, else the `vs_id` of the issuer's service entry (for a credential of a schema whose `credential_anchoring` is NO_DIGEST, an effective `ISSUER` entry of the issuer, else its service entry); the VPR refuses the service-entry form while the issuer holds an active entry, so that the issuer's branch is paid. The verifier reference is the verifier's active `VERIFIER` entry for the schema, else its service entry. A Verifiable User Agent that verifies has no service entry: it records no `CredentialPresentation`, and the holder computes its fees with [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) without a verifier reference.
+- `presentation_digest` is the digest of the presentation the holder is about to send, hashed with the `digest_algorithm` of the schema. The holder computes it once it has received the verifier's presentation request, which names what is disclosed, sends the verifier the digest only, and presents after it has checked the transaction. This method requires it when the schema's `presentation_validity_period`, evaluated at the block, is greater than 0; otherwise the verifier decides whether a digest is anchored.
+- `vua_issuer_accreditation_id` is set by the verifier itself when the holder is a **Verifiable User Agent**, from the User Agent credential it verified at connection. The holder sends nothing for it, and the parameter is absent when the holder is a **Verifiable Service**.
 
-The holder requires a `CredentialPresentation` for a credential when the `presentation_validity_period` of the schema, read at that time, is greater than 0, or when the fees it computes with [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) (for the schema, the issuer reference of that credential and the verifier reference it derived) are greater than 0; when the holder requires one, the verifier MUST create it whatever its own reading.
-
-In an exchange with a **Verifiable User Agent**, the verifier sets `vua_issuer_accreditation_id` itself, from the User Agent credential it verified at connection ([[ref: VT spec]]); the holder sends nothing for it, and the parameter is absent when the holder is a **Verifiable Service**.
-
-When an exchange record is required, the verifier MUST create it using the above information, then the holder MUST check, through the notification of an indexer of its whitelist ([[ref: VT spec]]), that the transaction was included and is valid: signed for the verifier's entry, carrying the `exchange_id`, the schema, for a User Agent its vendor's entry as `vua_issuer_accreditation_id`, the issuer reference of the credential it is about to present (fees are routed by that reference) and the presentation digest it sent, before sending the presentation. The VPR stores no exchange: the transaction is the receipt ([CredentialPresentation](#credentialpresentation)).
-
-See [[ref: VT spec]].
+The VPR stores no exchange: the transaction is the receipt ([CredentialPresentation](#credentialpresentation)).
 
 ##### [MOD-AC-MSG-16-1] Record Credential Presentation parameters
 
 An [[ref: account]] that would like to record a `CredentialPresentation` MUST send a Msg by specifying:
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `vs_account` (account): (Signer) the [[ref: VS account]] of the verifier's `VerifiableService` entry.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg. It MUST be the [[ref: VS account]] of the verifier's `VerifiableService` entry (its `vs_account`): this method is reserved to VS accounts, and neither a delegate nor the `corporation` account can execute it.
 - `exchange_id` (uuid) (*mandatory*): the exchange identifier agreed with the holder, in canonical textual form; a correlation key carried by the event ([CredentialPresentation](#credentialpresentation)), not stored.
 - `schema_id` (uint64) (*mandatory*): the id of the `CredentialSchema` entry of the credential.
 - `verifier_accreditation_id` (uint64) (*conditional*): the id of the verifier's own `VERIFIER` `Accreditation` entry for the schema. Exactly one of `verifier_accreditation_id` and `verifier_vs_id` MUST be provided.
 - `verifier_vs_id` (uint64) (*conditional*): the verifier's own `VerifiableService` entry, when it holds no active `VERIFIER` entry for the schema (the schema's `verifier_onboarding_mode` is OPEN or CREDENTIAL).
-- `issuer_accreditation_id` (uint64) (*conditional*): the id of the `ISSUER` `Accreditation` entry of the issuer of the credential: the entry the credential was anchored under, or an effective entry of the issuer (validated, its `effective_from` passed). It names the issuer branch that receives verification fees; the issuer takes no part in this transaction. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
-- `issuer_vs_id` (uint64) (*conditional*): the `VerifiableService` entry of the issuer, when the issuer holds no active `ISSUER` entry for the schema (an issuer acting under OPEN, or whose accreditation has since ended); the issuer branch of the fees is then the schema's root ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)).
+- `issuer_accreditation_id` (uint64) (*conditional*): the id of the `ISSUER` `Accreditation` entry of the issuer of the credential: the entry the credential was anchored under, or an [[ref: effective entry]] of the issuer. It names the issuer branch that receives verification fees; the issuer takes no part in this transaction. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
+- `issuer_vs_id` (uint64) (*conditional*): the `VerifiableService` entry of the issuer, when the issuer holds no active `ISSUER` entry for the schema (an issuer acting under OPEN, or whose accreditation has since ended); the issuer branch of the fees is then the schema's root ([[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries)). This is the consequence of keeping current state only: an entry that ended is deleted with the fees it declared and the validator it named, so the credentials of an issuer that left stay presentable, and neither that issuer nor the grantor that onboarded it is paid for them. An issuer that holds another effective `ISSUER` entry for the schema, under the same validator or under another one, is referenced by that entry and keeps being paid, along the branch of that entry.
 - `vua_issuer_accreditation_id` (uint64) (*optional*): in an exchange with a Verifiable User Agent, the `ISSUER` entry, under the User Agent schema, of the issuer of the User Agent credential the VUA presented at connection, as identified by the verifier's own trust resolution of that credential ([[ref: VT spec]]): the vendor that receives the Verifiable User Agent reward. Absent when the holder is a Verifiable Service.
 - `presentation_digest` (bytes, base64 in the API) (*conditional*): the presentation digest sent by the holder (see above): mandatory when `cs.presentation_validity_period` > 0 (see precondition checks), otherwise present when the verifier decided to anchor it.
 
@@ -4940,7 +4929,7 @@ An [[ref: account]] that would like to record a `CredentialPresentation` MUST se
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the VS Account Authorization of the signer ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `vs_account` (account): (Signer) signature must be verified.
+- `signer` (account): (Signer) signature must be verified.
 - `exchange_id` MUST be a valid UUID.
 - `schema_id` MUST refer to an existing `CredentialSchema` entry `cs`, else abort.
 - exactly one of `verifier_accreditation_id` and `verifier_vs_id` MUST be provided, and exactly one of `issuer_accreditation_id` and `issuer_vs_id`; else abort.
@@ -4949,9 +4938,9 @@ Verifier (the payer):
 
 - if `verifier_accreditation_id` is provided: load `verifier_accreditation` from it (abort if not found); `verifier_accreditation.role` MUST be VERIFIER and `verifier_accreditation.schema_id` MUST equal `schema_id`, and `verifier_accreditation` MUST be an [[ref: active accreditation]], else abort. Let `vs` = `VerifiableService[verifier_accreditation.vs_id]`.
 - else (`verifier_vs_id` is provided): `vs` = `VerifiableService[verifier_vs_id]` MUST exist, else abort. `cs.verifier_onboarding_mode` MUST be OPEN or CREDENTIAL, else abort. Let `d` be `ParticipationTrustDeposit[(vs.id, schema_id, VERIFIER)]` if it exists: `d.accreditation_ids` MUST list no [[ref: active accreditation]] (the caller MUST reference it instead), and `d` MUST NOT be [[ref: barred]] (`d.unrepaid_slash` = 0 and `d.excluded` false), else abort: the exclusion is the ecosystem's sanction on a participation it did not onboard. `TrustDeposit[co.id]`, if it exists, MUST NOT be barred either (`unrepaid_slash` = 0 and `excluded` false), else abort. `verifier_accreditation` is null.
-- `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `vs.vs_account` MUST equal `vs_account`, else abort.
+- `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `vs.vs_account` MUST equal `signer`, else abort: the signer is the VS account of that entry.
 
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `vs_account`, `verifier_accreditation`, `vs`) tuple (`verifier_accreditation` MAY be null).
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `signer`, `verifier_accreditation`, `vs`) tuple (`verifier_accreditation` MAY be null).
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the same tuple.
 [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and `cs.ecosystem_id`: a verifier that has not accepted the [[ref: EGF]] in force records no presentation, so it obtains no receipt.
 
@@ -4960,7 +4949,7 @@ Issuer reference (a fee beneficiary):
 - if `issuer_accreditation_id` is provided: load `issuer_accreditation` from it (abort if not found); `issuer_accreditation.role` MUST be ISSUER and `issuer_accreditation.schema_id` MUST equal `schema_id`, else abort; `issuer_accreditation.effective_from` MUST be non-null and not later than `now()` (the entry has been validated and became effective), else abort. No other state is required of it: the validity of the credential is established by trust resolution at its issuance time, and the barred filter of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
 - else (`issuer_vs_id` is provided): `VerifiableService[issuer_vs_id]` MUST exist, else abort; let `d_i` be `ParticipationTrustDeposit[(issuer_vs_id, schema_id, ISSUER)]` if it exists: `d_i.accreditation_ids` MUST list no [[ref: active accreditation]], else abort (the caller MUST reference it, so that the issuer's branch is paid). `issuer_accreditation` stays null: the issuer branch is the schema's root.
 
-> Note: the `vs_account` and `corporation_id` checks apply to the verifier only. The issuer reference generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only. An issuer whose entry has since expired or been revoked holds none, and is referenced by its service entry. A `CredentialPresentation` never anchors a credential: only a [CredentialIssuance](#credentialissuance), recorded by the issuer itself, does.
+> Note: the checks on `signer` and `corporation_id` apply to the verifier only. The issuer reference generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only. An issuer whose entry has since expired or been revoked holds none, and is referenced by its service entry. A `CredentialPresentation` never anchors a credential: only a [CredentialIssuance](#credentialissuance), recorded by the issuer itself, does.
 
 Presentation digest:
 
@@ -5205,8 +5194,8 @@ Set `vua_reward_portion` = 0 for this beneficiary. If `perm.[fee_field]` > 0:
 3. Execute transfers and mints for this beneficiary:
 
    - If `payee_fees_to_account` > 0: transfer `payee_fees_to_account` to the [[ref: funding account]] of `Corporation[perm.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) (in the appropriate denom).
-   - if `payee_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `perm.corporation_id`, `vs_id` = `perm.vs_id`, `schema_id` = `perm.schema_id`, `role` = `perm.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payee_trust_deposit`).
-   - if `payer_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `co.id`, (`vs_id`, `schema_id`, `role`) = `payer_participation`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payer_trust_deposit`).
+   - if `payee_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`vs_id` = `perm.vs_id`, `schema_id` = `perm.schema_id`, `role` = `perm.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payee_trust_deposit`).
+   - if `payer_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with ((`vs_id`, `schema_id`, `role`) = `payer_participation`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `payer_trust_deposit`).
 
 4. Accumulate the VUA reward:
 
@@ -5225,7 +5214,7 @@ If `vua_issuer_accreditation_id` is set AND `accumulated_vua_reward` > 0 AND `vu
 - `vua_trust_deposit` = `accumulated_vua_reward` × `GlobalVariables.trust_deposit_rate`, rounded down
 - `vua_fees_to_account` = `accumulated_vua_reward` - `vua_trust_deposit`
 - Transfer `vua_fees_to_account` to the [[ref: funding account]] of `Corporation[vua_issuer_accreditation.corporation_id]` ([[FUND-CHECK-2]](#fund-check-2-credit)) in [[ref: native denom]].
-- if `vua_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`corporation_id` = `vua_issuer_accreditation.corporation_id`, `vs_id` = `vua_issuer_accreditation.vs_id`, `schema_id` = `vua_issuer_accreditation.schema_id`, `role` = `vua_issuer_accreditation.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `vua_trust_deposit`).
+- if `vua_trust_deposit` > 0, use [[MOD-TD-MSG-1]](#mod-td-msg-1-mint-trust-units) Mint Trust Units with (`vs_id` = `vua_issuer_accreditation.vs_id`, `schema_id` = `vua_issuer_accreditation.schema_id`, `role` = `vua_issuer_accreditation.role`, `source_account` = the payer's [[ref: funding account]] ([[FUND-CHECK-1]](#fund-check-1-debit)), `amount` = `vua_trust_deposit`).
 
 #### [MOD-AC-QRY-1] List Accreditations
 
@@ -5524,8 +5513,7 @@ Only the modules that require trust deposit manipulation CAN call this method (i
 
 ##### [MOD-TD-MSG-1-1] Mint Trust Units method parameters
 
-- `corporation_id` (uint64) (*mandatory*): id of the corporation owner of the [[ref: trust deposit]]; `vs_id` MUST be owned by it.
-- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation the mint is attributed to, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, created with an empty ledger (`slash_count` 0, `excluded` false) and no entries when it does not exist (a party acting under an OPEN or CREDENTIAL mode without an entry).
+- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the participation the mint is attributed to, that is the [ParticipationTrustDeposit](#participationtrustdeposit) `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, created with an empty ledger (`slash_count` 0, `excluded` false) and no entries when it does not exist (a party acting under an OPEN or CREDENTIAL mode without an entry). The [[ref: trust deposit]] credited is that of the corporation that owns `vs_id`: the method takes no corporation as a parameter.
 - `source_account` (account) (*mandatory*): account funding the mint (the payer's [[ref: funding account]], or the escrow account at validation time).
 - `amount` (number) (*mandatory*): deposit-bound amount, in [[ref: native denom]].
 
@@ -5537,6 +5525,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - if a mandatory parameter is not present, [[ref: transaction]] MUST abort.
 - `amount` MUST be strictly positive.
+- `VerifiableService[vs_id]` MUST exist, else [[ref: transaction]] MUST abort. Let `corporation_id` be its `corporation_id`: the method derives the corporation from the participation, so that a mint cannot be credited to another corporation than the owner of the service entry.
 - neither `TrustDeposit[corporation_id]` (if it exists) nor `ParticipationTrustDeposit[(vs_id, schema_id, role)]` (if it exists) MAY be [[ref: barred]] (`unrepaid_slash` > 0 or `excluded`), else [[ref: transaction]] MUST abort: no trust units are minted to a barred participation or corporation.
 - the exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired ([Trust Unit Index](#trust-unit-index)), else [[ref: transaction]] MUST abort.
 
@@ -5550,7 +5539,7 @@ If all precondition checks passed, method is executed in a [[ref: transaction]].
 
 Method execution MUST perform the following tasks in a [[ref: transaction]], and rollback if any error occurs.
 
-- if a `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` does not exist, create entry `td`:
+- if a `TrustDeposit` entry `td` whose `td.corporation_id` equals `corporation_id` does not exist, create entry `td`:
   - set `td.corporation_id` to `corporation_id`;
   - set `td.tu`, `td.fiat_cost`, `td.unrepaid_slash`, `td.unrepaid_fiat` and `td.slash_count` to 0 and `td.excluded` to false;
 - calculate `minted_fiat` = `amount` × `P(now)`, at the ledger precision — the [[ref: main fiat currency]] cost of this mint, in minor units.
@@ -5577,6 +5566,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-TD-MSG-4-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-TD-MSG-4-2] Update Module Parameters precondition checks
@@ -5585,6 +5575,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-TD-MSG-4-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Trust Deposit and Trust Unit Index, Native denom and Network fees parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `tu_peg_value_genesis`, `main_fiat_currency`, `epoch_length` and `vna_total_supply`, immutable, MUST be refused ([GlobalVariables](#globalvariables)): the index only moves through decay, and the other three would re-denominate or re-index everything.
 - `network_gas_price` and `max_gas_per_msg_type`, if updated, take effect as stated by [[NET-FEE-1]](#net-fee-1-network-gas-price) and [[NET-FEE-3]](#net-fee-3-gas-cap-for-fee-granted-transactions).
@@ -5617,6 +5608,7 @@ The parts of the trust deposit, the [ParticipationTrustDeposit](#participationtr
 
 ##### [MOD-TD-MSG-5-1] Slash Trust Deposit method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `corporation_id` (uint64) (*mandatory*): id of the corporation we want to slash.
 - `percent` (decimal) (*mandatory*): the fraction of the corporation's [[ref: trust deposit]] to slash, greater than 0 and at most 1.
 - `exclude` (boolean) (*mandatory*): the network's decision to exclude the corporation in addition to the debt: true withdraws trust from everything the corporation issued or validated ([[ref: VT spec]]) and bars it until network governance lifts it ([[MOD-TD-MSG-8]](#mod-td-msg-8-set-corporation-exclusion)); false bars it until the debt is repaid only. A later slash with false does not clear an earlier exclusion.
@@ -5629,6 +5621,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `percent` MUST be greater than 0 and lower or equal to 1.
 - `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, and `td.tu` MUST be greater than 0.
 
@@ -5655,12 +5648,15 @@ Nothing is burned here: [[ref: trust units]] are not a token. The economic penal
 
 #### [MOD-TD-MSG-6] Repay Slash
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation` to repay a slash debt: the debt of one of its participations (an ecosystem slash, [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) or its network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)). Repayment is made in [[ref: native denom]] worth the debt's mint-time cost basis (`unrepaid_fiat`) at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the [ParticipationTrustDeposit](#participationtrustdeposit) entry, or to the [TrustDeposit](#trustdeposit) for a network debt, and the debt is cleared; the slash count and any exclusion stay. No trust units are minted. A debt is repaid in full in one message, successive unrepaid slashes having accumulated into it; partial repayment (installments) is a candidate for a later version.
+- Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`.
+- `corporation` CAN execute this method alone through a group proposal, so that a corporation can always repay, whatever its delegates and their spend limits.
+
+It repays a slash debt: the debt of one of the corporation's participations (an ecosystem slash, [[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)) or its network debt ([[MOD-TD-MSG-5]](#mod-td-msg-5-slash-trust-deposit)). Repayment is made in [[ref: native denom]] worth the debt's mint-time cost basis (`unrepaid_fiat`) at current rates, routed to the [[ref: distribution pool]]; the slashed trust units and their cost basis are restored to the [ParticipationTrustDeposit](#participationtrustdeposit) entry, or to the [TrustDeposit](#trustdeposit) for a network debt, and the debt is cleared; the slash count and any exclusion stay. No trust units are minted. A debt is repaid in full in one message, successive unrepaid slashes having accumulated into it; partial repayment (installments) is a candidate for a later version.
 
 ##### [MOD-TD-MSG-6-1] Repay Slash method parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*conditional*): the participation whose debt is repaid, `ParticipationTrustDeposit[(vs_id, schema_id, role)]`; all three present, or none to repay the corporation's network debt.
 
 ##### [MOD-TD-MSG-6-2] Repay Slash precondition checks
@@ -5671,16 +5667,15 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`, and no delegate spend limit applies, the corporation spending its own funds; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - if `vs_id` is given: `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]` MUST exist, `VerifiableService[vs_id].corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `d.unrepaid_slash` MUST be greater than 0; else: `td` = `TrustDeposit[co.id]` MUST exist, with `td.unrepaid_slash` greater than 0. Let `debt_tu` and `debt_fiat` be the `unrepaid_slash` and `unrepaid_fiat` of that entry.
 - the exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired ([Trust Unit Index](#trust-unit-index)).
 
 ###### [MOD-TD-MSG-6-2-2] Repay Slash fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- calculate `repay_amount` = `debt_fiat` / `P(now)`, rounded up to an integer number of [[ref: native denom]] base units, where `P(now)` is the price defined in [Trust Unit Index](#trust-unit-index). The [[ref: funding account]] of `co` MUST cover `repay_amount` ([[FUND-CHECK-1]](#fund-check-1-debit)), else [[ref: transaction]] MUST abort.
+- calculate `repay_amount` = `debt_fiat` / `P(now)`, rounded up to an integer number of [[ref: native denom]] base units, where `P(now)` is the price defined in [Trust Unit Index](#trust-unit-index). The [[ref: funding account]] of `co` MUST cover `repay_amount` ([[FUND-CHECK-1]](#fund-check-1-debit)), else [[ref: transaction]] MUST abort. On the delegate path `repay_amount` is the consumed amount of the message, counted against the delegate's spend limit ([[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) step 3).
 
 ##### [MOD-TD-MSG-6-3] Repay Slash execution of the method
 
@@ -5688,7 +5683,7 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 - define `now`: current timestamp.
 - calculate `repay_amount` as in fee checks.
-- debit `repay_amount` from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account.
+- if `repay_amount` is greater than 0, debit it from `co` per [[FUND-CHECK-1]](#fund-check-1-debit) and transfer it to the [[ref: distribution pool]] account. It is 0 only for a debt whose cost basis is 0: the message is still needed to clear the debt, and transfers nothing.
 - if `vs_id` is given: set `d.tu` to `d.tu` + `debt_tu`; set `d.fiat_cost` to `d.fiat_cost` + `debt_fiat`; set `d.unrepaid_slash` and `d.unrepaid_fiat` to 0; for the `TrustDeposit` entry `td` of `co`: set `td.tu` to `td.tu` + `debt_tu`; set `td.fiat_cost` to `td.fiat_cost` + `debt_fiat`.
 - else: set `td.tu` to `td.tu` + `debt_tu`; set `td.fiat_cost` to `td.fiat_cost` + `debt_fiat`; set `td.unrepaid_slash` and `td.unrepaid_fiat` to 0.
 - if `vs_id` is given, apply [[BAR-CHECK-2]](#bar-check-2-maintenance) to `d`: the participation leaves the list of its corporation unless it is excluded.
@@ -5704,8 +5699,7 @@ Make sure to **properly protect access to the execution of this method** else it
 
 ##### [MOD-TD-MSG-7-1] Record Ecosystem Slash method parameters
 
-- `corporation_id` (uint64) (*mandatory*): id of the corporation of the [[ref: trust deposit]].
-- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the slashed participation, `ParticipationTrustDeposit[(vs_id, schema_id, role)]`, whose service entry belongs to `corporation_id`.
+- `vs_id` (uint64), `schema_id` (uint64), `role` (AccreditationRole) (*mandatory*): the slashed participation, `ParticipationTrustDeposit[(vs_id, schema_id, role)]`. The [[ref: trust deposit]] debited is that of the corporation that owns `vs_id`: the method takes no corporation as a parameter.
 - `tu_amount` (decimal) (*mandatory*): amount of [[ref: trust units]] removed.
 - `fiat_amount` (decimal) (*mandatory*): cost basis of the removed trust units, in [[ref: main fiat currency]], as computed by the caller.
 - `exclude` (boolean) (*mandatory*): whether the participation is excluded as well ([[MOD-AC-MSG-12]](#mod-ac-msg-12-slash-participation-trust-deposit)).
@@ -5718,8 +5712,9 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `tu_amount` must be > 0 and `fiat_amount` must be ≥ 0.
-- `TrustDeposit` entry `td` whose `td.corporation_id` equals the supplied `corporation_id` MUST exist, with `td.tu` ≥ `tu_amount`, `td.fiat_cost` ≥ `fiat_amount` and `td.unrepaid_slash` = 0 (no open network debt).
+- `VerifiableService[vs_id]` MUST exist. Let `corporation_id` be its `corporation_id`: the method derives the corporation from the participation, so that the trust units cannot be taken from another corporation than the owner of the service entry.
+- `tu_amount` must be > 0 and `fiat_amount` must be ≥ 0. `fiat_amount` is 0 when the cost basis of the removed trust units rounds to 0: the debt is then recorded with `unrepaid_fiat` = 0, the participation is barred all the same (`unrepaid_slash` > 0), and [[MOD-TD-MSG-6]](#mod-td-msg-6-repay-slash) clears it with no transfer.
+- `TrustDeposit` entry `td` whose `td.corporation_id` equals `corporation_id` MUST exist, with `td.tu` ≥ `tu_amount`, `td.fiat_cost` ≥ `fiat_amount` and `td.unrepaid_slash` = 0 (no open network debt).
 - the deposit `d` = `ParticipationTrustDeposit[(vs_id, schema_id, role)]` MUST exist, with `d.tu` ≥ `tu_amount` and `d.fiat_cost` ≥ `fiat_amount`.
 
 ###### [MOD-TD-MSG-7-2-2] Record Ecosystem Slash fee checks
@@ -5743,6 +5738,7 @@ This method can only be called by a [[ref: governance proposal]]. It sets or lif
 
 ##### [MOD-TD-MSG-8-1] Set Corporation Exclusion method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `corporation_id` (uint64) (*mandatory*): id of the corporation.
 - `excluded` (boolean) (*mandatory*): the new value of the flag.
 
@@ -5752,6 +5748,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-TD-MSG-8-2-1] Set Corporation Exclusion basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `Corporation[corporation_id]` MUST exist, else abort. If the `TrustDeposit` entry `td` whose `td.corporation_id` equals `corporation_id` exists, `td.excluded` MUST differ from `excluded`, else abort (nothing to change); if it does not exist, `excluded` MUST be true, else abort.
 
 ###### [MOD-TD-MSG-8-2-2] Set Corporation Exclusion fee checks
@@ -5869,7 +5866,7 @@ Every [[ref: transaction]] pays [[ref: network fees]] in [[ref: native denom]], 
 
 - `GlobalVariables.network_gas_price` is the price of one unit of gas in [[ref: main fiat currency]].
 - The module maintains the derived state `network_gas_price_native`, the price of one unit of gas in [[ref: native denom]] base units for the current [[ref: epoch]], computed as `network_gas_price × rate / 10^rate_scale` from the `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]) required by [[XRG]](#xrg-genesis-exchange-rate). Implementations MUST use 128-bit or arbitrary-precision decimal arithmetic: the price of one unit of gas is a small fraction of one base unit.
-- At genesis, `network_gas_price_native` MUST be computed from the genesis values of `network_gas_price` and of that `ExchangeRate` entry. The genesis state MUST therefore define `GlobalVariables.main_fiat_currency`, `GlobalVariables.network_gas_price` and the exchange rate between the main fiat currency and the native denom: without them no transaction fee can be computed and no transaction can be executed.
+- At the first genesis of the chain, `network_gas_price_native` MUST be computed from the genesis values of `network_gas_price` and of that `ExchangeRate` entry. A genesis produced by exporting the state of a running chain MUST carry the exported `network_gas_price_native` unchanged, with the epoch state of [[TUG]](#tug-genesis-trust-unit-index): recomputing it would change the price inside an epoch and escape the clamp below. The genesis state MUST therefore define `GlobalVariables.main_fiat_currency`, `GlobalVariables.network_gas_price` and the exchange rate between the main fiat currency and the native denom: without them no transaction fee can be computed and no transaction can be executed.
 - In the boundary block of each epoch, as step (5) of the boundary sequence defined in [Trust Unit Index](#trust-unit-index), `network_gas_price_native` MUST be recomputed for the next epoch. If no enabled, non-expired exchange rate is available at that moment, the last stored rate MUST be used even if expired: unlike minting and repayment, fee computation never aborts for lack of a rate, so that the chain, and the exchange-rate update transaction itself, keep working.
 - The recomputed `network_gas_price_native` MUST NOT exceed twice, nor fall below half of, the value of the ending epoch: a larger move is clamped to that bound and reaches its target over successive boundaries. The clamp is a second guard behind the oracle's `max_deviation_bps`: a wrong push (a unit mistake, for instance) can at worst double the price of gas for one epoch, which keeps the corrective push and the council's votes affordable. It does not apply to the first computation at genesis.
 - Within an epoch `network_gas_price_native` MUST NOT change. A governance change of `network_gas_price` takes effect at the next boundary.
@@ -5947,6 +5944,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-DS-MSG-1-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-DS-MSG-1-2] Update Module Parameters precondition checks
@@ -5955,6 +5953,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-DS-MSG-1-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Distribution parameters listed above, else abort.
 - `validator_node_budget`, `council_budget` and `foundation_budget`, if updated, MUST be ≥ 0, in [[ref: main fiat currency]].
 - `validator_target_uptime` and `validator_min_uptime`: the resulting values MUST satisfy 0 ≤ `validator_min_uptime` ≤ `validator_target_uptime` ≤ 1, else abort.
@@ -6074,13 +6073,13 @@ In the same [[ref: transaction]], when a `FeeGrant` entry was deleted, also revo
 
 #### [MOD-DE-MSG-3] Grant Delegate Authorization
 
-- Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+- Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`.
 - `corporation` CAN execute this method alone through a group proposal
 
 ##### [MOD-DE-MSG-3-1] Grant Delegate Authorization method parameters
 
 - `corporation` (account) (*mandatory*): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
-- `delegate` (account) (*conditional*): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal: the corporation's group policy account is then the only signer (an implementation whose message carries a single signer field realizes this path by setting `delegate` to the `corporation` account itself, the policy account that executes the proposal).
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `grantee` (account) (*mandatory*): the account that receives the authorization from `corporation`.
 - `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): the type of messages `grantee` is authorized to execute on behalf of `corporation`.
 - `expiration` (timestamp) (*optional*): when the authorization expires, or the end of its first cycle when `authz_spend_limit_period` is set ([DelegateAuthorization](#delegateauthorization)); the fee allowance, when one is granted, receives the same `expiration`, as the end of its first cycle when `feegrant_spend_limit_period` is set, else as its absolute end ([FeeGrant](#feegrant)).
@@ -6093,8 +6092,8 @@ In the same [[ref: transaction]], when a `FeeGrant` entry was deleted, also revo
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
-- if `delegate` is present: `delegate` (account): (Signer) signature must be verified, and [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type. Else (group proposal) [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - `msg_types` ([MsgType](#msgtype)[]) (*mandatory*): MUST be a list of **VPR delegable messages only**, excepted `RecordCredentialIssuance`, `RecordCredentialPresentation` and `AcceptCorporationGovernanceFramework`, which are not allowed.
 - `expiration` (timestamp): if specified, MUST be in the future
 - `authz_spend_limit` (DenomAmount[]) if specified, MUST be a list of valid DenomAmounts
@@ -6106,6 +6105,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - `grantee` MUST NOT be the `vs_account` of any `VerifiableService` entry of the corporation (index of entries by VS account); else abort.
 - `grantee` MUST NOT be `co.policy_address` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), with or without a fee grant, else abort: a corporation needs no authorization to itself, and x/feegrant does not accept an allowance whose granter and grantee are the same account, and one that existed could never be revoked.
+- `grantee` MUST NOT be `signer`, else abort: a delegate does not grant an authorization to itself, to widen or to extend its own. The protection is limited: a delegate that holds `GrantDelegateAuthorization` can still grant to another account, so a corporation that wants no such power delegates that message type to nobody.
 - `grantee` MUST NOT be the `policy_address` of a corporation sponsored by `co` (a `Sponsorship` entry keyed (`co.id`, that corporation's `id`) exists, [[MOD-DE-MSG-10]](#mod-de-msg-10-grant-sponsorship)), else abort: its fee allowance and the sponsorship's would share the one (granter, grantee) slot of x/feegrant.
 
 ::: warning
@@ -6144,21 +6144,21 @@ else:
 
 #### [MOD-DE-MSG-4] Revoke Delegate Authorization
 
-- Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+- Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`.
 - `corporation` CAN execute this method alone through a group proposal
 
 ##### [MOD-DE-MSG-4-1] Revoke Delegate Authorization method parameters
 
 - `corporation` (account) (*mandatory*): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
-- `delegate` (account) (*conditional*): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal ([[MOD-DE-MSG-3-1]](#mod-de-msg-3-1-grant-delegate-authorization-method-parameters)).
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `grantee` (account) (*mandatory*): the account whose authorization is revoked.
 
 ##### [MOD-DE-MSG-4-2] Revoke Delegate Authorization basic checks
 
 MUST abort if one of these conditions fails:
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
-- if `delegate` is present: `delegate` (account): (Signer) signature must be verified, and [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type. Else (group proposal) [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - A `DelegateAuthorization` entry MUST exist for this (`co.id`, `grantee`) (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)).
 
 ##### [MOD-DE-MSG-4-3] Revoke Delegate Authorization fee checks
@@ -6273,13 +6273,13 @@ It clears the VS account configuration of the `VerifiableService` entry `vs_id` 
 
 #### [MOD-DE-MSG-10] Grant Sponsorship
 
-This method is **not delegable**: the `corporation` (the [[ref: sponsor]]) executes it alone through a corporation proposal, since it commits the corporation's funds to be spent by another corporation's delegates and VS accounts, outside any delegate spend limit.
+This method is **not delegable**: the corporation (the [[ref: sponsor]]) executes it alone through a corporation proposal, since it commits the corporation's funds to be spent by another corporation's delegates and VS accounts, outside any delegate spend limit.
 
 The sponsor declares the budget it is willing to pay for another corporation. The sponsorship takes effect only once the sponsored corporation elects it with [[MOD-CO-MSG-4]](#mod-co-msg-4-set-sponsor). A `Sponsorship` entry is **create-only**: an existing (`sponsor`, `sponsored`) pair can only be re-granted with terms that are at least as generous (raise-only update, see the execution); any reduction requires [[MOD-DE-MSG-11]](#mod-de-msg-11-revoke-sponsorship), which clears the sponsored corporation's election, followed by a fresh grant and a fresh election.
 
 ##### [MOD-DE-MSG-10-1] Grant Sponsorship method parameters
 
-- `corporation` (account) (*mandatory*): (Signer) the `policy_address` of the sponsor corporation, whose group policy account executes this message through a passed proposal.
+- `signer` (account) (*mandatory*): (Signer) the `policy_address` of the sponsor corporation, whose group policy account executes this message through a passed proposal. This message carries no `corporation` field: the corporation is its only possible signer.
 - `sponsored_corporation_id` (uint64) (*mandatory*): id of the `Corporation` to sponsor.
 - `msg_types` ([MsgType](#msgtype)[]) (*optional*): covered paying message types (see [Sponsorship](#sponsorship)); all of them when absent.
 - `spend_limit` (DenomAmount[]) (*optional*): maximum operation funds paid per cycle.
@@ -6292,8 +6292,8 @@ The sponsor declares the budget it is willing to pay for another corporation. Th
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): (Signer) the message is executed by the corporation's group policy account; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
-- let `co` be the `Corporation` entry resolved from the message's `corporation` account (the sponsor).
+- `signer` (account): (Signer) the message is executed by the corporation's group policy account; [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `signer`.
+- let `co` be the `Corporation` entry resolved from the message's `signer` account (the sponsor).
 - `sponsored_corporation_id`: a `Corporation` entry MUST exist with this `id`, and it MUST differ from `co.id`.
 - the `policy_address` of that corporation MUST NOT be the `grantee` of a `FeeGrant` of `co`, nor the `vs_account` of a `VerifiableService` entry of `co`, nor, when no `Sponsorship` entry exists for (`co.id`, `sponsored_corporation_id`) or the existing one has `covers_fees` false, the grantee of any `x/feegrant` allowance granted by `co.policy_address`, else abort: the sponsorship allowance and another allowance would share the one (granter, grantee) slot of x/feegrant (when the existing sponsorship covers fees, the allowance in the slot is its own, and the re-grant replaces it).
 - if a `Sponsorship` entry `s` already exists with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`, the new terms MUST be at least as generous as the current ones, else abort with an error indicating that the sponsorship must be revoked first: `period` MUST be unchanged; `msg_types` MUST be absent or a superset of `s.msg_types` (absent counts as all); `spend_limit` MUST be absent or, for every denom of `s.spend_limit`, at least `s.spend_limit` (an absent `s.spend_limit` cannot be set); `expiration` MUST be null or later than `s.expiration` (a null `s.expiration` cannot be set); `covers_fees` MUST NOT change from true to false; when `s.covers_fees` is true, `fee_spend_limit` MUST be absent or at least `s.fee_spend_limit` per denom (an absent `s.fee_spend_limit` cannot be set); when it is false, any `fee_spend_limit` is accepted with `covers_fees` true.
@@ -6323,21 +6323,21 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-DE-MSG-11] Revoke Sponsorship
 
-- Any authorized `delegate` CAN execute this method on behalf of a `corporation` (the [[ref: sponsor]]).
+- Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation` (the [[ref: sponsor]]).
 - `corporation` CAN execute this method alone through a group proposal.
 
 ##### [MOD-DE-MSG-11-1] Revoke Sponsorship method parameters
 
 - `corporation` (account) (*mandatory*): the `policy_address` of the sponsor corporation; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg. Not present when the method is executed through a group proposal.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `sponsored_corporation_id` (uint64) (*mandatory*): id of the sponsored `Corporation`.
 
 ##### [MOD-DE-MSG-11-2] Revoke Sponsorship basic checks
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
-- if `delegate` is present: `delegate` (account): (Signer) signature must be verified, and [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type. Else [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - let `co` be the `Corporation` entry resolved from the message's `corporation` account (the sponsor).
 - a `Sponsorship` entry `s` MUST exist with `s.sponsor_corporation_id` = `co.id` and `s.sponsored_corporation_id` = `sponsored_corporation_id`.
 
@@ -6446,15 +6446,15 @@ The Digests module keeps the [Digest](#digest) entries: the credential digests o
 
 #### [MOD-DI-MSG-1] Store Digest
 
-- An authorized account CAN execute this method on behalf of a `corporation`, in the context of one of the corporation's [VerifiableService](#verifiableservice) entries: a delegate of the corporation under a DelegateAuthorization, or the VS account of that entry under a VS Account Authorization whose entry's `msg_types` include `StoreDigest`.
+- An authorized account CAN execute this method on behalf of a `corporation`, in the context of one of the corporation's [VerifiableService](#verifiableservice) entries: a delegate of the corporation under a DelegateAuthorization, or the VS account of that entry under a VS Account Authorization whose entry's `msg_types` include `StoreDigest`. The `corporation` CAN also execute it alone through a group proposal.
 - This method can be called directly by [Record Credential Issuance](#mod-ac-msg-10-record-credential-issuance) ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)), with no checks.
 
 The VS of an issuer does not call this method itself: it anchors the digest of a credential it issues through the issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), `credential_digest` parameter), which it runs even when no fees are due, so that the anchoring entry of the digest is recorded; the entry is written only under a schema whose `credential_anchoring` is REVOCABLE_DIGEST. Called directly, this method anchors a digest for the owner's other needs (a dated proof of the existence of a document, a retention record): such a digest has no anchoring context of a credential.
 
 ##### [MOD-DI-MSG-1-1] Store Digest method parameters
 
-- `corporation` (account) (*mandatory*): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account) (*mandatory*): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, the [[ref: VS account]] that this method accepts, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `vs_id` (uint64) (*mandatory*): the `VerifiableService` entry under which the digest is anchored; MUST be owned by `corporation`.
 - `digest` (bytes, base64 in the API) (*mandatory*): digest to store.
 - `expires` (timestamp) (*optional*): block time after which the entry is deleted ([Digests Module](#digests-module)); null keeps it indefinitely.
@@ -6469,10 +6469,10 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified.
 - `vs_id` (uint64): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), else abort.
-- Authorization: either [[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) and [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and `StoreDigest`; or [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) and [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the (`corporation`, `delegate`, null, `vs`) tuple; else abort.
+- Authorization: either [[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) and [[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and `StoreDigest`; or [[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) and [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the (`corporation`, `signer`, null, `vs`) tuple; or the corporation executes the message itself through a group proposal (`signer` is the `corporation` account) and [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else abort.
 - if `digest` is not present, abort.
 - if `digest` decodes to neither 48 nor 64 bytes, abort.
 - if `expires` is present, it MUST be later than `now()`, else abort.
@@ -6504,14 +6504,16 @@ This method revokes a digest. It can be executed on behalf of:
 - the `corporation` of an **ancestor** of a current `ISSUER` entry of the issuer's participation (an entry listed in `ParticipationTrustDeposit[(d.vs_id, d.schema_id, ISSUER)].accreditation_ids`, and a validator in its branch up to the root ECOSYSTEM entry), while that ancestor is an [[ref: active accreditation]]: by any of its delegates under a DelegateAuthorization, or by the VS account of that ancestor entry under a VS Account Authorization whose entry's `msg_types` include `RevokeDigest`;
 - the `corporation` controlling the `Ecosystem` of `d.schema_id`, by any of its delegates under a DelegateAuthorization, whatever the state of the tree (as for [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)).
 
+Wherever a delegate of a corporation can execute this method, that corporation can also execute it alone through a group proposal.
+
 Revoking a digest is the on-chain revocation mechanism for an individual credential whose issuance was anchored through its issuance transaction ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance)); revoking the holder's `HOLDER` `Accreditation` entry ([[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation)) withdraws trust from every credential of that relationship instead. The authority structure mirrors [[MOD-AC-MSG-9]](#mod-ac-msg-9-revoke-accreditation): the issuer, its grantors and the ecosystem can revoke, and the ecosystem governance framework bounds the use of the ancestor path. Trust resolution of a credential of a REVOCABLE_DIGEST schema whose `Digest` entry, written by its issuance transaction under the issuer's entry, carries a non-null `revoked` timestamp MUST consider the credential revoked as of that timestamp, whichever of these parties set it; an entry stored directly, or anchored under another entry, is not the credential's anchor and is disregarded ([[ref: VT spec]]). Revocation is irreversible.
 
 Since any corporation may store any digest and the first to store it owns it, the Verifiable Trust specification requires the issuer of a credential of a schema whose `credential_anchoring` is DIGEST or REVOCABLE_DIGEST to anchor its digest through the issuance transaction before delivering the credential, so that no other corporation can anchor it first and hold the right to revoke it (under REVOCABLE_DIGEST the issuance transaction then aborts, [[MOD-AC-MSG-10-2]](#mod-ac-msg-10-2-record-credential-issuance-precondition-checks); under DIGEST, where nothing is written, such an entry anchors nothing and trust resolution disregards it).
 
 ##### [MOD-DI-MSG-2-1] Revoke Digest method parameters
 
-- `corporation` (account) (*mandatory*): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account) (*mandatory*): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account) (*mandatory*): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, the [[ref: VS account]] that this method accepts, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `accreditation_id` (uint64) (*optional*): the `Accreditation` entry in whose context a `vs_account` executes this message: a current `ISSUER` entry of the issuer's participation, or one of its ancestors (VS Account Authorization path). Absent when the delegate acts under a DelegateAuthorization, or when the VS account acts in the context of `d.vs_id` alone.
 - `digest` (bytes, base64 in the API) (*mandatory*): digest to revoke.
 
@@ -6521,8 +6523,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-DI-MSG-2-2-1] Revoke Digest basic checks
 
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified.
 - if `digest` is not present, abort.
 - if `digest` decodes to neither 48 nor 64 bytes, abort.
 - a `Digest` entry `d` with `d.digest` = `digest` MUST exist, else abort.
@@ -6533,12 +6535,15 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 either (executed by a delegate under a DelegateAuthorization; `accreditation_id` absent):
 - `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account) MUST equal `VerifiableService[d.vs_id].corporation_id`, or equal the `corporation_id` of an entry of `authority_set`, or, when `d.schema_id` is not null, equal `Ecosystem[cs.ecosystem_id].corporation_id` where `cs` is `CredentialSchema[d.schema_id]`, else abort.
-[[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) MUST pass for this (`corporation`, `delegate`) tuple and `RevokeDigest` message.
-[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) tuple and `RevokeDigest` message.
+[[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) MUST pass for this (`corporation`, `signer`) tuple and `RevokeDigest` message.
+[[AUTHZ-CHECK-2]](#authz-check-2-fee-grant-checks) MUST pass for this (`corporation`, `signer`) tuple and `RevokeDigest` message.
 OR (executed by a VS account under a VS Account Authorization):
 - if `accreditation_id` is present: `Accreditation[accreditation_id]` MUST be an entry of `authority_set`, else abort; define it as `context_accreditation`, and `context_vs` = `VerifiableService[context_accreditation.vs_id]`. `context_accreditation.corporation_id` MUST equal `co.id`, else abort. Else (`accreditation_id` absent): `VerifiableService[d.vs_id].corporation_id` MUST equal `co.id`, else abort; define `context_accreditation` as null and `context_vs` = `VerifiableService[d.vs_id]`.
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `delegate`, `context_accreditation`, `context_vs`) tuple.
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `signer`, `context_accreditation`, `context_vs`) tuple.
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the same tuple.
+OR (executed by the corporation itself through a group proposal; `signer` is the `corporation` account, `accreditation_id` absent):
+- the condition on `co.id` of the delegate path MUST hold, else abort.
+[[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`.
 else MUST abort.
 
 > Note: a digest stored directly with [[MOD-DI-MSG-1]](#mod-di-msg-1-store-digest) has no anchoring context of a credential (`d.schema_id` is null): only the owner corporation can revoke it, through its delegates or the VS account of `d.vs_id`. Such a digest is not a valid anchor of a Verifiable Trust credential, whose digest is anchored through the issuance transaction; it serves other uses. Under an OPEN schema the issuer's entry, when it holds one, sits directly under the root: its digests are revocable by the issuer's delegates or VS account and by the ecosystem controlling the schema.
@@ -6602,6 +6607,7 @@ The **Create Exchange Rate** method allows creating an `ExchangeRate` entry for 
 
 ##### [MOD-XR-MSG-1-1] Create Exchange Rate method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `base_asset_type` (PricingAssetType) (*mandatory*)  
 - `base_asset` (string) (*mandatory*)  
 - `quote_asset_type` (PricingAssetType) (*mandatory*)  
@@ -6618,6 +6624,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - if a mandatory parameter is not present, method MUST abort.
 - **Asset type validity**
   - `base_asset_type` MUST be a valid `PricingAssetType` value.
@@ -6684,7 +6691,7 @@ The **Update Exchange Rate** method allows a feeder authorized by network govern
 
 ##### [MOD-XR-MSG-2-1] Update Exchange Rate method parameters
 
-- `feeder` (account) (*mandatory*): (Signer) the account pushing the new rate.
+- `signer` (account) (*mandatory*): (Signer) the account pushing the new rate. It MUST be a feeder: the `feeder` of an `ExchangeRateAuthorization` for the target `ExchangeRate`.
 - `id` (uint64) (*mandatory*): id of the target `ExchangeRate` entry.
 - `rate` (uint64) (*mandatory*): the new fixed-point integer rate value.
 
@@ -6697,11 +6704,11 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
 - if a mandatory parameter is not present, method MUST abort.
-- `feeder` (account): (Signer) signature must be verified.
+- `signer` (account): (Signer) signature must be verified.
 - `id` MUST refer to an existing `ExchangeRate` entry `xr` with `xr.state` = true.
 - `rate` MUST be strictly greater than 0.
 - **Authorization**:
-  - An `ExchangeRateAuthorization` `xrauthz` MUST exist where `xrauthz.xr_id` = `id` and `xrauthz.feeder` = `feeder`.
+  - An `ExchangeRateAuthorization` `xrauthz` MUST exist where `xrauthz.xr_id` = `id` and `xrauthz.feeder` = `signer`.
   - `xrauthz.expiration` MUST be in the future (`now() < xrauthz.expiration`).
   - If `xrauthz.min_interval` is set, then `now() - xr.updated` MUST be greater than or equal to `xrauthz.min_interval`.
   - If `xrauthz.max_deviation_bps` is set, then `|rate - xr.rate| * 10000` MUST be less than or equal to `xrauthz.max_deviation_bps * xr.rate` (i.e., the relative change between the new `rate` and `xr.rate` MUST NOT exceed `xrauthz.max_deviation_bps` basis points). Both values share the same `xr.rate_scale`, since `MOD-XR-MSG-2` does not update the scale.
@@ -6724,6 +6731,7 @@ The **Set Exchange Rate State** method allows an authorized actor to enable or d
 
 ##### [MOD-XR-MSG-3-1] Set Exchange Rate State method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `id` (uint64) (*mandatory*): id of the exchange rate.
 - `state` (boolean) (*mandatory*): true to set enabled, false to set disabled.
 
@@ -6735,6 +6743,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
   - Only a [[ref: governance proposal]] can enable or disable an exchange rate.
@@ -6758,6 +6767,7 @@ The **Grant Exchange Rate Authorization** method creates (or updates) an `Exchan
 
 ##### [MOD-XR-MSG-4-1] Grant Exchange Rate Authorization method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
 - `feeder` (account) (*mandatory*): the account receiving the authorization.
 - `expiration` (timestamp) (*mandatory*): authorization end-of-life.
@@ -6772,6 +6782,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
   - Only a [[ref: governance proposal]] can grant an `ExchangeRateAuthorization`.
@@ -6803,6 +6814,7 @@ The **Revoke Exchange Rate Authorization** method deletes an existing `ExchangeR
 
 ##### [MOD-XR-MSG-5-1] Revoke Exchange Rate Authorization method parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `xr_id` (uint64) (*mandatory*): id of the target `ExchangeRate`.
 - `feeder` (account) (*mandatory*): the account whose authorization is revoked.
 
@@ -6814,6 +6826,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 If any of the following conditions is not satisfied, [[ref: transaction]] MUST abort.
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - if a mandatory parameter is not present, method MUST abort.
 - **Authorization**
   - Only a [[ref: governance proposal]] can revoke an `ExchangeRateAuthorization`.
@@ -6941,6 +6954,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-XR-MSG-6-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-XR-MSG-6-2] Update Module Parameters precondition checks
@@ -6949,6 +6963,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-XR-MSG-6-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Exchange Rate parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `twap_window` MUST be a strictly positive duration.
 
@@ -6978,12 +6993,12 @@ The Verifiable Service module keeps the [VerifiableService](#verifiableservice) 
 
 #### [MOD-VS-MSG-1] Register Verifiable Service
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal.
 
 ##### [MOD-VS-MSG-1-1] Register Verifiable Service parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `vid` (string) (*mandatory*): the [[ref: VID]] to register.
 - `vs_account` (account) (*optional*): the account that the service identified by `vid` signs with. Null when no software acts for the identifier, which is the common case for the identifier of a legal entity or of an ecosystem, or for a validator that works through corporation delegates: such an entry holds its `Accreditation` entries but cannot record exchanges ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) and [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) are reserved to a VS account), so it neither issues nor verifies through the VPR.
 
@@ -7001,9 +7016,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 ###### [MOD-VS-MSG-1-2-1] Register Verifiable Service basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters.
 - `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else method MUST abort ([VID ownership](#vid-ownership)).
 - `TrustDeposit[co.id]`, if it exists, MUST have `unrepaid_slash` = 0 and `excluded` false, else abort: a [[ref: barred]] corporation registers no service entry.
@@ -7012,7 +7026,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-VS-MSG-1-2-2] Register Verifiable Service fee checks
 
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)).
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)). The exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired, else [[ref: transaction]] MUST abort: a deposit is not priced with a stale rate, any more than a mint is.
 
 ##### [MOD-VS-MSG-1-3] Register Verifiable Service execution
 
@@ -7045,12 +7059,12 @@ The method MUST emit an event carrying `vs.id`, `vs.vid` and `co.id`, so that in
 
 #### [MOD-VS-MSG-2] Update Verifiable Service
 
-Any authorized `delegate` CAN execute this method on behalf of a `corporation`. It sets, replaces or clears the VS account of an entry together with its configuration.
+Any authorized [[ref: delegate]] CAN execute this method on behalf of a `corporation`, and the `corporation` CAN execute it alone through a group proposal. It sets, replaces or clears the VS account of an entry together with its configuration.
 
 ##### [MOD-VS-MSG-2-1] Update Verifiable Service parameters
 
-- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `delegate` (account): (Signer) the account authorized by the `corporation` to run this Msg.
+- `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) or, on the group-proposal path, as the executing policy account.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg: a [[ref: delegate]] authorized by the `corporation`, or the `corporation` account itself when its group executes the Msg through a passed proposal ([Delegable Module Messages](#delegable-module-messages)).
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry to update.
 - `vs_account` (account) (*optional*): the new VS account, or the current one when only the configuration changes. Null clears the VS account together with its configuration and budget: the entry keeps its `Accreditation` entries, but no exchange can be recorded for it until one is set again.
 - the VS Account Authorization parameters of [[MOD-VS-MSG-1-1]](#mod-vs-msg-1-1-register-verifiable-service-parameters), with the same semantics: presence of `vs_account_msg_types` triggers the whole group, budget included, and implies that `vs_account` is provided; the configuration is then applied incrementally by [[MOD-DE-MSG-5]](#mod-de-msg-5-set-vs-account-authorization), unchanged values leaving the budget balance and the fee allowance untouched. If `vs_account_msg_types` is not provided, no other parameter of the group MAY be, and the configuration and budget are cleared, whether or not `vs_account` is provided.
@@ -7062,9 +7076,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 ###### [MOD-VS-MSG-2-2-1] Update Verifiable Service basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `delegate`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `delegate` (account): (Signer) signature must be verified.
-- [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `delegate`) pair and this message type.
+- `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the `signer`'s authorization ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)) or, on the group-proposal path, as the executing policy account.
+- `signer` (account): (Signer) signature must be verified. If `signer` is the `corporation` account (group-proposal path), [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; else [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks) MUST pass for this (`corporation`, `signer`) pair and this message type.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
 - the VS Account Authorization parameters MUST satisfy the checks of [[MOD-VS-MSG-1-2-1]](#mod-vs-msg-1-2-1-register-verifiable-service-basic-checks), including the policy-address and mutual-exclusion checks on `vs_account` when it is provided.
 
@@ -7085,11 +7098,11 @@ Method execution MUST perform the following tasks in a [[ref: transaction]], and
 
 #### [MOD-VS-MSG-3] Rotate Verifiable Identifier
 
-This method is **not delegable**: the `corporation` executes it alone through a corporation proposal. It replaces the identifier string of an entry, the identifier through which relying parties trust-resolve the corporation's service: every accreditation of the entry moves to the new identifier with no re-validation, and the trust of relying parties moves to new keys. A delegate may change which account signs for an identifier ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)); only the corporation may change the identifier. Every `Corporation`, `Ecosystem` and `Accreditation` entry that references the entry, every accreditation, fee term, deposit and VS account configuration, is unaffected: they reference `vs_id`, never the string. A corporation that needs a fast rotation (a `transition` of 0 after a key compromise) sets the decision policy of its group accordingly.
+This method is **not delegable**: the corporation executes it alone through a corporation proposal. It replaces the identifier string of an entry, the identifier through which relying parties trust-resolve the corporation's service: every accreditation of the entry moves to the new identifier with no re-validation, and the trust of relying parties moves to new keys. A delegate may change which account signs for an identifier ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)); only the corporation may change the identifier. Every `Corporation`, `Ecosystem` and `Accreditation` entry that references the entry, every accreditation, fee term, deposit and VS account configuration, is unaffected: they reference `vs_id`, never the string. A corporation that needs a fast rotation (a `transition` of 0 after a key compromise) sets the decision policy of its group accordingly.
 
 ##### [MOD-VS-MSG-3-1] Rotate Verifiable Identifier parameters
 
-- `corporation` (account): (Signer) the `policy_address` of the corporation, whose group policy account executes this message through a passed proposal.
+- `signer` (account) (*mandatory*): (Signer) the `policy_address` of the corporation, whose group policy account executes this message through a passed proposal. This message carries no `corporation` field: the corporation is its only possible signer.
 - `vs_id` (uint64) (*mandatory*): id of the `VerifiableService` entry whose identifier is rotated.
 - `vid` (string) (*mandatory*): the new identifier string.
 - `transition` (duration) (*optional*): length of the transition window during which the former string remains acceptable to trust resolution for credentials issued under it as defined by the [[ref: VT spec]]. Defaults to `GlobalVariables.vid_rotation_max_transition`; 0 ends the former string at once, for instance after a key compromise. The window is carried by the event of this method and applied by indexers; the VPR does not store it.
@@ -7101,8 +7114,8 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 ###### [MOD-VS-MSG-3-2-1] Rotate Verifiable Identifier basic checks
 
 - if a mandatory parameter is not present, method MUST abort.
-- `corporation` (account): (Signer) signature must be verified: the message is executed by the corporation's group policy account.
-- [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `corporation`; let `co` be the `Corporation` entry it resolves.
+- `signer` (account): (Signer) signature must be verified: the message is executed by the corporation's group policy account.
+- [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) MUST pass for `signer`; let `co` be the `Corporation` entry it resolves.
 - `vs_id` (uint64) (*mandatory*): a `VerifiableService` entry `vs` with this id MUST exist and `vs.corporation_id` MUST equal `co.id`; else abort.
 - `vid` (string) (*mandatory*): MUST be a URI conforming to [[spec-norm:RFC3986]], at most 512 characters, and MUST differ from `vs.vid`.
 - `vid` MUST NOT be the current `vid` of any existing `VerifiableService` entry; else abort ([VID ownership](#vid-ownership)).
@@ -7135,6 +7148,7 @@ Can only be executed through a [[ref: governance proposal]].
 
 ##### [MOD-VS-MSG-4-1] Update Module Parameters parameters
 
+- `signer` (account) (*mandatory*): (Signer) the [[ref: council account]] (`GlobalVariables.council_account`): this method is executed only through a [[ref: governance proposal]].
 - `params` (KeySet<String, String>): the parameters to update and their values.
 
 ##### [MOD-VS-MSG-4-2] Update Module Parameters precondition checks
@@ -7143,6 +7157,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-VS-MSG-4-2-1] Update Module Parameters basic checks
 
+- `signer` MUST be `GlobalVariables.council_account`, else abort.
 - `params`: size of `params` MUST be greater than 0. For each `param` <`key`, `value`>, `key` MUST be one of the Delegation and Verifiable Service parameters of [[GLO]](#glo-global-variables), else abort: a module changes its own groups only, and no message changes the immutable parameters nor the Network governance group ([GlobalVariables](#globalvariables)).
 - `vs_registration_deposit` and `ecosystem_creation_deposit`, if updated, MUST be ≥ 0, and `vid_rotation_max_transition` MUST be a duration > 0, else abort.
 - `vs_account_fee_period` (Delegation group), if updated, MUST be a duration > 0, else abort. The new value applies to the allowances granted or adjusted afterwards ([[MOD-DE-MSG-5-5]](#mod-de-msg-5-5-adjust-vs-account-fee-allowance)): an entry's allowance keeps its period until the entry's next configuration change, so two periods coexist meanwhile, each a cap on its own allowance.
@@ -7182,20 +7197,19 @@ Anyone CAN execute this method.
 
 ##### [MOD-VS-QRY-2-1] List Verifiable Services query parameters
 
-The following parameters are optional:
-
-- `vs_account` (account) (*optional*): if specified, filter by VS account, served by the index the one-corporation rule requires ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)). Listing by corporation or by time is an indexer function.
+- `vs_account` (account) (*mandatory*): the VS account whose entries are listed, served by the index the one-corporation rule requires ([[MOD-DE-MSG-5-2]](#mod-de-msg-5-2-set-vs-account-authorization-basic-checks)). Listing every entry, or listing by corporation or by time, is an indexer function: service entries grow without bound, and no query scans them.
 - `response_max_size` (small number) (*optional*): default to 64. Max 1,024.
 
 ##### [MOD-VS-QRY-2-2] List Verifiable Services query checks
 
 If any of these checks fail, [[ref: query]] MUST fail.
 
+- `vs_account` MUST be provided.
 - `response_max_size` must be between 1 and 1,024. Default to 64 if unspecified.
 
 ##### [MOD-VS-QRY-2-3] List Verifiable Services execution
 
-Return a list of `VerifiableService` entries matching the filter criteria, ordered by `id`, or an empty list if nothing found.
+Return the `VerifiableService` entries whose `vs_account` is the given account, ordered by `id`, or an empty list if nothing found.
 
 #### [MOD-VS-QRY-3] List Module Parameters
 
@@ -7207,6 +7221,8 @@ Return the module parameters: `vs_registration_deposit`, `ecosystem_creation_dep
 
 
 ## Initial Data Requirements
+
+A network of this version starts from a genesis built for it. This specification defines no migration from the state of a chain that runs an earlier version: such a network is started anew. A genesis produced by exporting the state of a chain of this version is covered by [[TUG]](#tug-genesis-trust-unit-index).
 
 ### [GLO] Global Variables
 
@@ -7284,11 +7300,11 @@ Default values MUST be set at VPR initialization (genesis). Below you'll find so
 
 ### [TUG] Genesis Trust Unit Index
 
-The genesis state of the trust deposit module MUST contain `tu_peg_value`, the pending `tu_decay_rate` (null when none), the epoch origin `epoch_origin` and the number of the last closed epoch (null when none). At the first genesis of the chain, `tu_peg_value` equals `GlobalVariables.tu_peg_value_genesis`, nothing is pending, `epoch_origin` is the genesis time and no epoch is closed. A genesis produced by exporting the state of a running chain MUST carry the exported values unchanged: the index keeps declining along wall-clock time from where it was, and the epoch boundaries stay where they were, whatever the time of the new genesis. Re-initializing `tu_peg_value` from `tu_peg_value_genesis` on such a restart would reset the index, inflating the fiat score of every deposit to the genesis peg and pricing new mints at it.
+The genesis state of the trust deposit module MUST contain `tu_peg_value`, the pending `tu_decay_rate` (null when none), the epoch origin `epoch_origin` and the number of the last closed epoch (null when none). At the first genesis of the chain, `tu_peg_value` equals `GlobalVariables.tu_peg_value_genesis`, nothing is pending, `epoch_origin` is the genesis time and no epoch is closed. A genesis produced by exporting the state of a running chain MUST carry the exported values unchanged: the index keeps declining along wall-clock time from where it was, and the epoch boundaries stay where they were, whatever the time of the new genesis. Re-initializing `tu_peg_value` from `tu_peg_value_genesis` on such a restart would reset the index, inflating the fiat score of every deposit to the genesis peg and pricing new mints at it. The same holds for `network_gas_price_native`: computed at the first genesis, carried unchanged by an exported one ([[NET-FEE-1]](#net-fee-1-network-gas-price)).
 
 ### [XRG] Genesis Exchange Rate
 
-The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]), its `rate` being the number of base units of native denom per minor unit of the main fiat currency, scaled by `rate_scale`, with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch feeder for that entry, with `max_deviation_bps` set and an `expiration` later than the genesis time. Without this entry no transaction fee can be computed and no transaction can be executed ([[NET-FEE-1]](#net-fee-1-network-gas-price)); while the entry is disabled or its rate expired, no [[ref: trust unit]] can be minted and no slash debt repaid until governance enables it ([[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)) and a feeder pushes a rate ([[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)). Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the feeder pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
+The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]), its `rate` being the number of base units of native denom per minor unit of the main fiat currency, scaled by `rate_scale`, with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch feeder for that entry, with `max_deviation_bps` set and an `expiration` later than the genesis time. Without this entry no transaction fee can be computed and no transaction can be executed ([[NET-FEE-1]](#net-fee-1-network-gas-price)); while the entry is disabled or its rate expired, no [[ref: trust unit]] can be minted, no slash debt repaid, and no corporation, verifiable service entry or ecosystem created (their deposits are priced at the rate of the block), until governance enables it ([[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)) and a feeder pushes a rate ([[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)). Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the feeder pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
 
 ### [GCO] Genesis Council
 
