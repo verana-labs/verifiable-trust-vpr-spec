@@ -2388,7 +2388,7 @@ If any of these precondition checks fail, method MUST abort.
 
 ###### [MOD-CO-MSG-1-2-2] Create Corporation fee checks
 
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and `signer` MUST have an available balance of at least the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)): the registration deposit of the Corporation's identifier is paid by `signer`, the only account that exists before the Corporation does.
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and `signer` MUST have an available balance of at least the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)): the registration deposit of the Corporation's identifier is paid by `signer`, the only account that exists before the Corporation does. The exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired, else [[ref: transaction]] MUST abort: a deposit is not priced with a stale rate, any more than a mint is.
 
 ##### [MOD-CO-MSG-1-3] Create Corporation execution
 
@@ -2643,7 +2643,7 @@ Several `Ecosystem` entries MAY share the same identifier. The identity of an `E
 
 ###### [MOD-ES-MSG-1-2-2] Create Ecosystem fee checks
 
-Fee payer MUST have an available balance to cover the [[ref: estimated transaction fees]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.ecosystem_creation_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)).
+Fee payer MUST have an available balance to cover the [[ref: estimated transaction fees]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.ecosystem_creation_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)). The exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired, else [[ref: transaction]] MUST abort: a deposit is not priced with a stale rate, any more than a mint is.
 
 ##### [MOD-ES-MSG-1-3] Create Ecosystem execution
 
@@ -7029,7 +7029,7 @@ If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 ###### [MOD-VS-MSG-1-2-2] Register Verifiable Service fee checks
 
-Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)).
+Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]], and [[FUND-CHECK-1]](#fund-check-1-debit) MUST pass for `co` with the [[ref: native denom]] value of `GlobalVariables.vs_registration_deposit` at the rate of the block ([[MOD-XR-QRY-3]](#mod-xr-qry-3-get-price)). The exchange rate entry of [[XRG]](#xrg-genesis-exchange-rate) MUST be enabled and not expired, else [[ref: transaction]] MUST abort: a deposit is not priced with a stale rate, any more than a mint is.
 
 ##### [MOD-VS-MSG-1-3] Register Verifiable Service execution
 
@@ -7305,7 +7305,7 @@ The genesis state of the trust deposit module MUST contain `tu_peg_value`, the p
 
 ### [XRG] Genesis Exchange Rate
 
-The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]), its `rate` being the number of base units of native denom per minor unit of the main fiat currency, scaled by `rate_scale`, with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch feeder for that entry, with `max_deviation_bps` set and an `expiration` later than the genesis time. Without this entry no transaction fee can be computed and no transaction can be executed ([[NET-FEE-1]](#net-fee-1-network-gas-price)); while the entry is disabled or its rate expired, no [[ref: trust unit]] can be minted and no slash debt repaid until governance enables it ([[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)) and a feeder pushes a rate ([[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)). Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the feeder pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
+The genesis state MUST contain one `ExchangeRate` entry with base (FIAT, `main_fiat_currency`) and quote (COIN, [[ref: native denom]]), its `rate` being the number of base units of native denom per minor unit of the main fiat currency, scaled by `rate_scale`, with `state` = true and a valid, non-expired `rate`, and one `ExchangeRateAuthorization` designating the launch feeder for that entry, with `max_deviation_bps` set and an `expiration` later than the genesis time. Without this entry no transaction fee can be computed and no transaction can be executed ([[NET-FEE-1]](#net-fee-1-network-gas-price)); while the entry is disabled or its rate expired, no [[ref: trust unit]] can be minted, no slash debt repaid, and no corporation, verifiable service entry or ecosystem created (their deposits are priced at the rate of the block), until governance enables it ([[MOD-XR-MSG-3]](#mod-xr-msg-3-set-exchange-rate-state)) and a feeder pushes a rate ([[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate)). Before the native denom is listed on a market, the [[ref: governance framework]] declares the reference price that the feeder pushes (typically the last sale price); the time-weighted-average rule of [[MOD-XR-MSG-2]](#mod-xr-msg-2-update-exchange-rate) applies once a market exists.
 
 ### [GCO] Genesis Council
 
