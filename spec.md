@@ -2074,7 +2074,7 @@ For any **delegable message** executed by a delegate or by a VS account on behal
      - if `dauthz.spend_limit` is set, set `dauthz.remaining_spend := dauthz.spend_limit`.
      - set `dauthz.expiration := now() + dauthz.period`.
    - else, `dauthz.expiration` MUST be strictly greater than `now()`. Abort otherwise.
-3. If `dauthz.spend_limit` is set, `dauthz.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `dauthz.remaining_spend` (per matching `denom` entry).
+3. If `dauthz.spend_limit` is set, `dauthz.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `dauthz.remaining_spend` (per matching `denom` entry). The **consumed amount** of a message is what its method debits for the corporation through [[FUND-CHECK-1]](#fund-check-1-debit), per [[ref: denom]], whichever account funds it, the corporation's own or its sponsor's. It is zero for a message that debits nothing, such as [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding), whose amounts all come from the escrow: what a corporation receives, in its account or as [[ref: trust units]], is never counted.
 4. [[GF-CHECK-2]](#gf-check-2-corporation-governance-framework-acceptance-by-a-delegate) MUST pass for `dauthz` and `co`: the delegate has accepted the corporation's [[ref: CGF]] version in force, or a former one within the grace period of the activation.
 
 ##### [AUTHZ-CHECK-2] Fee Grant checks
@@ -2108,7 +2108,7 @@ Given a `corporation`, the signing account `signer` (the `vs_account` field of a
    - set `budget.expiration := now() + vs.period`.
 
    This step never aborts: `budget.expiration` is the end of the current budget cycle, not a validity window (an entry has none; step 1 enforces the window of the primary entry when there is one). The advance is `now() + vs.period`, so cycles drift with usage — intentional: drift never yields more budget per unit of time.
-6. If a [VsAccountBudget](#vsaccountbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written.
+6. If a [VsAccountBudget](#vsaccountbudget) `budget` exists for `vs.id` (loading it if step 5 did not), `budget.remaining_spend` MUST be sufficient for the operation. After successful execution, the consumed amount MUST be deducted from `budget.remaining_spend` (per matching `denom` entry); the entry itself is not written. The consumed amount is the one [[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) step 3 defines: what the method debits for the corporation, and zero when it debits nothing, as when the VS account of a validator executes [[MOD-AC-MSG-3]](#mod-ac-msg-3-validate-onboarding).
 
 > Note: step 1 is what prevents the use of an `Accreditation` entry that is not, or is no longer, an [[ref: active accreditation]]: an entry that has never been validated has no `effective_from` yet, a revoked or expired entry no longer exists, and a slashed participation fails the definition. The configuration itself is unaffected by the state of any single `Accreditation` entry: the same VS account keeps acting for the identifier's other entries, unless the bar of one participation stops its corporation in the whole ecosystem ([[BAR-CHECK-1]](#bar-check-1-ecosystem-bar)). A renewal is unaffected too: [[MOD-AC-MSG-2]](#mod-ac-msg-2-renew-onboarding) sets `onboarding_state` back to PENDING, but the entry stays active until its `effective_until`.
 
@@ -5661,7 +5661,7 @@ if any of these conditions is not satisfied, [[ref: transaction]] MUST abort.
 ###### [MOD-TD-MSG-6-2-2] Repay Slash fee checks
 
 - Fee payer MUST have the required [[ref: estimated transaction fees]] in its [[ref: account]];
-- calculate `repay_amount` = `debt_fiat` / `P(now)`, rounded up to an integer number of [[ref: native denom]] base units, where `P(now)` is the price defined in [Trust Unit Index](#trust-unit-index). The [[ref: funding account]] of `co` MUST cover `repay_amount` ([[FUND-CHECK-1]](#fund-check-1-debit)), else [[ref: transaction]] MUST abort.
+- calculate `repay_amount` = `debt_fiat` / `P(now)`, rounded up to an integer number of [[ref: native denom]] base units, where `P(now)` is the price defined in [Trust Unit Index](#trust-unit-index). The [[ref: funding account]] of `co` MUST cover `repay_amount` ([[FUND-CHECK-1]](#fund-check-1-debit)), else [[ref: transaction]] MUST abort. On the delegate path `repay_amount` is the consumed amount of the message, counted against the delegate's spend limit ([[AUTHZ-CHECK-1]](#authz-check-1-delegate-authorization-checks) step 3).
 
 ##### [MOD-TD-MSG-6-3] Repay Slash execution of the method
 
