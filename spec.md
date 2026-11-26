@@ -2006,7 +2006,7 @@ Such messages conceptually involve **two roles**:
   a [[ref: delegate]], which MUST be explicitly authorized by the `corporation` for the given message type;
   the [[ref: VS account]] of an entry, on the VS Account Authorization path of a message that offers one;
   or the `corporation` account itself, when the corporation executes the Msg through a passed proposal of its group.
-  The path is known from the field: `signer` equal to `corporation` is the group-proposal path. The messages reserved to VS accounts ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) name their signer field `vs_account`.
+  The path is known from the field: `signer` equal to `corporation` is the group-proposal path. The messages reserved to VS accounts ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) use the same field: there `signer` is always the VS account of the entry, as each of them states.
 
 When a delegable message is executed by a delegate or by a VS account, that account is the only signer and both roles are authenticated and enforced by the authorization system; every message that a delegate can execute can also be executed by the corporation itself, through a passed proposal of its group: `signer` is then the `corporation` account, which is the only signer, [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check) is the only authorization check, and no delegate authorization, spend limit or fee grant applies. The two messages reserved to VS accounts ([[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance), [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation)) offer no such path: they are executed during an exchange, by the service itself.
 
@@ -2099,7 +2099,7 @@ A second authorization mode exists for [[ref: VS accounts]]. It is used when a c
 
 > Note: the set of messages a `vs_account` is authorized to execute in the context of an entry is declared when the configuration is set ([[MOD-VS-MSG-1]](#mod-vs-msg-1-register-verifiable-service), [[MOD-CO-MSG-1]](#mod-co-msg-1-create-corporation)) or replaced ([[MOD-VS-MSG-2]](#mod-vs-msg-2-update-verifiable-service)) and stored in `vs.msg_types`. One configuration covers every role the identifier holds: the role-specific checks of each message decide what the VS account can do with a given `Accreditation` entry.
 
-Given a `corporation`, the signing account `signer` (the `vs_account` field of a message reserved to VS accounts, the `signer` field of a message that also offers this path), a **primary entry** `perm` (an `Accreditation` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) does or as [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) and [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) do for a party acting without an entry), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
+Given a `corporation`, the signing account `signer`, a **primary entry** `perm` (an `Accreditation` entry determined by the calling method, or null when the calling method takes a `vs_id` directly, as [[MOD-AC-MSG-15]](#mod-ac-msg-15-trigger-resolver) does or as [[MOD-AC-MSG-10]](#mod-ac-msg-10-record-credential-issuance) and [[MOD-AC-MSG-16]](#mod-ac-msg-16-record-credential-presentation) do for a party acting without an entry), the `VerifiableService` entry `vs` (`VerifiableService[perm.vs_id]`, or the entry identified by the given `vs_id`) and the current message type `msg_type`:
 
 1. If `perm` is not null, it MUST be an [[ref: active accreditation]]. Abort otherwise.
 2. `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account by [[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), and `vs.vs_account` MUST equal `signer`. Abort otherwise.
@@ -4469,7 +4469,7 @@ The VPR stores no exchange: the transaction is the receipt ([CredentialIssuance]
 An [[ref: account]] that would like to record a `CredentialIssuance` MUST send a Msg by specifying:
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `vs_account` (account): (Signer) the [[ref: VS account]] of the issuer's `VerifiableService` entry.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg. It MUST be the [[ref: VS account]] of the issuer's `VerifiableService` entry (its `vs_account`): this method is reserved to VS accounts, and neither a delegate nor the `corporation` account can execute it.
 - `exchange_id` (uuid) (*mandatory*): the exchange identifier agreed with the holder, in canonical textual form; a correlation key carried by the event ([CredentialIssuance](#credentialissuance)), not stored.
 - `schema_id` (uint64) (*mandatory*): the id of the `CredentialSchema` entry of the credential.
 - `issuer_accreditation_id` (uint64) (*conditional*): the id of the issuer's own `ISSUER` `Accreditation` entry for the schema. Exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided.
@@ -4483,7 +4483,7 @@ An [[ref: account]] that would like to record a `CredentialIssuance` MUST send a
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the VS Account Authorization of the signer ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `vs_account` (account): (Signer) signature must be verified.
+- `signer` (account): (Signer) signature must be verified.
 - `exchange_id` MUST be a valid UUID.
 - `schema_id` MUST refer to an existing `CredentialSchema` entry `cs`, else abort.
 - exactly one of `issuer_accreditation_id` and `issuer_vs_id` MUST be provided, else abort.
@@ -4492,9 +4492,9 @@ Issuer (the payer):
 
 - if `issuer_accreditation_id` is provided: load `issuer_accreditation` from it (abort if not found); `issuer_accreditation.role` MUST be ISSUER and `issuer_accreditation.schema_id` MUST equal `schema_id`, and `issuer_accreditation` MUST be an [[ref: active accreditation]], else abort. Let `vs` = `VerifiableService[issuer_accreditation.vs_id]`.
 - else (`issuer_vs_id` is provided): `vs` = `VerifiableService[issuer_vs_id]` MUST exist, else abort. `cs.issuer_onboarding_mode` MUST be OPEN, else abort. Let `d` be `ParticipationTrustDeposit[(vs.id, schema_id, ISSUER)]` if it exists: `d.accreditation_ids` MUST list no [[ref: active accreditation]] (the caller MUST reference it instead), and `d` MUST NOT be [[ref: barred]] (`d.unrepaid_slash` = 0 and `d.excluded` false), else abort: the exclusion is the ecosystem's sanction on a participation it did not onboard. `TrustDeposit[co.id]`, if it exists, MUST NOT be barred either (`unrepaid_slash` = 0 and `excluded` false), else abort. `issuer_accreditation` is null.
-- `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `vs.vs_account` MUST equal `vs_account`, else abort.
+- `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `vs.vs_account` MUST equal `signer`, else abort: the signer is the VS account of that entry.
 
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `vs_account`, `issuer_accreditation`, `vs`) tuple (`issuer_accreditation` MAY be null).
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `signer`, `issuer_accreditation`, `vs`) tuple (`issuer_accreditation` MAY be null).
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the same tuple.
 [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and `cs.ecosystem_id`: an issuer that has not accepted the [[ref: EGF]] in force records no issuance, so it anchors nothing.
 
@@ -4906,7 +4906,7 @@ The VPR stores no exchange: the transaction is the receipt ([CredentialPresentat
 An [[ref: account]] that would like to record a `CredentialPresentation` MUST send a Msg by specifying:
 
 - `corporation` (account): the `policy_address` of the corporation on whose behalf this message is executed; a field, not a signer, authenticated by [[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks).
-- `vs_account` (account): (Signer) the [[ref: VS account]] of the verifier's `VerifiableService` entry.
+- `signer` (account) (*mandatory*): (Signer) the account that signs this Msg. It MUST be the [[ref: VS account]] of the verifier's `VerifiableService` entry (its `vs_account`): this method is reserved to VS accounts, and neither a delegate nor the `corporation` account can execute it.
 - `exchange_id` (uuid) (*mandatory*): the exchange identifier agreed with the holder, in canonical textual form; a correlation key carried by the event ([CredentialPresentation](#credentialpresentation)), not stored.
 - `schema_id` (uint64) (*mandatory*): the id of the `CredentialSchema` entry of the credential.
 - `verifier_accreditation_id` (uint64) (*conditional*): the id of the verifier's own `VERIFIER` `Accreditation` entry for the schema. Exactly one of `verifier_accreditation_id` and `verifier_vs_id` MUST be provided.
@@ -4921,7 +4921,7 @@ An [[ref: account]] that would like to record a `CredentialPresentation` MUST se
 If any of these precondition checks fail, [[ref: transaction]] MUST abort.
 
 - `corporation` (account): MUST be the `policy_address` of a registered corporation ([[AUTHZ-CHECK-5]](#authz-check-5-corporation-registration-check)), authenticated by the VS Account Authorization of the signer ([[AUTHZ-CHECK]](#authz-check-common-authorization-and-fee-grant-checks)).
-- `vs_account` (account): (Signer) signature must be verified.
+- `signer` (account): (Signer) signature must be verified.
 - `exchange_id` MUST be a valid UUID.
 - `schema_id` MUST refer to an existing `CredentialSchema` entry `cs`, else abort.
 - exactly one of `verifier_accreditation_id` and `verifier_vs_id` MUST be provided, and exactly one of `issuer_accreditation_id` and `issuer_vs_id`; else abort.
@@ -4930,9 +4930,9 @@ Verifier (the payer):
 
 - if `verifier_accreditation_id` is provided: load `verifier_accreditation` from it (abort if not found); `verifier_accreditation.role` MUST be VERIFIER and `verifier_accreditation.schema_id` MUST equal `schema_id`, and `verifier_accreditation` MUST be an [[ref: active accreditation]], else abort. Let `vs` = `VerifiableService[verifier_accreditation.vs_id]`.
 - else (`verifier_vs_id` is provided): `vs` = `VerifiableService[verifier_vs_id]` MUST exist, else abort. `cs.verifier_onboarding_mode` MUST be OPEN or CREDENTIAL, else abort. Let `d` be `ParticipationTrustDeposit[(vs.id, schema_id, VERIFIER)]` if it exists: `d.accreditation_ids` MUST list no [[ref: active accreditation]] (the caller MUST reference it instead), and `d` MUST NOT be [[ref: barred]] (`d.unrepaid_slash` = 0 and `d.excluded` false), else abort: the exclusion is the ecosystem's sanction on a participation it did not onboard. `TrustDeposit[co.id]`, if it exists, MUST NOT be barred either (`unrepaid_slash` = 0 and `excluded` false), else abort. `verifier_accreditation` is null.
-- `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `vs.vs_account` MUST equal `vs_account`, else abort.
+- `vs.corporation_id` MUST equal `co.id` (where `co` is the `Corporation` entry resolved from the message's `corporation` account), and `vs.vs_account` MUST equal `signer`, else abort: the signer is the VS account of that entry.
 
-[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `vs_account`, `verifier_accreditation`, `vs`) tuple (`verifier_accreditation` MAY be null).
+[[AUTHZ-CHECK-3]](#authz-check-3-vs-account-authorization-checks) MUST pass for this (`corporation`, `signer`, `verifier_accreditation`, `vs`) tuple (`verifier_accreditation` MAY be null).
 [[AUTHZ-CHECK-4]](#authz-check-4-vs-account-fee-grant-checks) MUST pass for the same tuple.
 [[GF-CHECK-1]](#gf-check-1-network-governance-framework-acceptance) MUST pass for `co`, and [[GF-CHECK-3]](#gf-check-3-ecosystem-governance-framework-acceptance) for `co` and `cs.ecosystem_id`: a verifier that has not accepted the [[ref: EGF]] in force records no presentation, so it obtains no receipt.
 
@@ -4941,7 +4941,7 @@ Issuer reference (a fee beneficiary):
 - if `issuer_accreditation_id` is provided: load `issuer_accreditation` from it (abort if not found); `issuer_accreditation.role` MUST be ISSUER and `issuer_accreditation.schema_id` MUST equal `schema_id`, else abort; `issuer_accreditation.effective_from` MUST be non-null and not later than `now()` (the entry has been validated and became effective), else abort. No other state is required of it: the validity of the credential is established by trust resolution at its issuance time, and the barred filter of [[MOD-AC-QRY-4]](#mod-ac-qry-4-find-beneficiaries) decides whether the issuer branch is paid.
 - else (`issuer_vs_id` is provided): `VerifiableService[issuer_vs_id]` MUST exist, else abort; let `d_i` be `ParticipationTrustDeposit[(issuer_vs_id, schema_id, ISSUER)]` if it exists: `d_i.accreditation_ids` MUST list no [[ref: active accreditation]], else abort (the caller MUST reference it, so that the issuer's branch is paid). `issuer_accreditation` stays null: the issuer branch is the schema's root.
 
-> Note: the `vs_account` and `corporation_id` checks apply to the verifier only. The issuer reference generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only. An issuer whose entry has since expired or been revoked holds none, and is referenced by its service entry. A `CredentialPresentation` never anchors a credential: only a [CredentialIssuance](#credentialissuance), recorded by the issuer itself, does.
+> Note: the checks on `signer` and `corporation_id` apply to the verifier only. The issuer reference generally belongs to another [[ref: corporation]]: it is referenced so that the issuer branch receives its verification fees, and is checked for role, schema and prior validation only. An issuer whose entry has since expired or been revoked holds none, and is referenced by its service entry. A `CredentialPresentation` never anchors a credential: only a [CredentialIssuance](#credentialissuance), recorded by the issuer itself, does.
 
 Presentation digest:
 
